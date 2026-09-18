@@ -17,6 +17,13 @@ private_side_only:
 - ops
 default_rule: anything not enumerated under private_side_only is AGPL-3.0-or-later
 repo_areas:
+  ai-sdk: agpl
+  desktop: agpl
+  graph: agpl
+  importers: agpl
+  server: agpl
+  uci-worker: agpl
+  web: agpl
   .githooks: agpl
   .github: agpl
   backtest: agpl
