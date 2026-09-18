@@ -6,8 +6,8 @@ Until the name gate:
    `{{PRODUCT_NAME}}`, sourced from `brand.PRODUCT_NAME`.
 2. Explicit exceptions (infrastructure identifiers and verbatim source
    documents, never user-visible product naming):
-   - `pyproject.toml` `[project].name = "openchess"`: Python distribution
-     slug; a placeholder is not a valid package name.
+   - `pyproject.toml` `[project].name`: the Python distribution slug
+     (the repo slug in lowercase); a placeholder is not a valid package name.
    - Repository URLs (`github.com/mp663z/openchess`): factual infrastructure
      addresses.
    - `docs/plan/development-plan-v9.md`, `docs/plan/product-report-v5.md`:
