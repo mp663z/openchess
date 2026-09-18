@@ -1,0 +1,49 @@
+# T2230 - Spike B sampling plan, preregistered before any backtest run.
+# Protocol source: product-report-v5.md Appendix B. Frozen; amendments append-only.
+schema_version: 1
+registered_at: "2026-09-18"
+frozen_before_run: true
+amendments: []
+corpus:
+  delta_feed:
+    source: lichess_standard_games (CC0), snapshots 2024-01 through 2025-12
+    rights: data/datasets/public-source-rights.yaml (allow)
+    substitution_note: >-
+      v5 Appendix B names TWIC + Lichess. TWIC is fail-closed in the rights
+      manifest (no transformation grant), so the replay feed is Lichess CC0
+      only; TWIC remains a user-side drop source. Recorded as a deviation
+      from the report, rights-driven.
+  repertoires:
+    count: 50
+    construction: >-
+      De facto repertoires derived from the public game histories of Lichess
+      players in the CC0 standard dumps, window 2024-01..2025-12. A player's
+      own game history defines their de facto repertoire (Appendix B). No
+      human recruitment required for the offline replay; this also matches
+      the casual BUILDING path where connected history suffices.
+    rights: lichess_standard_games CC0 (allow)
+selection_rules:
+  rating_bands: ["1800-1999", "2000-2199", "2200-2399", "2400+"]
+  band_assignment: player mean rating over the window, weighted by games
+  repertoires_per_band: "as available; at least 8 in each of 1800-1999 and 2000-2199 (kill-rule bands)"
+  minimum_games:
+    rated_standard_games_in_window: 100
+    min_fraction_in_band: 0.6
+    min_average_moves: 20
+  exclusions:
+    - titled accounts (lichess title field in PGN headers when present)
+    - known engine/assistant accounts and official bots
+    - accounts with any single-game rating swing indicative of sandbagging (manual review list)
+    - duplicate accounts of the same natural person where detectable
+leakage_control:
+  rule: at replay week t, rankers see only data with game end-date <= t
+  implementation: weekly chronological snapshots; no global fit; weights frozen at backtest close
+  label_window: labels use weeks (t, t+4] - label data never feeds scoring
+  split_hygiene: repertoire selection uses window-wide aggregates ONLY for eligibility, never for scoring inputs
+reproducibility:
+  pins: data/datasets/snapshot-pins.yaml extended with 2024-01..2025-12 monthly pins before acquisition
+  scripts: fully reproducible; corpus recipe published with the backtest report
+kill_rule:
+  margin: ">=15 percentage points decision-relevance, model vs naive baseline"
+  bands: ["1800-1999", "2000-2199"]
+  consequence: Bet 2 dies; no twelve-week build (v5 section 5, rule 4)
