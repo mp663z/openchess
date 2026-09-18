@@ -1,4 +1,4 @@
-"""DAG board tooling for the OpenChess task graph (tasks/dag.json).
+"""DAG board tooling for the product task graph (tasks/dag.json).
 
 Done requires acceptance, an exact SHA and an evidence manifest.
 UNVERIFIED is never done.

@@ -1,6 +1,6 @@
-# OpenChess
+# {{PRODUCT_NAME}}
 
-Every week, OpenChess turns your own games into the three highest-impact things to train, gives you drills from the positions that caused them, and checks whether the learning transfers to later games.
+Every week, {{PRODUCT_NAME}} turns your own games into the three highest-impact things to train, gives you drills from the positions that caused them, and checks whether the learning transfers to later games.
 
 Local-first. Open source (AGPL-3.0). Bring your own keys: OpenRouter, OpenAI, Anthropic, Ollama, llama.cpp, or MLX - no hard vendor dependency.
 
