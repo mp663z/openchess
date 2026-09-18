@@ -1,0 +1,9 @@
+#!/bin/bash
+# Run the same gates CI runs, locally, before pushing.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+if [ -d .venv ]; then . .venv/bin/activate; fi
+ruff check .
+pytest -q
+python tools/dag.py verify
+python tools/license_audit.py
