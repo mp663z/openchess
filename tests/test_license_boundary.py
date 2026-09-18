@@ -23,7 +23,7 @@ def tracked_top_level_dirs() -> set[str]:
 
 
 def test_product_is_agpl():
-    assert BOUNDARY["product_license"] == "AGPL-3.0-only"
+    assert BOUNDARY["product_license"] == "AGPL-3.0-or-later"
 
 
 def test_agpl_covers_chess_local_byom():

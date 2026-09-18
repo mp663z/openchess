@@ -69,3 +69,9 @@ def test_canonical_hash_is_documented_and_pinned():
         "2cd0fb7883a3b3553dedbb0bad171646d46f51e2642951aae7c59cb5cec86c46"
     )
     assert "gnu.org/licenses/agpl-3.0.txt" in (ROOT / "tools/license_lint.py").read_text()
+
+
+def test_boundary_file_is_a_linted_declaration():
+    """licensing-boundary.yaml drift must fail the license lint (T0008)."""
+    import tools.license_lint as ll
+    assert "licensing-boundary.yaml" in ll.DECLARATIONS
