@@ -1,7 +1,6 @@
 """T3655: SBOM lists every library/engine/model/dataset/asset with version/hash/origin/license."""
 
 import json
-import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -9,9 +8,6 @@ MANIFEST = ROOT / "docs/component-inventory.json"
 
 
 def regenerate() -> dict:
-    subprocess.run(
-        ["git", "checkout", "--", "docs/component-inventory.json"], cwd=ROOT, check=False
-    )
     import tools.component_inventory as ci
 
     return ci.generate()
