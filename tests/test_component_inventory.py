@@ -17,24 +17,28 @@ def regenerate() -> dict:
     return ci.generate()
 
 
-def _without_versions(inv: dict) -> dict:
-    """Versions come from the installed environment and legitimately differ
-    between machines; everything else must regenerate identically."""
+def _env_independent(inv: dict) -> dict:
+    """Versions and license STRINGS come from the installed environment and
+    legitimately differ across machines (older package metadata omits them).
+    Names, requirements, origins and direct-flags must regenerate identically;
+    the committed manifest's versions/licenses are checked separately."""
     inv = json.loads(json.dumps(inv))
     for lib in inv["libraries"]:
         lib.pop("version", None)
+        lib.pop("license", None)
     return inv
 
 
 def test_committed_manifest_is_regenerable():
     committed = json.loads(MANIFEST.read_text())
     fresh = regenerate()
-    assert _without_versions(committed) == _without_versions(fresh), (
+    assert _env_independent(committed) == _env_independent(fresh), (
         "manifest is stale - re-run tools/component_inventory.py"
     )
-    # Versions are environment-sourced but must be recorded, never blank.
+    # Versions/licenses are environment-sourced but must be recorded, never blank.
     for lib in committed["libraries"]:
         assert lib.get("version"), lib["name"]
+        assert lib.get("license") not in (None, "", "UNVERIFIED"), lib["name"]
 
 
 def test_every_library_has_version_origin_license():
