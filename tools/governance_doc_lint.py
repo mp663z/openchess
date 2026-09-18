@@ -53,17 +53,65 @@ PLACEHOLDER_RE = re.compile(r"\b(TODO|TBD|FIXME|PLACEHOLDER|XXX)\b")
 CODENAME_RE = re.compile("open" + "chess", re.I)  # split: self-scan safe
 
 
-def _headings(text: str) -> set[str]:
-    """Normalized heading set: ATX (# ..) and setext (text + ---/===) styles."""
-    heads: set[str] = set()
-    lines = text.splitlines()
+MIN_SECTION_BODY = 80  # chars of real text under each required heading
+
+
+def _operative_lines(text: str) -> list[str]:
+    """Lines outside fenced code blocks and HTML comments.
+
+    A heading inside ``` / ~~~ fences or inside <!-- ... --> is inert
+    content, not structure; both are stripped before parsing.
+    """
+    out: list[str] = []
+    in_fence = False
+    in_comment = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if in_fence:
+            if re.match(r"^(```|~~~)", stripped):
+                in_fence = False
+            continue
+        if in_comment:
+            if "-->" in stripped:
+                in_comment = False
+            continue
+        if re.match(r"^(```|~~~)", stripped):
+            in_fence = True
+            continue
+        if stripped.startswith("<!--"):
+            if "-->" not in stripped:
+                in_comment = True
+            continue
+        out.append(line)
+    return out
+
+
+def _sections(text: str) -> dict[str, str]:
+    """Map normalized heading -> body text (operative lines only)."""
+    lines = _operative_lines(text)
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
     for i, line in enumerate(lines):
         m = re.match(r"^#{1,6}\s+(.*\S)\s*$", line)
         if m:
-            heads.add(" ".join(m.group(1).lower().split()))
-        elif i + 1 < len(lines) and re.match(r"^[-=]{3,}\s*$", lines[i + 1]) and line.strip():
-            heads.add(" ".join(line.strip().lower().split()))
-    return heads
+            current = " ".join(m.group(1).lower().split())
+            sections.setdefault(current, [])
+            continue
+        if (
+            i + 1 < len(lines)
+            and re.match(r"^[-=]{3,}\s*$", lines[i + 1])
+            and line.strip()
+        ):
+            current = " ".join(line.strip().lower().split())
+            sections.setdefault(current, [])
+            continue
+        if current is not None:
+            sections[current].append(line)
+    return {name: "\n".join(body).strip() for name, body in sections.items()}
+
+
+def _headings(text: str) -> set[str]:
+    return set(_sections(text))
 
 
 def lint_doc(path: Path, rel: str) -> list[str]:
@@ -91,10 +139,15 @@ def lint_doc(path: Path, rel: str) -> list[str]:
             if req not in rules:
                 errors.append(f"{rel}: no rule for {req}")
         return errors
-    heads = _headings(text)
+    sections = _sections(text)
     for req in REQUIRED_HEADINGS.get(rel, []):
-        if req not in heads:
+        if req not in sections:
             errors.append(f"{rel}: missing required heading {req!r}")
+        elif len(sections[req]) < MIN_SECTION_BODY:
+            errors.append(
+                f"{rel}: section {req!r} has no operative body "
+                f"({len(sections[req])} chars, need {MIN_SECTION_BODY})"
+            )
     return errors
 
 

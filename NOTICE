@@ -15,11 +15,11 @@ network service, not only for those who received a copy of the software.
 ## Source offer
 
 The Corresponding Source is the public source repository linked under
-"Source" in the project README. Each release is a signed-off git tag; the
-release workflow (.github/workflows/release.yml) regenerates the component
-inventory (SBOM, docs/component-inventory.json) at the tag and attaches it
-with sha256 checksums to the release, so the exact source revision behind
-any deployment is identifiable.
+"Source" in the project README. Each release is a git tag built by the
+release workflow (.github/workflows/release.yml), which regenerates the
+component inventory (SBOM, docs/component-inventory.json) at the tag and
+attaches it with sha256 checksums to the release, so the exact source
+revision behind any released artifact is identifiable.
 
 If the repository is unreachable or the deployed revision is not
 identifiable, request the Corresponding Source via the contact channel
