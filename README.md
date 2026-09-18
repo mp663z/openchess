@@ -2,7 +2,7 @@
 
 Every week, {{PRODUCT_NAME}} turns your own games into the three highest-impact things to train, gives you drills from the positions that caused them, and checks whether the learning transfers to later games.
 
-Local-first. Open source (AGPL-3.0). Bring your own keys: OpenRouter, OpenAI, Anthropic, Ollama, llama.cpp, or MLX - no hard vendor dependency.
+Local-first. Open source (AGPL-3.0-or-later). Bring your own keys: OpenRouter, OpenAI, Anthropic, Ollama, llama.cpp, or MLX - no hard vendor dependency.
 
 ## Status
 
@@ -40,4 +40,4 @@ Done requires acceptance, an exact SHA and evidence. UNVERIFIED is never done.
 
 ## License
 
-AGPL-3.0-only. Dependencies are restricted to permissive licenses (MIT / Apache-2.0 / BSD); see `tools/license_audit.py` and `docs/licensing.md`.
+AGPL-3.0-or-later. Dependencies are restricted to permissive licenses (MIT / Apache-2.0 / BSD); see `tools/license_audit.py` and `docs/licensing.md`.

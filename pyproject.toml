@@ -3,7 +3,7 @@ name = "openchess"
 version = "0.0.0"
 description = "Turn your own games into the three highest-impact things to train each week."
 requires-python = ">=3.12"
-license = { text = "AGPL-3.0-only" }
+license = { text = "AGPL-3.0-or-later" }
 dependencies = []
 
 [tool.ruff]
