@@ -38,6 +38,7 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "corresponding source scope",
         "trademarks, data, and models",
     ],
+<<<<<<< HEAD
     "CLA.md": [
         "contributor license agreement",
         "1. definitions",
@@ -64,12 +65,23 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "legal",
         "code of conduct",
         "development setup",
+=======
+    "TRADEMARK.md": [
+        "trademark policy",
+        "what you may do without asking",
+        "what requires written permission",
+        "logo use",
+        "enforcement and questions",
+>>>>>>> governance/t0014-trademark
     ],
 }
 
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> governance/t0014-trademark
 # paths that must each have a CODEOWNERS rule (when CODEOWNERS is registered)
 CODEOWNERS_REQUIRED_PATHS = [
     "LICENSE", "NOTICE", "CLA.md", "DCO.md", "CONTRIBUTING.md",

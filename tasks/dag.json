@@ -347,10 +347,12 @@
    "verification": "auto + human",
    "resource": "counsel where applicable",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "a2c6fb7dab1fb2252ed344ead4bc07c9498cf913",
+   "evidence_manifest": "evidence/T0014.md"
   },
   {
    "id": "T0015",
