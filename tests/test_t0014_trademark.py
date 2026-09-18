@@ -20,3 +20,9 @@ def test_trademark_content_exact():
     assert "not endorsed by the project owner" in text
     assert "clearly different name" in text
     assert "agpl-3.0-or-later" in text
+
+
+def test_contact_points_at_readme():
+    text = " ".join((ROOT / "TRADEMARK.md").read_text().lower().split())
+    assert "contact section of the readme" in text
+    assert "contact published in the repository" not in text

@@ -35,6 +35,6 @@ written permission from the owner.
 
 ## Enforcement and questions
 
-Trademark questions and permission requests go to the contact published in
-the repository. The owner may revoke permission for uses that confuse users
+Trademark questions and permission requests go to the owner through the
+Contact section of the README. The owner may revoke permission for uses that confuse users
 about the origin of software or services.
