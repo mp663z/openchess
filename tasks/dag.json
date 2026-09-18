@@ -172,10 +172,12 @@
    "verification": "independent review",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "e6bbb77b17dbd19d86a42f9fa02e106049f7d161",
+   "evidence_manifest": "evidence/T0006.md"
   },
   {
    "id": "T0007",
@@ -73578,14 +73580,15 @@
    "verification": "auto + independent review",
    "resource": "release artifacts",
    "checkpoint": "",
-   "status": "todo",
+   "status": "claimed",
    "evidence": "release SHA + dependency/data inventory + licenses + notices/source offer + auditor",
    "tags": [
     "license",
     "release"
    ],
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent"
   },
   {
    "id": "T3657",
