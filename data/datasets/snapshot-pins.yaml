@@ -1,23 +1,27 @@
-# T2712 - Snapshot pinning. Latest aliases are forbidden in reproducible runs.
-# bytes = publisher content-length at pin time; sha256 filled from measured bytes.
 schema_version: 1
-pinned_at: "2026-09-18"
+pinned_at: '2026-09-18'
 pins:
-  - dataset: lichess_standard_games
-    snapshot: "2026-08"
-    url: https://database.lichess.org/standard/lichess_db_standard_rated_2026-08.pgn.zst
-    expected_bytes: 30145862359
-    etag: null
-    sha256: 63ac22f4ce579f7c2c646ab0ca8872858d73839f96eb3d4ab5112e4a64730a5c
-  - dataset: lichess_puzzles
-    snapshot: "2026-09-09"
-    url: https://database.lichess.org/lichess_db_puzzle.csv.zst
-    expected_bytes: 304429328
-    etag: '"6aa199fe-12253910"'
-    sha256: 95fd454bec9efe8f940d5863d5db4c57474f281a865834997bd8cb5d6a149bb9
-  - dataset: lichess_evals
-    snapshot: "2026-09-10"
-    url: https://database.lichess.org/lichess_db_eval.jsonl.zst
-    expected_bytes: 22086532809
-    etag: '"6aa21979-52475bec9"'
-    sha256: 47f136a42e8e5414a81f3d50a92c7bae9ff41d3c84f091fefdce80d79eb3bd6c
+- dataset: lichess_standard_games
+  snapshot: 2026-08
+  url: https://database.lichess.org/standard/lichess_db_standard_rated_2026-08.pgn.zst
+  expected_bytes: 30145862359
+  etag: null
+  sha256: 63ac22f4ce579f7c2c646ab0ca8872858d73839f96eb3d4ab5112e4a64730a5c
+- dataset: lichess_puzzles
+  snapshot: '2026-09-09'
+  url: https://database.lichess.org/lichess_db_puzzle.csv.zst
+  expected_bytes: 304429328
+  etag: '"6aa199fe-12253910"'
+  sha256: 95fd454bec9efe8f940d5863d5db4c57474f281a865834997bd8cb5d6a149bb9
+- dataset: lichess_evals
+  snapshot: '2026-09-10'
+  url: https://database.lichess.org/lichess_db_eval.jsonl.zst
+  expected_bytes: 22086532809
+  etag: '"6aa21979-52475bec9"'
+  sha256: 47f136a42e8e5414a81f3d50a92c7bae9ff41d3c84f091fefdce80d79eb3bd6c
+- dataset: lichess_standard_games
+  snapshot: 2024-01
+  url: https://database.lichess.org/standard/lichess_db_standard_rated_2024-01.pgn.zst
+  expected_bytes: 32379325271
+  etag: null
+  sha256: 5c195d7415d802216f6fe9ea4f47bba2cf768dac1568ee83a01e4806dab8933d
