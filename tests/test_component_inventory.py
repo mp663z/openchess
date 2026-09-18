@@ -138,7 +138,7 @@ def test_lock_is_fingerprinted_into_inputs():
     import tools.component_inventory as ci
 
     h = hashlib.sha256()
-    for f in sorted(ROOT.glob("requirements*.txt")) + [ci.PINS, LOCK]:
+    for f in sorted(ROOT.glob("requirements*.txt")) + [ci.PINS, LOCK, ci.LINKAGE]:
         h.update(f.name.encode() + b"\0" + f.read_bytes())
     committed = json.loads(MANIFEST.read_text())
     assert committed["inputs_sha256"] == h.hexdigest()
