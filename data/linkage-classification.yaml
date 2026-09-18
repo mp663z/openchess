@@ -3,25 +3,34 @@
 # Fail-closed: a component without a classification entry fails generation.
 #
 # linkage: subprocess | dynamic_link | static_link | source_inclusion | data
-# deployment: ci_only | server_only | cli_tooling | browser_bundle
+# deployment: ci_only | cli_tooling | local_external | server_only | browser_bundle
+#   ci_only        - used only in CI/test runs
+#   cli_tooling    - imported/invoked by repo tooling run by a developer/operator
+#   local_external - runs on the user's machine or an offline worker (ADR-0001:
+#                    local-first, stockfish as an external local process, corpus
+#                    processed offline), never on a hosted server
+#   server_only    - runs on hosted infrastructure only
+#   browser_bundle - shipped inside a browser bundle
 # distribution: not_distributed | distributed_with_app
-schema_version: 1
+schema_version: 2
 components:
   # Python libraries: imported at runtime by tooling (dynamic link in the
   # interpreter sense), run only in CI/development environments, and are NOT
   # shipped inside any product artifact.
-  PyYAML:        {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  PyYAML:        {linkage: dynamic_link, deployment: cli_tooling, distribution: not_distributed}
   pytest:        {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
   ruff:          {linkage: subprocess,   deployment: ci_only, distribution: not_distributed}
-  zstandard:     {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  zstandard:     {linkage: dynamic_link, deployment: cli_tooling, distribution: not_distributed}
   colorama:      {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
   iniconfig:     {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
-  packaging:     {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  packaging:     {linkage: dynamic_link, deployment: cli_tooling, distribution: not_distributed}
   pluggy:        {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
   Pygments:      {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
   # Engines
-  stockfish:     {linkage: subprocess,   deployment: server_only, distribution: not_distributed}
+  stockfish:     {linkage: subprocess,   deployment: local_external, distribution: not_distributed}
   # Datasets: data inputs, streamed during ingest/backtest, never bundled.
-  lichess_standard_games: {linkage: data, deployment: server_only, distribution: not_distributed}
-  lichess_puzzles:        {linkage: data, deployment: server_only, distribution: not_distributed}
-  lichess_evals:          {linkage: data, deployment: server_only, distribution: not_distributed}
+  lichess_standard_games: {linkage: data, deployment: local_external, distribution: not_distributed}
+  lichess_puzzles:        {linkage: data, deployment: local_external, distribution: not_distributed}
+  lichess_evals:          {linkage: data, deployment: local_external, distribution: not_distributed}
+# Discovered files (model weights, bundled assets) classify by type:relpath.
+files: {}

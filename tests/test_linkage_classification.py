@@ -10,7 +10,7 @@ MANIFEST = ROOT / "docs/component-inventory.json"
 LINKAGE = ROOT / "data/linkage-classification.yaml"
 
 LINKAGE_CLASSES = {"subprocess", "dynamic_link", "static_link", "source_inclusion", "data"}
-DEPLOYMENT_CLASSES = {"ci_only", "server_only", "cli_tooling", "browser_bundle"}
+DEPLOYMENT_CLASSES = {"ci_only", "cli_tooling", "local_external", "server_only", "browser_bundle"}
 DISTRIBUTION_CLASSES = {"not_distributed", "distributed_with_app"}
 
 FIELDS = ("linkage", "deployment", "distribution")
@@ -43,8 +43,14 @@ def test_every_component_classified_with_allowed_values():
 
 def test_classification_file_covers_exactly_the_inventory_set():
     inv = json.loads(MANIFEST.read_text())
-    classified = set(yaml.safe_load(LINKAGE.read_text())["components"])
-    inventoried = {name for _, name, _ in _components(inv)}
+    raw = yaml.safe_load(LINKAGE.read_text())
+    classified = set(raw["components"]) | set(raw.get("files") or {})
+    inventoried = set()
+    for kind, name, comp in _components(inv):
+        if kind in ("model_weight", "bundled_asset"):
+            inventoried.add(f"{kind}:{comp['path']}")
+        else:
+            inventoried.add(name)
     missing = inventoried - classified
     extra = classified - inventoried
     assert not missing, f"components without classification: {missing}"
@@ -80,9 +86,11 @@ def test_no_browser_bundle_today():
 
 def test_generation_fails_closed_without_classification(tmp_path, monkeypatch):
     """A component missing from the classification file must fail generation."""
+    import pytest as _pytest
+
     import tools.component_inventory as ci
 
-    classes = ci._classifications()
+    classes, _ = ci._classifications()
     assert "pytest" in classes
     real_open = Path.read_text
 
@@ -93,10 +101,77 @@ def test_generation_fails_closed_without_classification(tmp_path, monkeypatch):
         return text
 
     monkeypatch.setattr(Path, "read_text", broken)
-    try:
-        import pytest as _pytest
+    with _pytest.raises(RuntimeError, match="no linkage classification"):
+        ci.generate()
 
-        with _pytest.raises(RuntimeError, match="no linkage classification"):
+
+import contextlib  # noqa: E402
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "kind,dirname", [("model_weight", "models"), ("bundled_asset", "assets")]
+)
+def test_unclassified_discovered_file_fails_closed(kind, dirname):
+    """A discovered weight/asset with no files: classification aborts generation."""
+    import tools.component_inventory as ci
+
+    target = ROOT / dirname
+    target.mkdir(parents=True, exist_ok=True)
+    probe = target / "probe-unclassified.bin"
+    probe.write_bytes(b"probe")
+    try:
+        with pytest.raises(RuntimeError, match=f"no linkage classification for {kind}:"):
             ci.generate()
     finally:
-        monkeypatch.undo()
+        probe.unlink()
+        with contextlib.suppress(OSError):
+            target.rmdir()
+
+
+@pytest.mark.parametrize(
+    "kind,dirname", [("model_weight", "models"), ("bundled_asset", "assets")]
+)
+def test_classified_discovered_file_joins_all_fields(kind, dirname, monkeypatch):
+    """A classified discovered file carries linkage + deployment + distribution."""
+    import tools.component_inventory as ci
+
+    target = ROOT / dirname
+    target.mkdir(parents=True, exist_ok=True)
+    probe = target / "probe-classified.bin"
+    probe.write_bytes(b"probe")
+    real_text = LINKAGE.read_text()
+    patched = real_text.replace(
+        "files: {}",
+        "files:\n"
+        f"  {kind}:{dirname}/probe-classified.bin:\n"
+        "    linkage: data\n    deployment: local_external\n"
+        "    distribution: not_distributed",
+    )
+    monkeypatch.setattr(ci, "LINKAGE", _TmpLinkage(patched))
+    try:
+        inv = ci.generate()
+        key = "model_weights" if kind == "model_weight" else "bundled_assets"
+        entry = next(f for f in inv[key] if f["path"].endswith("probe-classified.bin"))
+        assert entry["linkage"] == "data"
+        assert entry["deployment"] == "local_external"
+        assert entry["distribution"] == "not_distributed"
+        assert len(entry["sha256"]) == 64
+    finally:
+        probe.unlink()
+        with contextlib.suppress(OSError):
+            target.rmdir()
+
+
+class _TmpLinkage:
+    name = "linkage-classification.yaml"
+
+    def __init__(self, text):
+        self._text = text
+
+    def read_text(self):
+        return self._text
+
+    def read_bytes(self):
+        return self._text.encode()

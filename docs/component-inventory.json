@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "generated_by": "tools/component_inventory.py",
-  "inputs_sha256": "c3d0ce9e74077c71e91127d0551c84509b398c98df19a5cfedf6655a7e246101",
+  "inputs_sha256": "71f57cf3447c85213f1844297bc29ce53ccbb52a5c0293ce1b4c94982516e898",
   "libraries": [
     {
       "name": "pytest",
@@ -48,7 +48,7 @@
         }
       },
       "linkage": "dynamic_link",
-      "deployment": "ci_only",
+      "deployment": "cli_tooling",
       "distribution": "not_distributed"
     },
     {
@@ -96,7 +96,7 @@
         }
       },
       "linkage": "dynamic_link",
-      "deployment": "ci_only",
+      "deployment": "cli_tooling",
       "distribution": "not_distributed"
     },
     {
@@ -162,7 +162,7 @@
         }
       },
       "linkage": "dynamic_link",
-      "deployment": "ci_only",
+      "deployment": "cli_tooling",
       "distribution": "not_distributed"
     },
     {
@@ -223,7 +223,7 @@
       "bundled": false,
       "note": "external process, invoked over UCI; not linked, not distributed",
       "linkage": "subprocess",
-      "deployment": "server_only",
+      "deployment": "local_external",
       "distribution": "not_distributed"
     }
   ],
@@ -239,7 +239,7 @@
       "license": "CC0",
       "bundled": false,
       "linkage": "data",
-      "deployment": "server_only",
+      "deployment": "local_external",
       "distribution": "not_distributed"
     },
     {
@@ -252,7 +252,7 @@
       "license": "CC0",
       "bundled": false,
       "linkage": "data",
-      "deployment": "server_only",
+      "deployment": "local_external",
       "distribution": "not_distributed"
     },
     {
@@ -265,7 +265,7 @@
       "license": "CC0",
       "bundled": false,
       "linkage": "data",
-      "deployment": "server_only",
+      "deployment": "local_external",
       "distribution": "not_distributed"
     },
     {
@@ -278,7 +278,7 @@
       "license": "CC0",
       "bundled": false,
       "linkage": "data",
-      "deployment": "server_only",
+      "deployment": "local_external",
       "distribution": "not_distributed"
     },
     {
@@ -291,7 +291,7 @@
       "license": "CC0",
       "bundled": false,
       "linkage": "data",
-      "deployment": "server_only",
+      "deployment": "local_external",
       "distribution": "not_distributed"
     },
     {
@@ -304,7 +304,7 @@
       "license": "CC0",
       "bundled": false,
       "linkage": "data",
-      "deployment": "server_only",
+      "deployment": "local_external",
       "distribution": "not_distributed"
     }
   ],
