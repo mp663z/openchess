@@ -1,52 +1,116 @@
-# T3761 - Revenue target contract (v5 report sections 1, 10, Appendix C).
-# Machine-readable source of truth for the 2027 business goal.
-schema_version: 1
+# T3761 - Revenue target contract.
+# Machine-readable source of truth for the paying-user business goal.
+#
+# Provenance discipline: every value names its source. `report-v5` values are
+# verbatim from product report v5 (sections 1, 10, Appendix C). Values the
+# report never specified are `user-decision`, approved by the project owner
+# on 2026-09-19 (USER-APPROVED). The report itself says "during 2027"; the
+# owner accelerated the target to end of 2026 - see
+# docs/plan/product-report-v5-addendum.md.
+schema_version: 2
 target:
-  name: 2027 paying-user goal
-  active_paying_users: 1000
-  # "during 2027" made exact: the count of active paying users at the target
-  # instant below.
-  target_date: "2027-12-31T23:59:59Z"
+  name: 2026 paying-user goal
+  active_paying_users:
+    value: 1000
+    source: report-v5
+  target_instant:
+    value: "2026-12-31T23:59:59Z"
+    source: user-decision
+    approved: "2026-09-19"
+    note: owner accelerated v5's "during 2027" to end of 2026
+  measurement_window_days:
+    value: 35
+    source: user-decision
+    approved: "2026-09-19"
   measurement: >-
     Count of subscriptions in good standing with a successful charge within
     the trailing 35 days at the target instant.
 price:
   monthly:
-    - {currency: EUR, amount: 8}
-    - {currency: USD, amount: 10}
+    - {currency: EUR, amount: 8, source: report-v5}
+    - {currency: USD, amount: 10, source: report-v5}
   notes: >-
     EUR 8 inside the honest ChessTempo band; USD 10 parity. One price per
     market; no per-user negotiation (coach revenue share handled separately,
     capped inside the ~90% margin guardrail).
 currency:
   presentment_currencies: [EUR, USD]
-  reporting_currency: EUR
+  reporting_currency:
+    value: EUR
+    source: user-decision
+    approved: "2026-09-19"
+  fx_source:
+    value: ECB
+    source: user-decision
+    approved: "2026-09-19"
   fx_rule: >-
     USD charges convert to EUR at the ECB euro reference rate published on the
     charge date; if unpublished that day, the most recent prior rate.
 tax:
+  collected_tax_is_revenue:
+    value: false
+    source: user-decision
+    approved: "2026-09-19"
   rule: >-
     EU consumer prices are VAT-inclusive; VAT/GST collected is remitted and is
-    NEVER revenue. Sales-tax-exclusive markets charge tax on top where
+    never revenue. Sales-tax-exclusive markets charge tax on top where
     required.
 refunds:
+  window_days:
+    value: 14
+    source: user-decision
+    approved: "2026-09-19"
+  netted_from:
+    value: month_issued
+    source: user-decision
+    approved: "2026-09-19"
   policy: >-
     14-day no-questions refund (EU consumer right baseline); refunds are
     netted from net revenue in the month the refund is issued.
 net_revenue:
   definition: gross_charges - refunds - taxes_remitted - payment_processing_fees
+  definition_source:
+    value: user-decision
+    approved: "2026-09-19"
   notes: >-
-    Annualized reference at target: 1000 users x EUR 8 x 12 = EUR 96,000 ARR
-    gross; the ~90% margin guardrail applies to net revenue after direct
-    costs (payment fees, infrastructure, model/provider costs, coach share).
+    Annualized all-EUR reference at target: 1000 x EUR 8 x 12 = EUR 96,000
+    gross ARR (the report's ~EUR96k figure). Mixed-currency ARR depends on
+    the customer mix and the ECB rate; see mixed_currency_example below.
+    The ~90% margin guardrail (report-v5) applies to net revenue after
+    direct costs (payment fees, infrastructure, model/provider costs,
+    coach share).
+  mixed_currency_example:
+    eur_users: 600
+    usd_users: 400
+    usd_per_eur_rate: 1.08
+    # 600*8*12 + 400*10*12/1.08 = 57600 + 44444.44... = 102044.44
+    arr_eur: 102044.44
+    note: USD 10 converts above EUR 8 at rates below 1.25, so the mix shifts ARR
 funnel:
-  visitors_during_2027: 100000
+  source: report-v5
+  note: >-
+    Rates verbatim from report v5; the report scoped them to "during 2027".
+    With launch in 2026-10 (data/contracts/schedule.yaml) and the target
+    instant 2026-12-31, the full funnel must complete within roughly one
+    quarter - implied ~100k visitors between launch and target instant.
+    Re-derived monthly from real numbers once instruments report.
+  visitors_during_target_window: 100000
   visitor_to_free: 0.05
   active_free_users: 5000
   free_to_paid: 0.20
-  rule: >-
-    Derived backwards from the paying-user target; re-derived monthly from
-    real numbers once instruments (landing-page test, beta) report.
 provenance:
-  - product report v5, sections 1 (committed goal), 10 (pricing/funnel), Appendix C (funnel rows)
+  report_verbatim:
+    - 1000 active paying users (v5 section 1)
+    - EUR 8 / USD 10 monthly (v5 section 10)
+    - funnel rates 100000 visitors -> 5000 free (5%) -> 1000 paying (20%) (v5 Appendix C)
+    - ~EUR 96k gross ARR all-EUR reference (v5 section 10)
+    - ~90% gross-margin guardrail (v5 section 10)
+  user_approved_2026_09_19:
+    - target instant 2026-12-31T23:59:59Z (accelerated from v5's 2027)
+    - trailing 35-day active measurement
+    - EUR reporting currency, ECB charge-date FX rule
+    - collected VAT/GST is never revenue
+    - 14-day refunds netted in month issued
+    - net revenue = gross - refunds - taxes - processing fees
+  addendum: docs/plan/product-report-v5-addendum.md
 checkpoint: GROWTH
