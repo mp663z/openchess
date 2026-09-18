@@ -25,3 +25,9 @@ pins:
   expected_bytes: 32379325271
   etag: null
   sha256: 5c195d7415d802216f6fe9ea4f47bba2cf768dac1568ee83a01e4806dab8933d
+- dataset: lichess_standard_games
+  snapshot: 2024-02
+  url: https://database.lichess.org/standard/lichess_db_standard_rated_2024-02.pgn.zst
+  expected_bytes: 29762409631
+  etag: null
+  sha256: 91bca269dc0cb3515b1aea6820987a430c4d99a017ff1da4dab22294ffe63586
