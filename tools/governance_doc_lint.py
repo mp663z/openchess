@@ -57,7 +57,16 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "amending this file",
         "trademarks and assets",
     ],
+    "CONTRIBUTING.md": [
+        "contributing",
+        "ground rules",
+        "pull request flow",
+        "legal",
+        "code of conduct",
+        "development setup",
+    ],
 }
+
 
 
 
