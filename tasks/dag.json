@@ -54255,7 +54255,7 @@
    "verification": "auto",
    "resource": "Lichess dataset hosting/network/storage",
    "checkpoint": "",
-   "status": "in_progress",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel/model-card diff + verifier",
    "tags": [
     "lichess",
@@ -54263,7 +54263,9 @@
    ],
    "spine_outcome": "O1 first plan from connected games",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent-foundation"
+   "claimed_by": "task-agent-foundation",
+   "done_sha": "61e5c5334c121df950032e11a55c6d4a0d190692",
+   "evidence_manifest": "evidence/T2714.md"
   },
   {
    "id": "T2715",
