@@ -1,0 +1,54 @@
+# T2289 - Preregistered hypothesis H0 (authored before any data collection).
+# Frozen at registration. Amendments require a dated, appended amendment entry;
+# the original text is immutable.
+schema_version: 1
+registration:
+  registered_at: "2026-09-18T18:53:00+05:30"
+  registered_before_data_collection: true
+  status: registered
+  sources:
+    - docs/plan/product-report-v5.md (section 4, spike S3; section 2, Bet 1; hypothesis table H0)
+    - tasks/dag.json (T2289 acceptance)
+hypothesis:
+  id: H0
+  statement: >-
+    Among weekly-playing 2000-2200 (lichess/classical-equivalent) players, at
+    least 40% possess an importable machine-readable repertoire artifact
+    (maintained, scattered, or course-bound). H0 precedes H1: no H1 measurement
+    begins before H0 is measured and reported.
+  ordering: H0 precedes H1; cohorts for the two fork outcomes stay separate
+population:
+  segment: rated 2000-2200
+  activity_screen: plays chess weekly
+  recruitment: clubs and online communities (same communities as Spike C/S3)
+  sample_size: 20
+instrument:
+  kind: artifact-led conversation
+  prompt: "Show me your repertoire."
+  classification_rubric:
+    - id: maintained
+      definition: a machine-readable repertoire file/database the player actively updates
+      importable: true
+    - id: scattered
+      definition: machine-readable material split across files/apps/notes, not consolidated
+      importable: true
+    - id: course-bound
+      definition: repertoire lives inside a course app purchase; export may be limited
+      importable: true
+    - id: head-only
+      definition: repertoire exists only from memory; no machine-readable artifact
+      importable: false
+    - id: absent
+      definition: no repertoire in any form
+      importable: false
+measures:
+  primary: fraction of 20 conversations with an importable artifact (maintained + scattered + course-bound)
+  secondary: distribution across the five artifact classes
+decision_rule:
+  threshold: ">=40% importable"
+  pass: MAINTENANCE-first onboarding (maintain/triage path)
+  fail: BUILDING-first onboarding (build/train path; fork per report section 5)
+  note: >-
+    Casual BUILDING path does not require a repertoire file: connected game
+    history is sufficient to infer a de facto repertoire and recurring errors.
+amendments: []
