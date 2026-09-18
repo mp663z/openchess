@@ -1,0 +1,86 @@
+# T2229 - Rights manifest: every public game/repertoire source.
+# URL, license, transformation permission, checksum of the captured license
+# statement (sha256 of the verbatim statement text recorded at capture).
+# Unknown terms FAIL CLOSED.
+schema_version: 1
+captured_at: "2026-09-18"
+sources:
+  - id: lichess_standard_games
+    url: https://database.lichess.org/
+    license: CC0-1.0
+    statement_sha256: 903b20ce09a5914ea8f2e6319eb2fceb0754088a36d9e2a27885672cf0884020
+    statement_source_url: https://database.lichess.org/
+    transformation_permission: true
+    decision: allow
+  - id: lichess_puzzles
+    url: https://database.lichess.org/#puzzles
+    license: CC0-1.0
+    statement_sha256: 903b20ce09a5914ea8f2e6319eb2fceb0754088a36d9e2a27885672cf0884020
+    statement_source_url: https://database.lichess.org/
+    transformation_permission: true
+    decision: allow
+  - id: lichess_evals
+    url: https://database.lichess.org/#evals
+    license: CC0-1.0
+    statement_sha256: 903b20ce09a5914ea8f2e6319eb2fceb0754088a36d9e2a27885672cf0884020
+    statement_source_url: https://database.lichess.org/
+    transformation_permission: true
+    decision: allow
+  - id: lichess_chess_openings
+    url: https://github.com/lichess-org/chess-openings
+    license: CC0-1.0
+    statement_sha256: null
+    statement_source_url: https://api.github.com/repos/lichess-org/chess-openings (license field CC0-1.0)
+    transformation_permission: true
+    decision: allow
+  - id: lichess_elite_database
+    url: https://database.nikonoel.fr/
+    license: CC0-derived-unstated
+    statement_sha256: null
+    statement_source_url: https://database.nikonoel.fr/
+    transformation_permission: true
+    decision: allow_with_flag
+    note: filtered derivative of CC0 lichess dumps; site states no own terms; stale since 2024-04; flagged for verifier
+  - id: twic
+    url: https://theweekinchess.com/twic
+    license: proprietary (Mark Crowther), no redistribution grant located
+    statement_sha256: null
+    statement_source_url: https://theweekinchess.com/twic
+    transformation_permission: false
+    decision: fail_closed
+    note: weekly PGN/CBV downloads are free for personal offline reading; no license for transformation/redistribution found; permitted use is local processing of the user's own downloads, never redistribution or a curated feed
+  - id: lichess_broadcasts
+    url: https://lichess.org/broadcast
+    license: unknown
+    statement_sha256: null
+    transformation_permission: false
+    decision: fail_closed
+  - id: lichess_public_studies
+    url: https://lichess.org/study
+    license: unknown (user-created content; no CC0 grant located)
+    statement_sha256: null
+    transformation_permission: false
+    decision: fail_closed
+    note: individual study owners may grant rights; acquire per-study permission before any corpus use
+  - id: morphy_cbh_fixtures
+    url: https://github.com/Yarin78/morphy
+    license: none declared (all rights reserved)
+    statement_sha256: null
+    transformation_permission: false
+    decision: fail_closed
+    note: source readable as format documentation; code and test fixtures not usable without a grant from the author
+  - id: cbh2pgn
+    url: https://github.com/asdfjkl/cbh2pgn
+    license: MIT
+    statement_sha256: null
+    statement_source_url: https://api.github.com/repos/asdfjkl/cbh2pgn (license field MIT)
+    transformation_permission: true
+    decision: allow
+    note: reference implementation for S1 read-only CBH import
+  - id: user_own_cbh_files
+    url: null
+    license: user-purchased ChessBase databases, imported locally at the user's request
+    statement_sha256: null
+    transformation_permission: true
+    decision: allow
+    note: interoperability import only; we never acquire database content ourselves
