@@ -5,6 +5,8 @@ import pytest
 
 from tools.dag import DagError, claimable, cmd_complete, load, save_atomic, verify
 
+REAL_BOARD_PATH = Path(__file__).resolve().parent.parent / "tasks" / "dag.json"
+
 
 def make_board(tmp_path: Path) -> Path:
     board = {
@@ -101,3 +103,31 @@ def test_real_board_is_valid():
     board = load(Path(__file__).resolve().parent.parent / "tasks" / "dag.json")
     assert verify(board) == []
     assert len(board["tasks"]) == 5257
+
+
+def test_duplicate_ids_rejected(tmp_path):
+    board = json.loads((REAL_BOARD_PATH).read_text())
+    board["tasks"].append(dict(board["tasks"][0]))
+    with pytest.raises(DagError, match="duplicate task ids"):
+        verify(board)
+
+
+def test_empty_acceptance_rejected(tmp_path):
+    board = json.loads((REAL_BOARD_PATH).read_text())
+    board["tasks"][0]["acceptance"] = "   "
+    problems = verify(board)
+    assert any("empty acceptance" in p for p in problems)
+
+
+def test_empty_verification_rejected(tmp_path):
+    board = json.loads((REAL_BOARD_PATH).read_text())
+    board["tasks"][0]["verification"] = ""
+    problems = verify(board)
+    assert any("empty verification" in p for p in problems)
+
+
+def test_empty_title_rejected(tmp_path):
+    board = json.loads((REAL_BOARD_PATH).read_text())
+    board["tasks"][0]["title"] = ""
+    problems = verify(board)
+    assert any("empty title" in p for p in problems)

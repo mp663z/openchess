@@ -64,6 +64,9 @@ def verify(board: dict) -> list[str]:
         missing = REQUIRED_FIELDS - set(t)
         if missing:
             problems.append(f"{t.get('id', '?')}: missing fields {sorted(missing)}")
+        for field in ("title", "acceptance", "verification"):
+            if field in t and not str(t[field]).strip():
+                problems.append(f"{t['id']}: empty {field}")
         if t.get("status") not in VALID_STATUS:
             problems.append(f"{t['id']}: invalid status {t.get('status')!r}")
         for dep in t.get("dependencies", []):
