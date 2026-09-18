@@ -65,10 +65,12 @@
    "verification": "independent review",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "92d31111f4ae71cd299e4a3cada1471efd443f18",
+   "evidence_manifest": "scope/v0.1.yaml"
   },
   {
    "id": "T0002",
@@ -44490,12 +44492,14 @@
    "verification": "independent verifier",
    "resource": "rights-cleared public corpus",
    "checkpoint": "S2",
-   "status": "in_progress",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "tags": [],
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent-foundation"
+   "claimed_by": "task-agent-foundation",
+   "done_sha": "92d31111f4ae71cd299e4a3cada1471efd443f18",
+   "evidence_manifest": "evidence/T2229.md"
   },
   {
    "id": "T2230",
@@ -45690,12 +45694,14 @@
    "verification": "independent verifier",
    "resource": "20 target users",
    "checkpoint": "H0",
-   "status": "in_progress",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "tags": [],
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent-foundation"
+   "claimed_by": "task-agent-foundation",
+   "done_sha": "92d31111f4ae71cd299e4a3cada1471efd443f18",
+   "evidence_manifest": "validation/prereg-h0.yaml"
   },
   {
    "id": "T2290",
