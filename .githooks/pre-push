@@ -6,4 +6,5 @@ if [ -d .venv ]; then . .venv/bin/activate; fi
 ruff check .
 pytest -q
 python tools/dag.py verify
+python tools/evidence_lint.py
 python tools/license_audit.py
