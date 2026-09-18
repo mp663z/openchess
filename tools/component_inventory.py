@@ -1,11 +1,13 @@
-"""T3655 v2 - Release SBOM + data/model manifest generator.
+"""T3655 v3 - Release SBOM + data/model manifest generator.
 
 Env-independent: libraries come from the locked release resolution
-(data/release-lock.json, produced by tools/lock_release.py from the canonical
-environment), never from the ambient interpreter. Model weights and bundled
-assets are discovered from packaging/asset manifests, not hardcoded.
-Staleness = inputs (requirements + dataset pins + lock) changed since
-generation; the staleness test also compares the exact regenerated library set.
+(data/release-lock.json, produced by tools/lock_release.py from PyPI metadata
+with per-target PEP 508 marker evaluation), never from the ambient
+interpreter. Every library carries exact per-target versions and artifact
+hashes. Model weights and bundled assets are discovered from
+packaging/asset manifests, not hardcoded. Staleness = inputs (requirements +
+dataset pins + lock) changed since generation; tests byte-compare the full
+regenerated manifest.
 """
 
 from __future__ import annotations
@@ -64,16 +66,30 @@ def _discover_files(dirs: tuple[str, ...]) -> list[dict]:
 
 def generate() -> dict:
     lock = json.loads(LOCK.read_text())
+    by_name: dict[str, dict] = {}
+    for target_name, target in lock["release_targets"].items():
+        for a in target["artifacts"]:
+            entry = by_name.setdefault(
+                a["name"],
+                {
+                    "name": a["name"],
+                    "requirement": a.get("requirement"),
+                    "license": a["license"],
+                    "origin": a["origin"],
+                    "direct": a["direct"],
+                    "targets": {},
+                },
+            )
+            if entry["license"] != a["license"]:
+                raise RuntimeError(f"license differs across targets for {a['name']}")
+            entry["targets"][target_name] = {
+                "version": a["version"],
+                "filename": a["filename"],
+                "sha256": a["sha256"],
+                "url": a["url"],
+            }
     libraries = [
-        {
-            "name": lib["name"],
-            "requirement": lib.get("requirement"),
-            "version": lib["version"] or "n/a (conditional, not installed at lock time)",
-            "license": lib["license"],
-            "origin": lib["origin"],
-            "direct": lib["direct"],
-        }
-        for lib in sorted(lock["libraries"], key=lambda x: (not x["direct"], x["name"].lower()))
+        by_name[n] for n in sorted(by_name, key=lambda n: (not by_name[n]["direct"], n.lower()))
     ]
     pins = yaml.safe_load(PINS.read_text())
     datasets = [
@@ -90,7 +106,7 @@ def generate() -> dict:
         for p in pins["pins"]
     ]
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_by": "tools/component_inventory.py",
         "inputs_sha256": _inputs_sha256(),
         "libraries": libraries,
