@@ -108,4 +108,4 @@ sources:
   statement_source_url: docs/research/cbh-import-feasibility.md
   transformation_permission: true
   decision: allow
-  statement_sha256: fd78b5178336bcbf4fa3d12b6936c5a7d9f815a1a354e53d22234db52800d254
+  statement_sha256: 6bbe9400a7ee86b2f4234594da20db48d8de3c72d52276b9240304e1ef4414a3
