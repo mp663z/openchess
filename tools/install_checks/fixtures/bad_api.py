@@ -1,6 +1,4 @@
-"""Seeded violation for T0021: lint error + unpinned export."""
-
-import os  # unused import (ruff F401)
+"""Seeded violation: unpinned extra export only (ruff- and type-clean)."""
 
 
 def add(a: int, b: int) -> int:

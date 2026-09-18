@@ -17,12 +17,56 @@
           "requirement": null
         },
         {
+          "name": "librt",
+          "version": "0.15.0",
+          "filename": "librt-0.15.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "sha256": "89cc46cfd15022e35084355478c9ac809d90b1152222706ac9a7655ec21df6fa",
+          "url": "https://files.pythonhosted.org/packages/a7/b9/bdbb0b648b5c2befb031f4c6f3b1dd857415e8fb492a25a3c764a6681e6c/librt-0.15.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
+          "name": "mypy",
+          "version": "1.20.2",
+          "filename": "mypy-1.20.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "sha256": "a5da6976f20cae27059ea8d0c86e7cef3de720e04c4bb9ee18e3690fdb792066",
+          "url": "https://files.pythonhosted.org/packages/b9/94/7e4634a32b641aa1c112422eed1bbece61ee16205f674190e8b536f884de/mypy-1.20.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": true,
+          "requirement": "mypy<2.0,>=1.10"
+        },
+        {
+          "name": "mypy-extensions",
+          "version": "1.1.0",
+          "filename": "mypy_extensions-1.1.0-py3-none-any.whl",
+          "sha256": "1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505",
+          "url": "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
           "name": "packaging",
           "version": "26.3",
           "filename": "packaging-26.3-py3-none-any.whl",
           "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
           "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
           "license": "Apache-2.0 OR BSD-2-Clause",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
+          "name": "pathspec",
+          "version": "1.1.1",
+          "filename": "pathspec-1.1.1-py3-none-any.whl",
+          "sha256": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+          "url": "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl",
+          "license": "Mozilla Public License 2.0 (MPL 2.0)",
           "origin": "PyPI",
           "direct": false,
           "requirement": null
@@ -83,6 +127,17 @@
           "requirement": "ruff>=0.6"
         },
         {
+          "name": "typing-extensions",
+          "version": "4.16.0",
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+          "license": "PSF-2.0",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
           "name": "zstandard",
           "version": "0.25.0",
           "filename": "zstandard-0.25.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
@@ -121,12 +176,56 @@
           "requirement": null
         },
         {
+          "name": "librt",
+          "version": "0.15.0",
+          "filename": "librt-0.15.0-cp312-cp312-win_amd64.whl",
+          "sha256": "73b30cfa976659b3917c8f6153bdb0591c6a9ec6583599fd24a689b690622022",
+          "url": "https://files.pythonhosted.org/packages/38/d0/2ae99c83be86ce23f925ac1aeeedc777e97f427c4a8d190c70d0a16e9a87/librt-0.15.0-cp312-cp312-win_amd64.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
+          "name": "mypy",
+          "version": "1.20.2",
+          "filename": "mypy-1.20.2-cp312-cp312-win_amd64.whl",
+          "sha256": "d52ad8d78522da1d308789df651ee5379088e77c76cb1994858d40a426b343b9",
+          "url": "https://files.pythonhosted.org/packages/3e/0d/47e3c3a0ec2a876e35aeac365df3cac7776c36bbd4ed18cc521e1b9d255b/mypy-1.20.2-cp312-cp312-win_amd64.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": true,
+          "requirement": "mypy<2.0,>=1.10"
+        },
+        {
+          "name": "mypy-extensions",
+          "version": "1.1.0",
+          "filename": "mypy_extensions-1.1.0-py3-none-any.whl",
+          "sha256": "1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505",
+          "url": "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
           "name": "packaging",
           "version": "26.3",
           "filename": "packaging-26.3-py3-none-any.whl",
           "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
           "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
           "license": "Apache-2.0 OR BSD-2-Clause",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
+          "name": "pathspec",
+          "version": "1.1.1",
+          "filename": "pathspec-1.1.1-py3-none-any.whl",
+          "sha256": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+          "url": "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl",
+          "license": "Mozilla Public License 2.0 (MPL 2.0)",
           "origin": "PyPI",
           "direct": false,
           "requirement": null
@@ -185,6 +284,17 @@
           "origin": "PyPI",
           "direct": true,
           "requirement": "ruff>=0.6"
+        },
+        {
+          "name": "typing-extensions",
+          "version": "4.16.0",
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+          "license": "PSF-2.0",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
         },
         {
           "name": "zstandard",

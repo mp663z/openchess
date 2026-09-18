@@ -23,8 +23,21 @@ def discover() -> list[str]:
     )
 
 
+def check_ids() -> dict[str, str]:
+    ids: dict[str, str] = {}
+    for name in discover():
+        mod = importlib.import_module(f"tools.install_checks.{name}")
+        ids[mod.CHECK_ID] = name
+    return ids
+
+
 def run_all(only: set[str] | None = None) -> list[str]:
     failures: list[str] = []
+    known = check_ids()
+    if only:
+        unknown = sorted(only - set(known))
+        if unknown:
+            return [f"unknown check id(s): {unknown} (known: {sorted(known)})"]
     for name in discover():
         mod = importlib.import_module(f"tools.install_checks.{name}")
         check_id = mod.CHECK_ID
@@ -52,7 +65,11 @@ def main() -> int:
         print(f"FAIL {f}")
     if failures:
         return 1
-    print(f"OK install checks: {len(discover())} checks, good passes + violations caught")
+    found = discover()
+    if not found:
+        print("FAIL no install checks discovered")
+        return 1
+    print(f"OK install checks: {len(found)} checks, good passes + violations caught")
     return 0
 
 

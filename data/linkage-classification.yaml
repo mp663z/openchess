@@ -32,5 +32,12 @@ components:
   lichess_standard_games: {linkage: data, deployment: local_external, distribution: not_distributed}
   lichess_puzzles:        {linkage: data, deployment: local_external, distribution: not_distributed}
   lichess_evals:          {linkage: data, deployment: local_external, distribution: not_distributed}
+  # mypy chain (dev-only type checker, T0021): mypy runs as a subprocess in
+  # CI; its imports never ship in any product artifact.
+  mypy:            {linkage: subprocess,   deployment: ci_only, distribution: not_distributed}
+  mypy-extensions: {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  pathspec:        {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  librt:           {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  typing-extensions: {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
 # Discovered files (model weights, bundled assets) classify by type:relpath.
 files: {}

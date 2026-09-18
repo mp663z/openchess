@@ -24,6 +24,48 @@ ALLOWED = {
     "MPL-2.0",
 }
 
+
+def _token_ok(tok: str) -> bool:
+    """A single SPDX license id is OK only on an exact allowlist match."""
+    t = tok.strip()
+    if not re.fullmatch(r"[A-Za-z0-9.\-]+", t):
+        return False
+    return t in ALLOWED
+
+
+def expression_ok(expr: str) -> bool:
+    """SPDX subset: OR of ANDs of bare license ids, fail closed otherwise.
+
+    OR:  any one branch may be allowed (recipient picks the license).
+    AND: every branch must be allowed (all terms apply at once).
+    Parentheses, WITH exceptions, trailing operators and unknown tokens are
+    rejected rather than guessed.
+    """
+    expr = expr.strip()
+    if not expr or "(" in expr or ")" in expr:
+        return False
+    or_parts = [p.strip() for p in re.split(r"\s+OR\s+", expr, flags=re.IGNORECASE)]
+    if any(not p for p in or_parts):
+        return False
+    for part in or_parts:
+        and_parts = re.split(r"\s+AND\s+", part, flags=re.IGNORECASE)
+        if and_parts and all(_token_ok(p) for p in and_parts):
+            return True
+    return False
+
+
+def candidate_ok(cand: str) -> bool:
+    """One candidate string (License-Expression, License field, classifier)."""
+    cand = cand.strip()
+    if not cand:
+        return False
+    if expression_ok(cand):
+        return True
+    # tolerate a trailing " License" word on free-text fields/classifiers
+    suffix = " License"
+    return cand.endswith(suffix) and expression_ok(cand[: -len(suffix)].strip())
+
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -66,10 +108,7 @@ def audit_python(names: list[str]) -> list[str]:
             if c.startswith("License")
         }
         normalized = {c.replace(" License", "").strip() for c in classifiers}
-        ok = any(
-            any(a in cand or cand in a for a in ALLOWED) for cand in candidates | normalized
-        )
-        if not ok:
+        if not any(candidate_ok(c) for c in candidates | normalized):
             found = sorted(candidates | normalized) or ["UNKNOWN"]
             problems.append(f"python:{name}: license {found}")
     return problems
