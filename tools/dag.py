@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -26,6 +27,18 @@ REQUIRED_FIELDS = {
     "spine_outcome",
     "roadmap_layer",
 }
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+def require_sha(sha: str) -> None:
+    if not SHA_RE.fullmatch(sha or ""):
+        raise DagError(f"done requires a full lowercase 40-hex SHA, got {sha!r}")
+
+
+def require_evidence(task_id: str, manifest: str) -> None:
+    want = f"evidence/{task_id}.md"
+    if manifest != want:
+        raise DagError(f"evidence manifest must be exactly {want}, got {manifest!r}")
+
+
 VALID_STATUS = {"todo", "claimed", "in_progress", "done", "blocked"}
 
 
@@ -73,10 +86,14 @@ def verify(board: dict) -> list[str]:
             if dep not in by_id:
                 problems.append(f"{t['id']}: unknown dependency {dep}")
         if t.get("status") == "done":
-            if not t.get("done_sha"):
-                problems.append(f"{t['id']}: done without done_sha")
-            if not t.get("evidence_manifest"):
-                problems.append(f"{t['id']}: done without evidence_manifest")
+            sha = t.get("done_sha") or ""
+            if not SHA_RE.fullmatch(sha):
+                problems.append(f"{t['id']}: done_sha is not a full 40-hex SHA")
+            want = f"evidence/{t['id']}.md"
+            if t.get("evidence_manifest") != want:
+                problems.append(
+                    f"{t['id']}: evidence_manifest must be exactly {want}"
+                )
     # cycle detection (Kahn)
     indeg = {t["id"]: 0 for t in tasks}
     for t in tasks:
@@ -177,10 +194,8 @@ def cmd_complete(board: dict, args: argparse.Namespace) -> int:
         raise DagError(f"unknown task {args.task_id}")
     if t["status"] in {"done"}:
         raise DagError(f"{args.task_id} already done")
-    if not args.sha:
-        raise DagError("done requires an exact SHA (--sha)")
-    if not args.evidence:
-        raise DagError("done requires an evidence manifest (--evidence)")
+    require_sha(args.sha)
+    require_evidence(args.task_id, args.evidence)
     unmet = [d for d in t["dependencies"] if by_id[d]["status"] != "done"]
     if unmet:
         raise DagError(f"{args.task_id} has unmet dependencies: {unmet}")
