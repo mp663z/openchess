@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated_by": "tools/component_inventory.py",
-  "inputs_sha256": "45734bf413b4ca6b3e151592893d8729f51c1e1e1734f44f37f44db89aeca34b",
+  "inputs_sha256": "e861e67fea4632b68fc0bab751174cc7a01d0ddec2451b0fac67c00e2af0e256",
   "libraries": [
     {
       "name": "PyYAML",
@@ -149,6 +149,16 @@
       "sha256": "5c195d7415d802216f6fe9ea4f47bba2cf768dac1568ee83a01e4806dab8933d",
       "bytes": 32379325271,
       "origin": "https://database.lichess.org/standard/lichess_db_standard_rated_2024-01.pgn.zst",
+      "license": "CC0",
+      "bundled": false
+    },
+    {
+      "name": "lichess_standard_games",
+      "snapshot": "2024-02",
+      "version": "2024-02",
+      "sha256": "91bca269dc0cb3515b1aea6820987a430c4d99a017ff1da4dab22294ffe63586",
+      "bytes": 29762409631,
+      "origin": "https://database.lichess.org/standard/lichess_db_standard_rated_2024-02.pgn.zst",
       "license": "CC0",
       "bundled": false
     }
