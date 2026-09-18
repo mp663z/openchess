@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check .
+      - name: Tests
+        run: pytest -q
+      - name: DAG integrity
+        run: python tools/dag.py verify
+      - name: License audit
+        run: python tools/license_audit.py
+      - name: Docs parse
+        run: python -c "import json,yaml,pathlib; json.load(open('tasks/dag.json')); yaml.safe_load(open('scope/v0.1.yaml')); print('docs ok', pathlib.Path('README.md').stat().st_size)"

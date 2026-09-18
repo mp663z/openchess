@@ -1,0 +1,40 @@
+# T0001 - Freeze scope (week 0, Contracts milestone)
+# Machine-readable V0.1 scope freeze.
+#
+# Source-of-truth note: task T0001's acceptance text says "exactly seven V0.1
+# capabilities". That text is stale: the v5 product report (section "Seven
+# capabilities was still a year of work dressed as four months. V0.1 is five")
+# and tasks/dag.json rules.v01_capability_count both fix V0.1 at five
+# capabilities. The v5 report is newer than the v3 seven-capability list, so
+# this freeze encodes five. Discrepancy recorded for independent review.
+schema_version: 1
+frozen_at: "2026-09-18"
+sources:
+  - docs/plan/product-report-v5.md
+  - tasks/dag.json
+capabilities:
+  - id: C1
+    name: Cross-platform desktop core with thin web/mobile habit surface
+  - id: C2
+    name: Offline operation
+  - id: C3
+    name: Crash-safe state
+  - id: C4
+    name: End-to-end encrypted sync
+  - id: C5
+    name: Complete export
+deferrals:
+  - id: D1
+    name: Account sync of games (lichess/chess.com automatic import into V0.1 files)
+    deferred_to: post-V0.1
+    note: Files/folders only in V0.1 per T2776 contract; sync transport behind replaceable contract.
+  - id: D2
+    name: SRS scheduling
+    deferred_to: post-V0.1
+    note: Cut-order named in v5 report section 11.
+  - id: D3
+    name: Layer 2 ecosystem (coach channel, referrals, titled-player experiences, 2400+ pro mode)
+    deferred_to: post-2027, gated on T4794 proving all five spine outcomes
+notes:
+  - Product code gate: T2357; week 1 carries no product code.
+  - Paid features are gated (tier gate T4763, growth gate T3871).
