@@ -10,14 +10,17 @@ A task is DONE on the board only when ALL of the following hold:
 2. **Exact SHA** - the board records the exact merge commit on main that
    carries the artifact (`dag.py complete --sha`). "On a branch", "in a PR",
    and "locally" are not done.
-3. **Evidence manifest** - evidence/TNNNN.md passes tools/evidence_lint.py:
-   - title naming the task id,
-   - at least one exact 40-hex SHA (or the literal word `pending` when the
-     task is in progress),
-   - a `Verification:` line naming the task's verification mode and, for
-     independent-review tasks, the verifier verdict with its SHA,
-   - a `Commands:` line giving the exact commands that reproduce the
-     evidence, with environment.
+3. **Evidence manifest** - evidence/TNNNN.md passes tools/evidence_lint.py
+   (strict field parsing, cross-checked against tasks/dag.json):
+   - title naming the task id;
+   - `Status: done | in-progress | pending` on its own line - prose claims
+     mean nothing; done requires the board to say done;
+   - `Recorded merge SHA on main: <40-hex>` (required when Status: done) and
+     it must EQUAL the board's done_sha;
+   - `Verification: <exact board verification mode> - <detail>`; done tasks
+     in independent/human modes need a `PASS at <sha>` verdict naming the
+     same SHA; UNVERIFIED is never done;
+   - `Commands: \`<command>\` ... Environment: <env>` reproducing the evidence.
 4. **Verifier manifest** - tasks whose verification mode is `independent
    review` / `independent verifier` / `auto + independent review` are done
    only after the independent verifier's PASS is recorded against the exact
@@ -27,15 +30,18 @@ A task is DONE on the board only when ALL of the following hold:
 
 ## Pre-contract files
 
-Evidence files written before this contract carry the marker
-`pre-contract: true` with a retroactive index line. They are grandfathered
-for structure only: the task-level rules (exact SHA on the board, verifier
-PASS for independent-review tasks) still applied when they completed. Any
-edit to a pre-contract file must bring it to the full contract.
+Grandfathering is FROZEN, not claimed: data/evidence-pre-contract.yaml pins
+the 23 grandfathered paths to the sha256 of their bytes. A file is
+grandfathered only when it carries an exact `pre-contract: true` footer line
+AND is allowlisted AND its content hash matches - an inline prose mention of
+the marker means nothing, and any edit invalidates grandfathering (the file
+must then meet the full contract). The task-level rules (exact SHA on the
+board, verifier PASS for independent-review tasks) applied when those tasks
+completed.
 
 ## Enforcement
 
 - tools/evidence_lint.py lints every evidence/*.md file; CI and the
   pre-push hook run it.
 - tools/dag.py complete refuses without --sha and --evidence (existing).
-- tests/test_evidence_contract.py locks the lint behavior with fixtures.
+- tests/test_evidence_lint.py locks the lint behavior with adversarial fixtures.

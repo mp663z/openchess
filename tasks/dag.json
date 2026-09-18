@@ -134,7 +134,7 @@
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "done_sha": "784e4ecc",
+   "done_sha": "784e4eccd06eb36b181c620e88d39cbda067fd52",
    "evidence_manifest": "evidence/T0004.md"
   },
   {
