@@ -15,7 +15,12 @@ def test_frozen_before_run():
 
 def test_fifty_repertoires_and_bands():
     assert PLAN["corpus"]["repertoires"]["count"] == 50
-    assert PLAN["selection_rules"]["rating_bands"] == ["1800-1999", "2000-2199", "2200-2399", "2400+"]
+    assert PLAN["selection_rules"]["rating_bands"] == [
+        "1800-1999",
+        "2000-2199",
+        "2200-2399",
+        "2400+",
+    ]
 
 
 def test_minimum_games_and_exclusions():
