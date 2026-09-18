@@ -25,6 +25,7 @@ import argparse
 import json
 import re
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -88,10 +89,27 @@ _LICENSE_NORMALIZE = {
 _PYPI = "https://pypi.org/pypi"
 
 
-def _get_json(url: str) -> dict:
-    req = urllib.request.Request(url, headers={"User-Agent": "release-lock/3"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read())
+def _get_json(url: str, attempts: int = 4) -> dict:
+    """Fetch JSON with retry + exponential backoff on transient failures
+    (network errors, 429, 5xx). 4xx responses other than 429 are permanent
+    and raise immediately."""
+    delay = 1.0
+    for attempt in range(attempts):
+        req = urllib.request.Request(url, headers={"User-Agent": "release-lock/3"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code < 500 and e.code != 429:
+                raise
+            if attempt == attempts - 1:
+                raise
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == attempts - 1:
+                raise
+        time.sleep(delay)
+        delay *= 2
+    raise RuntimeError("unreachable")
 
 
 def _normalize_license(lic: str) -> str:
