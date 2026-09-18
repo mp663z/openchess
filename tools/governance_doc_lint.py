@@ -112,6 +112,11 @@ PLACEHOLDER_RE = re.compile(r"\b(TODO|TBD|FIXME|PLACEHOLDER|XXX)\b")
 CODENAME_RE = re.compile("open" + "chess", re.I)  # split: self-scan safe
 
 
+OWNER_TOKEN_RE = re.compile(
+    r"^@[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?"
+    r"(?:/[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)?$"
+)
+
 MIN_SECTION_BODY = 80  # chars of real text under each required heading
 
 
@@ -185,15 +190,19 @@ def lint_doc(path: Path, rel: str) -> list[str]:
     if CODENAME_RE.search(text):
         errors.append(f"{rel}: contains product codename (use neutral naming)")
     if rel == ".github/CODEOWNERS":
-        rules = [
-            ln.split()[0] for ln in text.splitlines()
-            if ln.strip() and not ln.startswith("#")
-        ]
-        owners_ok = all(
-            "@" in ln for ln in text.splitlines() if ln.strip() and not ln.startswith("#")
-        )
-        if not owners_ok:
-            errors.append(f"{rel}: rule without an @owner")
+        rules: list[str] = []
+        for ln in text.splitlines():
+            body = ln.split("#", 1)[0].strip()  # comments carry no rule
+            if not body:
+                continue
+            tokens = body.split()
+            if len(tokens) < 2:
+                errors.append(f"{rel}: rule without an owner: {ln.strip()!r}")
+                continue
+            rules.append(tokens[0])
+            for tok in tokens[1:]:
+                if not OWNER_TOKEN_RE.fullmatch(tok):
+                    errors.append(f"{rel}: invalid owner token {tok!r}")
         for req in CODEOWNERS_REQUIRED_PATHS:
             if req not in rules:
                 errors.append(f"{rel}: no rule for {req}")
