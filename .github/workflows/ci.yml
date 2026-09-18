@@ -22,6 +22,8 @@ jobs:
         run: pytest -q
       - name: DAG integrity
         run: python tools/dag.py verify
+      - name: Evidence contract
+        run: python tools/evidence_lint.py
       - name: License audit
         run: python tools/license_audit.py
       - name: Docs parse
