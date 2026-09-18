@@ -1,6 +1,6 @@
 # Licensing policy
 
-The product (working title placeholder {{PRODUCT_NAME}}) is AGPL-3.0-only. Third-party dependencies must carry permissive
+The product is AGPL-3.0-or-later (v5 product decision). Third-party dependencies must carry permissive
 licenses so the product can ship without license conflicts and downstream
 users keep maximum freedom.
 
