@@ -54213,14 +54213,15 @@
    "verification": "auto",
    "resource": "Lichess dataset hosting/network/storage",
    "checkpoint": "",
-   "status": "todo",
+   "status": "in_progress",
    "evidence": "exact SHA + commands + environment + logs + state/pixel/model-card diff + verifier",
    "tags": [
     "lichess",
     "data"
    ],
    "spine_outcome": "O1 first plan from connected games",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent-foundation"
   },
   {
    "id": "T2714",
