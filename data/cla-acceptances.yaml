@@ -1,0 +1,5 @@
+# CLA acceptance registry (CLA.md section 7). One entry per contributor.
+# Maintainers add an entry before merging a contributor's first non-de-minimis
+# pull request. CI validates the schema; empty registry is valid pre-launch.
+schema_version: 1
+acceptances: []
