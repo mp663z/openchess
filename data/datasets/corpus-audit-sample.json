@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "source_file": "lichess_db_puzzle.csv.zst",
+  "sample_rows_requested": 20000,
+  "rows_read": 20000,
+  "bytes_read": 4194304,
+  "raw_sample_sha256": "46ed896bdab1c4c0c8c0b245f6ec750c5acc2642a97e76320950e13f74c1c225",
+  "normalized_count": 20000,
+  "quarantined_count": 0,
+  "duplicate_puzzle_ids": 0,
+  "license_tally": {
+    "CC0": 20000
+  },
+  "normalized_id_multiset_sha256": "03dbe477a359fdfe0fe33370066d3d1bad75ed33da112775672b5a1691dfa171"
+}
