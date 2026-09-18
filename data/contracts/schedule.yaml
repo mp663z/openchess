@@ -1,0 +1,21 @@
+# Schedule contract - USER-APPROVED 2026-09-19.
+# Owner decisions given over WhatsApp on 2026-09-19 (IST).
+schema_version: 1
+milestones:
+  oss_release:
+    date: "2026-09-30"
+    source: user-decision
+    approved: "2026-09-19"
+    note: repo must be public-ready; governance chain (LICENSE, NOTICE, CLA) is launch-critical
+  product_launch:
+    window: "2026-10"
+    source: user-decision
+    approved: "2026-09-19"
+    note: month-precision as stated by the owner; no day picked yet
+  revenue_target_instant:
+    date: "2026-12-31"
+    source: user-decision
+    approved: "2026-09-19"
+    note: see data/contracts/revenue-target.yaml (T3761)
+provenance:
+  - owner messages 2026-09-19, recorded in docs/plan/product-report-v5-addendum.md
