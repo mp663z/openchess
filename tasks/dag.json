@@ -75775,11 +75775,13 @@
    "verification": "independent analyst",
    "resource": "billing/analytics",
    "checkpoint": "GROWTH",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + quality/cost/privacy evidence + verifier",
    "tags": [],
    "spine_outcome": "O5 retained paid cross-device loop at acceptable cost",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "08ca95e08059",
+   "evidence_manifest": "evidence/T3761.md"
   },
   {
    "id": "T3762",
