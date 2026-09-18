@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "generated_by": "tools/component_inventory.py",
+  "inputs_sha256": "45734bf413b4ca6b3e151592893d8729f51c1e1e1734f44f37f44db89aeca34b",
+  "libraries": [
+    {
+      "name": "PyYAML",
+      "requirement": "PyYAML>=6.0",
+      "version": "6.0.3",
+      "license": "MIT",
+      "origin": "PyPI",
+      "direct": true
+    },
+    {
+      "name": "pytest",
+      "requirement": "pytest>=8.0",
+      "version": "9.1.1",
+      "license": "MIT",
+      "origin": "PyPI",
+      "direct": true
+    },
+    {
+      "name": "ruff",
+      "requirement": "ruff>=0.6",
+      "version": "0.16.8",
+      "license": "MIT",
+      "origin": "PyPI",
+      "direct": true
+    },
+    {
+      "name": "zstandard",
+      "requirement": "zstandard>=0.23",
+      "version": "0.25.0",
+      "license": "BSD-3-Clause",
+      "origin": "PyPI",
+      "direct": true
+    },
+    {
+      "name": "colorama",
+      "requirement": null,
+      "version": "n/a (conditional, not installed on this platform)",
+      "license": "BSD-3-Clause",
+      "origin": "PyPI",
+      "direct": false
+    },
+    {
+      "name": "exceptiongroup",
+      "requirement": null,
+      "version": "1.3.1",
+      "license": "MIT License",
+      "origin": "PyPI",
+      "direct": false
+    },
+    {
+      "name": "iniconfig",
+      "requirement": null,
+      "version": "2.3.0",
+      "license": "MIT",
+      "origin": "PyPI",
+      "direct": false
+    },
+    {
+      "name": "packaging",
+      "requirement": null,
+      "version": "26.3",
+      "license": "Apache-2.0 OR BSD-2-Clause",
+      "origin": "PyPI",
+      "direct": false
+    },
+    {
+      "name": "pluggy",
+      "requirement": null,
+      "version": "1.6.0",
+      "license": "MIT",
+      "origin": "PyPI",
+      "direct": false
+    },
+    {
+      "name": "pygments",
+      "requirement": null,
+      "version": "2.21.0",
+      "license": "BSD-2-Clause",
+      "origin": "PyPI",
+      "direct": false
+    },
+    {
+      "name": "tomli",
+      "requirement": null,
+      "version": "2.4.1",
+      "license": "MIT",
+      "origin": "PyPI",
+      "direct": false
+    },
+    {
+      "name": "typing-extensions",
+      "requirement": null,
+      "version": "4.16.0",
+      "license": "PSF-2.0",
+      "origin": "PyPI",
+      "direct": false
+    }
+  ],
+  "engines": [
+    {
+      "name": "stockfish",
+      "version": "19",
+      "origin": "https://stockfishchess.org/",
+      "license": "GPL-3.0",
+      "bundled": false,
+      "note": "external process, invoked over UCI; not linked, not distributed"
+    }
+  ],
+  "model_weights": [],
+  "datasets": [
+    {
+      "name": "lichess_standard_games",
+      "snapshot": "2026-08",
+      "version": "2026-08",
+      "sha256": "63ac22f4ce579f7c2c646ab0ca8872858d73839f96eb3d4ab5112e4a64730a5c",
+      "bytes": 30145862359,
+      "origin": "https://database.lichess.org/standard/lichess_db_standard_rated_2026-08.pgn.zst",
+      "license": "CC0",
+      "bundled": false
+    },
+    {
+      "name": "lichess_puzzles",
+      "snapshot": "2026-09-09",
+      "version": "2026-09-09",
+      "sha256": "95fd454bec9efe8f940d5863d5db4c57474f281a865834997bd8cb5d6a149bb9",
+      "bytes": 304429328,
+      "origin": "https://database.lichess.org/lichess_db_puzzle.csv.zst",
+      "license": "CC0",
+      "bundled": false
+    },
+    {
+      "name": "lichess_evals",
+      "snapshot": "2026-09-10",
+      "version": "2026-09-10",
+      "sha256": "47f136a42e8e5414a81f3d50a92c7bae9ff41d3c84f091fefdce80d79eb3bd6c",
+      "bytes": 22086532809,
+      "origin": "https://database.lichess.org/lichess_db_eval.jsonl.zst",
+      "license": "CC0",
+      "bundled": false
+    },
+    {
+      "name": "lichess_standard_games",
+      "snapshot": "2024-01",
+      "version": "2024-01",
+      "sha256": "5c195d7415d802216f6fe9ea4f47bba2cf768dac1568ee83a01e4806dab8933d",
+      "bytes": 32379325271,
+      "origin": "https://database.lichess.org/standard/lichess_db_standard_rated_2024-01.pgn.zst",
+      "license": "CC0",
+      "bundled": false
+    }
+  ],
+  "bundled_assets": []
+}

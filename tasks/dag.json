@@ -73546,14 +73546,15 @@
    "verification": "auto + independent review",
    "resource": "release artifacts",
    "checkpoint": "",
-   "status": "todo",
+   "status": "in_progress",
    "evidence": "release SHA + dependency/data inventory + licenses + notices/source offer + auditor",
    "tags": [
     "license",
     "release"
    ],
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent-foundation"
   },
   {
    "id": "T3656",
