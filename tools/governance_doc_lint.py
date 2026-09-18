@@ -32,7 +32,14 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "corresponding source scope",
         "trademarks, data, and models",
     ],
+    "SECURITY.md": [
+        "reporting a vulnerability",
+        "supported versions",
+        "scope and disclosure",
+        "hardening notes",
+    ],
 }
+
 
 # paths that must each have a CODEOWNERS rule (when CODEOWNERS is registered)
 CODEOWNERS_REQUIRED_PATHS = [
