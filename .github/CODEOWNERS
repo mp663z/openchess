@@ -1,4 +1,5 @@
-# Code owners - review routing and merge rights.
+# Code owners - pull request review routing only.
+# Merge rights live in repository settings, not in this file.
 # The project owner holds final authority (GOVERNANCE.md).
 # The build account below is the owner's publication account;
 # One account owns everything until maintainers are named.
@@ -10,6 +11,7 @@ LICENSE                 @mp663z
 NOTICE                  @mp663z
 CLA.md                  @mp663z
 DCO.md                  @mp663z
+CONTRIBUTING.md         @mp663z
 GOVERNANCE.md           @mp663z
 TRADEMARK.md            @mp663z
 SECURITY.md             @mp663z

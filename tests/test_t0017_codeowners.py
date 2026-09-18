@@ -23,3 +23,20 @@ def test_codeowners_content_exact():
         assert any(ln.startswith(path) for ln in lines), path
     # every rule names an owner
     assert all("@" in ln for ln in lines)
+
+
+def test_contributing_owned_and_routing_wording():
+    text = (ROOT / ".github/CODEOWNERS").read_text()
+    lines = [ln for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+    assert any(ln.startswith("CONTRIBUTING.md") for ln in lines)
+    head = " ".join(text.split()).lower()
+    assert "review routing" in head
+    assert "merge rights live in repository settings" in head
+    assert "routing and merge rights" not in head
+
+
+def test_lint_is_structural_not_substring():
+    """A rules file missing a required path must fail the lint."""
+    lint = (ROOT / "tools/governance_doc_lint.py").read_text()
+    assert "CODEOWNERS_REQUIRED_PATHS" in lint
+    assert "no rule for" in lint
