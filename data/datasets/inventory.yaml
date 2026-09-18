@@ -1,0 +1,64 @@
+# T2710 - Dataset inventory (auto-verified by tests/test_dataset_inventory.py)
+# Measured 2026-09-18 via HTTPS HEAD/GET against the listed URLs.
+schema_version: 1
+measured_at: "2026-09-18"
+datasets:
+  - id: lichess_standard_games
+    kind: games
+    publisher: lichess.org
+    landing_url: https://database.lichess.org/
+    list_url: https://database.lichess.org/standard/list.txt
+    url_pattern: https://database.lichess.org/standard/lichess_db_standard_rated_{YYYY-MM}.pgn.zst
+    latest_snapshot: "2026-08"
+    snapshots_available: 163
+    first_snapshot: "2013-01"
+    release_cadence: monthly
+    format: PGN (rated standard games)
+    compression: zstd
+    latest_size_bytes: 30145862359
+    checksum_mechanism: publisher provides content-length and ETag only; no published cryptographic checksum; pipeline pins sha256 after first fetch (see snapshot-pins.yaml)
+    schema: PGN tag pairs + movetext; headers include UTCDate, UTCTime, WhiteElo, BlackElo, TimeControl, Termination
+  - id: lichess_puzzles
+    kind: puzzles
+    publisher: lichess.org
+    landing_url: https://database.lichess.org/#puzzles
+    download_url: https://database.lichess.org/lichess_db_puzzle.csv.zst
+    record_count: 6100952
+    file_updated: "2026-09-09"
+    release_cadence: rolling (regenerated, dated on page)
+    format: CSV, header PuzzleId,FEN,Moves,Rating,RatingDeviation,Popularity,NbPlays,Themes,GameUrl,OpeningTags,DailyDate
+    compression: zstd
+    size_bytes: 304429328
+    checksum_mechanism: publisher provides content-length and ETag only; pipeline pins sha256 after first fetch
+  - id: lichess_evals
+    kind: evaluations
+    publisher: lichess.org
+    landing_url: https://database.lichess.org/#evals
+    download_url: https://database.lichess.org/lichess_db_eval.jsonl.zst
+    record_count: 409710113
+    file_updated: "2026-09-10"
+    release_cadence: rolling (regenerated, dated on page)
+    format: JSONL; one position per line {fen, evals:[{knodes, depth, pvs:[{cp|mate, line (UCI_Chess960)}]}]}
+    compression: zstd
+    size_bytes: 22086532809
+    checksum_mechanism: publisher provides content-length and ETag only; pipeline pins sha256 after first fetch
+  - id: lichess_broadcasts
+    kind: broadcasts
+    publisher: lichess.org
+    landing_url: https://lichess.org/broadcast
+    api_url: https://lichess.org/api/broadcast/top
+    api_docs: https://lichess.org/api#tag/Broadcasts
+    release_cadence: per-event
+    format: JSON API; per-round PGN export endpoints
+    compression: none
+    checksum_mechanism: none published; snapshot via API response bytes, sha256 after fetch
+  - id: lichess_elite_database
+    kind: elite_games
+    publisher: nikonoel.fr (community derivative of lichess CC0 standard dumps)
+    landing_url: https://database.nikonoel.fr/
+    selection: "2400+ vs 2200+ rated, no bullet (from 2021-12: 2500+ vs 2300+)"
+    coverage: "2013-01 through 2024-04 (2013..2020-05 torrent/7z; monthly zip 2020-06..2022-12; 2023-01..2024-04 community-generated)"
+    release_cadence: monthly (community maintained; currently stale since 2024-04)
+    format: PGN
+    compression: zip / 7z
+    checksum_mechanism: none published; sha256 after fetch

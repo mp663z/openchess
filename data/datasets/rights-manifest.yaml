@@ -1,0 +1,43 @@
+# T2711 - Dataset-specific license proof / rights manifest
+# Rule: missing terms FAIL CLOSED (dataset excluded from acquisition until resolved).
+schema_version: 1
+measured_at: "2026-09-18"
+rights:
+  - dataset: lichess_standard_games
+    license: CC0-1.0
+    license_statement: "Database exports are released under the Creative Commons CC0 license. Use them for research, commercial purpose, publication, anything you like. You can download, modify and redistribute them, without asking for permission."
+    license_statement_url: https://database.lichess.org/
+    license_text_url: https://creativecommons.org/publicdomain/zero/1.0/
+    transformation_permission: true
+    obligations: none
+    decision: allow
+  - dataset: lichess_puzzles
+    license: CC0-1.0
+    license_statement: "Database exports are released under the Creative Commons CC0 license."
+    license_statement_url: https://database.lichess.org/
+    license_text_url: https://creativecommons.org/publicdomain/zero/1.0/
+    transformation_permission: true
+    obligations: none
+    decision: allow
+  - dataset: lichess_evals
+    license: CC0-1.0
+    license_statement: "Database exports are released under the Creative Commons CC0 license."
+    license_statement_url: https://database.lichess.org/
+    license_text_url: https://creativecommons.org/publicdomain/zero/1.0/
+    transformation_permission: true
+    obligations: none
+    decision: allow
+  - dataset: lichess_broadcasts
+    license: unknown
+    license_statement: ""
+    license_statement_url: https://lichess.org/broadcast
+    transformation_permission: false
+    obligations: unresolved - no license terms located for broadcast PGN exports
+    decision: fail_closed
+  - dataset: lichess_elite_database
+    license: CC0-derived-unstated
+    license_statement: "This is a collection of lichess.org games from https://database.lichess.org/ (filtered); no separate license terms stated on the site."
+    license_statement_url: https://database.nikonoel.fr/
+    transformation_permission: true
+    obligations: CC0 lineage imposes none; site terms unstated - flagged for independent verifier
+    decision: allow_with_flag
