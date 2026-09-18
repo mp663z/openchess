@@ -1,0 +1,52 @@
+# T3761 - Revenue target contract (v5 report sections 1, 10, Appendix C).
+# Machine-readable source of truth for the 2027 business goal.
+schema_version: 1
+target:
+  name: 2027 paying-user goal
+  active_paying_users: 1000
+  # "during 2027" made exact: the count of active paying users at the target
+  # instant below.
+  target_date: "2027-12-31T23:59:59Z"
+  measurement: >-
+    Count of subscriptions in good standing with a successful charge within
+    the trailing 35 days at the target instant.
+price:
+  monthly:
+    - {currency: EUR, amount: 8}
+    - {currency: USD, amount: 10}
+  notes: >-
+    EUR 8 inside the honest ChessTempo band; USD 10 parity. One price per
+    market; no per-user negotiation (coach revenue share handled separately,
+    capped inside the ~90% margin guardrail).
+currency:
+  presentment_currencies: [EUR, USD]
+  reporting_currency: EUR
+  fx_rule: >-
+    USD charges convert to EUR at the ECB euro reference rate published on the
+    charge date; if unpublished that day, the most recent prior rate.
+tax:
+  rule: >-
+    EU consumer prices are VAT-inclusive; VAT/GST collected is remitted and is
+    NEVER revenue. Sales-tax-exclusive markets charge tax on top where
+    required.
+refunds:
+  policy: >-
+    14-day no-questions refund (EU consumer right baseline); refunds are
+    netted from net revenue in the month the refund is issued.
+net_revenue:
+  definition: gross_charges - refunds - taxes_remitted - payment_processing_fees
+  notes: >-
+    Annualized reference at target: 1000 users x EUR 8 x 12 = EUR 96,000 ARR
+    gross; the ~90% margin guardrail applies to net revenue after direct
+    costs (payment fees, infrastructure, model/provider costs, coach share).
+funnel:
+  visitors_during_2027: 100000
+  visitor_to_free: 0.05
+  active_free_users: 5000
+  free_to_paid: 0.20
+  rule: >-
+    Derived backwards from the paying-user target; re-derived monthly from
+    real numbers once instruments (landing-page test, beta) report.
+provenance:
+  - product report v5, sections 1 (committed goal), 10 (pricing/funnel), Appendix C (funnel rows)
+checkpoint: GROWTH
