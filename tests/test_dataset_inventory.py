@@ -14,7 +14,7 @@ REQUIRED_KINDS = {"games", "puzzles", "evaluations", "broadcasts", "elite_games"
 
 def test_inventory_covers_required_datasets():
     kinds = {d["kind"] for d in INV["datasets"]}
-    assert REQUIRED_KINDS <= kinds
+    assert kinds >= REQUIRED_KINDS
 
 
 def test_inventory_fields_complete_and_https():
