@@ -20,3 +20,11 @@ def test_security_content_exact():
     assert "90 days" in text
     assert "sbom" in text
     assert "do not open a public issue" in text
+
+
+def test_contact_and_sbom_claims_are_real():
+    text = " ".join((ROOT / "SECURITY.md").read_text().lower().split())
+    assert "private vulnerability reporting on github" in text
+    assert "security contact field" not in text
+    assert ".github/workflows/release.yml" in (ROOT / "SECURITY.md").read_text()
+    assert "checksums.sha256" in text

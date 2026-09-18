@@ -2,9 +2,9 @@
 
 ## Reporting a vulnerability
 
-Report security vulnerabilities privately to the security contact published
-in the repository profile (SECURITY contact field). Do not open a public
-issue for an unpatched vulnerability. Include: affected version or commit,
+Report security vulnerabilities privately through the repository's private
+vulnerability reporting on GitHub (see the Contact section of the README).
+Do not open a public issue for an unpatched vulnerability. Include: affected version or commit,
 reproduction steps, impact, and whether you believe the issue is already
 being exploited.
 
@@ -36,7 +36,9 @@ conducted within this policy.
 
 ## Hardening notes
 
-- Release artifacts ship with an SBOM and checksums; verify before running.
+- Tagged releases build an SBOM (tools/component_inventory.py) and
+  checksums.sha256 in .github/workflows/release.yml; verify artifacts
+  before running.
 - License and dataset/model rights audits fail closed in CI.
 - User data stored locally stays local; telemetry, when added, will be
   opt-in and documented.
