@@ -8,7 +8,7 @@ pins:
     url: https://database.lichess.org/standard/lichess_db_standard_rated_2026-08.pgn.zst
     expected_bytes: 30145862359
     etag: null
-    sha256: pending-measurement
+    sha256: 63ac22f4ce579f7c2c646ab0ca8872858d73839f96eb3d4ab5112e4a64730a5c
   - dataset: lichess_puzzles
     snapshot: "2026-09-09"
     url: https://database.lichess.org/lichess_db_puzzle.csv.zst
