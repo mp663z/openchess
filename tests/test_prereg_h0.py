@@ -35,3 +35,11 @@ def test_decision_rule_threshold_and_paths():
 
 def test_amendments_appended_not_rewritten():
     assert PREREG["amendments"] == []
+
+
+def test_external_timestamp_evidence():
+    ev = PREREG["registration"]["timestamp_evidence"]
+    assert ev["kind"] == "external_registry_commit"
+    assert len(ev["commit_sha"]) == 40
+    assert ev["registry_recorded_at"]
+    assert ev["h1_artifact_present_at_registration"] is False

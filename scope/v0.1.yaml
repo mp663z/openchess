@@ -2,39 +2,85 @@
 # Machine-readable V0.1 scope freeze.
 #
 # Source-of-truth note: task T0001's acceptance text says "exactly seven V0.1
-# capabilities". That text is stale: the v5 product report (section "Seven
-# capabilities was still a year of work dressed as four months. V0.1 is five")
-# and tasks/dag.json rules.v01_capability_count both fix V0.1 at five
-# capabilities. The v5 report is newer than the v3 seven-capability list, so
-# this freeze encodes five. Discrepancy recorded for independent review.
-schema_version: 1
+# capabilities". That text is stale: the v5 product report (section 11, "V0.1
+# is five") and tasks/dag.json rules.v01_capability_count both fix V0.1 at
+# five. The v5 report is newer than the v3 seven-capability list, so this
+# freeze encodes five PRODUCT capabilities per v5 section 11 lines 396-400.
+schema_version: 2
 frozen_at: "2026-09-18"
 sources:
-  - docs/plan/product-report-v5.md
+  - docs/plan/product-report-v5.md (section 11, V0.1 scope after the cut)
   - tasks/dag.json
 capabilities:
   - id: C1
-    name: Cross-platform desktop core with thin web/mobile habit surface
+    name: Import
+    detail: >-
+      PGN files and folders, dropped or watched, plus one-connect
+      Lichess/Chess.com account sync on the casual path. Pro path keeps
+      PGN-drop and CBH as primary. Sync is scoped to the casual onboarding
+      fork - nothing broader.
   - id: C2
-    name: Offline operation
+    name: Search
+    detail: By player, position, move sequence.
   - id: C3
-    name: Crash-safe state
+    name: Personal memory
+    detail: >-
+      Comments, engine analysis and source games retrieved by position, with
+      full provenance, regardless of which file they came from.
   - id: C4
-    name: End-to-end encrypted sync
+    name: Repertoire + Delta + Diagnosis
+    detail: >-
+      Versioned lines with transposition-correct matching; the scoring
+      function (v5 section 7) computed on every import; recurring-error
+      diagnosis over the user's own games, feeding the weekly plan.
   - id: C5
-    name: Complete export
+    name: Review + Training on the web/mobile habit surface
+    detail: >-
+      Approve/reject against cited evidence with visible diffs; the three-item
+      weekly plan and drills built from the user's own positions; E2E
+      encrypted sync to the desktop core. Anki/Chessable export ships
+      alongside as a feature, not the training story.
 deferrals:
   - id: D1
-    name: Account sync of games (lichess/chess.com automatic import into V0.1 files)
-    deferred_to: post-V0.1
-    note: Files/folders only in V0.1 per T2776 contract; sync transport behind replaceable contract.
+    name: Account sync beyond the casual one-connect flow
+    deferred_to: rest of V0.2
   - id: D2
-    name: SRS scheduling
-    deferred_to: post-V0.1
-    note: Cut-order named in v5 report section 11.
+    name: CBH import
+    deferred_to: spike-gated beta connector (v5 section 4, S1)
   - id: D3
+    name: Native mobile app
+    deferred_to: post-V0.1 (web surface covers the behaviour)
+  - id: D4
+    name: Team collaboration
+    deferred_to: post-V0.1
+  - id: D5
+    name: Remote workers
+    deferred_to: post-V0.1
+  - id: D6
+    name: Plugin marketplace
+    deferred_to: post-V0.1
+  - id: D7
+    name: CQL
+    deferred_to: post-V0.1
+  - id: D8
+    name: Provider marketplace
+    deferred_to: post-V0.1
+  - id: D9
+    name: Visual agent canvas
+    deferred_to: post-V0.1
+  - id: D10
+    name: Air-gapped packages
+    deferred_to: post-V0.1
+  - id: D11
+    name: SRS scheduling
+    deferred_to: post-V0.1 (cut-order named in v5 report section 11)
+  - id: D12
     name: Layer 2 ecosystem (coach channel, referrals, titled-player experiences, 2400+ pro mode)
     deferred_to: post-2027, gated on T4794 proving all five spine outcomes
 notes:
-  - Product code gate: T2357; week 1 carries no product code.
-  - Paid features are gated (tier gate T4763, growth gate T3871).
+  - "Product code gate: T2357; week 1 carries no product code."
+  - "Paid features are gated (tier gate T4763, growth gate T3871)."
+  - >-
+    Discrepancy record: T0001 acceptance text says exactly seven V0.1
+    capabilities; v5 report section 11 supersedes it with five. Recorded for
+    independent review.
