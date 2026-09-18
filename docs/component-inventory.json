@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "generated_by": "tools/component_inventory.py",
+  "inputs_sha256": "45734bf413b4ca6b3e151592893d8729f51c1e1e1734f44f37f44db89aeca34b",
   "libraries": [
     {
       "name": "PyYAML",
