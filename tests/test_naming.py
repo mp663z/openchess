@@ -13,7 +13,8 @@ import brand
 
 ROOT = Path(__file__).resolve().parent.parent
 PLACEHOLDER = "{{PRODUCT_NAME}}"
-TEXT_GLOBS = ("*.py", "*.md", "*.yaml", "*.yml", "*.toml", "*.json", "*.txt")
+TEXT_SUFFIXES = (".py", ".md", ".yaml", ".yml", ".toml", ".json", ".txt")
+# Extensionless / dotfile tracked text files are scanned too (LICENSE, hooks).
 
 # Explicit exceptions with justification (path, pattern that must match the line).
 ALLOWLIST = {
@@ -25,12 +26,13 @@ URL_PATTERN = re.compile(r"github\.com/mp663z/openchess")  # factual repo addres
 
 
 def tracked_text_files() -> list[str]:
-    out = []
-    for pattern in TEXT_GLOBS:
-        out += subprocess.run(
-            ["git", "ls-files", pattern], cwd=ROOT, capture_output=True, text=True, check=True
-        ).stdout.split()
-    return sorted(set(out))
+    all_files = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.split()
+    return sorted(
+        f for f in all_files
+        if f.endswith(TEXT_SUFFIXES) or "." not in Path(f).name or Path(f).name.startswith(".")
+    )
 
 
 def codename_lines(path: Path) -> list[str]:
