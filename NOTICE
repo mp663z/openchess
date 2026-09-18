@@ -1,0 +1,43 @@
+NOTICE - Network Use and Source Offer
+
+This project is free software licensed under the GNU Affero General Public
+License, version 3 or any later version (AGPL-3.0-or-later). See the LICENSE
+file for the full license text.
+
+Network use
+-----------
+If you interact with this software, or a modified version of it, over a
+network (for example through a hosted web or API service), section 13 of the
+AGPL entitles you to receive the Corresponding Source of that version. The
+operators of this service honor that entitlement for every user of the
+network service, not only for those who received a copy of the software.
+
+Source offer
+------------
+The Corresponding Source for the version of the software behind this network
+service is available at no charge from the public source repository linked
+from the project README. Each deployed release is tagged, and every release
+artifact ships with a software bill of materials (SBOM) and checksums so you
+can verify which source revision you are interacting with.
+
+If the repository is unreachable or the source for the deployed version is
+not identifiable, you may request the Corresponding Source in writing via the
+contact address published in the repository, and the operators will provide
+it under AGPL-3.0-or-later without further conditions.
+
+Corresponding source scope
+--------------------------
+"Corresponding Source" has the meaning given in section 1 of the AGPL: all
+source code needed to generate, install, and (for an executable work) run
+the object code and to modify the work, including scripts used to control
+those activities. It does not include the operating system, system
+libraries, general-purpose tools, or generally available free programs used
+unmodified in performing those activities but not part of the work.
+
+Trademarks, data, and models
+----------------------------
+This notice concerns copyright licensing of the source code only. Project
+trademarks are covered by TRADEMARK.md; datasets, models, and third-party
+components are covered by the rights policy in docs/rights-policy.md and the
+license audit. No rights beyond those stated there are granted by this
+notice.
