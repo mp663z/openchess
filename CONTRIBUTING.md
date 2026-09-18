@@ -23,10 +23,10 @@ This guide is the short path from idea to merged pull request.
 
 1. Branch per task cluster; keep the tree lint-clean before pushing (the
    pre-push hook runs the full gate: style, tests, registry verify, license
-   audit, evidence lint).
+   audit, license lint, evidence lint, governance docs lint).
 2. CI must be green: unit and contract tests, style checks, release-lock
    freshness, SBOM regeneration when locked inputs change, evidence lint,
-   naming scan.
+   governance docs lint, naming scan.
 3. One logical change per pull request. Squash-merged after review.
 4. Independent-review tasks are not marked done by the author. They are
    routed to the independent verifier with the merge SHA and done only on
@@ -34,8 +34,9 @@ This guide is the short path from idea to merged pull request.
 
 ## Legal
 
-- Most contributions require the Contributor License Agreement (CLA.md);
-  the automated CLA check records acceptance on your first pull request.
+- Most contributions require the Contributor License Agreement (CLA.md):
+  state your acceptance in your first pull request; a maintainer records it
+  in data/cla-acceptances.yaml before merge.
 - De minimis contributions (typo scale; see DCO.md for the exact bounds)
   may instead carry a `Signed-off-by:` trailer certifying the Developer
   Certificate of Origin.
@@ -46,7 +47,9 @@ This guide is the short path from idea to merged pull request.
 
 Be direct, be kind, assume competence. Harassment, personal attacks, and
 bad-faith review are not acceptable. Maintainers may remove content and
-suspend participation; see GOVERNANCE.md for appeals.
+suspend participation. Appeal a moderation decision to the project owner
+(contact in the README); the owner's decision is final. GOVERNANCE.md
+carries the same rule.
 
 ## Development setup
 
