@@ -89,4 +89,5 @@ CLA-required change whose author has no registry entry loaded from the
 trusted base ref - an entry added inside the pull request itself does not
 count. The gate verifies each referenced pull request through the GitHub
 API: it must be authored by the registered handle and contain the exact
-acceptance statement in its body or in a comment by that author.
+acceptance statement as a standalone line in its body or in a comment by
+that author.

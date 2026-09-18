@@ -104,9 +104,9 @@ def test_verify_acceptance_paths(monkeypatch):
         cla_check, "_gh_api",
         fake_api(body="", comments=[
             {"user": {"login": "octocat"},
-             "body": f"noting: {cla_check.ACCEPTANCE_STATEMENT}"},
+             "body": f"\n{cla_check.ACCEPTANCE_STATEMENT}\n"},
         ]))
-    cla_check.verify_acceptance("octocat", e)  # author comment passes
+    cla_check.verify_acceptance("octocat", e)  # standalone-line comment passes
     monkeypatch.setattr(
         cla_check, "_gh_api",
         fake_api(body="", comments=[
@@ -173,3 +173,15 @@ def test_pr_gate_unregistered_and_de_minimis(tmp_path, monkeypatch):
 def test_ci_wires_the_gate():
     ci = (ROOT / ".github/workflows/ci.yml").read_text()
     assert "python tools/cla_check.py" in ci
+
+
+def test_acceptance_must_be_standalone_line():
+    s = cla_check.ACCEPTANCE_STATEMENT
+    assert cla_check._has_acceptance(f"\n  {s}  \n")  # whitespace ok
+    assert not cla_check._has_acceptance(
+        f'I do not agree; the requested phrase was "{s}"')
+    assert not cla_check._has_acceptance(f"please write: {s}")
+    assert not cla_check._has_acceptance(f"{s} today")
+    assert not cla_check._has_acceptance(f'"{s}"')
+    assert not cla_check._has_acceptance("")
+    assert not cla_check._has_acceptance(None)

@@ -140,7 +140,15 @@ def _gh_api(endpoint: str) -> dict | list:
 
 
 def _has_acceptance(text: str | None) -> bool:
-    return bool(text) and ACCEPTANCE_STATEMENT in text
+    """Affirmative consent: the exact statement as a standalone normalized
+    line. Substring hits inside prose, negations, or quotations do not
+    count."""
+    if not text:
+        return False
+    return any(
+        " ".join(line.split()) == ACCEPTANCE_STATEMENT
+        for line in text.splitlines()
+    )
 
 
 def verify_acceptance(handle: str, entry: dict, repo: str | None = None) -> None:
