@@ -83,10 +83,11 @@ def download(
         written = _fetch_range(url, have, out, budget=first_call_budget)
 
     total = part.stat().st_size
+    _ = written
     if expected_bytes is not None and total != expected_bytes:
-        raise DownloadError(f"incomplete: have {total}, want {expected_bytes} bytes; rerun to resume")
-    if total == (resumed_from + written) and expected_bytes is None:
-        pass
+        raise DownloadError(
+            f"incomplete: have {total}, want {expected_bytes} bytes; rerun to resume"
+        )
 
     sha = hashlib.sha256()
     with part.open("rb") as f:

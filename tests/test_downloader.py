@@ -3,7 +3,6 @@
 import hashlib
 import http.server
 import threading
-from pathlib import Path
 
 import pytest
 
