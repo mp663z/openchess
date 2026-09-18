@@ -1,33 +1,37 @@
-# T0005 - License boundary freeze.
-# Rule: ALL chess features, all local-first code, and all BYOM (bring your own
-# model/provider) code are AGPL-3.0. The private side may contain ONLY the
-# enumerated control-plane areas. Anything not enumerated defaults to AGPL.
 schema_version: 1
-frozen_at: "2026-09-19"
+frozen_at: '2026-09-19'
 product_license: AGPL-3.0-only
 agpl_covers:
-  - all chess features (import, search, memory, repertoire, delta, diagnosis, review, training)
-  - all local-first client code (core, desktop shell, thin surfaces)
-  - all BYOM/provider-neutral model access code (client-side provider adapters)
-  - data tooling that ships with or feeds the product corpus pipeline
+- all chess features (import, search, memory, repertoire, delta, diagnosis, review,
+  training)
+- all local-first client code (core, desktop shell, thin surfaces)
+- all BYOM/provider-neutral model access code (client-side provider adapters)
+- data tooling that ships with or feeds the product corpus pipeline
 private_side_only:
-  - identity
-  - billing
-  - entitlements
-  - quota
-  - provider routing and provider keys
-  - abuse and admin
-  - ops
+- identity
+- billing
+- entitlements
+- quota
+- provider routing and provider keys
+- abuse and admin
+- ops
 default_rule: anything not enumerated under private_side_only is AGPL-3.0-only
 repo_areas:
-  ingest: agpl
+  .githooks: agpl
+  .github: agpl
   backtest: agpl
   brand: agpl
-  tools: agpl
-  docs: agpl
   data: agpl
-  validation: agpl
+  docs: agpl
   evidence: agpl
-  core: agpl        # future Rust core
-  app: agpl         # future Tauri+TS shell
-  control-plane: private   # future private repo; only the enumerated areas
+  ingest: agpl
+  scope: agpl
+  tasks: agpl
+  tests: agpl
+  tools: agpl
+  validation: agpl
+  core: agpl (planned Rust core)
+  app: agpl (planned Tauri+TS shell)
+  control-plane: private (planned private repo; only the enumerated areas)
+root_files: agpl (LICENSE, README.md, pyproject.toml, requirements*.txt, .gitignore,
+  licensing-boundary.yaml and any future root file by default rule)
