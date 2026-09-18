@@ -80,7 +80,9 @@ Corresponding Source, consistent with the NOTICE file.
 
 You accept this CLA by stating your acceptance in your first pull request
 ("I accept the CLA in CLA.md"). Before that pull request merges, a
-maintainer records your GitHub handle and acceptance reference in
-data/cla-acceptances.yaml; CI validates the registry's format. A pull
-request from a contributor with no registry entry is not merged (de minimis
-contributions excepted, per DCO.md).
+maintainer records your GitHub handle, acceptance timestamp, and pull
+request reference in data/cla-acceptances.yaml. The pull request CI gate
+(tools/cla_check.py) reads the PR author from the trusted GitHub event
+payload, classifies the change against the de minimis bounds in DCO.md from
+the actual diff, and fails a CLA-required change whose author has no
+registry entry.
