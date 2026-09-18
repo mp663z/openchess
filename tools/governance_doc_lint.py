@@ -25,6 +25,12 @@ MIN_BYTES = 400
 
 # doc path (repo-relative) -> required headings, exact after normalization
 REQUIRED_HEADINGS: dict[str, list[str]] = {
+    "DCO.md": [
+        "developer certificate of origin and de minimis contributions",
+        "developer certificate of origin",
+        "sign-off",
+        "de minimis contributions",
+    ],
     "NOTICE": [
         "network use and source offer",
         "network use",
