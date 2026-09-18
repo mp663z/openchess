@@ -81,8 +81,42 @@ def test_funnel_internally_consistent():
 def test_provenance_distinguishes_report_from_user_decisions():
     prov = CONTRACT["provenance"]
     assert any("1000" in p for p in prov["report_verbatim"])
-    assert any("2026-12-31" in p for p in prov["user_approved_2026_09_19"])
-    assert len(prov["user_approved_2026_09_19"]) == 6
+    assert "user_approved_2026_09_19" not in prov  # v2 claim removed in v3
+
+
+def test_policy_bundle_provenance_is_proposal_plus_reply():
+    od = CONTRACT["provenance"]["owner_policy_decision"]
+    prop, reply = od["proposal"], od["reply"]
+    assert prop["wamid"] == (
+        "wamid.HBgMOTE4MTIxNzk4Mjg1FQIAERgSMkY5NjUyM0VDQ0MwRkVBQ0JFAA=="
+    )
+    assert prop["at"] == "2026-09-19T03:20:26+05:30"
+    assert len(prop["items"]) == 5
+    assert "2027" in prop["items"][0]  # proposal said 2027
+    assert reply["wamid"] == (
+        "wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0I4MzQ3RDlBN0VGQ0Y3MDA1QjcA"
+    )
+    assert reply["at"] == "2026-09-19T03:21:01+05:30"
+    assert "2026" in reply["effect"]
+    assert "2026-12-31T23:59:59Z" in reply["effect"]
+    # the terse schedule messages must not be cited as policy approval
+    sched = CONTRACT["provenance"]["schedule_decisions"]
+    assert sched["launch"]["wamid"] != reply["wamid"]
+    assert "do not by themselves approve" in od["note"]
+
+
+def test_schedule_provenance_wamids():
+    sched = CONTRACT["provenance"]["schedule_decisions"]
+    assert sched["launch"]["value"] == "2026-10"
+    assert sched["oss_release"]["value"] == "2026-09-30"
+    assert sched["launch"]["at"] == "2026-09-19T03:21:11+05:30"
+    assert sched["oss_release"]["at"] == "2026-09-19T03:21:17+05:30"
+    sp = SCHEDULE["provenance"]
+    assert sp["product_launch"]["wamid"] == sched["launch"]["wamid"]
+    assert sp["oss_release"]["wamid"] == sched["oss_release"]["wamid"]
+    assert sp["revenue_target"]["reply_wamid"] == (
+        "wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0I4MzQ3RDlBN0VGQ0Y3MDA1QjcA"
+    )
 
 
 def test_schedule_contract_records_owner_milestones():

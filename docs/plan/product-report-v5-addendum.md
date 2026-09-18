@@ -2,14 +2,26 @@
 
 The v5 report remains the product baseline. The project owner made the
 following decisions on 2026-09-19 (IST) over WhatsApp, recorded here because
-they revise v5 positions. Original messages (WhatsApp IDs):
+they revise v5 positions.
 
-- wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0I4MzQ3RDlBN0VGQ0Y3MDA1QjcA -
-  revenue point 1 changed to "1000 paying by dec 2026"
-- wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0JFNDk5Q0RBMkMwRjM5MThCM0EA -
-  "launch oct 2026"
-- wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0JCNUJBOEQwOUUyQTcwNkExOUUA -
-  "oss end of sept 2026"
+Revenue policy bundle (items in data/contracts/revenue-target.yaml): the
+owner was presented a five-item policy proposal at 03:20:26 IST
+(wamid.HBgMOTE4MTIxNzk4Mjg1FQIAERgSMkY5NjUyM0VDQ0MwRkVBQ0JFAA==) and
+answered at 03:21:01 IST with a numbered edit
+(wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0I4MzQ3RDlBN0VGQ0Y3MDA1QjcA) changing
+item 1's year to 2026 while adopting the unchanged remainder of the
+explicitly presented list. The bundle's approval rests on that
+proposal-plus-reply pair.
+
+Schedule decisions, each its own message:
+
+- "launch oct 2026", 03:21:11 IST,
+  wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0JFNDk5Q0RBMkMwRjM5MThCM0EA
+- "oss end of sept 2026", 03:21:17 IST,
+  wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0JCNUJBOEQwOUUyQTcwNkExOUUA
+
+These two terse messages cover the schedule only; they are not evidence for
+any revenue policy item.
 
 ## Decisions
 
