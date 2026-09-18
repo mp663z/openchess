@@ -3,10 +3,12 @@
 Good mode: tools/rights_audit.py validates the repo's real
 data/datasets/public-source-rights.yaml (per-source rules + required-source
 coverage). Violation mode: seeded manifest fixtures under
-fixtures/rights/, each breaking exactly one rule - allow without a
-transformation grant, tampered statement hash, unknown decision value,
-missing license. Every seeded violation must be rejected by the real
-validator.
+fixtures/rights/, each breaking exactly one rule: allow without a
+transformation grant, tampered evidence hash, unknown decision value,
+missing license, fabricated license string, non-https URL, self-authored
+grant (statement absent from its evidence bytes), missing local source
+path. Every seeded violation must be rejected by the real validator
+for its own seeded reason.
 """
 
 from __future__ import annotations
@@ -22,10 +24,14 @@ CHECK_ID = "T0033"
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "rights"
 
 VIOLATIONS = {
-    "bad_allow_without_grant.yaml": "allow requires transformation_permission",
-    "bad_hash.yaml": "statement_sha256 does not recompute",
+    "bad_allow_without_grant.yaml": "decision=allow requires transformation_permission",
+    "bad_evidence_hash.yaml": "evidence_sha256 does not recompute",
     "bad_unknown_decision.yaml": "unknown decision",
     "bad_missing_license.yaml": "missing license",
+    "bad_fake_license.yaml": "outside the policy set",
+    "bad_url_scheme.yaml": "url is not an https URL",
+    "bad_self_authored.yaml": "statement not contained in evidence file",
+    "bad_local_missing.yaml": "local path missing",
 }
 
 
@@ -38,7 +44,8 @@ def run(mode: str) -> None:
     uncaught = []
     for fname, expect in sorted(VIOLATIONS.items()):
         problems = rights_audit.validate_sources(
-            yaml.safe_load((FIXTURES / fname).read_text())
+            yaml.safe_load((FIXTURES / fname).read_text()),
+            FIXTURES,
         )
         if not any(expect in p for p in problems):
             uncaught.append(f"{fname}: expected problem containing {expect!r}, got {problems}")

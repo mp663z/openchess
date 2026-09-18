@@ -5,6 +5,7 @@ sources:
   license: CC0-1.0
   transformation_permission: true
   decision: allow
-  statement: You may download, modify and redistribute.
+  statement: You may download, modify and redistribute this data.
   statement_source_url: https://example.com/terms
-  statement_sha256: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+  evidence_path: evidence/good.txt
+  evidence_sha256: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff

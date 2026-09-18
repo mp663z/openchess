@@ -5,6 +5,7 @@ sources:
   license: CC0-1.0
   transformation_permission: true
   decision: allow_with_flag
-  statement: You may download, modify and redistribute.
+  statement: You may download, modify and redistribute this data.
   statement_source_url: https://example.com/terms
-  statement_sha256: bd8f4e7d142417b32c8f8ef600479e56aa9c9f24a1d88bb4e42b82f6d40ecd42
+  evidence_path: evidence/good.txt
+  evidence_sha256: 349d8b4b7f04437719f4804eb1fe6ea2336e183f1e8e9a226c4263712a18a73f

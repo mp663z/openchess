@@ -1,9 +1,8 @@
 """T0033/T0034/T0035: rights, SBOM and CLA/DCO install checks."""
 
 import pytest
-import yaml
 
-from tools import cla_check, rights_audit
+from tools import cla_check
 from tools.install_checks import (
     CheckError,
     check_cla_dco,
@@ -32,26 +31,27 @@ def test_runner_lane_green(only):
     assert runner.run_all(only=only) == []
 
 
-def test_t0033_each_fixture_rejected_for_its_own_reason():
-    for fname, expect in sorted(check_data_model_rights.VIOLATIONS.items()):
-        problems = rights_audit.validate_sources(
-            yaml.safe_load((check_data_model_rights.FIXTURES / fname).read_text())
-        )
-        assert any(expect in p for p in problems), f"{fname}: {problems}"
+def test_t0033_fixtures_and_real_manifest():
+    # per-fixture assertions and full-audit coverage live in
+    # tests/test_public_source_rights.py (single home next to the manifest)
+    assert (check_data_model_rights.FIXTURES / "bad_fake_license.yaml").exists()
 
 
-def test_t0033_real_manifest_passes_full_audit():
-    doc = yaml.safe_load(rights_audit.RIGHTS.read_text())
-    assert rights_audit.validate(doc) == []
+@pytest.mark.parametrize("name", sorted(check_cla_dco.VIOLATIONS))
+def test_t0035_each_seeded_attack_rejected_end_to_end(name):
+    kw = check_cla_dco.VIOLATIONS[name]
+    with pytest.raises(cla_check.ClaError), check_cla_dco._seeded_pr(**kw):
+        pass
 
 
-def test_t0035_registry_fixtures_each_raise():
-    for name, fn in sorted(check_cla_dco.REGISTRY_VIOLATIONS.items()):
-        with pytest.raises(cla_check.ClaError):
-            fn(), name
+@pytest.mark.parametrize("name", sorted(check_cla_dco.GOOD))
+def test_t0035_good_scenarios_pass_end_to_end(name):
+    with check_cla_dco._seeded_pr(**check_cla_dco.GOOD[name]) as result:
+        assert isinstance(result, str) and result
 
 
-def test_t0035_de_minimis_truth_table():
-    assert cla_check.is_de_minimis(5, [("M", "docs/faq.md")])
-    for name, (lines, files) in sorted(check_cla_dco.DEMINIMIS_VIOLATIONS.items()):
-        assert not cla_check.is_de_minimis(lines, files), name
+def test_t0035_verify_acceptance_neutralized_fails_harness(monkeypatch):
+    from tools.install_checks import runner
+
+    monkeypatch.setattr(cla_check, "verify_acceptance", lambda *a, **k: None)
+    assert runner.run_all(only={"T0035"}) != []

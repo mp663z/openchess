@@ -1,0 +1,4 @@
+fetched_from: https://database.lichess.org/
+fetched_at: 2026-09-18
+---
+Database exports are released under the Creative Commons CC0 license. Use them for research, commercial purpose, publication, anything you like. You can download, modify and redistribute them, without asking for permission.

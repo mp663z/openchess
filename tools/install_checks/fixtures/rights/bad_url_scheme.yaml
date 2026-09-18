@@ -1,8 +1,8 @@
 schema_version: 2
 sources:
 - id: somesource
-  url: https://example.com/data
-  license: ''
+  url: javascript:evil
+  license: CC0-1.0
   transformation_permission: true
   decision: allow
   statement: You may download, modify and redistribute this data.

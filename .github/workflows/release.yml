@@ -4,6 +4,8 @@ on:
     tags: ["v*"]
 permissions:
   contents: write
+  id-token: write        # OIDC token for keyless Sigstore signing
+  attestations: write    # persist attestations to the repo's attestation store
 jobs:
   attest:
     runs-on: ubuntu-latest
@@ -17,6 +19,13 @@ jobs:
       - run: python tools/license_audit.py
       - run: python tools/component_inventory.py
       - run: sha256sum docs/component-inventory.json data/release-lock.json > checksums.sha256
+      - name: Attest build provenance (SBOM, lock, checksums)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            docs/component-inventory.json
+            data/release-lock.json
+            checksums.sha256
       - name: Create release with SBOM and checksums
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,16 +1,30 @@
 """Data/model rights audit (T2229 discipline, wrapped by install check T0033).
 
-Fail-closed validation of data/datasets/public-source-rights.yaml: every
-source needs url + license + boolean transformation_permission + a known
-decision; decision=allow additionally requires an explicit transformation
-grant and a captured, hash-pinned permission statement that recomputes.
-Unknown decision values, missing terms and hash drift are all violations -
-a source with unproven terms is excluded, never assumed.
+Fail-closed validation of data/datasets/public-source-rights.yaml. Beyond
+field presence, every claim is checked against something independent:
+
+- URLs must be https with a real host (no javascript:/data:/file: schemes);
+  url may be explicitly null only with a statement_source_url recorded.
+- statement_source_url is either an https URL or a repo-relative path that
+  EXISTS; for local paths the cited statement must appear verbatim in the
+  referenced file.
+- decision=allow requires a policy-approved license (permissive set) or the
+  pinned user-owned-files exemption, an explicit transformation grant, and
+  captured evidence.
+- Evidence is pinned BYTES, not a claim stored beside its hash: each
+  source's statement lives in data/datasets/statements/<id>.txt with
+  fetched_from/fetched_at provenance; evidence_sha256 recomputes over the
+  snapshot file bytes and the manifest statement must appear verbatim in
+  the snapshot. A self-authored "grant" must fabricate a tracked evidence
+  file whose hash and provenance header survive review.
+- Unknown decision values, missing terms, hash drift and unknown licenses
+  are violations: unproven terms exclude the source, never assume it.
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 import sys
 from pathlib import Path
 
@@ -31,9 +45,36 @@ REQUIRED_SOURCES = {
 }
 DECISIONS = {"allow", "fail_closed"}
 
+# Policy: licenses compatible with the fail-closed licensing directive for
+# data/content acquisition (mirrors the dependency allowlist's permissive
+# core; content licenses limited to CC0 + permissive code licenses).
+ALLOW_DATA_LICENSES = {
+    "CC0-1.0", "MIT", "MIT-0", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC",
+}
+# The one non-published-license allow: the user's own purchased files.
+USER_OWNED_ID = "user_own_cbh_files"
+USER_OWNED_LICENSE = (
+    "user-purchased ChessBase databases, imported locally at the user's request"
+)
 
-def validate_sources(doc: dict) -> list[str]:
-    """Per-source rules. Returns a list of problems (empty = clean)."""
+_HTTPS_RE = re.compile(r"^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}([/?#].*)?$")
+
+
+def _sha256_bytes(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+def _is_https_url(value: str) -> bool:
+    return bool(_HTTPS_RE.match(value.strip()))
+
+
+def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
+    """Per-source rules. Returns a list of problems (empty = clean).
+
+    base: directory that repo-relative evidence/source paths resolve
+    against (the repository root in real runs; the fixture dir in seeded
+    violation runs).
+    """
     problems: list[str] = []
     sources = doc.get("sources") if isinstance(doc, dict) else None
     if not isinstance(sources, list) or not sources:
@@ -47,17 +88,26 @@ def validate_sources(doc: dict) -> list[str]:
         if sid in seen:
             problems.append(f"{sid}: duplicate source id")
         seen.add(sid)
+
+        # --- URL shape ---
         if "url" not in s:
             problems.append(f"{sid}: missing url")
-        elif not s["url"] and not s.get("statement_source_url"):
-            # url may be explicitly null (e.g. the user's own local files)
-            # only when provenance is recorded via statement_source_url
-            problems.append(f"{sid}: null url without a statement_source_url")
-        if not s.get("license"):
+        else:
+            url = s["url"]
+            if url is None:
+                if not s.get("statement_source_url"):
+                    problems.append(f"{sid}: null url without a statement_source_url")
+            elif not isinstance(url, str) or not _is_https_url(url):
+                problems.append(f"{sid}: url is not an https URL: {url!r}")
+
+        license_ = (s.get("license") or "").strip()
+        if not license_:
             problems.append(f"{sid}: missing license")
+
         perm = s.get("transformation_permission")
         if not isinstance(perm, bool):
             problems.append(f"{sid}: transformation_permission must be a boolean")
+
         decision = s.get("decision")
         if decision not in DECISIONS:
             problems.append(f"{sid}: unknown decision {decision!r} (fail closed)")
@@ -66,24 +116,69 @@ def validate_sources(doc: dict) -> list[str]:
                 problems.append(
                     f"{sid}: decision=allow requires transformation_permission: true"
                 )
-            for field in ("statement", "statement_source_url", "statement_sha256"):
-                if not s.get(field):
-                    problems.append(f"{sid}: decision=allow requires {field}")
+            if license_ not in ALLOW_DATA_LICENSES and not (
+                sid == USER_OWNED_ID and license_ == USER_OWNED_LICENSE
+            ):
+                problems.append(
+                    f"{sid}: decision=allow with license outside the policy set: "
+                    f"{license_!r}"
+                )
+
+        # --- statement source: https URL or existing local file containing it ---
         statement = s.get("statement")
-        recorded = s.get("statement_sha256")
+        src_url = (s.get("statement_source_url") or "").strip()
+        if statement is not None and not src_url:
+            problems.append(f"{sid}: statement without statement_source_url")
+        if src_url:
+            if _is_https_url(src_url):
+                pass
+            else:
+                local = base / src_url
+                if "://" in src_url or src_url.startswith(("javascript:", "data:", "file:")):
+                    problems.append(f"{sid}: statement_source_url is not https: {src_url!r}")
+                elif not local.is_file():
+                    problems.append(
+                        f"{sid}: statement_source_url local path missing: {src_url}"
+                    )
+                elif statement is not None and statement not in local.read_text():
+                    problems.append(
+                        f"{sid}: statement not found verbatim in {src_url}"
+                    )
+
+        # --- evidence bytes: snapshot file pinned by hash, statement inside ---
+        ev_path = s.get("evidence_path")
+        ev_hash = s.get("evidence_sha256")
         if statement is not None:
-            if not recorded:
-                problems.append(f"{sid}: statement without statement_sha256")
-            elif hashlib.sha256(statement.encode()).hexdigest() != recorded:
-                problems.append(f"{sid}: statement_sha256 does not recompute")
-        elif recorded:
-            problems.append(f"{sid}: statement_sha256 without a statement")
+            if not ev_path or not ev_hash:
+                problems.append(f"{sid}: statement without evidence_path/evidence_sha256")
+            else:
+                f = base / ev_path
+                if not f.is_file():
+                    problems.append(f"{sid}: evidence file missing: {ev_path}")
+                else:
+                    blob = f.read_bytes()
+                    if _sha256_bytes(blob) != ev_hash:
+                        problems.append(f"{sid}: evidence_sha256 does not recompute")
+                    text = blob.decode("utf-8", errors="replace")
+                    if statement not in text:
+                        problems.append(
+                            f"{sid}: statement not contained in evidence file {ev_path}"
+                        )
+                    header_from = re.search(r"^fetched_from: (.+)$", text, re.M)
+                    if not header_from:
+                        problems.append(f"{sid}: evidence file lacks fetched_from")
+                    elif src_url and header_from.group(1).strip() != src_url:
+                        problems.append(
+                            f"{sid}: evidence fetched_from != statement_source_url"
+                        )
+        elif ev_path or ev_hash:
+            problems.append(f"{sid}: evidence fields without a statement")
     return problems
 
 
-def validate(doc: dict) -> list[str]:
+def validate(doc: dict, base: Path = ROOT) -> list[str]:
     """Full audit: per-source rules plus required-source coverage."""
-    problems = validate_sources(doc)
+    problems = validate_sources(doc, base)
     ids = {
         s.get("id")
         for s in (doc.get("sources") or [])

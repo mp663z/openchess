@@ -2,7 +2,7 @@ schema_version: 2
 sources:
 - id: somesource
   url: https://example.com/data
-  license: ''
+  license: totally fake
   transformation_permission: true
   decision: allow
   statement: You may download, modify and redistribute this data.
