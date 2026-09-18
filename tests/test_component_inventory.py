@@ -3,7 +3,10 @@
 import contextlib
 import hashlib
 import json
+import re
 from pathlib import Path
+
+from packaging.utils import parse_wheel_filename
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs/component-inventory.json"
@@ -66,6 +69,44 @@ def test_every_artifact_is_exact_and_hashed():
             assert a["filename"].endswith(".whl"), (target_name, a["name"])
             assert a["url"].startswith("https://files.pythonhosted.org/"), a["name"]
             assert a["license"] and a["license"] != "UNVERIFIED", a["name"]
+
+
+def test_every_wheel_tag_matches_its_named_target():
+    """Every locked wheel's parsed tags must be compatible with its target -
+    independent of the tool's own matcher (a win32 wheel on a win_amd64 target
+    is the class of bug this guards)."""
+    lock = json.loads(LOCK.read_text())
+    for target_name, target in lock["release_targets"].items():
+        for a in target["artifacts"]:
+            _, _, _, tags = parse_wheel_filename(a["filename"])
+            assert tags, a["filename"]
+
+            def tag_compatible(t, target_name=target_name) -> bool:
+                py, abi, plat = t.interpreter, t.abi, t.platform
+                if py.startswith("cp"):
+                    if py != "cp312" or abi not in ("cp312", "abi3", "none"):
+                        return False
+                else:
+                    if not re.fullmatch(r"py3(\d*)", py) or abi != "none":
+                        return False
+                if target_name.endswith("win_amd64"):
+                    return plat in ("win_amd64", "any")  # never win32
+                if "manylinux_x86_64" in target_name:
+                    return plat == "any" or (
+                        plat.startswith("manylinux") and plat.endswith("x86_64")
+                    )
+                raise AssertionError(f"untested target {target_name}")
+
+            assert any(tag_compatible(t) for t in tags), (
+                target_name,
+                a["filename"],
+            )
+            # A 64-bit windows target must never lock a win32-only wheel.
+            if target_name.endswith("win_amd64"):
+                plats = {t.platform for t in tags}
+                assert "win32" not in plats or "win_amd64" in plats, (
+                    f"win32-only wheel on win_amd64 target: {a['filename']}"
+                )
 
 
 def test_libraries_come_from_lock_not_environment():

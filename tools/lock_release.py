@@ -142,7 +142,9 @@ def _tag_ok(py: str, abi: str, plat: str, target: dict) -> bool:
         return True
     if os_kind == "manylinux":
         return plat.startswith("manylinux") and plat.endswith("x86_64")
-    return plat in ("win_amd64", "win32")
+    # 64-bit Windows target: win_amd64 wheels only. A win32 wheel is the wrong
+    # architecture for the declared target and must never be locked for it.
+    return plat == "win_amd64"
 
 
 def _pick_artifact(files: list[dict], target: dict) -> dict | None:
@@ -168,6 +170,9 @@ def _resolve_target(target_name: str, target: dict) -> list[dict]:
     }
     resolved: dict[str, dict] = {}
     direct_keys = set(pending)
+    constraints: dict[str, list[Requirement]] = {
+        k: list(v) for k, v in pending.items()
+    }
     while pending:
         key = min(pending)
         reqs = pending.pop(key)
@@ -224,8 +229,21 @@ def _resolve_target(target_name: str, target: dict) -> list[dict]:
                 except Exception:
                     continue
             dkey = dep.name.lower().replace("_", "-")
+            constraints.setdefault(dkey, []).append(dep)
             if dkey not in resolved:
                 pending.setdefault(dkey, []).append(dep)
+    # Post-closure validation: the resolved version must satisfy EVERY
+    # requirement edge accumulated for it, including ones discovered after
+    # the package was first resolved. Fail-closed on conflict.
+    for key, reqs in constraints.items():
+        if key not in resolved:
+            continue
+        version = Version(resolved[key]["version"])
+        for r in reqs:
+            if version not in r.specifier:
+                raise RuntimeError(
+                    f"{target_name}: resolved {key}=={version} violates {r}"
+                )
     return [resolved[k] for k in sorted(resolved)]
 
 
