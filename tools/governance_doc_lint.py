@@ -25,6 +25,12 @@ MIN_BYTES = 400
 
 # doc path (repo-relative) -> required headings, exact after normalization
 REQUIRED_HEADINGS: dict[str, list[str]] = {
+    "DCO.md": [
+        "developer certificate of origin and de minimis contributions",
+        "developer certificate of origin",
+        "sign-off",
+        "de minimis contributions",
+    ],
     "NOTICE": [
         "network use and source offer",
         "network use",
@@ -32,7 +38,28 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "corresponding source scope",
         "trademarks, data, and models",
     ],
+    "CLA.md": [
+        "contributor license agreement",
+        "1. definitions",
+        "2. grant of copyright license",
+        "3. grant of patent license",
+        "4. representations",
+        "5. no obligation",
+        "6. outbound license (agpl)",
+        "7. acceptance",
+    ],
+    "GOVERNANCE.md": [
+        "governance",
+        "roles",
+        "decision making",
+        "moderation and appeals",
+        "delegation",
+        "amending this file",
+        "trademarks and assets",
+    ],
 }
+
+
 
 # paths that must each have a CODEOWNERS rule (when CODEOWNERS is registered)
 CODEOWNERS_REQUIRED_PATHS = [
@@ -52,6 +79,11 @@ GOVERNANCE_DOC_PATHS = [
 PLACEHOLDER_RE = re.compile(r"\b(TODO|TBD|FIXME|PLACEHOLDER|XXX)\b")
 CODENAME_RE = re.compile("open" + "chess", re.I)  # split: self-scan safe
 
+
+OWNER_TOKEN_RE = re.compile(
+    r"^@[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?"
+    r"(?:/[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)?$"
+)
 
 MIN_SECTION_BODY = 80  # chars of real text under each required heading
 
@@ -126,15 +158,19 @@ def lint_doc(path: Path, rel: str) -> list[str]:
     if CODENAME_RE.search(text):
         errors.append(f"{rel}: contains product codename (use neutral naming)")
     if rel == ".github/CODEOWNERS":
-        rules = [
-            ln.split()[0] for ln in text.splitlines()
-            if ln.strip() and not ln.startswith("#")
-        ]
-        owners_ok = all(
-            "@" in ln for ln in text.splitlines() if ln.strip() and not ln.startswith("#")
-        )
-        if not owners_ok:
-            errors.append(f"{rel}: rule without an @owner")
+        rules: list[str] = []
+        for ln in text.splitlines():
+            body = ln.split("#", 1)[0].strip()  # comments carry no rule
+            if not body:
+                continue
+            tokens = body.split()
+            if len(tokens) < 2:
+                errors.append(f"{rel}: rule without an owner: {ln.strip()!r}")
+                continue
+            rules.append(tokens[0])
+            for tok in tokens[1:]:
+                if not OWNER_TOKEN_RE.fullmatch(tok):
+                    errors.append(f"{rel}: invalid owner token {tok!r}")
         for req in CODEOWNERS_REQUIRED_PATHS:
             if req not in rules:
                 errors.append(f"{rel}: no rule for {req}")

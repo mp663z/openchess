@@ -40,3 +40,24 @@ def test_lint_is_structural_not_substring():
     lint = (ROOT / "tools/governance_doc_lint.py").read_text()
     assert "CODEOWNERS_REQUIRED_PATHS" in lint
     assert "no rule for" in lint
+
+
+def test_lint_rejects_malformed_rules(tmp_path):
+    from tools import governance_doc_lint as gdl
+    good = (ROOT / ".github/CODEOWNERS").read_text()
+
+    def errs(content):
+        p = tmp_path / "CODEOWNERS"
+        p.write_text(content)
+        return gdl.lint_doc(p, ".github/CODEOWNERS")
+
+    assert errs(good) == []
+    assert any("without an owner" in e for e in errs(good + "\nlonely-path\n"))
+    assert any("invalid owner token" in e for e in errs(good + "\n/x hello@world\n"))
+    assert any("invalid owner token" in e for e in errs(good + "\n/y @bad..dots\n"))
+    # a comment containing @ is not a rule and does not break anything
+    assert errs(good + "\n# mention @someone in a comment\n") == []
+    # removing a required path fails
+    import re
+    stripped = re.sub(r"(?m)^LICENSE .*$", "", good)
+    assert any("no rule for LICENSE" in e for e in errs(stripped))
