@@ -108,10 +108,11 @@
    "verification": "independent review",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "in_progress",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent-foundation"
   },
   {
    "id": "T0004",
