@@ -48,7 +48,17 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "6. outbound license (agpl)",
         "7. acceptance",
     ],
+    "GOVERNANCE.md": [
+        "governance",
+        "roles",
+        "decision making",
+        "moderation and appeals",
+        "delegation",
+        "amending this file",
+        "trademarks and assets",
+    ],
 }
+
 
 
 # paths that must each have a CODEOWNERS rule (when CODEOWNERS is registered)
