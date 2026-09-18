@@ -100,4 +100,4 @@ def test_done_without_sha_flagged(tmp_path):
 def test_real_board_is_valid():
     board = load(Path(__file__).resolve().parent.parent / "tasks" / "dag.json")
     assert verify(board) == []
-    assert len(board["tasks"]) == 4825
+    assert len(board["tasks"]) == 5257
