@@ -19,6 +19,7 @@ TEXT_SUFFIXES = (".py", ".md", ".yaml", ".yml", ".toml", ".json", ".txt")
 # Explicit exceptions with justification (path, pattern that must match the line).
 ALLOWLIST = {
     "pyproject.toml": re.compile(r'^\s*name\s*=\s*"openchess"'),  # distribution slug
+    "tools/cla_check.py": re.compile(r"DEFAULT_REPO = "),  # factual repo address constant
     "docs/plan/development-plan-v9.md": None,   # verbatim source document of record
     "docs/plan/product-report-v5.md": None,     # verbatim source document of record
 }
