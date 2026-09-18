@@ -1,18 +1,24 @@
-"""T0006 - No silent writes: executable invariant.
+"""T0006 v2 - No silent writes: executable invariant, binding approvals.
 
 Every state-changing operation on user data goes through ApprovalGate:
-1. compute a visible diff (before -> after),
-2. present it (the diff IS the approval artifact),
+1. build an immutable typed Proposal (action + target/scope + before -> after),
+2. present it (the canonical artifact IS what the approver sees),
 3. only after an explicit Approval is recorded may the mutation commit.
 
-A mutation attempted without a prior approval for its exact diff raises
-SilentWriteError. Approvals bind to the diff hash, so changing the diff
-invalidates the approval.
+v2 remediation (independent-review FAIL at d62a0b45): approvals now bind to
+the ENTIRE approval artifact. The gate recomputes the canonical artifact and
+its sha256 at BOTH approve() and commit() and compares with
+hmac.compare_digest; approve() stores the canonical artifact, not just its
+hash, so a mutated or fabricated proposal cannot replay an approval.
+Approvers must be registered identities; unknown identities and role
+mismatches are rejected. Any mutation attempted without a prior approval for
+its exact artifact raises SilentWriteError.
 """
 
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -23,55 +29,113 @@ class SilentWriteError(Exception):
     pass
 
 
+def _canonical(action: str, target: str, before: Any, after: Any) -> bytes:
+    """Canonical serialization of the full approval artifact."""
+    try:
+        return json.dumps(
+            {"action": action, "target": target, "before": before, "after": after},
+            sort_keys=True,
+        ).encode()
+    except (TypeError, ValueError) as exc:
+        raise SilentWriteError(f"proposal is not serializable: {exc}") from exc
+
+
+@dataclass(frozen=True)
+class Proposal:
+    """Immutable, typed approval artifact. No caller-supplied hash field exists."""
+
+    action: str
+    target: str
+    before: Any
+    after: Any
+
+    @property
+    def canonical(self) -> bytes:
+        return _canonical(self.action, self.target, self.before, self.after)
+
+    @property
+    def artifact_hash(self) -> str:
+        return hashlib.sha256(self.canonical).hexdigest()
+
+
 @dataclass(frozen=True)
 class Approval:
-    diff_hash: str
+    artifact_hash: str
+    canonical_artifact: bytes
+    approver_identity: str
     approver_role: str
     approved_at: str
 
 
-def diff_hash(before: Any, after: Any) -> str:
-    canonical = json.dumps({"before": before, "after": after}, sort_keys=True, default=str)
-    return hashlib.sha256(canonical.encode()).hexdigest()
-
-
 class ApprovalGate:
-    """Reference implementation for tooling-side state mutations."""
+    """Reference implementation for tooling-side state mutations.
 
-    def __init__(self) -> None:
+    approvers: registry mapping approver identity -> role. Only registered
+    identities may approve, and the recorded role always comes from the
+    registry, never from the caller.
+    """
+
+    def __init__(self, approvers: dict[str, str]) -> None:
+        if not approvers:
+            raise ValueError("gate requires at least one registered approver")
+        self._approvers = dict(approvers)
         self._approvals: dict[str, Approval] = {}
         self.audit_log: list[dict[str, str]] = []
 
-    def propose(self, action: str, before: Any, after: Any) -> dict:
-        """Compute the visible diff that must be approved."""
-        return {
-            "action": action,
-            "before": before,
-            "after": after,
-            "diff_hash": diff_hash(before, after),
-        }
+    def _require_proposal(self, proposal: Any) -> Proposal:
+        if not isinstance(proposal, Proposal):
+            raise SilentWriteError(
+                f"expected an immutable Proposal, got {type(proposal).__name__}"
+            )
+        return proposal
 
-    def approve(self, proposal: dict, approver_role: str) -> Approval:
+    def propose(self, action: str, target: str, before: Any, after: Any) -> Proposal:
+        """Build the immutable artifact that must be approved."""
+        return Proposal(action=action, target=target, before=before, after=after)
+
+    def approve(self, proposal: Any, approver_identity: str) -> Approval:
+        proposal = self._require_proposal(proposal)
+        role = self._approvers.get(approver_identity)
+        if role is None:
+            raise SilentWriteError(f"unregistered approver {approver_identity!r}")
+        canonical = proposal.canonical  # recomputed from the live proposal
+        artifact_hash = hashlib.sha256(canonical).hexdigest()
+        if not hmac.compare_digest(artifact_hash, proposal.artifact_hash):
+            raise SilentWriteError("proposal artifact hash mismatch")
         approval = Approval(
-            diff_hash=proposal["diff_hash"],
-            approver_role=approver_role,
-            approved_at=datetime.now(timezone.utc).isoformat()  # noqa: UP017 - python 3.10 runtime,
+            artifact_hash=artifact_hash,
+            canonical_artifact=canonical,
+            approver_identity=approver_identity,
+            approver_role=role,
+            approved_at=datetime.now(timezone.utc).isoformat(),  # noqa: UP017 - py3.10 runtime
         )
-        self._approvals[approval.diff_hash] = approval
+        self._approvals[artifact_hash] = approval
         return approval
 
-    def commit(self, proposal: dict) -> None:
-        """Commit the mutation; raises unless the exact diff was approved."""
-        dh = proposal["diff_hash"]
-        if dh not in self._approvals:
+    def commit(self, proposal: Any) -> None:
+        """Commit the mutation; raises unless this exact artifact was approved."""
+        proposal = self._require_proposal(proposal)
+        canonical = proposal.canonical  # recomputed at commit time
+        artifact_hash = hashlib.sha256(canonical).hexdigest()
+        approval = self._approvals.get(artifact_hash)
+        if approval is None:
             raise SilentWriteError(
-                f"action {proposal['action']!r} has no approval for diff {dh[:12]}"
+                f"action {proposal.action!r} has no approval for artifact "
+                f"{artifact_hash[:12]}"
             )
-        approval = self._approvals.pop(dh)  # single-use: one approval, one commit
+        # Constant-time compare of hash AND the stored canonical artifact:
+        # the committed proposal must be byte-identical to what was approved.
+        hash_ok = hmac.compare_digest(artifact_hash, approval.artifact_hash)
+        artifact_ok = hmac.compare_digest(canonical, approval.canonical_artifact)
+        if not (hash_ok and artifact_ok):
+            raise SilentWriteError("proposal differs from the approved artifact")
+        del self._approvals[artifact_hash]  # single-use: one approval, one commit
         self.audit_log.append(
             {
-                "action": proposal["action"],
-                "diff_hash": dh,
+                "action": proposal.action,
+                "target": proposal.target,
+                "artifact_hash": artifact_hash,
+                "approver_identity": approval.approver_identity,
                 "approver_role": approval.approver_role,
                 "approved_at": approval.approved_at,
             }
