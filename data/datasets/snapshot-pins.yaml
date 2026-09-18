@@ -1,0 +1,23 @@
+# T2712 - Snapshot pinning. Latest aliases are forbidden in reproducible runs.
+# bytes = publisher content-length at pin time; sha256 filled from measured bytes.
+schema_version: 1
+pinned_at: "2026-09-18"
+pins:
+  - dataset: lichess_standard_games
+    snapshot: "2026-08"
+    url: https://database.lichess.org/standard/lichess_db_standard_rated_2026-08.pgn.zst
+    expected_bytes: 30145862359
+    etag: null
+    sha256: pending-measurement
+  - dataset: lichess_puzzles
+    snapshot: "2026-09-09"
+    url: https://database.lichess.org/lichess_db_puzzle.csv.zst
+    expected_bytes: 304429328
+    etag: '"6aa199fe-12253910"'
+    sha256: 95fd454bec9efe8f940d5863d5db4c57474f281a865834997bd8cb5d6a149bb9
+  - dataset: lichess_evals
+    snapshot: "2026-09-10"
+    url: https://database.lichess.org/lichess_db_eval.jsonl.zst
+    expected_bytes: 22086532809
+    etag: '"6aa21979-52475bec9"'
+    sha256: pending-measurement
