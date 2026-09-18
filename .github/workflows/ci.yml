@@ -30,6 +30,8 @@ jobs:
         run: python tools/license_lint.py
       - name: Governance docs lint
         run: python tools/governance_doc_lint.py
+      - name: Install checks (good passes, seeded violation caught)
+        run: python -m tools.install_checks.runner
       - name: CLA gate
         if: github.event_name == 'pull_request'
         env:
