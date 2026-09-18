@@ -27,3 +27,7 @@ def test_dco_content_exact():
     assert "mechanical-change" not in text
     # real mechanism: maintainer verifies at review
     assert "maintainers verify" in text
+    # scope coherence: DCO covers de minimis only, CLA covers the rest
+    assert "only de minimis contributions (within the bounds below) are made under" in text
+    assert "all contributions to this project are made under" not in text
+    assert "do not need the trailer" in text

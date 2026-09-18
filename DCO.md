@@ -8,8 +8,10 @@ minimis bounds.
 
 ## Developer Certificate of Origin
 
-All contributions to this project are made under the Developer Certificate of
-Origin, Version 1.1 (the same certificate used by the Linux kernel project):
+Only de minimis contributions (within the bounds below) are made under the
+Developer Certificate of Origin, Version 1.1 (the same certificate used by
+the Linux kernel project). All other contributions are made under CLA.md
+and carry no DCO sign-off obligation:
 
 ```
 Developer Certificate of Origin
