@@ -27,6 +27,10 @@ def check_ids() -> dict[str, str]:
     ids: dict[str, str] = {}
     for name in discover():
         mod = importlib.import_module(f"tools.install_checks.{name}")
+        if mod.CHECK_ID in ids:
+            raise CheckError(
+                f"duplicate CHECK_ID {mod.CHECK_ID}: {ids[mod.CHECK_ID]} and {name}"
+            )
         ids[mod.CHECK_ID] = name
     return ids
 

@@ -25,6 +25,9 @@ def test_allowed_expressions(expr):
     "MIT-like",
     "NotMIT",
     "MIT OR",                       # dangling operator
+    "MIT OR GPL-2.0-only OR",       # trailing operator after several branches
+    "MIT AND Apache-2.0 AND",
+    "WITH MIT",
     "OR MIT",
     "MIT AND",
     "(MIT OR Apache-2.0)",          # parens: unparsed, fail closed
@@ -43,3 +46,15 @@ def test_free_text_with_allowed_token_is_rejected():
 def test_trailing_license_word_tolerated_on_clean_ids():
     assert candidate_ok("MIT License")
     assert not candidate_ok("GPL License")
+
+
+def test_pep639_expression_is_authoritative_over_legacy_fields():
+    """A bad License-Expression fails closed even with permissive legacy
+    metadata; legacy fields are consulted only when no expression exists."""
+    from tools.install_checks import check_dependency_license as c
+
+    for case in ("seedmix1", "seedmix2", "seedmix3", "seedtrail"):
+        dist = c.VIOLATION_CASES[case][0]
+        assert c._audit_in_subprocess(c.FIXTURES / case, dist), f"{case} escaped"
+    dist = c.GOOD_CASES["seedmixok"][0]
+    assert not c._audit_in_subprocess(c.FIXTURES / "seedmixok", dist)

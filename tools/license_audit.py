@@ -33,6 +33,9 @@ def _token_ok(tok: str) -> bool:
     return t in ALLOWED
 
 
+_OPERATORS = {"AND", "OR", "WITH"}
+
+
 def expression_ok(expr: str) -> bool:
     """SPDX subset: OR of ANDs of bare license ids, fail closed otherwise.
 
@@ -43,6 +46,9 @@ def expression_ok(expr: str) -> bool:
     """
     expr = expr.strip()
     if not expr or "(" in expr or ")" in expr:
+        return False
+    tokens = expr.split()
+    if tokens[0].upper() in _OPERATORS or tokens[-1].upper() in _OPERATORS:
         return False
     or_parts = [p.strip() for p in re.split(r"\s+OR\s+", expr, flags=re.IGNORECASE)]
     if any(not p for p in or_parts):
@@ -101,16 +107,25 @@ def audit_python(names: list[str]) -> list[str]:
             continue
         lic = (dist.metadata.get("License") or "").strip()
         expr = (dist.metadata.get("License-Expression") or "").strip()
-        candidates = {c for c in (expr, lic) if c}
         classifiers = {
             c.split("::")[-1].strip()
             for c in dist.metadata.get_all("Classifier") or []
             if c.startswith("License")
         }
         normalized = {c.replace(" License", "").strip() for c in classifiers}
-        if not any(candidate_ok(c) for c in candidates | normalized):
-            found = sorted(candidates | normalized) or ["UNKNOWN"]
-            problems.append(f"python:{name}: license {found}")
+        if expr:
+            # PEP 639: License-Expression is authoritative. A bad or
+            # malformed expression fails closed - a permissive legacy
+            # License field or classifier cannot rescue it.
+            ok = expression_ok(expr)
+            found = [expr]
+        else:
+            # legacy fallback only when no expression exists
+            candidates = ({lic} if lic else set()) | normalized
+            ok = any(candidate_ok(c) for c in candidates)
+            found = sorted(candidates)
+        if not ok:
+            problems.append(f"python:{name}: license {found or ['UNKNOWN']}")
     return problems
 
 

@@ -31,10 +31,15 @@ VIOLATION_CASES = {
     "seedsub": ("seedsub", "free text containing the token MIT"),
     "seedunk": ("seedunk", "UNKNOWN license"),
     "seedor": ("seedor", "OR with no allowed branch: GPL-2.0-only OR CC-BY-NC-4.0"),
+    "seedtrail": ("seedtrail", "trailing operator: GPL-2.0-only OR MIT OR"),
+    "seedmix1": ("seedmix1", "authoritative bad expression + permissive legacy field"),
+    "seedmix2": ("seedmix2", "MIT AND GPL-2.0-only expression + MIT legacy field"),
+    "seedmix3": ("seedmix3", "malformed expression + permissive classifier"),
 }
 GOOD_CASES = {
     "seedok": ("seedok", "OR with an allowed branch: GPL-2.0-only OR MIT"),
     "seedmit": ("seedmit", "free-text field: MIT License"),
+    "seedmixok": ("seedmixok", "authoritative MIT expression overrides GPL legacy field"),
 }
 
 
