@@ -11,9 +11,12 @@ is simple: when rights are unclear, the answer is no. Fail closed, always.
   equivalents). Copyleft dependencies are admitted only where the license
   audit proves the combination keeps the product's AGPL obligations intact;
   GPL-2.0-only combinations are rejected.
-- Every dependency is pinned with cryptographic hashes in the release lock;
-  the SBOM is regenerated in the same pull request whenever a pinned input
-  changes. No floating versions.
+- Distribution dependencies are pinned with cryptographic hashes in the
+  release lock (data/release-lock.json, regenerated per target by
+  tools/lock_release.py); the SBOM is regenerated in the same pull request
+  whenever a pinned input changes. Development-only tools carry minimum
+  versions in requirements-dev.txt and are not part of the distributed
+  product.
 
 ## Datasets
 
@@ -22,8 +25,9 @@ license or dedication explicitly permits the intended use, recorded in
 data/datasets/ with the license name, source location, retrieval date, and
 content hashes (snapshot pins). Known outcomes:
 
-- Allowed: CC0 public dedications, MIT-licensed tools and converters, the
-  user's own files.
+- Allowed: CC0 public dedications, MIT-licensed tools and converters, and
+  the user's own files imported locally by that user (for example their own
+  game collections), which the project never redistributes.
 - Fail closed: scraped broadcast archives, subscription databases, "free
   for personal use" collections, and anything whose provenance cannot be
   documented. Popularity in the community is not permission.
