@@ -193,10 +193,12 @@
    "verification": "independent review",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "097782c2406ec2e43358d4f916fd04bdf61c055d",
+   "evidence_manifest": "evidence/T0007.md"
   },
   {
    "id": "T0008",
