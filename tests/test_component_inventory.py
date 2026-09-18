@@ -183,19 +183,21 @@ def test_engines_models_assets_sections_exist():
 
 
 def test_discovery_picks_up_weights_and_assets():
-    """Discovery must find files under the declared dirs (fail-closed vs hardcode)."""
+    """Discovery itself must find files under the declared dirs (not hardcoded).
+    Classification of discovered files is fail-closed and tested in
+    tests/test_linkage_classification.py."""
     import tools.component_inventory as ci
 
-    for d, key in ((ci.MODEL_DIRS[0], "model_weights"), (ci.ASSET_DIRS[0], "bundled_assets")):
+    for d in (ci.MODEL_DIRS[0], ci.ASSET_DIRS[0]):
         target = ROOT / d
         target.mkdir(parents=True, exist_ok=True)
         probe = target / "probe.bin"
         probe.write_bytes(b"probe")
         try:
-            found = ci.generate()[key]
+            found = ci._discover_files((d,))
             assert any(
                 f["path"].endswith("probe.bin") and len(f["sha256"]) == 64 for f in found
-            ), key
+            ), d
         finally:
             probe.unlink()
             with contextlib.suppress(OSError):

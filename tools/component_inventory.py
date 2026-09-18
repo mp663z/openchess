@@ -26,7 +26,7 @@ MANIFEST = ROOT / "docs/component-inventory.json"
 
 # T3656: allowed linkage/deployment/distribution classes.
 LINKAGE_CLASSES = ("subprocess", "dynamic_link", "static_link", "source_inclusion", "data")
-DEPLOYMENT_CLASSES = ("ci_only", "server_only", "cli_tooling", "browser_bundle")
+DEPLOYMENT_CLASSES = ("ci_only", "cli_tooling", "local_external", "server_only", "browser_bundle")
 DISTRIBUTION_CLASSES = ("not_distributed", "distributed_with_app")
 
 # Directories whose contents ship inside the release artifact. Any file found
@@ -70,24 +70,49 @@ def _discover_files(dirs: tuple[str, ...]) -> list[dict]:
     return found
 
 
-def _classifications() -> dict[str, dict]:
+def _validate_classification(name: str, c: dict) -> dict:
+    for field, allowed in (
+        ("linkage", LINKAGE_CLASSES),
+        ("deployment", DEPLOYMENT_CLASSES),
+        ("distribution", DISTRIBUTION_CLASSES),
+    ):
+        if c.get(field) not in allowed:
+            raise RuntimeError(f"{name}: {field}={c.get(field)!r} not in {allowed}")
+    return {k: c[k] for k in ("linkage", "deployment", "distribution")}
+
+
+def _classifications() -> tuple[dict[str, dict], dict[str, dict]]:
+    """Returns (by_component_name, by_type_relpath) classification maps."""
     raw = yaml.safe_load(LINKAGE.read_text())
-    out = {}
-    for name, c in raw["components"].items():
-        for field, allowed in (
-            ("linkage", LINKAGE_CLASSES),
-            ("deployment", DEPLOYMENT_CLASSES),
-            ("distribution", DISTRIBUTION_CLASSES),
-        ):
-            if c.get(field) not in allowed:
-                raise RuntimeError(f"{name}: {field}={c.get(field)!r} not in {allowed}")
-        out[name] = {k: c[k] for k in ("linkage", "deployment", "distribution")}
+    by_name = {
+        name: _validate_classification(name, c) for name, c in raw["components"].items()
+    }
+    by_file = {
+        key: _validate_classification(key, c) for key, c in (raw.get("files") or {}).items()
+    }
+    return by_name, by_file
+
+
+def _classify_discovered(kind: str, found: list[dict], file_classes: dict) -> list[dict]:
+    """Join linkage/deployment/distribution onto discovered files, keyed by
+    type + relative path. Fail-closed: an unclassified discovered file aborts
+    generation."""
+    out = []
+    for f in found:
+        key = f"{kind}:{f['path']}"
+        cls = file_classes.get(key)
+        if cls is None:
+            raise RuntimeError(
+                f"no linkage classification for {key} - add it under files: in "
+                "data/linkage-classification.yaml"
+            )
+        out.append({**f, **cls})
     return out
 
 
 def generate() -> dict:
     lock = json.loads(LOCK.read_text())
-    classes = _classifications()
+    classes, file_classes = _classifications()
     by_name: dict[str, dict] = {}
     for target_name, target in lock["release_targets"].items():
         for a in target["artifacts"]:
@@ -155,14 +180,18 @@ def generate() -> dict:
         }
     ]
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "generated_by": "tools/component_inventory.py",
         "inputs_sha256": _inputs_sha256(),
         "libraries": libraries,
         "engines": engines,
-        "model_weights": _discover_files(MODEL_DIRS),
+        "model_weights": _classify_discovered(
+            "model_weight", _discover_files(MODEL_DIRS), file_classes
+        ),
         "datasets": datasets,
-        "bundled_assets": _discover_files(ASSET_DIRS),
+        "bundled_assets": _classify_discovered(
+            "bundled_asset", _discover_files(ASSET_DIRS), file_classes
+        ),
     }
 
 
