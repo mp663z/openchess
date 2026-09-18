@@ -32,3 +32,13 @@ def test_committed_manifest_matches_tool_output():
     committed = json.loads(Path("data/datasets/corpus-audit-sample.json").read_text())
     rerun = run_sample(FIXTURE, committed["sample_rows_requested"])
     assert committed == rerun
+
+
+def test_evidence_matches_manifest():
+    """Guard against stale evidence: the evidence file must quote the exact
+    checksums from the committed manifest."""
+    committed = json.loads(Path("data/datasets/corpus-audit-sample.json").read_text())
+    evidence = Path("evidence/T2723.md").read_text()
+    assert committed["normalized_id_multiset_sha256"] in evidence
+    assert committed["raw_sample_sha256"] in evidence
+    assert "READ WINDOW" in evidence  # raw checksum described honestly
