@@ -73552,7 +73552,7 @@
    "verification": "auto + independent review",
    "resource": "release artifacts",
    "checkpoint": "",
-   "status": "in_progress",
+   "status": "done",
    "evidence": "release SHA + dependency/data inventory + licenses + notices/source offer + auditor",
    "tags": [
     "license",
@@ -73560,7 +73560,9 @@
    ],
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent-foundation"
+   "claimed_by": "task-agent-foundation",
+   "done_sha": "21d530c2bafec618d888f90b33a666ef0ab7c2cc",
+   "evidence_manifest": "evidence/T3655.md"
   },
   {
    "id": "T3656",
