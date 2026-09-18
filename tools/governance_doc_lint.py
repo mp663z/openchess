@@ -78,7 +78,15 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "scope and disclosure",
         "hardening notes",
     ],
+    "docs/rights-policy.md": [
+        "code",
+        "datasets",
+        "models",
+        "models and outputs in the product",
+        "questions",
+    ],
 }
+
 
 
 
