@@ -1,0 +1,41 @@
+# T2714 - Storage and cost budget, measured 2026-09-18 before recurring acquisition.
+schema_version: 1
+measured_at: "2026-09-18"
+measurement_method: HEAD content-length per snapshot URL; download speed measured from real transfers on this network (304MB in ~14s; 22GB and 30GB streams completed)
+measured_download_bandwidth_MBps: 22
+corpora:
+  backtest_window_2024_2025:
+    snapshots: 24
+    compressed_bytes: 725388139774
+    compressed_GB: 725.4
+    estimated_raw_pgn_GB: 3200
+    note: zstd PGN decompresses ~4-5x; measured per-month list in evidence/T2714.md
+  current_monthly_snapshot:
+    compressed_GB: 30.1
+  puzzles:
+    compressed_MB: 304
+  evals:
+    compressed_GB: 22.1
+normalized_extract_estimate_GB: 5
+normalized_extract_basis: >-
+  Streaming filter-extract keeps only band-eligible players' games, positions
+  and repertoire lines needed by the replay (sampling plan T2230); raw PGN is
+  decompressed in bounded memory and discarded per month. Extract size is an
+  estimate to be corrected by the T2723 corpus audit.
+download_time:
+  backtest_window_hours_at_22MBps: 9.2
+  single_month_hours: 0.4
+cost_model:
+  lichess_egress: 0
+  our_ingress: "bandwidth only; no per-GB charge on the acquisition network"
+  storage_usd_per_GB_month_est: 0.02
+  retained_extract_annual_usd_est: 1.2
+  note: no recurring raw-corpus storage cost by design (stream-discard)
+retention_and_deletion:
+  raw_monthly_pgn: discarded immediately after extract per month (never persisted)
+  normalized_extract: retained, versioned per snapshot pin
+  deletion: extracts deletable per user request policy; corpus is public data, reproducible from pins
+environment_verdict:
+  this_sandbox: "2 vCPU / 1GB RAM / 20GB disk - fixtures and unit tests only"
+  full_backtest_run: "needs a worker with >=50GB scratch and ~10h streaming window, or ~4TB if raw retention were ever chosen (it is not)"
+decision: streaming filter-extract pipeline; no raw retention; monthly incremental per T2722
