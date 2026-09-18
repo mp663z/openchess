@@ -38,7 +38,7 @@
   "paid_tier": "hosted sync + hosted/bigger models + bounded genAI credits + coach features",
   "price_purpose": "infra and bundled LLM credits",
   "tier_gate": "T4763",
-  "product_promise": "Every week, OpenChess turns your own games into the three highest-impact things to train, gives you drills from the positions that caused them, and checks whether the learning transfers to later games.",
+  "product_promise": "Every week, {{PRODUCT_NAME}} turns your own games into the three highest-impact things to train, gives you drills from the positions that caused them, and checks whether the learning transfers to later games.",
   "design_horizon": "30-50 years",
   "ambition": "the leading chess harness of its generation",
   "spine_outcomes": [

@@ -104,7 +104,7 @@ sources:
   url: null
   license: user-purchased ChessBase databases, imported locally at the user's request
   statement: Interoperability import of the user's own purchased files on their machine at their request;
-    OpenChess never acquires database content itself.
+    {{PRODUCT_NAME}} never acquires database content itself.
   statement_source_url: docs/research/cbh-import-feasibility.md
   transformation_permission: true
   decision: allow
