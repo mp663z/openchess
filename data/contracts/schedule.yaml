@@ -1,21 +1,37 @@
-# Schedule contract - USER-APPROVED 2026-09-19.
-# Owner decisions given over WhatsApp on 2026-09-19 (IST).
+# Schedule contract - owner decisions of 2026-09-19 (IST).
+# Provenance: WhatsApp message IDs + timestamps under `provenance` below;
+# the revenue policy bundle approval rests on the proposal + numbered-edit
+# reply pair, not on the two terse schedule messages.
 schema_version: 1
 milestones:
   oss_release:
-    date: "2026-09-30"
+    date: '2026-09-30'
     source: user-decision
-    approved: "2026-09-19"
+    approved: '2026-09-19'
     note: repo must be public-ready; governance chain (LICENSE, NOTICE, CLA) is launch-critical
   product_launch:
-    window: "2026-10"
+    window: 2026-10
     source: user-decision
-    approved: "2026-09-19"
+    approved: '2026-09-19'
     note: month-precision as stated by the owner; no day picked yet
   revenue_target_instant:
-    date: "2026-12-31"
+    date: '2026-12-31'
     source: user-decision
-    approved: "2026-09-19"
+    approved: '2026-09-19'
     note: see data/contracts/revenue-target.yaml (T3761)
 provenance:
-  - owner messages 2026-09-19, recorded in docs/plan/product-report-v5-addendum.md
+  product_launch:
+    wamid: wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0JFNDk5Q0RBMkMwRjM5MThCM0EA
+    at: '2026-09-19T03:21:11+05:30'
+    text: launch oct 2026
+  oss_release:
+    wamid: wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0JCNUJBOEQwOUUyQTcwNkExOUUA
+    at: '2026-09-19T03:21:17+05:30'
+    text: oss end of sept 2026
+  revenue_target:
+    proposal_wamid: wamid.HBgMOTE4MTIxNzk4Mjg1FQIAERgSMkY5NjUyM0VDQ0MwRkVBQ0JFAA==
+    proposal_at: '2026-09-19T03:20:26+05:30'
+    reply_wamid: wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0I4MzQ3RDlBN0VGQ0Y3MDA1QjcA
+    reply_at: '2026-09-19T03:21:01+05:30'
+    note: numbered edit to item 1 changed the year to 2026; see revenue-target.yaml provenance
+  addendum: docs/plan/product-report-v5-addendum.md
