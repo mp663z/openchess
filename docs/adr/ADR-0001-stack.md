@@ -1,6 +1,6 @@
 # ADR-0001: Stack choice (T0004)
 
-Status: proposed for independent review
+Status: accepted (independent review PASS at 784e4ecc)
 Date: 2026-09-19
 
 ## Context
