@@ -23,8 +23,7 @@ stable release.
 ## Scope and disclosure
 
 In scope: the application code in this repository (desktop, server, web,
-workers, importers), the CI/release pipeline, and the signed release
-artifacts. Out of scope: third-party services you point the software at
+workers, importers), the CI/release pipeline, and the release artifacts. Out of scope: third-party services you point the software at
 (your own model providers, your own infrastructure), vulnerabilities in
 dependencies already publicly disclosed (we track and bump; report only if
 our pin blocks the fix), and issues requiring physical access.

@@ -28,3 +28,8 @@ def test_contact_and_sbom_claims_are_real():
     assert "security contact field" not in text
     assert ".github/workflows/release.yml" in (ROOT / "SECURITY.md").read_text()
     assert "checksums.sha256" in text
+
+
+def test_no_unimplemented_signing_claim():
+    text = " ".join((ROOT / "SECURITY.md").read_text().lower().split())
+    assert "signed" not in text
