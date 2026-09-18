@@ -1,0 +1,45 @@
+# T2235 - Scoring equation, version v0.1 (initial guesses per v5 Appendix D,
+# to be frozen by the Spike B backtest). S = (wT*T + wE*E + wD*D + wR*R + wA*A) * F * G.
+version: "0.1"
+status: initial-guess-unfrozen
+weights_reference_band_2200plus:
+  T_theory_activity: 0.15
+  E_elite_adoption: 0.20
+  D_engine_drift: 0.20
+  R_own_results: 0.25
+  A_review_age: 0.20
+normalization:
+  T_theory_activity: >-
+    games this window in the line, quality-weighted by adopter strength and
+    evidence quality, scaled against the line's trailing-year baseline; clamped [0,1]
+  E_elite_adoption: net elite move-switching at the tabiya, significance-guarded at low n; clamped [-1,1] -> mapped to [0,1]
+  D_engine_drift: abs(eval drift) at the user's tabiya since last review, capped at 0.5 pawn; verified runs only; scaled to [0,1]
+  R_own_results: score in the line over trailing 90 days vs user's overall score; suppressed below 5 games (-> 0)
+  A_review_age: days since review, saturating at 365; scaled to [0,1]
+modulators:
+  F_line_frequency:
+    definition: occurrences in the user's own games, trailing year, relative to their repertoire median
+    clamp: [0.25, 2.0]
+  G_rating_band:
+    reference: "2200+"
+    attenuation:
+      "2000-2199": {T_E_factor: 0.6}
+      "1800-1999": {T_E_factor: 0.4}
+    rule: >-
+      T and E are multiplied by the band factor; R and D are then
+      renormalised upward so effective weights sum to 1 within the band.
+inputs_versioned:
+  - game_count
+  - adopter_strength
+  - engine_drift
+  - personal_result
+  - review_age
+  - user_rating
+  - line_frequency
+  - evidence_quality
+threshold:
+  cold_start: score distribution 75th percentile
+  target_precision: 0.60
+  adjustment: weekly on accept/reject feedback
+  floor_ceiling: enforced so surfaced count stays inside the section-9 budget
+freeze_discipline: weights frozen at backtest close; re-fit at most monthly; every change versioned and replayed against the Appendix B rig
