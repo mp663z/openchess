@@ -80,10 +80,9 @@ def download(
         have = resumed_from = 0
 
     with part.open("ab") as out:
-        written = _fetch_range(url, have, out, budget=first_call_budget)
+        _fetch_range(url, have, out, budget=first_call_budget)
 
     total = part.stat().st_size
-    _ = written
     if expected_bytes is not None and total != expected_bytes:
         raise DownloadError(
             f"incomplete: have {total}, want {expected_bytes} bytes; rerun to resume"
