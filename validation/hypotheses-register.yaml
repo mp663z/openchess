@@ -1,17 +1,21 @@
 # T0002 - Hypothesis register H1-H5, locked 2026-09-19.
-# Source: product report v5, section 6 hypothesis table (exact statements and
-# thresholds quoted verbatim). External timestamp evidence: this file's first
-# merge commit on the public repo (same pattern as T2289 preregistration).
+# Source: product report v5, section 6 hypothesis table (statements and
+# thresholds verbatim, >= normalized from >=, "section" from section-symbol),
+# section 8 corrections, section 11 measurement plan.
+# External timestamp evidence: this file's first merge commit on the public
+# repo (same pattern as T2289 preregistration).
 schema_version: 1
 locked_at: "2026-09-19"
 owner_role: product owner          # role only; no personal identity in this repo
-source: "product report v5 section 6"
+source: "product report v5 sections 6, 8, 11"
 hypotheses:
   - id: H1
     statement: >-
       Onboarding friction is solvable - PGN drop on the pro path, one-connect
       account sync on the casual path
-    cohort: beta users (concierge beta cohort, T2290)
+    cohort: >-
+      concierge beta (30 users, 2000-2200 weekly players; v5 section 11);
+      the concierge beta returns H1 (v5 section 8)
     pass_threshold: ">=70% of beta users reach first value in <15 min"
     fail_threshold: "Median >30 min or <50% complete"
     measurement_query: >-
@@ -20,16 +24,21 @@ hypotheses:
     status: registered
   - id: H2
     statement: The Inbox is a weekly habit
-    cohort: automated V0.1 product users; concierge phase is directional only
-      and cannot pass or fail this hypothesis (v5 section 8 restatement)
-    pass_threshold: ">=40% open it in 3 of 4 consecutive weeks on the automated product"
+    cohort: >-
+      automated V0.1 product users only; the concierge phase is directional
+      only and explicitly cannot pass or fail this hypothesis (v5 section 8)
+    pass_threshold: >-
+      >=40% open it in 3 of 4 consecutive weeks on the automated product
     fail_threshold: "<25% weekly retention on the automated product"
     measurement_query: weekly open events per user over rolling 4-week windows,
       automated product only, no human-in-loop interactions counted
     status: registered
   - id: H3
     statement: The delta changes decisions, durably
-    cohort: automated product users, model arm vs naive-baseline arm
+    cohort: >-
+      concierge beta (30 users, 2000-2200 weekly players; v5 section 11);
+      each user's deltas ranked by the model and the naive baseline in
+      parallel, decision-change rates compared per user (v5 section 6)
     pass_threshold: >-
       >=40% of surfaced deltas produce an accepted repertoire change still in
       the repertoire at 30 days, and the model arm beats the naive-baseline
@@ -41,8 +50,8 @@ hypotheses:
     status: registered
   - id: H4
     statement: The loop is fast enough as a weekly habit
-    cohort: automated product users
-    pass_threshold: "Median weekly human time <=25 min at the observed N (decisions/week), N measured inside the funnel (v5 section 9)"
+    cohort: concierge beta (30 users, 2000-2200 weekly players; v5 section 11 - H0-H4 measured there)
+    pass_threshold: "Median weekly human time <=25 min at the observed N (decisions/week), with N measured inside the funnel (section 9)"
     fail_threshold: Median weekly human time >45 min, or N collapses to near zero for most users
     measurement_query: >-
       per-user weekly active minutes on decision surfaces; N = decisions
@@ -50,8 +59,8 @@ hypotheses:
     status: registered
   - id: H5
     statement: "(Demoted - signal, not gate) Beta users prepay"
-    cohort: beta users alongside the landing-page test
-    pass_threshold: "n/a - signal only, reported alongside the landing-page test (v5 section 10)"
-    fail_threshold: "n/a"
+    cohort: beta users, alongside the landing-page test (the primary willingness-to-pay instrument, section 10)
+    pass_threshold: Reported alongside the landing-page test
+    fail_threshold: "n/a - see section 10"
     measurement_query: prepay conversion count/rate, reported descriptively
     status: registered_demoted_signal
