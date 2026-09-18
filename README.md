@@ -41,3 +41,11 @@ Done requires acceptance, an exact SHA and evidence. UNVERIFIED is never done.
 ## License
 
 AGPL-3.0-or-later. Dependencies are restricted to permissive licenses (MIT / Apache-2.0 / BSD); see `tools/license_audit.py` and `docs/licensing.md`.
+
+## Source
+
+The canonical public repository is https://github.com/mp663z/openchess - every release is a git tag whose generated artifacts carry a component inventory (SBOM) and sha256 checksums.
+
+## Contact
+
+Project contact, rights questions, trademark and security reports: open an issue at https://github.com/mp663z/openchess/issues (security reports may instead use the repository's private vulnerability reporting on GitHub).

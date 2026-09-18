@@ -9,3 +9,4 @@ python tools/dag.py verify
 python tools/evidence_lint.py
 python tools/license_audit.py
 python tools/license_lint.py
+python tools/governance_doc_lint.py
