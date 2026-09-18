@@ -1,6 +1,6 @@
 schema_version: 1
 frozen_at: '2026-09-19'
-product_license: AGPL-3.0-only
+product_license: AGPL-3.0-or-later
 agpl_covers:
 - all chess features (import, search, memory, repertoire, delta, diagnosis, review,
   training)
@@ -15,7 +15,7 @@ private_side_only:
 - provider routing and provider keys
 - abuse and admin
 - ops
-default_rule: anything not enumerated under private_side_only is AGPL-3.0-only
+default_rule: anything not enumerated under private_side_only is AGPL-3.0-or-later
 repo_areas:
   .githooks: agpl
   .github: agpl

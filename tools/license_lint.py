@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # (https://www.gnu.org/licenses/agpl-3.0.txt, fetched and compared 2026-09-19)
 AGPL3_NORMALIZED_SHA256 = "2cd0fb7883a3b3553dedbb0bad171646d46f51e2642951aae7c59cb5cec86c46"
 
-DECLARATIONS = ("pyproject.toml", "README.md", "docs/licensing.md")
+DECLARATIONS = ("pyproject.toml", "README.md", "docs/licensing.md", "licensing-boundary.yaml")
 
 
 def _normalized_sha256(path: Path) -> str:
