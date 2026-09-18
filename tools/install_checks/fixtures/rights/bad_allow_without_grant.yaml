@@ -1,0 +1,10 @@
+schema_version: 2
+sources:
+- id: twic
+  url: https://theweekinchess.com/twic
+  license: proprietary
+  transformation_permission: false
+  decision: allow
+  statement: TWIC page offers free weekly PGN downloads for personal offline reading.
+  statement_source_url: https://theweekinchess.com/twic
+  statement_sha256: cd6ac0ff0e1eb77bad66bac3c4d245b6ada4b3021af382a6e3226d822f172841

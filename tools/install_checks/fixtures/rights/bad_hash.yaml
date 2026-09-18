@@ -1,0 +1,10 @@
+schema_version: 2
+sources:
+- id: somesource
+  url: https://example.com/data
+  license: CC0-1.0
+  transformation_permission: true
+  decision: allow
+  statement: You may download, modify and redistribute.
+  statement_source_url: https://example.com/terms
+  statement_sha256: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
