@@ -35,8 +35,10 @@ This guide is the short path from idea to merged pull request.
 ## Legal
 
 - Most contributions require the Contributor License Agreement (CLA.md):
-  state your acceptance in your first pull request; a maintainer records it
-  in data/cla-acceptances.yaml before merge.
+  state your acceptance as a standalone line in your first pull request; a
+  maintainer records it in data/cla-acceptances.yaml on the base branch
+  before merge. The pull request CI gate (tools/cla_check.py) verifies the
+  recorded acceptance against the referenced pull request.
 - De minimis contributions (typo scale; see DCO.md for the exact bounds)
   may instead carry a `Signed-off-by:` trailer certifying the Developer
   Certificate of Origin.

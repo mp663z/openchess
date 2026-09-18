@@ -25,13 +25,11 @@ MIN_BYTES = 400
 
 # doc path (repo-relative) -> required headings, exact after normalization
 REQUIRED_HEADINGS: dict[str, list[str]] = {
-    "CONTRIBUTING.md": [
-        "contributing",
-        "ground rules",
-        "pull request flow",
-        "legal",
-        "code of conduct",
-        "development setup",
+    "DCO.md": [
+        "developer certificate of origin and de minimis contributions",
+        "developer certificate of origin",
+        "sign-off",
+        "de minimis contributions",
     ],
     "NOTICE": [
         "network use and source offer",
@@ -40,7 +38,37 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "corresponding source scope",
         "trademarks, data, and models",
     ],
+    "CLA.md": [
+        "contributor license agreement",
+        "1. definitions",
+        "2. grant of copyright license",
+        "3. grant of patent license",
+        "4. representations",
+        "5. no obligation",
+        "6. outbound license (agpl)",
+        "7. acceptance",
+    ],
+    "GOVERNANCE.md": [
+        "governance",
+        "roles",
+        "decision making",
+        "moderation and appeals",
+        "delegation",
+        "amending this file",
+        "trademarks and assets",
+    ],
+    "CONTRIBUTING.md": [
+        "contributing",
+        "ground rules",
+        "pull request flow",
+        "legal",
+        "code of conduct",
+        "development setup",
+    ],
 }
+
+
+
 
 # paths that must each have a CODEOWNERS rule (when CODEOWNERS is registered)
 CODEOWNERS_REQUIRED_PATHS = [

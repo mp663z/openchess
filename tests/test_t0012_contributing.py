@@ -25,3 +25,11 @@ def test_contributing_content_exact():
     assert "automated CLA check" not in text
     assert "governance docs lint" in text
     assert "Appeal a moderation decision to the project owner" in text
+
+
+def test_references_are_real_in_tree():
+    text = (ROOT / "CONTRIBUTING.md").read_text()
+    assert (ROOT / "tools/cla_check.py").exists(), "CLA gate referenced but absent"
+    gov = " ".join((ROOT / "GOVERNANCE.md").read_text().lower().split())
+    assert "may appeal to the project owner" in gov, "GOVERNANCE appeal rule absent"
+    assert "tools/cla_check.py" in text
