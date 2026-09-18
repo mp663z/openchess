@@ -1,11 +1,18 @@
-"""T0006 v2: approvals bind to the full artifact; silent writes impossible."""
+"""T0006 v3: binding approvals + role-per-action authorization."""
 
 import hashlib
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from brand.approval import Approval, ApprovalGate, Proposal, SilentWriteError
+from brand.approval import (
+    Approval,
+    ApprovalGate,
+    CapabilityGrant,
+    Proposal,
+    SilentWriteError,
+)
 
 APPROVERS = {"abhishek": "user", "review-bot": "reviewer"}
 
@@ -117,9 +124,6 @@ def test_invalid_approver_rejected():
         gate.approve(p, "mallory")  # not registered
     with pytest.raises(SilentWriteError):
         gate.approve(p, "")  # empty identity
-    # Role comes from the registry, never from caller-supplied strings.
-    approval = gate.approve(p, "review-bot")
-    assert approval.approver_role == "reviewer"
 
 
 def test_gate_requires_registered_approvers():
@@ -159,3 +163,132 @@ def test_approval_record_is_immutable():
     assert isinstance(approval, Approval)
     with pytest.raises(AttributeError):
         approval.approver_role = "admin"  # type: ignore[misc]
+
+
+# --- v3: role-per-action authorization -------------------------------------
+
+
+def test_reviewer_cannot_approve_user_data_write():
+    """Registered identity without the capability is not authorized."""
+    gate = make_gate()
+    p = gate.propose("rename_note", "notes/n1", {"title": "a"}, {"title": "b"})
+    with pytest.raises(SilentWriteError, match="not authorized"):
+        gate.approve(p, "review-bot")
+
+
+@pytest.mark.parametrize("role", ["reviewer", "service", "admin"])
+def test_non_user_roles_cannot_approve_user_data_writes(role):
+    gate = ApprovalGate({"abhishek": "user", "agent-x": role})
+    p = gate.propose("update_repertoire", "repertoire/main", {"line": "e4"}, {"line": "d4"})
+    with pytest.raises(SilentWriteError):
+        gate.approve(p, "agent-x")
+
+
+def test_destructive_action_requires_user_role():
+    gate = ApprovalGate({"abhishek": "user", "ops": "admin"})
+    p = gate.propose("delete_all_user_data", "users", {"n": 3}, None)
+    with pytest.raises(SilentWriteError, match="destructive"):
+        gate.approve(p, "ops")
+    gate.approve(p, "abhishek")  # user role holds the destructive capability
+    gate.commit(p)
+    assert gate.audit_log[0]["authorization"] == "role:user"
+
+
+def test_destructive_capability_cannot_be_delegated_by_grant():
+    grant = CapabilityGrant(
+        grantee="review-bot",
+        action="delete_all_user_data",
+        target_scope="users",
+        granted_by="abhishek",
+        capability="user-data-destructive",
+    )
+    gate = ApprovalGate(APPROVERS, grants=[grant])
+    p = gate.propose("delete_all_user_data", "users", {"n": 3}, None)
+    with pytest.raises(SilentWriteError, match="destructive"):
+        gate.approve(p, "review-bot")
+
+
+def test_scoped_grant_allows_exact_action_and_target():
+    grant = CapabilityGrant(
+        grantee="review-bot",
+        action="rename_note",
+        target_scope="notes/*",
+        granted_by="abhishek",
+    )
+    gate = ApprovalGate(APPROVERS, grants=[grant])
+    p = gate.propose("rename_note", "notes/n1", {"title": "a"}, {"title": "b"})
+    approval = gate.approve(p, "review-bot")
+    assert approval.authorization == "grant:abhishek"
+    gate.commit(p)
+    assert gate.audit_log[0]["authorization"] == "grant:abhishek"
+
+
+def test_scoped_grant_cannot_widen_action_or_target():
+    grant = CapabilityGrant(
+        grantee="review-bot",
+        action="rename_note",
+        target_scope="notes/*",
+        granted_by="abhishek",
+    )
+    gate = ApprovalGate(APPROVERS, grants=[grant])
+    other_action = gate.propose("delete_note", "notes/n1", {"title": "a"}, None)
+    with pytest.raises(SilentWriteError):
+        gate.approve(other_action, "review-bot")
+    other_target = gate.propose("rename_note", "games/g1", {"title": "a"}, {"title": "b"})
+    with pytest.raises(SilentWriteError):
+        gate.approve(other_target, "review-bot")
+    exact = CapabilityGrant(
+        grantee="review-bot",
+        action="rename_note",
+        target_scope="notes/n1",
+        granted_by="abhishek",
+    )
+    gate2 = ApprovalGate(APPROVERS, grants=[exact])
+    off_scope = gate2.propose("rename_note", "notes/n2", {"title": "a"}, {"title": "b"})
+    with pytest.raises(SilentWriteError):
+        gate2.approve(off_scope, "review-bot")
+
+
+def test_grant_from_non_user_grantor_confers_nothing():
+    grant = CapabilityGrant(
+        grantee="review-bot",
+        action="rename_note",
+        target_scope="notes/*",
+        granted_by="review-bot",  # reviewer cannot delegate authority
+    )
+    gate = ApprovalGate(APPROVERS, grants=[grant])
+    p = gate.propose("rename_note", "notes/n1", {"title": "a"}, {"title": "b"})
+    with pytest.raises(SilentWriteError):
+        gate.approve(p, "review-bot")
+
+
+def test_expired_grant_confers_nothing():
+    now = datetime.now(timezone.utc)  # noqa: UP017 - py3.10 runtime
+    grant = CapabilityGrant(
+        grantee="review-bot",
+        action="rename_note",
+        target_scope="notes/*",
+        granted_by="abhishek",
+        expires_at=(now - timedelta(minutes=1)).isoformat(),
+    )
+    gate = ApprovalGate(APPROVERS, grants=[grant], now=lambda: now)
+    p = gate.propose("rename_note", "notes/n1", {"title": "a"}, {"title": "b"})
+    with pytest.raises(SilentWriteError):
+        gate.approve(p, "review-bot")
+
+
+def test_authorization_bound_into_approval_and_audit():
+    gate = make_gate()
+    p = gate.propose("update_repertoire", "repertoire/main", {"line": "e4"}, {"line": "d4"})
+    approval = gate.approve(p, "abhishek")
+    assert approval.authorization == "role:user"
+    gate.commit(p)
+    assert gate.audit_log[0]["authorization"] == "role:user"
+
+
+def test_default_policy_unknown_action_requires_user():
+    gate = ApprovalGate({"abhishek": "user", "svc": "service"})
+    p = gate.propose("brand_new_action", "anything", {"a": 1}, {"a": 2})
+    with pytest.raises(SilentWriteError):
+        gate.approve(p, "svc")
+    gate.approve(p, "abhishek")
