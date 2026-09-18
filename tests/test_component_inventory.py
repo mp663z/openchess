@@ -17,24 +17,21 @@ def regenerate() -> dict:
     return ci.generate()
 
 
-def _env_independent(inv: dict) -> dict:
-    """Versions and license STRINGS come from the installed environment and
-    legitimately differ across machines (older package metadata omits them).
-    Names, requirements, origins and direct-flags must regenerate identically;
-    the committed manifest's versions/licenses are checked separately."""
-    inv = json.loads(json.dumps(inv))
-    for lib in inv["libraries"]:
-        lib.pop("version", None)
-        lib.pop("license", None)
-    return inv
+def test_committed_manifest_is_current_with_inputs():
+    """Staleness = inputs changed since generation (env-independent). Library
+    membership/versions/licenses legitimately vary with the installed
+    environment (platform and python-version markers), so regenerability is
+    checked against input hashes, not a byte-for-byte environment diff."""
+    import tools.component_inventory as ci
 
-
-def test_committed_manifest_is_regenerable():
     committed = json.loads(MANIFEST.read_text())
-    fresh = regenerate()
-    assert _env_independent(committed) == _env_independent(fresh), (
+    assert committed["inputs_sha256"] == ci._inputs_sha256(), (
         "manifest is stale - re-run tools/component_inventory.py"
     )
+    # The env-independent sections must regenerate identically.
+    fresh = regenerate()
+    for section in ("datasets", "engines", "model_weights", "bundled_assets"):
+        assert committed[section] == fresh[section], section
     # Versions/licenses are environment-sourced but must be recorded, never blank.
     for lib in committed["libraries"]:
         assert lib.get("version"), lib["name"]

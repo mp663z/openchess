@@ -95,6 +95,17 @@ def _transitive_closure(direct: set[str]) -> set[str]:
     return seen
 
 
+def _inputs_sha256() -> str:
+    """Hash of the manifest's inputs: requirement files + snapshot pins.
+    Staleness is defined against inputs, not the installed environment."""
+    import hashlib
+
+    h = hashlib.sha256()
+    for f in sorted(ROOT.glob("requirements*.txt")) + [PINS]:
+        h.update(f.name.encode() + b"\0" + f.read_bytes())
+    return h.hexdigest()
+
+
 def generate() -> dict:
     direct = _requirements()
     closure = _transitive_closure(set(direct))
@@ -121,6 +132,7 @@ def generate() -> dict:
     return {
         "schema_version": 1,
         "generated_by": "tools/component_inventory.py",
+        "inputs_sha256": _inputs_sha256(),
         "libraries": libraries,
         "engines": [
             {
