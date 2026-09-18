@@ -25,8 +25,8 @@ non-exclusive, no-charge, royalty-free, irrevocable copyright license to
 reproduce, prepare derivative works of, publicly display, publicly perform,
 sublicense, and distribute Your Contributions and derivative works of them.
 The Project will sublicense Contributions only under AGPL-3.0-or-later (the
-Project's outbound license) or another license approved through the
-Project's documented governance process.
+Project's outbound license). This CLA grants no right to relicense
+Contributions under any other license.
 
 ## 3. Grant of patent license
 
@@ -78,7 +78,9 @@ Corresponding Source, consistent with the NOTICE file.
 
 ## 7. Acceptance
 
-This CLA is accepted when a Contribution is submitted with a pull request
-or patch and the automated CLA check records acceptance for your account.
-Contributions below the de minimis threshold described in DCO.md may be
-accepted under the Developer Certificate of Origin instead.
+You accept this CLA by stating your acceptance in your first pull request
+("I accept the CLA in CLA.md"). Before that pull request merges, a
+maintainer records your GitHub handle and acceptance reference in
+data/cla-acceptances.yaml; CI validates the registry's format. A pull
+request from a contributor with no registry entry is not merged (de minimis
+contributions excepted, per DCO.md).
