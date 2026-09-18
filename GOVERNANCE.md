@@ -32,6 +32,13 @@ small: one owner, a maintainer group, and written records.
   the change until remediated. Nobody, including the owner, marks UNVERIFIED
   work as done.
 
+## Moderation and appeals
+
+Maintainers may remove content and suspend participation for
+code-of-conduct violations (CONTRIBUTING.md). A moderated contributor may
+appeal to the project owner (contact in the README); the owner's decision
+is final.
+
 ## Delegation
 
 The owner may delegate specific decisions (for example, merge judgment on a

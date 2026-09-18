@@ -24,3 +24,5 @@ def test_governance_content_exact():
     assert "named in this file as they join" in text
     assert "a delegation names its scope" in text
     assert "delegation never bypasses the evidence gates" in text
+    assert "may appeal to the project owner" in text
+    assert "owner's decision" in text

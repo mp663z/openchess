@@ -36,6 +36,7 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "governance",
         "roles",
         "decision making",
+        "moderation and appeals",
         "delegation",
         "amending this file",
         "trademarks and assets",
