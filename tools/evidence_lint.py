@@ -1,4 +1,15 @@
-"""T0007 v2 - evidence contract lint (strict).
+"""T0007 v3 - evidence contract lint (strict, frozen grandfathering).
+
+v3 hardenings (verifier findings on v2):
+- The grandfather allowlist is pinned: ALLOWLIST_SHA256 is the sha256 of the
+  allowlist file's exact bytes, hardcoded in this enforcement module. A commit
+  that edits data/evidence-pre-contract.yaml (replace an entry, keep the
+  count, retarget a digest) fails closed: every marker file then errors as
+  non-allowlisted. Changing the allowlist requires changing trusted code.
+- The pre-contract marker must close the file (only whitespace after it).
+- An evidence file for a task missing from tasks/dag.json is an error.
+- Commands must contain a nonempty backticked command and a nonempty
+  Environment value.
 
 Rules (docs/governance/evidence-contract.md):
 - A file is grandfathered ONLY when it carries an exact `pre-contract: true`
@@ -32,9 +43,15 @@ EVIDENCE = ROOT / "evidence"
 DAG = ROOT / "tasks" / "dag.json"
 ALLOWLIST = ROOT / "data" / "evidence-pre-contract.yaml"
 
+# sha256 of data/evidence-pre-contract.yaml bytes - the frozen grandfather list
+ALLOWLIST_SHA256 = "1475352ad9092f9e676096948476c2eb1b650a0d513f4021aa0a53fa17fd5a42"
 SHA_RE = re.compile(r"\b[0-9a-f]{40}\b")
+DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+ALLOWLIST_KEY_RE = re.compile(r"^evidence/T\d{4}\.md$")
+CMD_RE = re.compile(r"`[^`\s][^`]*`")
+ENV_RE = re.compile(r"Environment:\s*\S")
 TASK_RE = re.compile(r"^T\d{4}$")
-MARKER_RE = re.compile(r"^pre-contract: true( - .*)?$", re.M)
+MARKER_RE = re.compile(r"pre-contract: true( - [^\n]*)?\s*\Z")
 INDEPENDENT = ("independent", "human")
 
 
@@ -82,9 +99,14 @@ def lint_file(
         errors.append(f"{rel}: missing or invalid `Status:` field (done|in-progress|pending)")
 
     board = tasks.get(task)
-    board_done = bool(board and board.get("status") == "done")
-    board_sha = (board or {}).get("done_sha") or ""
-    mode = (board or {}).get("verification") if board else None
+    if board is None:
+        errors.append(f"{rel}: task {task} missing from tasks/dag.json")
+        return errors
+    board_done = bool(board.get("status") == "done")
+    board_sha = board.get("done_sha") or ""
+    mode = board.get("verification")
+    if not mode:
+        errors.append(f"{rel}: board task {task} has no verification mode")
 
     recorded_sha = _field(text, "Recorded merge SHA on main")
     if status == "done":
@@ -126,11 +148,36 @@ def lint_file(
     if not commands:
         errors.append(f"{rel}: missing `Commands:` field")
     else:
-        if "`" not in commands:
-            errors.append(f"{rel}: Commands must include a backticked command")
-        if "Environment:" not in commands:
-            errors.append(f"{rel}: Commands must record the environment (Environment:)")
+        if not CMD_RE.search(commands):
+            errors.append(f"{rel}: Commands must include a nonempty backticked command")
+        if not ENV_RE.search(commands):
+            errors.append(
+                f"{rel}: Commands must record a nonempty environment (Environment: <value>)"
+            )
     return errors
+
+
+def load_allowlist(path: Path) -> tuple[dict[str, str], list[str]]:
+    """Load the grandfather allowlist, failing closed on any tampering.
+
+    The file's bytes must hash to ALLOWLIST_SHA256 (pinned above in trusted
+    code); on mismatch nothing is grandfathered. Shape is validated too.
+    """
+    raw = path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != ALLOWLIST_SHA256:
+        return {}, [
+            "data/evidence-pre-contract.yaml: digest != ALLOWLIST_SHA256 pinned "
+            "in tools/evidence_lint.py - allowlist tampered; grandfathering "
+            "refused (fail closed)"
+        ]
+    errors: list[str] = []
+    mapping = (yaml.safe_load(raw.decode()) or {}).get("files", {})
+    for key, value in mapping.items():
+        if not ALLOWLIST_KEY_RE.match(key):
+            errors.append(f"allowlist key {key!r} is not evidence/TNNNN.md")
+        if not isinstance(value, str) or not DIGEST_RE.match(value):
+            errors.append(f"allowlist digest for {key!r} is not 64-hex sha256")
+    return mapping, errors
 
 
 def lint_tree(root: Path = ROOT) -> list[str]:
@@ -138,8 +185,7 @@ def lint_tree(root: Path = ROOT) -> list[str]:
     dag = root / "tasks" / "dag.json"
     allowlist_path = root / "data" / "evidence-pre-contract.yaml"
     tasks = _tasks(dag)
-    allowlist = (yaml.safe_load(allowlist_path.read_text()) or {}).get("files", {})
-    errors: list[str] = []
+    allowlist, errors = load_allowlist(allowlist_path)
     files = sorted(evidence.glob("T*.md"))
     if not files:
         errors.append("no evidence files found")
