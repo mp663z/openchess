@@ -20,4 +20,4 @@ pins:
     url: https://database.lichess.org/lichess_db_eval.jsonl.zst
     expected_bytes: 22086532809
     etag: '"6aa21979-52475bec9"'
-    sha256: pending-measurement
+    sha256: 47f136a42e8e5414a81f3d50a92c7bae9ff41d3c84f091fefdce80d79eb3bd6c
