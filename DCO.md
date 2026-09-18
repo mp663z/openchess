@@ -1,5 +1,11 @@
 # Developer Certificate of Origin and De Minimis Contributions
 
+This project accepts contributions under two regimes: the Contributor
+License Agreement (CLA.md) for ordinary contributions, and the Developer
+Certificate of Origin below for de minimis contributions only. This file
+carries the certificate text, the sign-off mechanics, and the exact de
+minimis bounds.
+
 ## Developer Certificate of Origin
 
 All contributions to this project are made under the Developer Certificate of

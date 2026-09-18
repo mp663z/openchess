@@ -22,3 +22,8 @@ def test_dco_content_exact():
     assert "10 changed lines" in text
     # de minimis must be bounded, not open-ended
     assert "all of the following" in text
+    # no unenforceable CI-rejection claim, no Mechanical-Change exception
+    assert "ci rejects" not in text
+    assert "mechanical-change" not in text
+    # real mechanism: maintainer verifies at review
+    assert "maintainers verify" in text
