@@ -1,0 +1,26 @@
+# Code owners - review routing and merge rights.
+# The project owner holds final authority (GOVERNANCE.md).
+# The build account below is the owner's publication account;
+# One account owns everything until maintainers are named.
+
+*                       @mp663z
+
+# Governance and legal documents: owner only, never delegated.
+LICENSE                 @mp663z
+NOTICE                  @mp663z
+CLA.md                  @mp663z
+DCO.md                  @mp663z
+GOVERNANCE.md           @mp663z
+TRADEMARK.md            @mp663z
+SECURITY.md             @mp663z
+.github/CODEOWNERS      @mp663z
+docs/rights-policy.md   @mp663z
+docs/licensing.md       @mp663z
+
+# Evidence chain and licensing enforcement: owner only.
+tools/evidence_lint.py  @mp663z
+tools/license_lint.py   @mp663z
+tools/governance_doc_lint.py @mp663z
+data/evidence-pre-contract.yaml @mp663z
+data/release-lock.json  @mp663z
+licensing-boundary.yaml @mp663z
