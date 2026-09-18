@@ -72,7 +72,14 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "logo use",
         "enforcement and questions",
     ],
+    "SECURITY.md": [
+        "reporting a vulnerability",
+        "supported versions",
+        "scope and disclosure",
+        "hardening notes",
+    ],
 }
+
 
 
 
