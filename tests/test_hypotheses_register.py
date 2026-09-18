@@ -70,5 +70,6 @@ def test_cohorts_match_report_measurement_plan():
 
 def test_h3_ab_inside_beta_and_h5_demoted():
     assert "naive baseline" in HS["H3"]["cohort"]
+    assert "alongside the landing-page test" in HS["H5"]["cohort"]
     assert "directional only" in HS["H2"]["cohort"]
     assert HS["H5"]["status"] == "registered_demoted_signal"
