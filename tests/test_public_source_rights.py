@@ -28,7 +28,10 @@ def test_every_source_has_license_url_permission_checksum_field():
         assert "license" in s and s["license"], s["id"]
         assert "url" in s, s["id"]
         assert "transformation_permission" in s, s["id"]
-        assert "statement_sha256" in s, s["id"]  # null allowed, key required
+        sha = s.get("statement_sha256")
+        assert sha and len(sha) == 64, f"{s['id']}: statement_sha256 must be a real sha256"
+        int(sha, 16)
+        assert s.get("statement"), f"{s['id']}: captured statement text required"
         assert s["decision"] in ("allow", "allow_with_flag", "fail_closed")
 
 

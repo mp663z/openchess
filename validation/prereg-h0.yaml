@@ -6,6 +6,17 @@ registration:
   registered_at: "2026-09-18T18:53:00+05:30"
   registered_before_data_collection: true
   status: registered
+  # External timestamp evidence (option (b) from verifier review 2026-09-18):
+  # the preregistration content is pinned by a GitHub merge commit whose
+  # committer timestamp is recorded by GitHub's servers - an external
+  # registry outside our control. Chosen over amending the criterion.
+  timestamp_evidence:
+    kind: external_registry_commit
+    registry: https://github.com/mp663z/openchess
+    commit_sha: cacd9b4e0b2f1a46cbcb3d66298ed081f09627d9
+    commit_url: https://github.com/mp663z/openchess/commit/cacd9b4e0b2f1a46cbcb3d66298ed081f09627d9
+    registry_recorded_at: "2026-09-18T13:24:58Z"
+    h1_artifact_present_at_registration: false
   sources:
     - docs/plan/product-report-v5.md (section 4, spike S3; section 2, Bet 1; hypothesis table H0)
     - tasks/dag.json (T2289 acceptance)
