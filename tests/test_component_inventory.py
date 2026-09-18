@@ -1,4 +1,4 @@
-"""T3655 v2: SBOM is generated from a locked release resolution, exact-compared."""
+"""T3655 v3: SBOM from a locked, per-target release resolution with artifact hashes."""
 
 import contextlib
 import hashlib
@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs/component-inventory.json"
 LOCK = ROOT / "data" / "release-lock.json"
+TARGETS = ("cp312-manylinux_x86_64", "cp312-win_amd64")
 
 
 def _fresh() -> dict:
@@ -30,21 +31,65 @@ def test_committed_manifest_is_current_with_inputs():
 def test_committed_manifest_regenerates_exactly():
     """The locked resolution makes the whole manifest byte-reproducible."""
     committed = json.loads(MANIFEST.read_text())
-    fresh = _fresh()
-    assert committed == fresh, (
-        "committed manifest differs from regeneration - re-run "
-        "tools/component_inventory.py"
+    assert committed == _fresh(), (
+        "committed manifest differs from regeneration - re-run tools/component_inventory.py"
     )
+
+
+def test_lock_covers_defined_release_targets():
+    lock = json.loads(LOCK.read_text())
+    assert set(lock["release_targets"]) == set(TARGETS)
+    for name, target in lock["release_targets"].items():
+        assert target["python"] == "3.12"
+        assert target["artifacts"], f"empty closure for {name}"
+
+
+def test_markers_evaluated_per_target():
+    """The closures are demonstrably per-target, not running-env leakage."""
+    lock = json.loads(LOCK.read_text())
+    linux = {a["name"] for a in lock["release_targets"]["cp312-manylinux_x86_64"]["artifacts"]}
+    win = {a["name"] for a in lock["release_targets"]["cp312-win_amd64"]["artifacts"]}
+    assert "colorama" in win, "win32-only dep missing from the windows target"
+    assert "colorama" not in linux, "win32-only dep leaked into the linux target"
+    for py311_only in ("exceptiongroup", "tomli", "typing_extensions"):
+        assert py311_only not in linux, f"{py311_only} is py<3.11-only; target is 3.12"
+        assert py311_only not in win, f"{py311_only} is py<3.11-only; target is 3.12"
+
+
+def test_every_artifact_is_exact_and_hashed():
+    """No null/n/a versions anywhere; every artifact carries a real hash."""
+    lock = json.loads(LOCK.read_text())
+    for target_name, target in lock["release_targets"].items():
+        for a in target["artifacts"]:
+            assert a["version"] and "n/a" not in a["version"], (target_name, a["name"])
+            assert len(a["sha256"]) == 64, (target_name, a["name"])
+            assert a["filename"].endswith(".whl"), (target_name, a["name"])
+            assert a["url"].startswith("https://files.pythonhosted.org/"), a["name"]
+            assert a["license"] and a["license"] != "UNVERIFIED", a["name"]
 
 
 def test_libraries_come_from_lock_not_environment():
     """Every lock entry appears in the manifest; nothing ambient leaks in."""
     lock = json.loads(LOCK.read_text())
     committed = json.loads(MANIFEST.read_text())
-    lock_names = {lib["name"] for lib in lock["libraries"]}
+    lock_names = {
+        a["name"]
+        for target in lock["release_targets"].values()
+        for a in target["artifacts"]
+    }
     manifest_names = {lib["name"] for lib in committed["libraries"]}
     assert manifest_names == lock_names
-    assert lock["libraries"], "lock is empty - run tools/lock_release.py"
+
+
+def test_manifest_versions_match_lock_exactly():
+    lock = json.loads(LOCK.read_text())
+    committed = json.loads(MANIFEST.read_text())
+    libs = {lib["name"]: lib for lib in committed["libraries"]}
+    for target_name, target in lock["release_targets"].items():
+        for a in target["artifacts"]:
+            t = libs[a["name"]]["targets"][target_name]
+            assert t["version"] == a["version"], a["name"]
+            assert t["sha256"] == a["sha256"], a["name"]
 
 
 def test_lock_is_fingerprinted_into_inputs():
@@ -58,13 +103,16 @@ def test_lock_is_fingerprinted_into_inputs():
     assert committed["inputs_sha256"] == h.hexdigest()
 
 
-def test_every_library_has_version_origin_license():
+def test_every_library_has_origin_license_direct():
     inv = json.loads(MANIFEST.read_text())
     assert inv["libraries"], "no libraries listed"
     for lib in inv["libraries"]:
-        for field in ("name", "version", "license", "origin", "direct"):
+        for field in ("name", "license", "origin", "direct"):
             assert lib.get(field) not in (None, ""), (lib["name"], field)
         assert lib["license"] != "UNVERIFIED", lib["name"]
+        assert lib["targets"], lib["name"]
+        for t in lib["targets"].values():
+            assert t["version"] and "n/a" not in t["version"], lib["name"]
 
 
 def test_transitive_dependencies_present():
@@ -89,13 +137,11 @@ def test_engines_models_assets_sections_exist():
         e["name"] == "stockfish" and e["license"] == "GPL-3.0" and not e["bundled"]
         for e in engines
     )
-    # Discovered (not hardcoded): lists may be empty only because no such
-    # files exist under the declared asset/model dirs yet.
     assert isinstance(inv["model_weights"], list)
     assert isinstance(inv["bundled_assets"], list)
 
 
-def test_discovery_picks_up_weights_and_assets(tmp_path, monkeypatch):
+def test_discovery_picks_up_weights_and_assets():
     """Discovery must find files under the declared dirs (fail-closed vs hardcode)."""
     import tools.component_inventory as ci
 
