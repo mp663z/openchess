@@ -1,7 +1,7 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "generated_by": "tools/component_inventory.py",
-  "inputs_sha256": "1a8b00a3cc43c206a052d105ad6e4101f401f60e43660f314cf6bd90491207ed",
+  "inputs_sha256": "c3d0ce9e74077c71e91127d0551c84509b398c98df19a5cfedf6655a7e246101",
   "libraries": [
     {
       "name": "pytest",
@@ -22,7 +22,10 @@
           "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
           "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl"
         }
-      }
+      },
+      "linkage": "dynamic_link",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "PyYAML",
@@ -43,7 +46,10 @@
           "sha256": "5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b",
           "url": "https://files.pythonhosted.org/packages/86/bf/899e81e4cce32febab4fb42bb97dcdf66bc135272882d1987881a4b519e9/pyyaml-6.0.3-cp312-cp312-win_amd64.whl"
         }
-      }
+      },
+      "linkage": "dynamic_link",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "ruff",
@@ -64,7 +70,10 @@
           "sha256": "a6b85621fd3c81e31fc5f5add09c9c078b430db3595ca632efafdec9e64ebfaa",
           "url": "https://files.pythonhosted.org/packages/1e/5d/a509c07d714b6da88f2c518b4637cf6f1d46b074be8f0f1e5fb9ff5126fe/ruff-0.16.8-py3-none-win_amd64.whl"
         }
-      }
+      },
+      "linkage": "subprocess",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "zstandard",
@@ -85,7 +94,10 @@
           "sha256": "ffef5a74088f1e09947aecf91011136665152e0b4b359c42be3373897fb39b01",
           "url": "https://files.pythonhosted.org/packages/79/3b/fa54d9015f945330510cb5d0b0501e8253c127cca7ebe8ba46a965df18c5/zstandard-0.25.0-cp312-cp312-win_amd64.whl"
         }
-      }
+      },
+      "linkage": "dynamic_link",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "colorama",
@@ -100,7 +112,10 @@
           "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
           "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl"
         }
-      }
+      },
+      "linkage": "dynamic_link",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "iniconfig",
@@ -121,7 +136,10 @@
           "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
           "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl"
         }
-      }
+      },
+      "linkage": "dynamic_link",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "packaging",
@@ -142,7 +160,10 @@
           "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
           "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
         }
-      }
+      },
+      "linkage": "dynamic_link",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "pluggy",
@@ -163,7 +184,10 @@
           "sha256": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
           "url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl"
         }
-      }
+      },
+      "linkage": "dynamic_link",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "Pygments",
@@ -184,7 +208,10 @@
           "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
           "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl"
         }
-      }
+      },
+      "linkage": "dynamic_link",
+      "deployment": "ci_only",
+      "distribution": "not_distributed"
     }
   ],
   "engines": [
@@ -194,7 +221,10 @@
       "origin": "https://stockfishchess.org/",
       "license": "GPL-3.0",
       "bundled": false,
-      "note": "external process, invoked over UCI; not linked, not distributed"
+      "note": "external process, invoked over UCI; not linked, not distributed",
+      "linkage": "subprocess",
+      "deployment": "server_only",
+      "distribution": "not_distributed"
     }
   ],
   "model_weights": [],
@@ -207,7 +237,10 @@
       "bytes": 30145862359,
       "origin": "https://database.lichess.org/standard/lichess_db_standard_rated_2026-08.pgn.zst",
       "license": "CC0",
-      "bundled": false
+      "bundled": false,
+      "linkage": "data",
+      "deployment": "server_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "lichess_puzzles",
@@ -217,7 +250,10 @@
       "bytes": 304429328,
       "origin": "https://database.lichess.org/lichess_db_puzzle.csv.zst",
       "license": "CC0",
-      "bundled": false
+      "bundled": false,
+      "linkage": "data",
+      "deployment": "server_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "lichess_evals",
@@ -227,7 +263,10 @@
       "bytes": 22086532809,
       "origin": "https://database.lichess.org/lichess_db_eval.jsonl.zst",
       "license": "CC0",
-      "bundled": false
+      "bundled": false,
+      "linkage": "data",
+      "deployment": "server_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "lichess_standard_games",
@@ -237,7 +276,10 @@
       "bytes": 32379325271,
       "origin": "https://database.lichess.org/standard/lichess_db_standard_rated_2024-01.pgn.zst",
       "license": "CC0",
-      "bundled": false
+      "bundled": false,
+      "linkage": "data",
+      "deployment": "server_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "lichess_standard_games",
@@ -247,7 +289,10 @@
       "bytes": 29762409631,
       "origin": "https://database.lichess.org/standard/lichess_db_standard_rated_2024-02.pgn.zst",
       "license": "CC0",
-      "bundled": false
+      "bundled": false,
+      "linkage": "data",
+      "deployment": "server_only",
+      "distribution": "not_distributed"
     },
     {
       "name": "lichess_standard_games",
@@ -257,7 +302,10 @@
       "bytes": 31053615321,
       "origin": "https://database.lichess.org/standard/lichess_db_standard_rated_2024-03.pgn.zst",
       "license": "CC0",
-      "bundled": false
+      "bundled": false,
+      "linkage": "data",
+      "deployment": "server_only",
+      "distribution": "not_distributed"
     }
   ],
   "bundled_assets": []

@@ -1,0 +1,27 @@
+# T3656 - linkage and deployment classification for every inventory component.
+# Joined into docs/component-inventory.json by tools/component_inventory.py.
+# Fail-closed: a component without a classification entry fails generation.
+#
+# linkage: subprocess | dynamic_link | static_link | source_inclusion | data
+# deployment: ci_only | server_only | cli_tooling | browser_bundle
+# distribution: not_distributed | distributed_with_app
+schema_version: 1
+components:
+  # Python libraries: imported at runtime by tooling (dynamic link in the
+  # interpreter sense), run only in CI/development environments, and are NOT
+  # shipped inside any product artifact.
+  PyYAML:        {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  pytest:        {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  ruff:          {linkage: subprocess,   deployment: ci_only, distribution: not_distributed}
+  zstandard:     {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  colorama:      {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  iniconfig:     {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  packaging:     {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  pluggy:        {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  Pygments:      {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  # Engines
+  stockfish:     {linkage: subprocess,   deployment: server_only, distribution: not_distributed}
+  # Datasets: data inputs, streamed during ingest/backtest, never bundled.
+  lichess_standard_games: {linkage: data, deployment: server_only, distribution: not_distributed}
+  lichess_puzzles:        {linkage: data, deployment: server_only, distribution: not_distributed}
+  lichess_evals:          {linkage: data, deployment: server_only, distribution: not_distributed}
