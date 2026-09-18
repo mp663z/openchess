@@ -32,8 +32,16 @@ REQUIRED_HEADINGS: dict[str, list[str]] = {
         "corresponding source scope",
         "trademarks, data, and models",
     ],
+    "GOVERNANCE.md": [
+        "governance",
+        "roles",
+        "decision making",
+        "moderation and appeals",
+        "delegation",
+        "amending this file",
+        "trademarks and assets",
+    ],
 }
-
 # paths that must each have a CODEOWNERS rule (when CODEOWNERS is registered)
 CODEOWNERS_REQUIRED_PATHS = [
     "LICENSE", "NOTICE", "CLA.md", "DCO.md", "CONTRIBUTING.md",
