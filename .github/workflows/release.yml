@@ -1,0 +1,23 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: python tools/lock_release.py --check
+      - run: python tools/license_audit.py
+      - run: python tools/component_inventory.py
+      - run: sha256sum docs/component-inventory.json data/release-lock.json > checksums.sha256
+      - name: Create release with SBOM and checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes docs/component-inventory.json data/release-lock.json checksums.sha256
