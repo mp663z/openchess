@@ -20,3 +20,7 @@ def test_governance_content_exact():
     assert "lazy consensus" in text
     assert "not subject to convenience overrides" in text
     assert "unverified" in text
+    assert "sole maintainer at" in text
+    assert "named in this file as they join" in text
+    assert "a delegation names its scope" in text
+    assert "delegation never bypasses the evidence gates" in text

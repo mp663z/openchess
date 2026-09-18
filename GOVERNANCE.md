@@ -12,7 +12,9 @@ small: one owner, a maintainer group, and written records.
   policy, CODEOWNERS) personally or through engaged counsel.
 - **Maintainers**: contributors with merge rights, listed in
   .github/CODEOWNERS. Maintainers review and merge within their areas and
-  keep the evidence registry honest.
+  keep the evidence registry honest. The owner is the sole maintainer at
+  project bootstrap; new maintainers are named in this file as they join,
+  with the appointment recorded in the pull request that adds them.
 - **Contributors**: everyone who submits pull requests under CLA.md or
   DCO.md.
 
@@ -29,6 +31,14 @@ small: one owner, a maintainer group, and written records.
   review FAIL, a license-audit rejection, or a broken evidence chain blocks
   the change until remediated. Nobody, including the owner, marks UNVERIFIED
   work as done.
+
+## Delegation
+
+The owner may delegate specific decisions (for example, merge judgment on a
+defined set of pull requests) in writing. A delegation names its scope, is
+recorded in the affected task evidence, and is revocable at any time. A
+delegation never bypasses the evidence gates: independent review and
+recorded verification still apply to every delegated decision.
 
 ## Amending this file
 
