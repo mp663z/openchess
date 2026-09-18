@@ -8,6 +8,7 @@ dependencies = []
 
 [tool.ruff]
 line-length = 100
+extend-exclude = ["tools/install_checks/fixtures"]
 target-version = "py312"
 
 [tool.ruff.lint]

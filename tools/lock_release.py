@@ -74,9 +74,10 @@ RELEASE_TARGETS = {
     },
 }
 
-# Pre-PEP-639 packages whose PyPI page states the license but whose metadata
-# omits it. Values verified against each project's PyPI page.
-LICENSE_OVERRIDES = {"colorama": "BSD-3-Clause"}
+# Pre-PEP-639 packages whose PyPI metadata omits the license. Values verified
+# against the project's PyPI page, or its own LICENSE file when the page is
+# silent (mypy-extensions: MIT, github.com/python/mypy_extensions LICENSE).
+LICENSE_OVERRIDES = {"colorama": "BSD-3-Clause", "mypy-extensions": "MIT"}
 
 _LICENSE_NORMALIZE = {
     "mit license": "MIT",

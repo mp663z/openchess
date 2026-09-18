@@ -24,6 +24,54 @@ ALLOWED = {
     "MPL-2.0",
 }
 
+
+def _token_ok(tok: str) -> bool:
+    """A single SPDX license id is OK only on an exact allowlist match."""
+    t = tok.strip()
+    if not re.fullmatch(r"[A-Za-z0-9.\-]+", t):
+        return False
+    return t in ALLOWED
+
+
+_OPERATORS = {"AND", "OR", "WITH"}
+
+
+def expression_ok(expr: str) -> bool:
+    """SPDX subset: OR of ANDs of bare license ids, fail closed otherwise.
+
+    OR:  any one branch may be allowed (recipient picks the license).
+    AND: every branch must be allowed (all terms apply at once).
+    Parentheses, WITH exceptions, trailing operators and unknown tokens are
+    rejected rather than guessed.
+    """
+    expr = expr.strip()
+    if not expr or "(" in expr or ")" in expr:
+        return False
+    tokens = expr.split()
+    if tokens[0].upper() in _OPERATORS or tokens[-1].upper() in _OPERATORS:
+        return False
+    or_parts = [p.strip() for p in re.split(r"\s+OR\s+", expr, flags=re.IGNORECASE)]
+    if any(not p for p in or_parts):
+        return False
+    for part in or_parts:
+        and_parts = re.split(r"\s+AND\s+", part, flags=re.IGNORECASE)
+        if and_parts and all(_token_ok(p) for p in and_parts):
+            return True
+    return False
+
+
+def candidate_ok(cand: str) -> bool:
+    """One candidate string (License-Expression, License field, classifier)."""
+    cand = cand.strip()
+    if not cand:
+        return False
+    if expression_ok(cand):
+        return True
+    # tolerate a trailing " License" word on free-text fields/classifiers
+    suffix = " License"
+    return cand.endswith(suffix) and expression_ok(cand[: -len(suffix)].strip())
+
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -59,19 +107,25 @@ def audit_python(names: list[str]) -> list[str]:
             continue
         lic = (dist.metadata.get("License") or "").strip()
         expr = (dist.metadata.get("License-Expression") or "").strip()
-        candidates = {c for c in (expr, lic) if c}
         classifiers = {
             c.split("::")[-1].strip()
             for c in dist.metadata.get_all("Classifier") or []
             if c.startswith("License")
         }
         normalized = {c.replace(" License", "").strip() for c in classifiers}
-        ok = any(
-            any(a in cand or cand in a for a in ALLOWED) for cand in candidates | normalized
-        )
+        if expr:
+            # PEP 639: License-Expression is authoritative. A bad or
+            # malformed expression fails closed - a permissive legacy
+            # License field or classifier cannot rescue it.
+            ok = expression_ok(expr)
+            found = [expr]
+        else:
+            # legacy fallback only when no expression exists
+            candidates = ({lic} if lic else set()) | normalized
+            ok = any(candidate_ok(c) for c in candidates)
+            found = sorted(candidates)
         if not ok:
-            found = sorted(candidates | normalized) or ["UNKNOWN"]
-            problems.append(f"python:{name}: license {found}")
+            problems.append(f"python:{name}: license {found or ['UNKNOWN']}")
     return problems
 
 
