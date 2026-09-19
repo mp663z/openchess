@@ -19,7 +19,7 @@ FIXTURE = ROOT / "tests" / "fixtures" / "variant" / "cases.json"
 SUITE = ROOT / "tests" / "test_variant_behavior.py"
 
 FIXTURE_SHA256 = "395933e4d1fe06da57f97b92363212663b4c80bf472dc085b9a2d462014219f0"
-SUITE_SHA256 = "2ce7c1c9241317ebbc313fb2dfa85b2e8c362c6ec84a38c47a75ad74169b5d4f"
+SUITE_SHA256 = "a4e5e9aaf47c03f5261ebb3f2ba109c819c9ae2c80804bcda3d1085ccd3641c0"
 
 EXPECTED_COUNTS = {
     "happy": 3,
@@ -30,8 +30,8 @@ EXPECTED_COUNTS = {
 }
 DEFERRED_HOOKS = {"contract.variants.entries"}
 # 3 happy + 5 active boundary + 14 malformed + 1 unknown-variant
-# + 1 additive + 3 static error-shape tests = 27 collected + 1 skip.
-EXPECTED_COLLECTED = 27
+# + 1 additive + 4 static error-shape tests = 28 collected + 1 skip.
+EXPECTED_COLLECTED = 28
 
 
 def _sha256(path: Path) -> str:

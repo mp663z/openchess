@@ -107,6 +107,29 @@ def test_rollback_additive_fields(case):
     assert rt.project_additive(augmented) == base["expect_identity"]
 
 
+def test_identity_revalidates_mutated_position():
+    import dataclasses
+
+    rt = _rt()
+    good = rt.parse_position("standard", HAPPY[0]["fen"])
+    bad_values = {
+        "variant": "crazyhouse",
+        "board": "x",
+        "side_to_move": "x",
+        "castling_rights": "XYZ",
+        "en_passant": "e4",
+    }
+    for field_name, bad in bad_values.items():
+        forged = dataclasses.replace(good, **{field_name: bad})  # copies the token
+        with pytest.raises(rt.VariantError):
+            rt.identity(forged)
+        mutated = rt.parse_position("standard", HAPPY[0]["fen"])
+        object.__setattr__(mutated, field_name, bad)  # bypasses frozen=True
+        with pytest.raises(rt.VariantError):
+            rt.identity(mutated)
+    assert rt.identity(good) == HAPPY[0]["expect_identity"]
+
+
 def test_identity_requires_position():
     rt = _rt()
     record = rt.identity(rt.parse_position("standard", HAPPY[0]["fen"]))

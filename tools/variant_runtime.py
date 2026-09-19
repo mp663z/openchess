@@ -10,8 +10,11 @@ API:
   VariantError carrying a closed-enum code and, for FEN failures, the
   contract's declared failure_class.
 - identity(position) -> exact canonical five-field projection (dict in
-  declared field order). Requires a Position - identity is only ever
-  taken over a validated record.
+  declared field order). Requires a Position AND revalidates its five
+  fields through the same registry + _check_fen path as every other
+  entry point: the construction token is defense-in-depth, never the
+  only gate, so a token-copying dataclasses.replace or an
+  object.__setattr__ mutation cannot smuggle an invalid record through.
 - project_additive(record) -> the same canonical projection for an
   arbitrary additive mapping (e.g. a record carrying extra fields).
   Fully validates first: exact scalar types, registered variant, and
@@ -89,9 +92,11 @@ _TOKEN = object()
 
 @dataclass(frozen=True)
 class Position:
-    """Immutable validated position record. Constructible only via
-    parse_position - the private token cannot be forged from outside
-    this module, so a Position instance IS proof of validation."""
+    """Immutable validated position record. The private construction
+    token makes casual forgery fail closed, but ordinary Python can
+    copy it (dataclasses.replace) or mutate under frozen=True
+    (object.__setattr__) - so identity() REVALIDATES the fields on
+    every call and the token is defense-in-depth, not the gate."""
 
     variant: str
     board: str
@@ -134,22 +139,61 @@ def parse_position(variant: object, fen: object) -> Position:
     return Position(variant, board, side, castling, ep, _token=_TOKEN)
 
 
+def _validate_fields(variant: object, board: object, side: object,
+                     castling: object, ep: object) -> None:
+    """The single validation path every public entry point funnels
+    through: exact str scalars, registered variant, canonical syntax +
+    variant compatibility via _check_fen (synthetic counters; legality
+    never depends on counters)."""
+    for name, v in (("variant", variant), ("board", board), ("side_to_move", side),
+                    ("castling_rights", castling), ("en_passant", ep)):
+        if type(v) is not str:
+            raise VariantError(
+                code="malformed_request",
+                message=f"field {name} must be an exact string",
+            )
+    try:
+        check_variant_id(variant, set(_REGISTRY))
+    except _ContractError as exc:
+        code = str(exc).split(":", 1)[0]
+        raise VariantError(code=code, message=str(exc)) from exc
+    kind = _REGISTRY[variant]["castling"]
+    fen = " ".join((board, side, castling, ep, *_SYNTHETIC_COUNTERS.split(" ")))
+    try:
+        _check_fen(fen, variant, kind)
+    except _ContractError as exc:
+        cls = exc.failure_class
+        raise VariantError(
+            code=_CODE_FOR_CLASS.get(cls, "malformed_request"),
+            failure_class=cls,
+            message=str(exc),
+        ) from exc
+
+
 def identity(position: object) -> dict:
     """The exact canonical identity tuple of a Position: the five
-    declared fields in declared order. Identity is defined only over a
-    validated record; anything else fails closed."""
+    declared fields in declared order. REVALIDATES every field through
+    _validate_fields before projecting - a Position whose fields were
+    mutated or token-copied after construction fails closed here."""
     if type(position) is not Position:
         raise VariantError(
             code="malformed_request",
             message="identity: a Position from parse_position is required",
         )
+    _validate_fields(
+        position.variant,
+        position.board,
+        position.side_to_move,
+        position.castling_rights,
+        position.en_passant,
+    )
     return _projection(
         position.variant,
         position.board,
         position.side_to_move,
         position.castling_rights,
         position.en_passant,
-      )
+    )
 
 
 def project_additive(record: object) -> dict:
@@ -172,25 +216,12 @@ def project_additive(record: object) -> dict:
                 code="malformed_request",
                 message=f"project_additive: field {f} must be an exact string",
             )
-    variant = record["variant"]
-    try:
-        check_variant_id(variant, set(_REGISTRY))
-    except _ContractError as exc:
-        code = str(exc).split(":", 1)[0]
-        raise VariantError(code=code, message=str(exc)) from exc
-    kind = _REGISTRY[variant]["castling"]
-    fen = " ".join(
-        (record["board"], record["side_to_move"], record["castling_rights"],
-         record["en_passant"], *_SYNTHETIC_COUNTERS.split(" "))
+    _validate_fields(
+        record["variant"],
+        record["board"],
+        record["side_to_move"],
+        record["castling_rights"],
+        record["en_passant"],
     )
-    try:
-        _check_fen(fen, variant, kind)
-    except _ContractError as exc:
-        cls = exc.failure_class
-        raise VariantError(
-            code=_CODE_FOR_CLASS.get(cls, "malformed_request"),
-            failure_class=cls,
-            message=str(exc),
-        ) from exc
-    return _projection(variant, record["board"], record["side_to_move"],
+    return _projection(record["variant"], record["board"], record["side_to_move"],
                        record["castling_rights"], record["en_passant"])
