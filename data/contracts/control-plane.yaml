@@ -1,37 +1,59 @@
-# T0473 - Replaceable control-plane contract.
+# T0473 - Replaceable control-plane contract, schema v2.
 # Machine-readable source of truth for the boundary between the public
 # product (client + AGPL server) and ANY control-plane implementation
-# (hosted private repo, self-hosted, or test mock). The control plane is
-# replaceable: a consumer coded to this contract works against any
-# conforming implementation, and the chess product never depends on one.
-#
-# Boundary rules (enforced by tools/contract_lint.py):
-# - No chess logic lives behind this contract: no game state, moves,
-#   analysis, openings, or user content crosses it. Identity, billing,
-#   entitlements, quota and provider routing ONLY.
-# - Provider-neutral (BYOK): provider keys are opaque references; the
-#   contract never names a specific AI vendor in required fields.
-# - Neutral/swappable UI: consumers render from these types only; no
-#   control-plane implementation details leak into client code.
-schema_version: 1
+# (hosted private repo, self-hosted, or test mock). Consumers code to
+# this contract, never to an implementation.
+schema_version: 2
 contract:
   name: replaceable-control-plane
   versioning:
     scheme: semver
-    rule: >-
-      Clients pin MAJOR. MINOR is additive-only; a server MUST accept any
-      client minor within its major. Rollback: a consumer may downgrade to
-      any earlier MINOR within the same MAJOR without migration. MAJOR
-      bumps require a new base path.
     base_path: /cp/v1
+    rule: >-
+      Clients pin MAJOR. MINOR is additive-only: new optional request
+      fields, new response fields, new operations or new provider_kind
+      values. A server MUST accept any client minor within its major and
+      MUST ignore unknown request fields. Rollback: a consumer may
+      downgrade to any earlier MINOR within the same MAJOR without
+      migration, because conformance never asserts absence of extra
+      response fields. MAJOR bumps require a new base path.
   transport:
     kind: https-json
-    auth: bearer opaque-token (identity.issue); 401 + error code
-      auth_expired on expiry; no cookies, no sessions
-    idempotency: Every mutating operation REQUIRES an Idempotency-Key
-      header (unique nonempty string per logical operation). Retries with
-      the same key return the original outcome, never a duplicate effect.
+    auth:
+      scheme: bearer
+      header: Authorization
+      format: "Authorization: Bearer <opaque-token>"
+      issued_by: [identity.register, identity.login]
+      public_operations: [identity.register, identity.login]
+      rule: >-
+        Every operation not listed in public_operations REQUIRES a valid
+        bearer token. Unknown or expired tokens answer 401 with
+        auth_invalid or auth_expired respectively. No cookies, no query
+        tokens, no exceptions.
+
+    read_only_operations: [billing.get_subscription,
+      entitlements.get, provider_routing.route]
+    read_only_rule: >-
+      Operations with mutating: false MUST be listed in
+      read_only_operations, and every listed operation MUST be
+      mutating: false. A state-changing operation flipped to
+      mutating: false without allowlisting is an idempotency bypass and
+      fails the contract lint.
+    idempotency: >-
+      Every mutating operation REQUIRES an Idempotency-Key header
+      (unique nonempty string per logical operation). A replay with the
+      same key AND the same canonical request body returns the original
+      outcome with no duplicate effect. The same key with a DIFFERENT
+      body answers 409 idempotency_conflict. Keys are scoped per
+      authenticated account.
     errors:
+      shape:
+        error:
+          fields:
+            code: {type: string, required: true, example: not_found}
+            message: {type: string, required: true,
+                      example: human-readable detail}
+            retryable: {type: boolean, required: true, example: false}
       closed_enum:
       - auth_expired
       - auth_invalid
@@ -47,113 +69,201 @@ contract:
       - not_found
       - conflict
       - internal
-      shape: '{ "error": { "code": <enum>, "message": <human string>,
-        "retryable": <bool> } }'
   privacy:
-    - No chess content (games, moves, FENs, analysis, notes) in any field.
-    - Provider keys are write-only opaque references; implementations MUST
-      NOT return key material in any response.
-    - Logs and error messages MUST NOT contain secrets or key material.
+    chess_content: forbidden
+    chess_content_note: No games, moves, FENs, analysis or notes in any
+      field of any operation, in either direction.
+    key_material: write-only
+    key_material_note: Provider keys and credentials are accepted only in
+      fields flagged write_only and MUST NOT appear in any response, log
+      line or error message.
+    logs: no-secrets
   cost:
-    - Mutating billable operations require a quota reservation first.
-    - Per-request and per-day cost caps are entitlements, enforced
-      server-side; consumers receive cost_cap_exceeded, never a surprise
-      bill.
+    reservation_required: Billable operations require a quota
+      reservation first; consumers receive cost_cap_exceeded, never a
+      surprise bill.
+    caps_enforced: server-side
   recovery:
-    - entitlements.get responses carry a cache_ttl_seconds; consumers may
-      serve cached entitlements for that long when the control plane is
-      unreachable (offline grace), then degrade to free tier.
-    - quota.reserve reservations carry expires_at; consumers MUST treat
-      expired reservations as released.
+    entitlements_cache: entitlements.get responses carry
+      cache_ttl_seconds; consumers may serve cached entitlements that
+      long when unreachable, then degrade to free tier.
+    reservation_expiry: quota.reserve reservations carry expires_at;
+      consumers MUST treat expired reservations as released.
 areas:
   identity:
     ops:
       register:
         method: POST
         path: /identity/register
+        auth: public
         mutating: true
-        request: '{ email, password_hash_client, display_name? }'
-        response: '{ account_id, token, token_expires_at }'
-        errors: [malformed_request, conflict, rate_limited, internal]
+        request:
+          fields:
+            email: {type: string, required: true, example: ada@example.test}
+            password_hash_client: {type: string, required: true, example: h0}
+            display_name: {type: string, required: false, example: Ada}
+        response:
+          fields:
+            account_id: {type: string, required: true, example: acct-1}
+            token: {type: string, required: true, example: tok-1}
+            token_expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [malformed_request, conflict, rate_limited,
+                 idempotency_conflict, internal]
       login:
         method: POST
         path: /identity/login
+        auth: public
         mutating: true
-        request: '{ email, password_hash_client }'
-        response: '{ account_id, token, token_expires_at }'
-        errors: [malformed_request, auth_invalid, rate_limited, internal]
+        request:
+          fields:
+            email: {type: string, required: true, example: ada@example.test}
+            password_hash_client: {type: string, required: true, example: h0}
+        response:
+          fields:
+            account_id: {type: string, required: true, example: acct-1}
+            token: {type: string, required: true, example: tok-2}
+            token_expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [malformed_request, auth_invalid, rate_limited,
+                 idempotency_conflict, internal]
       refresh:
         method: POST
         path: /identity/refresh
+        auth: required
         mutating: true
-        request: '{ token }'
-        response: '{ token, token_expires_at }'
-        errors: [auth_expired, auth_invalid, internal]
+        request:
+          fields: {}
+        response:
+          fields:
+            token: {type: string, required: true, example: tok-3}
+            token_expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [auth_expired, auth_invalid, idempotency_conflict,
+                 internal]
       logout:
         method: POST
         path: /identity/logout
+        auth: required
         mutating: true
-        request: '{ token }'
-        response: '{ }'
-        errors: [auth_invalid, internal]
+        request:
+          fields: {}
+        response:
+          fields: {}
+        errors: [auth_invalid, idempotency_conflict, internal]
       delete_account:
         method: POST
         path: /identity/delete-account
+        auth: required
         mutating: true
-        request: '{ token, confirm: "DELETE" }'
-        response: '{ }'
-        errors: [auth_invalid, internal]
+        request:
+          fields:
+            confirm: {type: string, required: true, example: DELETE}
+        response:
+          fields: {}
+        errors: [auth_invalid, malformed_request, idempotency_conflict,
+                 internal]
   entitlements:
     ops:
       get:
         method: GET
         path: /entitlements
+        auth: required
         mutating: false
-        request: '{ }'
-        response: '{ tier, features: [string], cache_ttl_seconds,
-          cost_caps: { per_request_usd, per_day_usd } }'
+        request:
+          fields: {}
+        response:
+          fields:
+            tier: {type: string, required: true, example: free}
+            features: {type: array, items: string, required: true,
+                       example: [local-analysis]}
+            cache_ttl_seconds: {type: integer, required: true, example: 300}
+            cost_caps:
+              type: object
+              required: true
+              fields:
+                per_request_usd: {type: number, required: true, example: 0.10}
+                per_day_usd: {type: number, required: true, example: 2.00}
         errors: [auth_expired, auth_invalid, internal]
   quota:
     ops:
       reserve:
         method: POST
         path: /quota/reserve
+        auth: required
         mutating: true
-        request: '{ operation_kind, estimated_units, hold_seconds }'
-        response: '{ reservation_id, granted_units, expires_at }'
-        errors: [auth_expired, quota_exhausted, malformed_request,
-          internal]
+        request:
+          fields:
+            operation_kind: {type: string, required: true, example: analysis}
+            estimated_units: {type: integer, required: true, example: 10}
+            hold_seconds: {type: integer, required: true, example: 60}
+        response:
+          fields:
+            reservation_id: {type: string, required: true, example: rsv-1}
+            granted_units: {type: integer, required: true, example: 10}
+            expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [auth_expired, auth_invalid, quota_exhausted,
+                 malformed_request, idempotency_conflict, internal]
       commit:
         method: POST
         path: /quota/commit
+        auth: required
         mutating: true
-        request: '{ reservation_id, actual_units }'
-        response: '{ remaining_units }'
-        errors: [auth_expired, quota_reservation_expired, not_found,
-          internal]
+        request:
+          fields:
+            reservation_id: {type: string, required: true, example: rsv-1}
+            actual_units: {type: integer, required: true, example: 8}
+        response:
+          fields:
+            remaining_units: {type: integer, required: true, example: 990}
+        errors: [auth_expired, auth_invalid, quota_reservation_expired,
+                 not_found, malformed_request, idempotency_conflict,
+                 internal]
       release:
         method: POST
         path: /quota/release
+        auth: required
         mutating: true
-        request: '{ reservation_id }'
-        response: '{ }'
-        errors: [auth_expired, not_found, internal]
+        request:
+          fields:
+            reservation_id: {type: string, required: true, example: rsv-1}
+        response:
+          fields: {}
+        errors: [auth_expired, auth_invalid, not_found,
+                 idempotency_conflict, internal]
   billing:
     ops:
       create_checkout:
         method: POST
         path: /billing/checkout
+        auth: required
         mutating: true
-        request: '{ price_id, success_url, cancel_url }'
-        response: '{ checkout_url, expires_at }'
-        errors: [auth_expired, malformed_request, provider_unavailable,
-          internal]
+        request:
+          fields:
+            price_id: {type: string, required: true, example: price_monthly}
+            success_url: {type: string, required: true,
+                          example: https://app.example/ok}
+            cancel_url: {type: string, required: true,
+                         example: https://app.example/cancel}
+        response:
+          fields:
+            checkout_url: {type: string, required: true,
+                           example: https://payments.example/c/1}
+            expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [auth_expired, auth_invalid, malformed_request,
+                 provider_unavailable, idempotency_conflict, internal]
       get_subscription:
         method: GET
         path: /billing/subscription
+        auth: required
         mutating: false
-        request: '{ }'
-        response: '{ status, tier, current_period_end, cancel_at_period_end }'
+        request:
+          fields: {}
+        response:
+          fields:
+            status: {type: string, required: true, example: active}
+            tier: {type: string, required: true, example: pro}
+            current_period_end: {type: integer, required: true,
+                                 example: 1893456000}
+            cancel_at_period_end: {type: boolean, required: true,
+                                   example: false}
         errors: [auth_expired, auth_invalid, not_found, internal]
     pci_boundary: Card details NEVER cross this contract. Checkout is a
       redirect to the payment provider; the control plane sees only
@@ -163,26 +273,57 @@ areas:
       register_key:
         method: POST
         path: /provider-keys/register
+        auth: required
         mutating: true
-        request: '{ provider_kind, key_material, label? }'
-        response: '{ key_ref }'
-        errors: [auth_expired, provider_key_invalid, malformed_request,
-          internal]
+        request:
+          fields:
+            provider_kind: {type: string, required: true,
+                            example: generic-a}
+            key_material: {type: string, required: true,
+                           example: "12345678", write_only: true}
+            label: {type: string, required: false, example: my-key}
+        response:
+          fields:
+            key_ref: {type: string, required: true, example: key-1}
+        errors: [auth_expired, auth_invalid, provider_key_invalid,
+                 malformed_request, idempotency_conflict, internal]
       revoke_key:
         method: POST
         path: /provider-keys/revoke
+        auth: required
         mutating: true
-        request: '{ key_ref }'
-        response: '{ }'
-        errors: [auth_expired, not_found, internal]
+        request:
+          fields:
+            key_ref: {type: string, required: true, example: key-1}
+        response:
+          fields: {}
+        errors: [auth_expired, auth_invalid, not_found,
+                 idempotency_conflict, internal]
       route:
         method: POST
         path: /provider-routing/route
+        auth: required
         mutating: false
-        request: '{ capability, policy: { prefer?: "own-key"|"platform",
-          max_cost_usd? } }'
-        response: '{ provider_kind, key_ref?, estimated_cost_usd }'
-        errors: [auth_expired, entitlement_missing, cost_cap_exceeded,
-          provider_unavailable, internal]
+        request:
+          fields:
+            capability: {type: string, required: true,
+                         example: analysis-fast}
+            policy:
+              type: object
+              required: false
+              fields:
+                prefer: {type: string, required: false, example: own-key}
+                max_cost_usd: {type: number, required: false, example: 0.05}
+        response:
+          fields:
+            provider_kind: {type: string, required: true,
+                            example: generic-a}
+            key_ref: {type: string, required: false, example: key-1}
+            estimated_cost_usd: {type: number, required: true,
+                                 example: 0.02}
+        errors: [auth_expired, auth_invalid, entitlement_missing,
+                 cost_cap_exceeded, provider_unavailable,
+                 malformed_request, internal]
     byok: provider_kind is an open enum (new providers additively, MINOR
-      bump); consumers MUST NOT hardcode provider lists.
+      bump); consumers MUST NOT hardcode provider lists. Field names are
+      vendor-neutral everywhere.

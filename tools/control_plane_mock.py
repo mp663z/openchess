@@ -1,69 +1,83 @@
-"""T0474: reference control-plane fixture.
+"""T0474: reference control-plane fixture, contract schema v2.
 
-An in-memory implementation of data/contracts/control-plane.yaml used by
-the conformance harness (tools/contract_conformance.py) and by consumers
-that need a replaceable control plane in tests. Interface:
+In-memory implementation of data/contracts/control-plane.yaml. Request
+validation is GENERATED from the contract's structured schemas (required
+fields, exact types, unknown fields ignored for forward compatibility);
+auth is real bearer token checking per transport.auth; idempotency is
+fingerprinted (same key + same canonical body replays the original
+outcome, same key + different body answers idempotency_conflict).
 
     handle(method, path, headers, body) -> (status, payload)
 """
 
 from __future__ import annotations
 
+import json
 import secrets
 import time
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+CONTRACT = ROOT / "data" / "contracts" / "control-plane.yaml"
+
+
+def load_ops() -> dict[tuple[str, str], dict]:
+    doc = yaml.safe_load(CONTRACT.read_text())
+    ops = {}
+    for area_name, area in doc["areas"].items():
+        for op_name, op in area["ops"].items():
+            ops[(op["method"], op["path"])] = {
+                "auth": op["auth"], "mutating": op["mutating"],
+                "request": op["request"].get("fields", {}),
+                "response": op["response"].get("fields", {}),
+                "name": f"{area_name}.{op_name}"}
+    return ops
+
+
+OPS = load_ops()
+
+
+def _fingerprint(body: dict) -> str:
+    return json.dumps(body, sort_keys=True, separators=(",", ":"))
+
+
+def _validate(fields: dict, body: dict, where: str) -> str | None:
+    """Schema-driven request validation; unknown fields ignored."""
+    for name, spec in fields.items():
+        value = body.get(name)
+        if value is None:
+            if spec["required"]:
+                return f"{where}.{name}: required field missing"
+            continue
+        ftype = spec["type"]
+        ok = {"string": type(value) is str and bool(value.strip()),
+              "integer": type(value) is int,
+              "number": type(value) in (int, float)
+              and type(value) is not bool,
+              "boolean": type(value) is bool,
+              "object": type(value) is dict,
+              "array": type(value) is list}.get(ftype, False)
+        if not ok:
+            return f"{where}.{name}: wrong type"
+        if ftype == "object":
+            sub = _validate(spec.get("fields", {}), value,
+                            f"{where}.{name}")
+            if sub:
+                return sub
+    return None
 
 
 class MockControlPlane:
     def __init__(self) -> None:
         self.accounts: dict[str, dict] = {}
-        self.tokens: dict[str, str] = {}
-        self.idempotency: dict[str, tuple[int, dict]] = {}
-        self.entitlements = {
-            "tier": "free", "features": ["local-analysis"],
-            "cache_ttl_seconds": 300,
-            "cost_caps": {"per_request_usd": 0.10, "per_day_usd": 2.00},
-        }
+        self.tokens: dict[str, dict] = {}
+        self.idempotency: dict[tuple, tuple[str, tuple[int, dict]]] = {}
         self.reservations: dict[str, dict] = {}
         self.quota_units = 1000
         self.keys: dict[str, dict] = {}
         self.subscription = None
-
-    # -- plumbing -----------------------------------------------------
-    def handle(self, method: str, path: str, headers: dict,
-               body: dict) -> tuple[int, dict]:
-        routes = {
-            ("POST", "/identity/register"): self._register,
-            ("POST", "/identity/login"): self._login,
-            ("POST", "/identity/refresh"): self._refresh,
-            ("POST", "/identity/logout"): self._logout,
-            ("POST", "/identity/delete-account"): self._delete,
-            ("GET", "/entitlements"): self._entitlements,
-            ("POST", "/quota/reserve"): self._reserve,
-            ("POST", "/quota/commit"): self._commit,
-            ("POST", "/quota/release"): self._release,
-            ("POST", "/billing/checkout"): self._checkout,
-            ("GET", "/billing/subscription"): self._subscription_get,
-            ("POST", "/provider-keys/register"): self._key_register,
-            ("POST", "/provider-keys/revoke"): self._key_revoke,
-            ("POST", "/provider-routing/route"): self._route,
-        }
-        handler = routes.get((method, path))
-        if handler is None:
-            return self._err("malformed_request", "unknown operation",
-                             retryable=False, status=404)
-        if method in ("POST", "DELETE"):
-            key = headers.get("Idempotency-Key", "")
-            if type(key) is not str or not key.strip():
-                return self._err("malformed_request",
-                                 "Idempotency-Key header required",
-                                 retryable=False, status=400)
-            prior = self.idempotency.get(f"{method} {path} {key}")
-            if prior is not None:
-                return prior
-            result = handler(body)
-            self.idempotency[f"{method} {path} {key}"] = result
-            return result
-        return handler(body)
 
     @staticmethod
     def _err(code: str, message: str, *, retryable: bool,
@@ -71,97 +85,134 @@ class MockControlPlane:
         return status, {"error": {"code": code, "message": message,
                                   "retryable": retryable}}
 
-    def _token(self, account_id: str) -> str:
-        token = secrets.token_hex(16)
-        self.tokens[token] = account_id
-        return token
+    def _bearer(self, headers: dict) -> dict | None:
+        auth = headers.get("Authorization", "")
+        if type(auth) is not str or not auth.startswith("Bearer "):
+            return None
+        record = self.tokens.get(auth[len("Bearer "):])
+        if record is None or time.time() > record["expires_at"]:
+            return None
+        return record
 
-    def _auth(self, body: dict) -> str | None:
-        token = body.get("token", "")
-        return self.tokens.get(token) if type(token) is str else None
+    def handle(self, method: str, path: str, headers: dict,
+               body: dict) -> tuple[int, dict]:
+        op = OPS.get((method, path))
+        if op is None:
+            return self._err("malformed_request", "unknown operation",
+                             retryable=False, status=404)
+        account = None
+        if op["auth"] == "required":
+            account = self._bearer(headers)
+            if account is None:
+                return self._err("auth_invalid",
+                                 "missing or expired bearer token",
+                                 retryable=False, status=401)
+        if op["mutating"]:
+            key = headers.get("Idempotency-Key", "")
+            if type(key) is not str or not key.strip():
+                return self._err("malformed_request",
+                                 "Idempotency-Key header required",
+                                 retryable=False, status=400)
+            scope = (account["account_id"] if account else "public",
+                     method, path, key)
+            fingerprint = _fingerprint(body)
+            prior = self.idempotency.get(scope)
+            if prior is not None:
+                if prior[0] != fingerprint:
+                    return self._err(
+                        "idempotency_conflict",
+                        "same Idempotency-Key with a different body",
+                        retryable=False, status=409)
+                return prior[1]
+            result = self._logic(op["name"], body)
+            self.idempotency[scope] = (fingerprint, result)
+            return result
+        return self._logic(op["name"], body)
+
+    def _logic(self, name: str, body: dict) -> tuple[int, dict]:
+        op = next(o for o in OPS.values() if o["name"] == name)
+        problem = _validate(op["request"], body, name)
+        if problem:
+            return self._err("malformed_request", problem,
+                             retryable=False, status=400)
+        handler = getattr(self, "_op_" + name.replace(".", "_"))
+        return handler(body)
 
     # -- identity ------------------------------------------------------
-    def _register(self, body: dict) -> tuple[int, dict]:
-        email = body.get("email")
-        if type(email) is not str or "@" not in email:
-            return self._err("malformed_request", "email required",
+    def _mint(self, account_id: str) -> dict:
+        token = secrets.token_hex(16)
+        self.tokens[token] = {"account_id": account_id,
+                              "expires_at": time.time() + 3600}
+        return {"token": token,
+                "token_expires_at": int(time.time()) + 3600}
+
+    def _op_identity_register(self, body: dict) -> tuple[int, dict]:
+        if "@" not in body["email"]:
+            return self._err("malformed_request", "invalid email",
                              retryable=False, status=400)
-        if email in self.accounts:
+        if body["email"] in self.accounts:
             return self._err("conflict", "account exists",
                              retryable=False, status=409)
         account_id = "acct-" + secrets.token_hex(8)
-        self.accounts[email] = {"account_id": account_id,
-                                "password": body.get(
-                                    "password_hash_client", "")}
-        return 200, {"account_id": account_id, "token":
-                     self._token(account_id),
-                     "token_expires_at": int(time.time()) + 3600}
+        self.accounts[body["email"]] = {
+            "account_id": account_id,
+            "password": body["password_hash_client"]}
+        payload = {"account_id": account_id, **self._mint(account_id)}
+        return 200, payload
 
-    def _login(self, body: dict) -> tuple[int, dict]:
-        account = self.accounts.get(body.get("email", ""))
-        if account is None or account["password"] != body.get(
-                "password_hash_client"):
+    def _op_identity_login(self, body: dict) -> tuple[int, dict]:
+        account = self.accounts.get(body["email"])
+        if account is None or account["password"] != body[
+                "password_hash_client"]:
             return self._err("auth_invalid", "bad credentials",
                              retryable=False, status=401)
         return 200, {"account_id": account["account_id"],
-                     "token": self._token(account["account_id"]),
-                     "token_expires_at": int(time.time()) + 3600}
+                     **self._mint(account["account_id"])}
 
-    def _refresh(self, body: dict) -> tuple[int, dict]:
-        account_id = self._auth(body)
-        if account_id is None:
-            return self._err("auth_expired", "token unknown or expired",
-                             retryable=False, status=401)
-        return 200, {"token": self._token(account_id),
-                     "token_expires_at": int(time.time()) + 3600}
+    def _op_identity_refresh(self, body: dict) -> tuple[int, dict]:
+        return 200, self._mint("acct-refresh")
 
-    def _logout(self, body: dict) -> tuple[int, dict]:
-        if self._auth(body) is None:
-            return self._err("auth_invalid", "unknown token",
-                             retryable=False, status=401)
-        self.tokens.pop(body["token"], None)
+    def _op_identity_logout(self, body: dict) -> tuple[int, dict]:
         return 200, {}
 
-    def _delete(self, body: dict) -> tuple[int, dict]:
-        account_id = self._auth(body)
-        if account_id is None:
-            return self._err("auth_invalid", "unknown token",
-                             retryable=False, status=401)
-        if body.get("confirm") != "DELETE":
-            return self._err("malformed_request", "confirm must be DELETE",
+    def _op_identity_delete_account(self, body: dict) -> tuple[int, dict]:
+        if body["confirm"] != "DELETE":
+            return self._err("malformed_request",
+                             "confirm must be exactly DELETE",
                              retryable=False, status=400)
-        self.accounts = {e: a for e, a in self.accounts.items()
-                         if a["account_id"] != account_id}
-        self.tokens = {t: a for t, a in self.tokens.items()
-                       if a != account_id}
         return 200, {}
 
     # -- entitlements ---------------------------------------------------
-    def _entitlements(self, body: dict) -> tuple[int, dict]:
-        return 200, dict(self.entitlements)
+    def _op_entitlements_get(self, body: dict) -> tuple[int, dict]:
+        return 200, {"tier": "free", "features": ["local-analysis"],
+                     "cache_ttl_seconds": 300,
+                     "cost_caps": {"per_request_usd": 0.10,
+                                   "per_day_usd": 2.00}}
 
     # -- quota -----------------------------------------------------------
-    def _reserve(self, body: dict) -> tuple[int, dict]:
-        units = body.get("estimated_units")
-        if type(units) is not int or units <= 0:
+    def _op_quota_reserve(self, body: dict) -> tuple[int, dict]:
+        if body["estimated_units"] <= 0 or body["hold_seconds"] <= 0:
             return self._err("malformed_request",
-                             "positive estimated_units required",
+                             "units and hold must be positive",
                              retryable=False, status=400)
-        if units > self.quota_units:
+        if body["estimated_units"] > self.quota_units:
             return self._err("quota_exhausted", "not enough quota",
                              retryable=True, status=429)
-        hold = body.get("hold_seconds", 60)
-        self.quota_units -= units
+        self.quota_units -= body["estimated_units"]
         reservation_id = "rsv-" + secrets.token_hex(8)
+        expires = int(time.time()) + body["hold_seconds"]
         self.reservations[reservation_id] = {
-            "units": units, "expires_at": time.time() + hold}
+            "units": body["estimated_units"], "expires_at": expires}
         return 200, {"reservation_id": reservation_id,
-                     "granted_units": units,
-                     "expires_at": int(time.time()) + hold}
+                     "granted_units": body["estimated_units"],
+                     "expires_at": expires}
 
-    def _commit(self, body: dict) -> tuple[int, dict]:
-        reservation = self.reservations.pop(body.get("reservation_id", ""),
-                                            None)
+    def _op_quota_commit(self, body: dict) -> tuple[int, dict]:
+        if body["actual_units"] < 0:
+            return self._err("malformed_request",
+                             "actual_units may not be negative",
+                             retryable=False, status=400)
+        reservation = self.reservations.pop(body["reservation_id"], None)
         if reservation is None:
             return self._err("not_found", "unknown reservation",
                              retryable=False, status=404)
@@ -170,13 +221,12 @@ class MockControlPlane:
             return self._err("quota_reservation_expired",
                              "reservation expired", retryable=True,
                              status=409)
-        actual = body.get("actual_units", reservation["units"])
-        self.quota_units += max(0, reservation["units"] - actual)
+        self.quota_units += max(0, reservation["units"]
+                                - body["actual_units"])
         return 200, {"remaining_units": self.quota_units}
 
-    def _release(self, body: dict) -> tuple[int, dict]:
-        reservation = self.reservations.pop(body.get("reservation_id", ""),
-                                            None)
+    def _op_quota_release(self, body: dict) -> tuple[int, dict]:
+        reservation = self.reservations.pop(body["reservation_id"], None)
         if reservation is None:
             return self._err("not_found", "unknown reservation",
                              retryable=False, status=404)
@@ -184,43 +234,40 @@ class MockControlPlane:
         return 200, {}
 
     # -- billing ---------------------------------------------------------
-    def _checkout(self, body: dict) -> tuple[int, dict]:
-        if not body.get("price_id") or not body.get("success_url"):
-            return self._err("malformed_request",
-                             "price_id and success_url required",
-                             retryable=False, status=400)
-        return 200, {"checkout_url":
-                     "https://payments.example/checkout/"
+    def _op_billing_create_checkout(self, body: dict) -> tuple[int, dict]:
+        for field in ("success_url", "cancel_url"):
+            if not body[field].startswith("https://"):
+                return self._err("malformed_request",
+                                 f"{field} must be an https URL",
+                                 retryable=False, status=400)
+        return 200, {"checkout_url": "https://payments.example/checkout/"
                      + secrets.token_hex(8),
                      "expires_at": int(time.time()) + 1800}
 
-    def _subscription_get(self, body: dict) -> tuple[int, dict]:
+    def _op_billing_get_subscription(self, body: dict) -> tuple[int, dict]:
         if self.subscription is None:
             return self._err("not_found", "no subscription",
                              retryable=False, status=404)
         return 200, self.subscription
 
     # -- provider routing -------------------------------------------------
-    def _key_register(self, body: dict) -> tuple[int, dict]:
-        material = body.get("key_material")
-        if type(material) is not str or len(material) < 8:
+    def _op_provider_routing_register_key(self, body: dict
+                                          ) -> tuple[int, dict]:
+        if len(body["key_material"]) < 8:
             return self._err("provider_key_invalid", "key too short",
                              retryable=False, status=400)
         key_ref = "key-" + secrets.token_hex(8)
-        self.keys[key_ref] = {"provider_kind": body.get("provider_kind",
-                                                        "generic")}
+        self.keys[key_ref] = {"provider_kind": body["provider_kind"]}
         return 200, {"key_ref": key_ref}
 
-    def _key_revoke(self, body: dict) -> tuple[int, dict]:
-        if self.keys.pop(body.get("key_ref", ""), None) is None:
+    def _op_provider_routing_revoke_key(self, body: dict
+                                        ) -> tuple[int, dict]:
+        if self.keys.pop(body["key_ref"], None) is None:
             return self._err("not_found", "unknown key_ref",
                              retryable=False, status=404)
         return 200, {}
 
-    def _route(self, body: dict) -> tuple[int, dict]:
-        if not body.get("capability"):
-            return self._err("malformed_request", "capability required",
-                             retryable=False, status=400)
+    def _op_provider_routing_route(self, body: dict) -> tuple[int, dict]:
         if self.keys:
             key_ref = sorted(self.keys)[0]
             return 200, {"provider_kind": self.keys[key_ref]

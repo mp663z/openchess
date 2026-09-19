@@ -1,7 +1,6 @@
-"""T0475: the conformance harness is RED on every non-compliant
-implementation and green only on a conforming one. Each mutation below
-fails for its own reason - a harness that cannot catch these cannot
-certify a real control plane."""
+"""T0475 v2: the harness is RED on every non-compliant implementation.
+Includes the verifier's direct mutants (NoDeleteConfirm, LeakKey) plus
+auth-bypass and fingerprint-removal mutants."""
 
 from __future__ import annotations
 
@@ -13,55 +12,68 @@ def test_clean_run_passes():
     assert run(MockControlPlane()) == []
 
 
-class DropEntitlements(MockControlPlane):
+class NoDeleteConfirm(MockControlPlane):
+    """Models an implementation that skips request validation entirely:
+    delete succeeds with no confirm field at all."""
+
+    def _logic(self, name, body):
+        if name == "identity.delete_account":
+            return 200, {}
+        return super()._logic(name, body)
+
+
+class LeakKey(MockControlPlane):
+    def _op_provider_routing_register_key(self, body):
+        status, payload = super()._op_provider_routing_register_key(body)
+        payload["key_material"] = body["key_material"]  # privacy leak
+        return status, payload
+
+
+class UnauthenticatedAccess(MockControlPlane):
+    def _bearer(self, headers):
+        return {"account_id": "acct-any"}  # every caller authenticated
+
+
+class NoFingerprint(MockControlPlane):
     def handle(self, method, path, headers, body):
-        if path == "/entitlements":
-            return self._err("malformed_request", "unknown operation",
-                             retryable=False, status=404)
+        op = None
+        from tools.control_plane_mock import OPS
+        op = OPS.get((method, path))
+        if op and op["mutating"]:
+            key = headers.get("Idempotency-Key", "")
+            scope = ("public", method, path, key)
+            if scope in self.idempotency:
+                return self.idempotency[scope][1]  # any body replays
         return super().handle(method, path, headers, body)
 
 
 class WrongErrorCode(MockControlPlane):
-    def _register(self, body):
-        status, payload = super()._register(body)
+    def _op_identity_register(self, body):
+        status, payload = super()._op_identity_register(body)
         if status == 409:
             payload["error"]["code"] = "conflictz"
         return status, payload
 
 
-class NoIdempotencyReplay(MockControlPlane):
-    def handle(self, method, path, headers, body):
-        routes_key = (method, path)
-        if method in ("POST", "DELETE") and routes_key != (
-                "POST", "/identity/teleport"):
-            # bypass the idempotency cache entirely
-            saved = self.idempotency
-            self.idempotency = {}
-            try:
-                return super().handle(method, path, headers, body)
-            finally:
-                self.idempotency = saved
-        return super().handle(method, path, headers, body)
-
-
-class ShapelessError(MockControlPlane):
-    def _login(self, body):
-        status, payload = super()._login(body)
-        if status == 401:
-            return status, {"oops": "no error shape"}
+class WrongResponseType(MockControlPlane):
+    def _op_entitlements_get(self, body):
+        status, payload = super()._op_entitlements_get(body)
+        payload["cache_ttl_seconds"] = "300"  # string, not integer
         return status, payload
 
 
 class CrashOnRoute(MockControlPlane):
-    def _route(self, body):
+    def _op_provider_routing_route(self, body):
         raise RuntimeError("boom")
 
 
 MUTANTS = {
-    "dropped_operation": DropEntitlements,
+    "no_delete_confirm": NoDeleteConfirm,
+    "leak_key_material": LeakKey,
+    "unauthenticated_access": UnauthenticatedAccess,
+    "no_idempotency_fingerprint": NoFingerprint,
     "error_code_outside_enum": WrongErrorCode,
-    "no_idempotent_replay": NoIdempotencyReplay,
-    "error_without_shape": ShapelessError,
+    "response_wrong_value_type": WrongResponseType,
     "implementation_crash": CrashOnRoute,
 }
 
