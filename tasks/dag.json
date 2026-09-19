@@ -1528,10 +1528,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "288af43d4fc2a488ebbb0dda280d8a782854777c",
+   "evidence_manifest": "evidence/T0069.md"
   },
   {
    "id": "T0070",
