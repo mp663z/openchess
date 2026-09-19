@@ -44,9 +44,10 @@ def _copy_repo(dst: Path) -> None:
 
 
 def _env() -> dict:
-    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    env["PYTHONPATH"] = str(ROOT)  # tools imports; CLIs use repo-relative ROOT
-    return env
+    # No PYTHONPATH: the CLIs are self-contained (no tools.* imports), so the
+    # copy must run on its own files alone - and no GIT_* leakage.
+    return {k: v for k, v in os.environ.items()
+            if not k.startswith("GIT_") and k != "PYTHONPATH"}
 
 
 def _run_cli(repo: Path, cli: str, *args: str) -> int:
@@ -90,6 +91,23 @@ def _tampered_copies(base_copy: Path, tmp: Path) -> dict[str, tuple[Path, str]]:
     ev.write_text(text.replace(sha, forged))
     cases["evidence merge SHA forged"] = (c, "tools/evidence_lint.py")
 
+    c = tmp / "tamper_module"
+    shutil.copytree(base_copy, c)
+    target = c / "tools/rights_audit.py"
+    original_text = target.read_text()
+    anchor = "from __future__ import annotations\n"
+    assert anchor in original_text
+    target.write_text(
+        original_text.replace(
+            anchor,
+            anchor
+            + 'import sys\nprint("ISOLATION-PROOF: copy module executed")\nsys.exit(3)\n',
+            1,
+        )
+    )
+    cases["module tamper proves the copy executes, not the original"] = (
+        c, ("tools/rights_audit.py", 3, "ISOLATION-PROOF"))
+
     c = tmp / "tamper_rights"
     shutil.copytree(base_copy, c)
     rights = c / "data/datasets/public-source-rights.yaml"
@@ -117,6 +135,16 @@ def run(mode: str) -> None:
             return
         uncaught = []
         for label, (copy, cli) in _tampered_copies(base, tmp).items():
+            if isinstance(cli, tuple):
+                script, want_rc, marker = cli
+                r = subprocess.run(
+                    [sys.executable, script], cwd=copy,
+                    capture_output=True, text=True, env=_env(), timeout=120)
+                if r.returncode != want_rc or marker not in r.stdout:
+                    uncaught.append(
+                        f"{label}: rc={r.returncode} marker present="
+                        f"{marker in r.stdout} - imports not proven from copy")
+                continue
             args = ("verify",) if cli == "dag" else ()
             rc = _run_cli(copy, "tools/dag.py" if cli == "dag" else cli, *args)
             if rc == 0:

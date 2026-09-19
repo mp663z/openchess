@@ -120,9 +120,15 @@ def run(mode: str) -> None:
         bad += _expect_no_crash_string(
             la.candidate_ok, random_strings[:500], "candidate_ok")
         bad += _expect_no_crash_yaml(
-            lambda d: rights_audit.validate_sources(d) if isinstance(d, dict) else [],
-            random_docs, "validate_sources")
+            rights_audit.validate_sources, random_docs, "validate_sources")
         bad += _expect_no_crash_yaml(cla_check.validate_registry, random_docs, "validate_registry")
+        # invalid structures must be actively REJECTED, not empty-accepted
+        for d in random_docs:
+            try:
+                if not rights_audit.validate_sources(d):
+                    bad.append(f"validate_sources empty-accepted {str(d)[:50]!r}")
+            except Exception as e:
+                bad.append(f"validate_sources crashed on {str(d)[:50]!r}: {e!r}")
         # noise must not be ACCEPTED as a license expression
         accepted_noise = [s for s in random_strings
                           if la.expression_ok(s)
@@ -138,12 +144,41 @@ def run(mode: str) -> None:
     uncaught += _expect_no_crash_string(
         la.expression_ok, STRING_NASTIES, "expression_ok")
     uncaught += _expect_no_crash_yaml(
-        lambda d: rights_audit.validate_sources(d) if isinstance(d, dict) else [],
-        YAML_NASTIES, "validate_sources")
+        rights_audit.validate_sources, YAML_NASTIES, "validate_sources")
     # every string nasty must be REJECTED (not silently accepted)
     for s in STRING_NASTIES:
         if la.expression_ok(s):
             uncaught.append(f"nasty ACCEPTED: {s[:40]!r}")
+    # every YAML nasty must be REJECTED: validate_sources returns nonempty
+    # problems; validate_registry raises its designed ClaError
+    for d in YAML_NASTIES:
+        try:
+            if not rights_audit.validate_sources(d):
+                uncaught.append(f"validate_sources ACCEPTED nasty: {str(d)[:40]!r}")
+        except Exception as e:
+            uncaught.append(f"validate_sources crashed on {str(d)[:40]!r}: {e!r}")
+        try:
+            cla_check.validate_registry(d)
+            uncaught.append(f"validate_registry ACCEPTED nasty: {str(d)[:40]!r}")
+        except cla_check.ClaError:
+            pass
+        except Exception as e:
+            uncaught.append(f"validate_registry crashed on {str(d)[:40]!r}: {e!r}")
+    # schema-aware near-valid sources with ONE fuzzed field must be rejected
+    valid = {"id": "x", "url": "https://e.com", "license": "CC0-1.0",
+             "transformation_permission": True, "decision": "allow"}
+    for field, bad_value in [("license", 1), ("license", True),
+                             ("statement_source_url", 1), ("statement_source_url", b"x"),
+                             ("evidence_path", 1), ("evidence_path", b"x"),
+                             ("decision", []), ("decision", {}),
+                             ("id", []), ("statement", 123)]:
+        doc = {"sources": [{**valid, field: bad_value, "id": "x"
+                            if field != "id" else bad_value}]}
+        try:
+            if not rights_audit.validate_sources(doc):
+                uncaught.append(f"near-valid fuzz ACCEPTED: {field}={bad_value!r}")
+        except Exception as e:
+            uncaught.append(f"near-valid fuzz crashed on {field}={bad_value!r}: {e!r}")
     if uncaught:
         return  # harness FAILS: a crash or silent accept escaped
     raise CheckError("all fuzz nasties handled without crash and rejected")
