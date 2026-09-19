@@ -40,6 +40,7 @@ def _git_env() -> dict[str, str]:
     return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
 
 
+
 def fresh_copy(root: Path, dest: Path) -> None:
     """Clone root and detach at its exact HEAD sha: committed content only,
     full history (git-dependent gates need it), no untracked state."""
@@ -88,6 +89,13 @@ def verify(
     with tempfile.TemporaryDirectory() as td:
         dest = Path(td) / "clean"
         fresh_copy(root, dest)
+        setup_rc = subprocess.run(
+            ["bash", "tools/setup.sh"], cwd=dest,
+            env=scrub_env(env),
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        ).returncode
+        if setup_rc != 0:
+            problems.append("documented setup (tools/setup.sh) failed in the clean copy")
         rc_clean = _run(cmd, dest, scrub_env(env))
     if rc_clean != 0:
         problems.append(

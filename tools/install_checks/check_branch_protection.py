@@ -5,9 +5,11 @@ Good mode: tools/branch_guard.py verifies the real repo - hooks path pinned,
 pre-push hook executable with the pinned gate commands in exact order, CI
 workflow carrying the pinned steps in exact order, policy schema-exact with
 required_checks naming real workflow jobs.
-Violation mode: five seeded fixture trees - hook missing a gate, hook not
+Violation mode: eight seeded fixture trees - hook missing a gate, hook not
 executable, gates reordered, CI workflow missing a pinned step, policy
-required_check naming a nonexistent job - each caught for its own reason.
+required_check naming a nonexistent job, policy wrong-type ref, setup.sh
+missing, setup.sh missing the pinned install line - each caught for its own
+reason.
 """
 
 from __future__ import annotations
@@ -53,7 +55,12 @@ POLICY = {"protected_ref": "main",
           "required_checks": ["CI / build-test-lint"]}
 
 
-def _fixture(hook=HOOK, executable=True, ci=CI, policy=POLICY) -> Path:
+SETUP = ("#!/bin/bash\nset -e\ncd \"$(git rev-parse --show-toplevel)\"\n"
+         + branch_guard.REQUIRED_SETUP_LINE + "\n")
+
+
+def _fixture(hook=HOOK, executable=True, ci=CI, policy=POLICY,
+             setup=SETUP) -> Path:
     td = tempfile.mkdtemp()
     root = Path(td)
     (root / ".githooks").mkdir(parents=True)
@@ -65,6 +72,11 @@ def _fixture(hook=HOOK, executable=True, ci=CI, policy=POLICY) -> Path:
     (root / ".github" / "workflows" / "ci.yml").write_text(yaml.safe_dump(ci))
     (root / "data").mkdir()
     (root / "data" / "branch-protection.yaml").write_text(yaml.safe_dump(policy))
+    if setup is not None:
+        (root / "tools").mkdir()
+        s = root / "tools" / "setup.sh"
+        s.write_text(setup)
+        s.chmod(s.stat().st_mode | stat.S_IXUSR)
     return root
 
 
@@ -94,6 +106,14 @@ CASES = {
     "policy wrong protected_ref type": dict(
         policy={**POLICY, "protected_ref": 42},
         expect="protected_ref must be a non-empty string",
+    ),
+    "setup.sh missing": dict(
+        setup=None,
+        expect="no documented fresh-clone install step",
+    ),
+    "setup.sh missing the pinned line": dict(
+        setup="#!/bin/bash\ngit config core.hooksPath hooks\n",
+        expect="does not contain exactly",
     ),
 }
 

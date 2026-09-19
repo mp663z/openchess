@@ -14,5 +14,7 @@ jobs:
           python-version: "3.12"
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
+      - name: Install git hooks
+        run: bash tools/setup.sh
       - name: Post-merge canary
         run: python tools/canary.py

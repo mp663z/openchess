@@ -38,6 +38,11 @@ REQUIRED_HOOK_GATES = [
     "python tools/governance_doc_lint.py",
 ]
 
+# The documented fresh-clone install step; tools/setup.sh must carry it
+# verbatim so any clone (CI, clean verifier, a new contributor) can install
+# the machinery hermetically.
+REQUIRED_SETUP_LINE = "git config core.hooksPath .githooks"
+
 # Pinned CI step names in the CI workflow's build-test-lint job, exact order.
 REQUIRED_CI_STEPS = [
     "Install dev dependencies",
@@ -49,6 +54,7 @@ REQUIRED_CI_STEPS = [
     "License audit",
     "License lint (T0008)",
     "Governance docs lint",
+    "Install git hooks",
     "Install checks (good passes, seeded violation caught)",
     "Docs parse",
 ]
@@ -92,6 +98,20 @@ def _subsequence(haystack: list[str], needle: list[str]) -> bool:
     """needle appears in haystack as full elements in exact relative order."""
     it = iter(haystack)
     return all(any(n == h for h in it) for n in needle)
+
+
+def verify_setup(root: Path) -> list[str]:
+    problems: list[str] = []
+    setup = root / "tools" / "setup.sh"
+    if not setup.is_file():
+        return ["tools/setup.sh missing: no documented fresh-clone install step"]
+    if not (setup.stat().st_mode & stat.S_IXUSR):
+        problems.append("tools/setup.sh is not executable")
+    if REQUIRED_SETUP_LINE not in setup.read_text().splitlines():
+        problems.append(
+            f"tools/setup.sh does not contain exactly: {REQUIRED_SETUP_LINE}"
+        )
+    return problems
 
 
 def verify_hook(root: Path, hooks_path: str | None = None) -> list[str]:
@@ -175,6 +195,7 @@ def verify_policy_links(root: Path) -> list[str]:
 
 def verify(root: Path = ROOT, hooks_path: str | None = None) -> list[str]:
     problems = load_policy(root / "data" / "branch-protection.yaml")
+    problems += verify_setup(root)
     problems += verify_hook(root, hooks_path)
     problems += verify_ci(root)
     problems += verify_policy_links(root)
