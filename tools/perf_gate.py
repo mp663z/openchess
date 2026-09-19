@@ -71,10 +71,10 @@ def run_benchmarks(bench_dir: Path) -> list[str]:
             # touch on the untrusted module can raise.
             mod = _load(path)
             key, problem = _validate(mod)
-        except Exception as e:
+        except BaseException as e:
             try:
                 detail = f"{type(e).__name__}: {e}"
-            except Exception:
+            except BaseException:
                 detail = "unprintable exception"
             failures.append(f"{path.name}: malformed ({detail})")
             continue
@@ -124,11 +124,11 @@ def run_benchmarks(bench_dir: Path) -> list[str]:
                             "verify must return None or a nonempty exact str")
                     else:
                         wrong.append(v)
-        except Exception as e:  # a crash is a failure, never a skip
+        except BaseException as e:  # a crash is a failure, never a skip
             # Even the exception object is hostile: its __str__ may raise.
             try:
                 detail = f"{type(e).__name__}: {e}"
-            except Exception:
+            except BaseException:
                 detail = "unprintable exception"
             failures.append(f"{key}: crash ({detail})")
             continue
@@ -142,7 +142,8 @@ def run_benchmarks(bench_dir: Path) -> list[str]:
 
 
 def main() -> int:
-    failures = run_benchmarks(BENCH_DIR)
+    bench_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else BENCH_DIR
+    failures = run_benchmarks(bench_dir)
     for f in failures:
         print(f"FAIL {f}")
     if failures:

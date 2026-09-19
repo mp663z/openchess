@@ -33,6 +33,8 @@ EXPECTED = {
     "bench_evil_getattr.py": "malformed",
     "evil-verify-str": "wrong result",
     "evil-exception": "crash",
+    "exit-zero": "crash",
+    "kbd-verify": "crash",
 }
 
 
