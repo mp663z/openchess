@@ -51,6 +51,15 @@ RESPONSE_FORMAT = {
                        "effect": "never-aborts-parsed-records"},
 }
 INCREMENTAL_PARAMS = ["since", "until"]
+NDJSON_ONLY_PARAMS = ["pgnInJson", "lastFen", "withBookmarked"]
+HEADERS = {"Accept": {"required": True, "value": "application/x-ndjson"}}
+STREAM_FOR_ACCEPT = {"application/x-ndjson": "ndjson"}
+SPEC_PROVENANCE = {
+    "source": "lichess-org/api GitHub repo, doc/specs",
+    "repo_head": "b6695d0ad9b604452c1cf0c5a0aa57c202cd6937",
+    "endpoint_spec_last_commit": "2026-09-18",
+    "fetched": "2026-09-19",
+}
 REQUIRED_VIOLATION = {"effect": "reject-record", "error": "malformed_request",
                       "partial_game": "never"}
 UNKNOWN_FIELD_STORAGE = "never-stored"
@@ -154,7 +163,7 @@ VERSIONING = {
 ALLOWED_TOP = {"schema_version", "contract"}
 ALLOWED_CONTRACT = {"id", "endpoint", "request", "game_object",
                     "error_envelope", "failure_classes", "failure_mapping",
-                    "errors", "versioning"}
+                    "errors", "spec_provenance", "versioning"}
 ALLOWED_PARAM = {"type", "required", "min", "default", "enum"}
 ALLOWED_GAME_OBJECT = {"required_fields", "optional_fields",
                        "unknown_field_policy", "field_types",
@@ -241,10 +250,25 @@ def lint(doc: object, root: Path = ROOT) -> None:
           "contract.endpoint.response_format.rule")
 
     request = _get(c, "request", "contract")
-    _keys(request, {"params", "incremental_params", "rule"},
-          "contract.request")
+    _keys(request, {"headers", "params", "incremental_params",
+                    "ndjson_only_params", "rule"}, "contract.request")
+    _strict_eq(_get(request, "headers", "contract.request"), HEADERS,
+               "contract.request.headers")
     _strict_eq(_get(request, "incremental_params", "contract.request"),
                INCREMENTAL_PARAMS, "contract.request.incremental_params")
+    _strict_eq(_get(request, "ndjson_only_params", "contract.request"),
+               NDJSON_ONLY_PARAMS,
+               "contract.request.ndjson_only_params")
+    for p in NDJSON_ONLY_PARAMS:
+        _need(p in PARAMS, f"contract.request: ndjson-only param {p} "
+                           "not declared in params")
+    # header/format consistency: the pinned Accept value must yield the
+    # pinned stream format
+    stream = _get(_get(c, "endpoint", "contract"), "response_format",
+                  "contract.endpoint")["stream"]
+    accept = HEADERS["Accept"]["value"]
+    _need(STREAM_FOR_ACCEPT.get(accept) == stream,
+          "contract: Accept header inconsistent with response_format.stream")
     params = _get(request, "params", "contract.request")
     _need(type(params) is dict, "contract.request.params: mapping required")
     for name, spec in params.items():
@@ -311,6 +335,8 @@ def lint(doc: object, root: Path = ROOT) -> None:
         _need(err in errors["closed_enum"],
               f"failure class {cls} maps to undeclared error {err}")
 
+    _strict_eq(_get(c, "spec_provenance", "contract"), SPEC_PROVENANCE,
+               "contract.spec_provenance")
     versioning = _get(c, "versioning", "contract")
     _keys(versioning, {"base_path", "client_pin", "minor_policy",
                        "minor_additions", "downgrade_policy", "major_bump",

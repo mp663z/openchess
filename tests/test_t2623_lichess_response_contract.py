@@ -25,7 +25,10 @@ DOC = yaml.safe_load(CONTRACT.read_text())
 
 def _mut(fn, where: str):
     doc = copy.deepcopy(DOC)
-    fn(doc["contract"] if where.startswith("contract") else doc)
+    if where == "top-c":
+        fn(doc["contract"])
+    else:
+        fn(doc["contract"] if where.startswith("contract") else doc)
     return doc
 
 
@@ -269,3 +272,40 @@ def test_swept_prose_claims_now_structured():
     _bad(lambda d: d["error_envelope"]["statuses"]["404"].__delitem__("scope"))
     _bad(lambda d: d["error_envelope"]["statuses"]["5xx"]
          .__setitem__("scope", "endpoint-level"))
+
+
+def test_request_headers_and_format_consistency():
+    """The PGN-default hole (v2): without an exact Accept header the
+    endpoint returns PGN while the contract pins NDJSON parsing."""
+    # the exact verifier attack: Accept PGN, stream still ndjson
+    _bad(lambda d: d["request"]["headers"]["Accept"]
+         .__setitem__("value", "application/x-chess-pgn"))
+    # header missing entirely (spec default is PGN)
+    _bad(lambda d: d["request"].__delitem__("headers"))
+    # Accept not required
+    _bad(lambda d: d["request"]["headers"]["Accept"]
+         .__setitem__("required", False))
+    _bad(lambda d: d["request"]["headers"]["Accept"]
+         .__setitem__("required", 1))  # bool/int conflation
+    # extra smuggled header
+    _bad(lambda d: d["request"]["headers"]
+         .__setitem__("Authorization", {"required": False, "value": "x"}))
+    # ndjson-only param family: dropped list, shrunk, renamed
+    _bad(lambda d: d["request"].__delitem__("ndjson_only_params"))
+    _bad(lambda d: d["request"]
+         .__setitem__("ndjson_only_params", ["pgnInJson", "lastFen"]))
+    _bad(lambda d: d["request"]["ndjson_only_params"].append("sort"))
+    # params/header family split: pgnInJson dropped from params but
+    # still claimed ndjson-only
+    def drop_param(d):
+        del d["request"]["params"]["pgnInJson"]
+    _bad(drop_param)
+
+
+def test_spec_provenance_exact():
+    _bad(lambda d: d.__delitem__("spec_provenance"), "top-c")
+    _bad(lambda d: d["spec_provenance"]
+         .__setitem__("repo_head", "0" * 40), "top-c")
+    _bad(lambda d: d["spec_provenance"]
+         .__setitem__("endpoint_spec_last_commit", "2026-09-01"), "top-c")
+    _bad(lambda d: d["spec_provenance"].__setitem__("bogus", 1), "top-c")

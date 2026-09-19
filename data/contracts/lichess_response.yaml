@@ -43,6 +43,8 @@ contract:
         affected record fail-closed and never aborts already-parsed
         records (per-game atomicity per the import contract).
   request:
+    headers:
+      Accept: {required: true, value: application/x-ndjson}
     params:
       since: {type: integer-ms, required: false}
       until: {type: integer-ms, required: false}
@@ -68,6 +70,7 @@ contract:
       sort: {type: string, enum: [dateAsc, dateDesc], default: dateDesc,
         required: false}
     incremental_params: [since, until]
+    ndjson_only_params: [pgnInJson, lastFen, withBookmarked]
     rule: >-
       The request uses only the declared params with the declared
       types; incremental import uses since/until as integer
@@ -133,6 +136,11 @@ contract:
           code: {type: string, required: true}
           message: {type: string, required: true}
           retryable: {type: boolean, required: true}
+  spec_provenance:
+    source: lichess-org/api GitHub repo, doc/specs
+    repo_head: b6695d0ad9b604452c1cf0c5a0aa57c202cd6937
+    endpoint_spec_last_commit: "2026-09-18"
+    fetched: "2026-09-19"
   versioning:
     base_path: /lichess-response/v1
     client_pin: MAJOR
