@@ -1,0 +1,458 @@
+{
+ "schema": 1,
+ "contract": "data/contracts/en_passant.yaml",
+ "contract_schema_version": 1,
+ "notes": "T0069 en-passant conformance fixture. States carry exactly three fields: ep_target (canonical square or the none sentinel '-'), occupied (partial square->piece-token map; unlisted squares empty; tokens are side w/b + piece p/n/b/r/q/k), side_to_move (w|b). All semantics derive from data/contracts/en_passant.yaml, never from this file: target grammar, set_on (event, target_file, per-side ranks), lifetime, storage-vs-identity split, capture mechanics and preconditions, turn linkage, failure classes and the closed error enum. Every malformed case is discriminating: repairing ONLY its declared defect makes it valid. Rollback cases assert the pre-state survives a rejected capture bit-identically.",
+ "happy": [
+  {
+   "name": "set-target-white",
+   "kind": "set-target",
+   "state": {
+    "ep_target": "-",
+    "occupied": {
+     "e2": "wp",
+     "e8": "bk",
+     "e1": "wk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "pawn-advance",
+    "from": "e2",
+    "to": "e4"
+   },
+   "expect_target": "e3",
+   "expect_occupied": {
+    "e4": "wp",
+    "e8": "bk",
+    "e1": "wk"
+   },
+   "expect_turn": {
+    "halfmove_clock": "reset",
+    "fullmove_number": "same"
+   }
+  },
+  {
+   "name": "set-target-black",
+   "kind": "set-target",
+   "state": {
+    "ep_target": "-",
+    "occupied": {
+     "d7": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "type": "pawn-advance",
+    "from": "d7",
+    "to": "d5"
+   },
+   "expect_target": "d6",
+   "expect_occupied": {
+    "d5": "bp",
+    "e1": "wk",
+    "e8": "bk"
+   },
+   "expect_turn": {
+    "halfmove_clock": "reset",
+    "fullmove_number": "increment"
+   }
+  },
+  {
+   "name": "capture-white",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "d6",
+    "occupied": {
+     "d5": "bp",
+     "e5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "e5",
+    "to": "d6"
+   },
+   "expect_target": "-",
+   "expect_occupied": {
+    "d6": "wp",
+    "e1": "wk",
+    "e8": "bk"
+   },
+   "expect_turn": {
+    "halfmove_clock": "reset",
+    "fullmove_number": "same"
+   }
+  },
+  {
+   "name": "capture-black",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "e3",
+    "occupied": {
+     "e4": "wp",
+     "d4": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "d4",
+    "to": "e3"
+   },
+   "expect_target": "-",
+   "expect_occupied": {
+    "e3": "bp",
+    "e1": "wk",
+    "e8": "bk"
+   },
+   "expect_turn": {
+    "halfmove_clock": "reset",
+    "fullmove_number": "increment"
+   }
+  }
+ ],
+ "boundary": [
+  {
+   "name": "capture-a-file-white",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "a6",
+    "occupied": {
+     "a5": "bp",
+     "b5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "b5",
+    "to": "a6"
+   },
+   "expect_target": "-",
+   "expect_occupied": {
+    "a6": "wp",
+    "e1": "wk",
+    "e8": "bk"
+   },
+   "expect_turn": {
+    "halfmove_clock": "reset",
+    "fullmove_number": "same"
+   }
+  },
+  {
+   "name": "capture-h-file-black",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "h3",
+    "occupied": {
+     "h4": "wp",
+     "g4": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "g4",
+    "to": "h3"
+   },
+   "expect_target": "-",
+   "expect_occupied": {
+    "h3": "bp",
+    "e1": "wk",
+    "e8": "bk"
+   },
+   "expect_turn": {
+    "halfmove_clock": "reset",
+    "fullmove_number": "increment"
+   }
+  },
+  {
+   "name": "lifetime-cleared-by-other-move",
+   "kind": "other-move",
+   "state": {
+    "ep_target": "d6",
+    "occupied": {
+     "d5": "bp",
+     "e5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "quiet",
+    "from": "e1",
+    "to": "f1"
+   },
+   "expect_target": "-",
+   "expect_occupied": {
+    "d5": "bp",
+    "e5": "wp",
+    "f1": "wk",
+    "e8": "bk"
+   },
+   "expect_turn": {
+    "halfmove_clock": "increment",
+    "fullmove_number": "same"
+   }
+  },
+  {
+   "name": "storage-recorded-identity-none",
+   "kind": "identity",
+   "state": {
+    "ep_target": "e6",
+    "occupied": {
+     "e5": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "expect_identity_value": "-",
+   "expect_stored_target": "e6"
+  },
+  {
+   "name": "storage-recorded-identity-target",
+   "kind": "identity",
+   "state": {
+    "ep_target": "e6",
+    "occupied": {
+     "e5": "bp",
+     "d5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "expect_identity_value": "e6",
+   "expect_stored_target": "e6"
+  }
+ ],
+ "malformed": [
+  {
+   "name": "target-not-canonical",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "E6",
+    "occupied": {
+     "e5": "bp",
+     "d5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "d5",
+    "to": "e6"
+   },
+   "defect": "ep_target is not a canonical square or the sentinel",
+   "expect_failure": "target_malformed"
+  },
+  {
+   "name": "target-wrong-rank-white",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "e3",
+    "occupied": {
+     "e5": "bp",
+     "d5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "d5",
+    "to": "e6"
+   },
+   "defect": "rank-3 target with white to move: a target is available only to the advancing side's opponent",
+   "expect_failure": "target_inconsistent"
+  },
+  {
+   "name": "no-enemy-pawn-on-captured-square",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "e6",
+    "occupied": {
+     "d5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "d5",
+    "to": "e6"
+   },
+   "defect": "no enemy pawn on the captured square e5",
+   "expect_failure": "target_inconsistent"
+  },
+  {
+   "name": "no-adjacent-mover",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "e6",
+    "occupied": {
+     "e5": "bp",
+     "c5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "c5",
+    "to": "e6"
+   },
+   "defect": "mover is not in a file adjacent to the target file",
+   "expect_failure": "capture_precondition"
+  },
+  {
+   "name": "stale-target",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "-",
+    "occupied": {
+     "e5": "bp",
+     "d5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "d5",
+    "to": "e6"
+   },
+   "defect": "no target set on the immediately preceding move",
+   "expect_failure": "capture_precondition"
+  },
+  {
+   "name": "pinned-capture-horizontal",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "d6",
+    "occupied": {
+     "d5": "bp",
+     "e5": "wp",
+     "a5": "br",
+     "h5": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "e5",
+    "to": "d6"
+   },
+   "defect": "double removal opens a horizontal pin on the own king",
+   "expect_failure": "pinned_capture"
+  },
+  {
+   "name": "mover-wrong-rank",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "e6",
+    "occupied": {
+     "e5": "bp",
+     "d4": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "d4",
+    "to": "e6"
+   },
+   "defect": "mover is not on its mover rank (5 for white)",
+   "expect_failure": "capture_precondition"
+  }
+ ],
+ "rollback": [
+  {
+   "name": "rollback-pinned-capture",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "d6",
+    "occupied": {
+     "d5": "bp",
+     "e5": "wp",
+     "a5": "br",
+     "h5": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "e5",
+    "to": "d6"
+   },
+   "defect": "double removal opens a horizontal pin on the own king",
+   "expect_failure": "pinned_capture",
+   "expect_state_after": {
+    "ep_target": "d6",
+    "occupied": {
+     "d5": "bp",
+     "e5": "wp",
+     "a5": "br",
+     "h5": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   }
+  },
+  {
+   "name": "rollback-stale-target",
+   "kind": "ep-capture",
+   "state": {
+    "ep_target": "-",
+    "occupied": {
+     "e5": "bp",
+     "d5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "type": "ep-capture",
+    "from": "d5",
+    "to": "e6"
+   },
+   "defect": "no target set on the immediately preceding move",
+   "expect_failure": "capture_precondition",
+   "expect_state_after": {
+    "ep_target": "-",
+    "occupied": {
+     "e5": "bp",
+     "d5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   }
+  }
+ ]
+}
