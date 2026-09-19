@@ -1,0 +1,184 @@
+# T0086: chess FEN contract (implementation-neutral; the product
+# runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for FEN parsing and serialization everywhere in the
+# product: position import, game import, repertoire storage, review and
+# drill generation, and engine handoff all share THESE semantics. ALL
+# normative semantics live in STRUCTURED fields the lint compares
+# exactly - prose is documentation, never the enforcement surface.
+# FEN here is the PRODUCT's position interchange form, not merely the
+# grammar: a FEN that parses but names an impossible position is
+# rejected, and a rejected parse yields no partial state.
+schema_version: 1
+
+contract:
+  id: chess-fen
+  board:
+    files: [a, b, c, d, e, f, g, h]
+    ranks: ["1", "2", "3", "4", "5", "6", "7", "8"]
+    file_index: file-a-is-index-0
+    rank_index: rank1-is-index-1
+    attack:
+      knight_deltas: [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2],
+        [-2, -1], [-2, 1], [-1, 2]]
+      king_deltas: [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0],
+        [-1, -1], [0, -1], [1, -1]]
+      rook_directions: [[1, 0], [-1, 0], [0, 1], [0, -1]]
+      bishop_directions: [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+      queen_directions: rook-directions-union-bishop-directions
+      white_pawn_capture_deltas: [[1, 1], [-1, 1]]
+      black_pawn_capture_deltas: [[1, -1], [-1, -1]]
+      rule: >-
+        Board coordinates and the attack relation used by the position
+        rules are exactly this structured data: leapers attack along
+        their deltas, sliders along their directions until blocked,
+        pawns attack along their capture deltas. Nothing else attacks.
+    rule: >-
+      The board is exactly the declared files and ranks; consumers
+      derive coordinates and the attack relation from this section
+      and nothing else.
+  fields:
+    order: [placement, active_color, castling, en_passant,
+      halfmove_clock, fullmove_number]
+    exactly_six: true
+    separator: single-ascii-space
+    empty_field: forbidden
+    rule: >-
+      A FEN is exactly the six declared fields in the declared order,
+      separated by single ASCII spaces. No leading, trailing, or
+      repeated separators; no missing or extra fields; no empty field.
+  placement:
+    rank_count: 8
+    rank_separator: "/"
+    rank_order: rank8-to-rank1
+    piece_letters: [p, n, b, r, q, k, P, N, B, R, Q, K]
+    case_rule: uppercase-white-lowercase-black
+    empty_run_digits: ["1", "2", "3", "4", "5", "6", "7", "8"]
+    zero_digit: forbidden
+    adjacent_digits: forbidden
+    rank_sum: 8
+    rule: >-
+      Eight ranks separated by "/", first rank is rank 8. Piece
+      letters are exactly the declared set; empty runs are single
+      digits 1-8; every rank's pieces plus empty runs sum to exactly
+      8. Zero and adjacent digits never appear in canonical form.
+  position_rules:
+    white_kings: exactly-1
+    black_kings: exactly-1
+    kings_adjacent: forbidden
+    pawns_on_back_ranks: forbidden
+    non_mover_king_attacked: forbidden
+    white_pawns_max: 8
+    black_pawns_max: 8
+    white_pieces_max: 16
+    black_pieces_max: 16
+    promotion_budget: excess-officers-over-start-set-covered-by-missing-pawns
+    rule: >-
+      Exactly one white king and one black king; kings are never on
+      adjacent squares; pawns never occupy rank 1 or rank 8; the king
+      of the side NOT to move is never attacked (the previous move
+      cannot have left it capturable). Material must be reachable
+      from the start: at most the declared pawn and total-piece
+      counts per side, and every officer (queen/rook/bishop/knight)
+      beyond the start-set count of its kind must be covered by a
+      missing pawn of that side (promotion budget). A placement
+      violating any rule is an impossible position, never a
+      parseable one.
+  active_color:
+    values: [w, b]
+    rule: >-
+      Exactly one declared side letter, lowercase.
+  castling:
+    none_sentinel: "-"
+    letters: [K, Q, k, q]
+    order: KQkq
+    duplicates: forbidden
+    consistency: right-requires-king-and-rook-on-start-squares
+    home_squares: from-linked-castling-contract-home_squares
+    rule: >-
+      Either the none sentinel or a subsequence of KQkq in that exact
+      order with no duplicates. A declared right requires the matching
+      king and rook on their start squares; the squares are NOT
+      restated here - they are the home_squares of the linked castling
+      contract (K: e1 h1, Q: e1 a1, k: e8 h8, q: e8 a8 at time of
+      writing). A right without its pieces is an impossible position.
+  en_passant:
+    none_sentinel: "-"
+    storage: recorded-on-every-two-square-advance
+    ranks: ["3", "6"]
+    rank3_requires: black-to-move
+    rank6_requires: white-to-move
+    pawn_presence: advancing-pawn-on-destination-square
+    target_square: empty
+    origin_square: empty
+    halfmove_clock: must-be-zero
+    set_on: from-linked-en-passant-contract-set_on
+    halfmove_reset_source: turn-contract-counter-reset-on-pawn-move
+    link: data/contracts/en_passant.yaml
+    rule: >-
+      Either the none sentinel or one square on rank 3 or rank 6,
+      matching the sibling en-passant contract's storage semantics:
+      the target is recorded after EVERY two-square advance, whether
+      or not a capture is legal. The advance geometry (from/to/target
+      ranks per side) comes from the sibling contract's set_on, not
+      restated here. Rank 3 requires black to move with the advancing
+      white pawn on rank 4 of that file; rank 6 requires white to
+      move with the advancing black pawn on rank 5 of that file. The
+      target square itself must be EMPTY (the pawn passed over it),
+      the pawn's origin square must be EMPTY (the pawn left it), and
+      the halfmove clock must be 0 (the immediately preceding move
+      was a pawn move, which resets it per the turn contract).
+      Anything else is impossible.
+  counters:
+    halfmove_clock: {type: integer, grammar: ascii-digits-0-9-only,
+      leading_zeros: forbidden, min: 0}
+    fullmove_number: {type: integer, grammar: ascii-digits-0-9-only,
+      leading_zeros: forbidden, min: 1}
+    link: data/contracts/turn.yaml
+    rule: >-
+      Both counters are ASCII-digit (0-9 only, never other Unicode
+      numerals) integers with the declared bounds, matching the
+      sibling turn contract's counter semantics. Leading zeros are
+      forbidden: canonical input carries no padding. No signs, no
+      non-digit characters.
+  serialization:
+    canonical: true
+    roundtrip: parse-of-emit-is-identity
+    emit_of_parse: exact-input-string-reproduced
+    rule: >-
+      Every accepted position has exactly one canonical FEN; the
+      serializer emits it, and parsing it reproduces the position
+      exactly (placement, active color, castling, en-passant target,
+      both counters). Canonical input round-trips byte-for-byte:
+      emit(parse(x)) == x for every accepted canonical x.
+  atomicity:
+    parse: all-or-nothing
+    rule: >-
+      A rejected FEN yields no partial position, no partial field
+      map, and no side effects: parse either returns the complete
+      position or the declared error. There is no half-parsed state
+      to roll back because nothing is committed before full
+      validation.
+  failure_classes: [malformed_fen, impossible_position]
+  failure_mapping:
+    malformed_fen: {trigger: any-fields-or-grammar-violation, error: malformed_request}
+    impossible_position: {trigger: any-position_rules-castling-consistency-or-en-passant-violation, error: illegal_position}
+  errors:
+    closed_enum: [malformed_request, illegal_position, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  links:
+    turn: data/contracts/turn.yaml
+    en_passant: data/contracts/en_passant.yaml
+    castling: data/contracts/castling.yaml
+  versioning:
+    base_path: /fen/v1
+    rule: >-
+      MINOR additions (new optional fields) keep the base path; MAJOR
+      changes (field order, grammar, position rules, error enum
+      narrowing) bump it; a consumer must never silently downgrade a
+      document to a lower major version.
