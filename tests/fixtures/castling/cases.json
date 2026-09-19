@@ -1,0 +1,970 @@
+{
+  "schema": 1,
+  "contract": "data/contracts/castling.yaml",
+  "contract_schema_version": 1,
+  "notes": "T0060 castling conformance fixture. States carry exactly four fields: rights (string per the contract grammar), occupied (partial square->piece-token map; any square not listed is empty; tokens are two chars, side w/b + piece kqrbnp), attacked (squares attacked by the opponent of the side to move), side_to_move (w/b). Moves are strictly shaped: castle {type,right}, king_move {type,side}, rook_move_from {type,square}, rook_capture_on {type,square}. Loss events only update rights. Rollback cases assert the pre-state survives a rejected castle bit-identically.",
+  "happy": [
+    {
+      "name": "castle-k-full-rights",
+      "kind": "castle",
+      "state": {
+        "rights": "KQkq",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "a1": "wr",
+          "e8": "bk",
+          "h8": "br",
+          "a8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_rights": "kq",
+      "expect_occupied": {
+        "a1": "wr",
+        "e8": "bk",
+        "h8": "br",
+        "a8": "br",
+        "g1": "wk",
+        "f1": "wr"
+      },
+      "expect_turn": {
+        "halfmove_clock": "increment",
+        "fullmove_number": "same"
+      }
+    },
+    {
+      "name": "castle-q-full-rights",
+      "kind": "castle",
+      "state": {
+        "rights": "KQkq",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "a1": "wr",
+          "e8": "bk",
+          "h8": "br",
+          "a8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "Q"
+      },
+      "expect_rights": "kq",
+      "expect_occupied": {
+        "h1": "wr",
+        "e8": "bk",
+        "h8": "br",
+        "a8": "br",
+        "c1": "wk",
+        "d1": "wr"
+      },
+      "expect_turn": {
+        "halfmove_clock": "increment",
+        "fullmove_number": "same"
+      }
+    },
+    {
+      "name": "castle-k-black-increments-fullmove",
+      "kind": "castle",
+      "state": {
+        "rights": "Kk",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "e8": "bk",
+          "h8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "k"
+      },
+      "expect_rights": "K",
+      "expect_occupied": {
+        "e1": "wk",
+        "h1": "wr",
+        "g8": "bk",
+        "f8": "br"
+      },
+      "expect_turn": {
+        "halfmove_clock": "increment",
+        "fullmove_number": "increment"
+      }
+    },
+    {
+      "name": "castle-q-to-none-sentinel",
+      "kind": "castle",
+      "state": {
+        "rights": "q",
+        "occupied": {
+          "e8": "bk",
+          "a8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "q"
+      },
+      "expect_rights": "-",
+      "expect_occupied": {
+        "c8": "bk",
+        "d8": "br"
+      },
+      "expect_turn": {
+        "halfmove_clock": "increment",
+        "fullmove_number": "increment"
+      }
+    },
+    {
+      "name": "king-move-white-loses-both",
+      "kind": "loss",
+      "state": {
+        "rights": "KQq",
+        "occupied": {
+          "e1": "wk"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "king_move",
+        "side": "w"
+      },
+      "expect_rights": "q"
+    },
+    {
+      "name": "king-move-black-to-sentinel",
+      "kind": "loss",
+      "state": {
+        "rights": "kq",
+        "occupied": {
+          "e8": "bk"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "king_move",
+        "side": "b"
+      },
+      "expect_rights": "-"
+    },
+    {
+      "name": "rook-move-from-h1-loses-K",
+      "kind": "loss",
+      "state": {
+        "rights": "KQ",
+        "occupied": {
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "rook_move_from",
+        "square": "h1"
+      },
+      "expect_rights": "Q"
+    },
+    {
+      "name": "rook-capture-on-a8-loses-q",
+      "kind": "loss",
+      "state": {
+        "rights": "Kq",
+        "occupied": {
+          "a8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "rook_capture_on",
+        "square": "a8"
+      },
+      "expect_rights": "K"
+    },
+    {
+      "name": "rook-move-from-a1-loses-Q",
+      "kind": "loss",
+      "state": {
+        "rights": "KQ",
+        "occupied": {
+          "a1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "rook_move_from",
+        "square": "a1"
+      },
+      "expect_rights": "K"
+    },
+    {
+      "name": "rook-move-from-h8-loses-k",
+      "kind": "loss",
+      "state": {
+        "rights": "kq",
+        "occupied": {
+          "h8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "rook_move_from",
+        "square": "h8"
+      },
+      "expect_rights": "q"
+    },
+    {
+      "name": "rook-move-from-a8-loses-q",
+      "kind": "loss",
+      "state": {
+        "rights": "q",
+        "occupied": {
+          "a8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "rook_move_from",
+        "square": "a8"
+      },
+      "expect_rights": "-"
+    },
+    {
+      "name": "rook-capture-on-h1-loses-K",
+      "kind": "loss",
+      "state": {
+        "rights": "Kq",
+        "occupied": {
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "rook_capture_on",
+        "square": "h1"
+      },
+      "expect_rights": "q"
+    },
+    {
+      "name": "rook-capture-on-a1-loses-Q",
+      "kind": "loss",
+      "state": {
+        "rights": "Q",
+        "occupied": {
+          "a1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "rook_capture_on",
+        "square": "a1"
+      },
+      "expect_rights": "-"
+    },
+    {
+      "name": "rook-capture-on-h8-loses-k",
+      "kind": "loss",
+      "state": {
+        "rights": "k",
+        "occupied": {
+          "h8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "rook_capture_on",
+        "square": "h8"
+      },
+      "expect_rights": "-"
+    }
+  ],
+  "boundary": [
+    {
+      "name": "grammar-sentinel-loss-noop",
+      "kind": "grammar",
+      "state": {
+        "rights": "-",
+        "occupied": {
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "rook_move_from",
+        "square": "h1"
+      },
+      "expect_rights": "-"
+    },
+    {
+      "name": "grammar-single-right-unaffected-capture",
+      "kind": "grammar",
+      "state": {
+        "rights": "K",
+        "occupied": {
+          "a1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "rook_capture_on",
+        "square": "a1"
+      },
+      "expect_rights": "K"
+    },
+    {
+      "name": "grammar-full-set-canonical-order-after-loss",
+      "kind": "grammar",
+      "state": {
+        "rights": "KQkq",
+        "occupied": {
+          "e1": "wk"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "king_move",
+        "side": "w"
+      },
+      "expect_rights": "kq"
+    },
+    {
+      "name": "occupancy-b1-irrelevant-kingside",
+      "kind": "occupancy",
+      "state": {
+        "rights": "K",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "b1": "wn"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_rights": "-",
+      "expect_occupied": {
+        "b1": "wn",
+        "g1": "wk",
+        "f1": "wr"
+      }
+    },
+    {
+      "name": "identity-occupancy-differ-identical",
+      "kind": "identity",
+      "state": {
+        "rights": "Kq",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "e8": "bk",
+          "a8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "other": {
+        "rights": "Kq",
+        "occupied": {},
+        "attacked": [
+          "b8"
+        ],
+        "side_to_move": "b"
+      },
+      "expect_identity": "identical"
+    },
+    {
+      "name": "identity-rights-differ-different",
+      "kind": "identity",
+      "state": {
+        "rights": "K",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "other": {
+        "rights": "Q",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "expect_identity": "different"
+    }
+  ],
+  "malformed": [
+    {
+      "name": "rights-empty-string",
+      "state": {
+        "rights": "",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "rights_malformed"
+    },
+    {
+      "name": "rights-duplicate",
+      "state": {
+        "rights": "KK",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "rights_malformed"
+    },
+    {
+      "name": "rights-misordered",
+      "state": {
+        "rights": "QK",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "rights_malformed"
+    },
+    {
+      "name": "rights-non-subset-member",
+      "state": {
+        "rights": "KX",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "rights_malformed"
+    },
+    {
+      "name": "rights-sentinel-mixed",
+      "state": {
+        "rights": "-K",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "rights_malformed"
+    },
+    {
+      "name": "rook-missing-from-home",
+      "state": {
+        "rights": "K",
+        "occupied": {
+          "e1": "wk"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "rights_inconsistent"
+    },
+    {
+      "name": "wrong-piece-on-king-home",
+      "state": {
+        "rights": "q",
+        "occupied": {
+          "e8": "wr",
+          "a8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "q"
+      },
+      "expect_failure": "rights_inconsistent"
+    },
+    {
+      "name": "f1-occupied-blocks-kingside",
+      "state": {
+        "rights": "K",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "f1": "wn"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "path_blocked"
+    },
+    {
+      "name": "b1-occupied-blocks-queenside",
+      "state": {
+        "rights": "Q",
+        "occupied": {
+          "e1": "wk",
+          "a1": "wr",
+          "b1": "wn"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "Q"
+      },
+      "expect_failure": "path_blocked"
+    },
+    {
+      "name": "right-not-held-kingside",
+      "state": {
+        "rights": "Qkq",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "king_unmoved_required"
+    },
+    {
+      "name": "sentinel-castle-attempt",
+      "state": {
+        "rights": "-",
+        "occupied": {
+          "e8": "bk",
+          "h8": "br"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "k"
+      },
+      "expect_failure": "king_unmoved_required"
+    },
+    {
+      "name": "king-from-attacked",
+      "state": {
+        "rights": "K",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [
+          "e1"
+        ],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "king-transit-attacked",
+      "state": {
+        "rights": "K",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [
+          "f1"
+        ],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "king-to-attacked",
+      "state": {
+        "rights": "K",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [
+          "g1"
+        ],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "f8-occupied-blocks-k",
+      "state": {
+        "rights": "k",
+        "occupied": {
+          "e8": "bk",
+          "h8": "br",
+          "f8": "bn"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "k"
+      },
+      "expect_failure": "path_blocked"
+    },
+    {
+      "name": "b8-occupied-blocks-q",
+      "state": {
+        "rights": "q",
+        "occupied": {
+          "e8": "bk",
+          "a8": "br",
+          "b8": "bn"
+        },
+        "attacked": [],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "q"
+      },
+      "expect_failure": "path_blocked"
+    },
+    {
+      "name": "Q-from-attacked",
+      "state": {
+        "rights": "Q",
+        "occupied": {
+          "e1": "wk",
+          "a1": "wr"
+        },
+        "attacked": [
+          "e1"
+        ],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "Q"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "Q-transit-attacked",
+      "state": {
+        "rights": "Q",
+        "occupied": {
+          "e1": "wk",
+          "a1": "wr"
+        },
+        "attacked": [
+          "d1"
+        ],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "Q"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "Q-to-attacked",
+      "state": {
+        "rights": "Q",
+        "occupied": {
+          "e1": "wk",
+          "a1": "wr"
+        },
+        "attacked": [
+          "c1"
+        ],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "Q"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "k-from-attacked",
+      "state": {
+        "rights": "k",
+        "occupied": {
+          "e8": "bk",
+          "h8": "br"
+        },
+        "attacked": [
+          "e8"
+        ],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "k"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "k-transit-attacked",
+      "state": {
+        "rights": "k",
+        "occupied": {
+          "e8": "bk",
+          "h8": "br"
+        },
+        "attacked": [
+          "f8"
+        ],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "k"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "k-to-attacked",
+      "state": {
+        "rights": "k",
+        "occupied": {
+          "e8": "bk",
+          "h8": "br"
+        },
+        "attacked": [
+          "g8"
+        ],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "k"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "q-from-attacked",
+      "state": {
+        "rights": "q",
+        "occupied": {
+          "e8": "bk",
+          "a8": "br"
+        },
+        "attacked": [
+          "e8"
+        ],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "q"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "q-transit-attacked",
+      "state": {
+        "rights": "q",
+        "occupied": {
+          "e8": "bk",
+          "a8": "br"
+        },
+        "attacked": [
+          "d8"
+        ],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "q"
+      },
+      "expect_failure": "through_check"
+    },
+    {
+      "name": "q-to-attacked",
+      "state": {
+        "rights": "q",
+        "occupied": {
+          "e8": "bk",
+          "a8": "br"
+        },
+        "attacked": [
+          "c8"
+        ],
+        "side_to_move": "b"
+      },
+      "move": {
+        "type": "castle",
+        "right": "q"
+      },
+      "expect_failure": "through_check"
+    }
+  ],
+  "rollback": [
+    {
+      "name": "rollback-through-check-preserves-state",
+      "state": {
+        "rights": "Kk",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "e8": "bk",
+          "h8": "br"
+        },
+        "attacked": [
+          "e1"
+        ],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "through_check",
+      "expect_state_after": {
+        "rights": "Kk",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "e8": "bk",
+          "h8": "br"
+        },
+        "attacked": [
+          "e1"
+        ],
+        "side_to_move": "w"
+      }
+    },
+    {
+      "name": "rollback-path-blocked-preserves-state",
+      "state": {
+        "rights": "Q",
+        "occupied": {
+          "e1": "wk",
+          "a1": "wr",
+          "b1": "wn"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "Q"
+      },
+      "expect_failure": "path_blocked",
+      "expect_state_after": {
+        "rights": "Q",
+        "occupied": {
+          "e1": "wk",
+          "a1": "wr",
+          "b1": "wn"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      }
+    },
+    {
+      "name": "rollback-rights-malformed-preserves-state",
+      "state": {
+        "rights": "KK",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      },
+      "move": {
+        "type": "castle",
+        "right": "K"
+      },
+      "expect_failure": "rights_malformed",
+      "expect_state_after": {
+        "rights": "KK",
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr"
+        },
+        "attacked": [],
+        "side_to_move": "w"
+      }
+    }
+  ]
+}
