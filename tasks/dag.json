@@ -452,10 +452,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "259b0d5d2ac6e48baa3846c1e01b66ba7ad411dd",
+   "evidence_manifest": "evidence/T0019.md"
   },
   {
    "id": "T0020",
