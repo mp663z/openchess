@@ -61,8 +61,15 @@ FIXTURE_DIGESTS.update({
 
 RETRIEVED_AT = "2026-09-19T00:00:00Z"
 
+# VALID_PGN with all six identity headers: update classification
+# requires the full header set (contract two-tier identity rule)
+FULL_HEADER_PGN = VALID_PGN.replace(
+    '[Result "1-0"]',
+    '[UTCDate "2026.09.19"]\n[Date "2026.09.19"]\n[Round "1"]\n'
+    '[Result "1-0"]', 1)
+
 PINNED_DIGESTS = {
-    "import.yaml": "b37cbc7386b9bdf17ec3415ed74dd15a962bbcf36ba4a40fec28cc0b3158fb2a",
+    "import.yaml": "ae3633113a5b22e0552f47ffe426425492dfaf28b7e11227ca602e89369e8e2c",
     "rights_policy.yaml": "90e8b328153ba0cc0b84b601ea2ae38239225fc77a88eadaa81b4ffd537f8d7d",
     "valid_pgn": "fae5a5bbb31fb85acc6e64b483bcb124e494617c3d5f5c4079ae8bac3ed0f625",
 }
@@ -151,8 +158,15 @@ class TestExpectedPath:
         assert prov["rights_class"] == "user-own"
         assert prov["retrieved_at"] == RETRIEVED_AT
         assert prov["retrieval_detail"].endswith("in.pgn")
-        assert rec["content_sha256"] == hashlib.sha256(
-            VALID_PGN.rstrip("\n").encode()).hexdigest()
+        # contract: content_sha256 covers the canonical record bytes
+        canonical = {
+            k: rec[k] for k in ("game_id", "source_id", "variant",
+                                "tags", "movetext")}
+        canonical["tags"] = {k: canonical["tags"][k]
+                             for k in sorted(canonical["tags"])}
+        assert rec["content_sha256"] == hashlib.sha256(json.dumps(
+            canonical, separators=(",", ":"),
+            ensure_ascii=False).encode()).hexdigest()
         assert rec["tags"]["White"] == "a"
         assert rec["variant"] == "standard"
         # index manifest: ordered unique entries, exact key set/order,
@@ -351,11 +365,13 @@ class TestIdempotency:
         assert len(_read_json(store / "index.json")) == 1
 
     def test_same_id_new_content_is_recorded_replacement(self, tmp_path):
-        changed = VALID_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
-        assert changed != VALID_PGN
+        # update classification requires the full identity headers
+        # (contract two-tier identity rule); sparse games never replace
+        changed = FULL_HEADER_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
+        assert changed != FULL_HEADER_PGN
         p = tmp_path / "in.pgn"
         store = tmp_path / "store"
-        p.write_text(VALID_PGN)
+        p.write_text(FULL_HEADER_PGN)
         run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
         p.write_text(changed)
         s2 = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
@@ -365,8 +381,14 @@ class TestIdempotency:
         assert len(index) == 1  # still unique
         rec = _stored_records(store)[0]
         assert "2. Nf3 d6" in rec["movetext"]
-        assert rec["content_sha256"] == hashlib.sha256(
-            changed.rstrip("\n").encode()).hexdigest()
+        canonical = {
+            k: rec[k] for k in ("game_id", "source_id", "variant",
+                                "tags", "movetext")}
+        canonical["tags"] = {k: canonical["tags"][k]
+                             for k in sorted(canonical["tags"])}
+        assert rec["content_sha256"] == hashlib.sha256(json.dumps(
+            canonical, separators=(",", ":"),
+            ensure_ascii=False).encode()).hexdigest()
         assert "import.game_updated" in _telemetry_events(store)
 
 
@@ -491,11 +513,11 @@ class TestUpdateAtomicity:
         import ingest.import_pgn as imp
         p = tmp_path / "in.pgn"
         store = tmp_path / "store"
-        p.write_text(VALID_PGN)
+        p.write_text(FULL_HEADER_PGN)
         run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
         old_index = _read_json(store / "index.json")
         old_record_name = old_index[0]["record"]
-        changed = VALID_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
+        changed = FULL_HEADER_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
         p.write_text(changed)
         real = imp.os.replace
 
@@ -532,10 +554,10 @@ class TestUpdateAtomicity:
             self, tmp_path, monkeypatch):
         p = tmp_path / "in.pgn"
         store = tmp_path / "store"
-        p.write_text(VALID_PGN)
+        p.write_text(FULL_HEADER_PGN)
         run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
         old_name = _read_json(store / "index.json")[0]["record"]
-        changed = VALID_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
+        changed = FULL_HEADER_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
         p.write_text(changed)
         real_open = Path.open
         appends = {"n": 0}
