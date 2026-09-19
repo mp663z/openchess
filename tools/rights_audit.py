@@ -102,10 +102,14 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
         return ["rights manifest: sources must be a non-empty list"]
     seen: set[str] = set()
     for s in sources:
-        if not isinstance(s, dict) or not s.get("id"):
-            problems.append("source entry without an id")
+        if not isinstance(s, dict):
+            problems.append("source entry is not a mapping")
             continue
-        sid = s["id"]
+        sid_raw = s.get("id")
+        if not isinstance(sid_raw, str) or not sid_raw.strip():
+            problems.append(f"source entry with a non-string or empty id: {sid_raw!r}")
+            continue
+        sid = sid_raw
         if sid in seen:
             problems.append(f"{sid}: duplicate source id")
         seen.add(sid)
@@ -121,7 +125,14 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
             elif not isinstance(url, str) or not _is_https_url(url):
                 problems.append(f"{sid}: url is not an https URL: {url!r}")
 
-        license_ = (s.get("license") or "").strip()
+        license_raw = s.get("license")
+        if license_raw is not None and not isinstance(license_raw, str):
+            problems.append(
+                f"{sid}: license must be a string, got {type(license_raw).__name__}"
+            )
+            license_ = ""
+        else:
+            license_ = (license_raw or "").strip()
         if not license_:
             problems.append(f"{sid}: missing license")
 
@@ -130,7 +141,7 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
             problems.append(f"{sid}: transformation_permission must be a boolean")
 
         decision = s.get("decision")
-        if decision not in DECISIONS:
+        if not isinstance(decision, str) or decision not in DECISIONS:
             problems.append(f"{sid}: unknown decision {decision!r} (fail closed)")
         elif decision == "allow":
             if perm is not True:
@@ -147,7 +158,20 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
 
         # --- statement source: https URL or existing local file containing it ---
         statement = s.get("statement")
-        src_url = (s.get("statement_source_url") or "").strip()
+        if statement is not None and not isinstance(statement, str):
+            problems.append(
+                f"{sid}: statement must be a string, got {type(statement).__name__}"
+            )
+            statement = None
+        src_raw = s.get("statement_source_url")
+        if src_raw is not None and not isinstance(src_raw, str):
+            problems.append(
+                f"{sid}: statement_source_url must be a string, "
+                f"got {type(src_raw).__name__}"
+            )
+            src_url = ""
+        else:
+            src_url = (src_raw or "").strip()
         if statement is not None and not src_url:
             problems.append(f"{sid}: statement without statement_source_url")
         if src_url:
@@ -172,7 +196,17 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
 
         # --- evidence bytes: snapshot file pinned by hash, statement inside ---
         ev_path = s.get("evidence_path")
+        if ev_path is not None and not isinstance(ev_path, str):
+            problems.append(
+                f"{sid}: evidence_path must be a string, got {type(ev_path).__name__}"
+            )
+            ev_path = None
         ev_hash = s.get("evidence_sha256")
+        if ev_hash is not None and not isinstance(ev_hash, str):
+            problems.append(
+                f"{sid}: evidence_sha256 must be a string, got {type(ev_hash).__name__}"
+            )
+            ev_hash = None
         if statement is not None:
             if not ev_path or not ev_hash:
                 problems.append(f"{sid}: statement without evidence_path/evidence_sha256")
