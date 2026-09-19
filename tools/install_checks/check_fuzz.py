@@ -73,6 +73,8 @@ def _random_yaml(rng: random.Random, depth: int = 0):
         return _random_string(rng)
     if kind == 3:
         return rng.choice([True, False])
+    if kind == 5 and rng.random() < 0.3:
+        return _random_string(rng).encode()  # bytes reach YAML-adjacent paths
     if kind == 4:
         return [_random_yaml(rng, depth + 1) for _ in range(rng.randint(0, 4))]
     return {rng.choice(["id", "sources", "acceptances", "handle", "statement",
@@ -129,6 +131,19 @@ def run(mode: str) -> None:
                     bad.append(f"validate_sources empty-accepted {str(d)[:50]!r}")
             except Exception as e:
                 bad.append(f"validate_sources crashed on {str(d)[:50]!r}: {e!r}")
+        # typed-boundary fuzz: nonstring scalars/containers/bytes into the
+        # string gates must return False, never crash
+        for v in random_docs:
+            for fn, label in ((la.expression_ok, "expression_ok"),
+                              (la.candidate_ok, "candidate_ok")):
+                try:
+                    r = fn(v)
+                    if not isinstance(r, bool):
+                        bad.append(f"{label}(nonstring) returned {type(r).__name__}")
+                    elif r and not isinstance(v, str):
+                        bad.append(f"{label} ACCEPTED nonstring {str(v)[:40]!r}")
+                except Exception as e:
+                    bad.append(f"{label} CRASHED on {type(v).__name__}: {e!r}")
         # noise must not be ACCEPTED as a license expression
         accepted_noise = [s for s in random_strings
                           if la.expression_ok(s)
@@ -149,6 +164,14 @@ def run(mode: str) -> None:
     for s in STRING_NASTIES:
         if la.expression_ok(s):
             uncaught.append(f"nasty ACCEPTED: {s[:40]!r}")
+    for v in [None, 1, 1.5, [], {}, b"MIT", b"MIT OR Apache-2.0", True]:
+        for fn, label in ((la.expression_ok, "expression_ok"),
+                          (la.candidate_ok, "candidate_ok")):
+            try:
+                if fn(v) is not False:
+                    uncaught.append(f"{label}({v!r}) did not return False")
+            except Exception as e:
+                uncaught.append(f"{label} CRASHED on {v!r}: {e!r}")
     # every YAML nasty must be REJECTED: validate_sources returns nonempty
     # problems; validate_registry raises its designed ClaError
     for d in YAML_NASTIES:

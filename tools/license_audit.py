@@ -44,6 +44,8 @@ def expression_ok(expr: str) -> bool:
     Parentheses, WITH exceptions, trailing operators and unknown tokens are
     rejected rather than guessed.
     """
+    if not isinstance(expr, str):
+        return False  # parsed YAML/provider metadata can supply non-strings
     expr = expr.strip()
     if not expr or "(" in expr or ")" in expr:
         return False
@@ -73,6 +75,8 @@ def expression_ok(expr: str) -> bool:
 
 def candidate_ok(cand: str) -> bool:
     """One candidate string (License-Expression, License field, classifier)."""
+    if not isinstance(cand, str):
+        return False
     cand = cand.strip()
     if not cand:
         return False
