@@ -95,7 +95,7 @@ KIND_KEYS = {
 MALFORMED_REQUIRED = {"name", "state", "move", "defect", "expect_failure"}
 ROLLBACK_REQUIRED = MALFORMED_REQUIRED | {"expect_state_after"}
 
-SECTION_COUNTS = {"happy": 15, "boundary": 31, "terminal": 4,
+SECTION_COUNTS = {"happy": 15, "boundary": 33, "terminal": 4,
                   "malformed": 14, "rollback": 2}
 TERMINAL_STATUSES = {"checkmate": 1, "stalemate": 1, "check": 1, "none": 1}
 FAILURE_CLASS_COUNTS = {"malformed_move": 7, "no_piece": 1,
@@ -244,11 +244,19 @@ def _apply(occ: dict, move: dict) -> dict:
     return new
 
 
-def _legal_moves(state: dict) -> list:
+CAPTURE_PROMOS = list(PROMO_ENUM)
+
+
+def _legal_moves(state: dict, capture_promos=None) -> list:
     """The legal move set: pseudo-legal moves, promotion-rank pawn moves
     expanded to exactly one move per promotion value (no unpromoted
     move to the promotion rank exists), filtered to moves whose
     resulting position leaves the mover's own king unattacked."""
+    # capture_promos parametrizes the expansion applied to CAPTURE
+    # promotions (contract: identical to quiet); tests pass a shrunk
+    # list to prove the fixture catches a capture-expansion hole
+    if capture_promos is None:
+        capture_promos = CAPTURE_PROMOS
     occ = state["occupied"]
     side = state["side_to_move"]
     promo_rank = PROMO_RANKS[SIDE_NAME[side]]
@@ -257,8 +265,11 @@ def _legal_moves(state: dict) -> list:
         if tok[0] != side:
             continue
         for t in sorted(_pseudo_targets(occ, sq)):
-            promos = PROMO_ENUM \
-                if tok[1] == "p" and t[1] == promo_rank else [None]
+            if tok[1] == "p" and t[1] == promo_rank:
+                capturing = t in occ and occ[t][0] != side
+                promos = capture_promos if capturing else PROMO_ENUM
+            else:
+                promos = [None]
             for pr in promos:
                 mv = {"from_square": sq, "to_square": t}
                 if pr is not None:
@@ -363,6 +374,7 @@ def test_contract_premises():
     assert EXPANSION["expands_to"] == 4
     assert EXPANSION["values"] == PROMO_ENUM
     assert EXPANSION["unpromoted_last_rank_move"] == "none"
+    assert EXPANSION["applies_to"] == ["quiet", "capture"]
     assert len(KNIGHT_DELTAS) == 8 and MOVEMENT["knight"]["jumps"] is True
     assert len(KING_DELTAS) == 8 and MOVEMENT["king"]["jumps"] is False
     for p in ("rook", "bishop", "queen"):
@@ -469,6 +481,27 @@ def test_boundary():
                 _legal_moves(state), case["name"]
         else:
             raise AssertionError(f"{case['name']}: bad kind {kind}")
+
+
+def test_mutation_capture_expansion_restricted_fails():
+    """An implementation expanding QUIET promotions to four but CAPTURE
+    promotions to queen-only fails ONLY the capture-expansion
+    witnesses - the quiet witnesses keep passing under the mutation."""
+    for case in CASES["boundary"]:
+        if case["kind"] != "expansion":
+            continue
+        got = sorted(
+            m["promotion"]
+            for m in _legal_moves(case["state"], capture_promos=["q"])
+            if m["from_square"] == case["from_square"]
+            and m["to_square"] == case["to_square"])
+        if "capture" in case["name"]:
+            assert got != sorted(case["expect_promotions"]), (
+                f"{case['name']}: capture-expansion hole not caught")
+            assert got == ["q"], case["name"]
+        else:
+            assert got == sorted(case["expect_promotions"]), (
+                f"{case['name']}: quiet expansion broke under mutation")
 
 
 def test_terminal():

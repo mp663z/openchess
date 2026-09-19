@@ -762,6 +762,48 @@
    "attacker": "w",
    "square": "d5",
    "expect_attacked": true
+  },
+  {
+   "name": "white-capture-expands-to-four",
+   "kind": "expansion",
+   "state": {
+    "occupied": {
+     "a7": "wp",
+     "b8": "br",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "from_square": "a7",
+   "to_square": "b8",
+   "expect_promotions": [
+    "q",
+    "r",
+    "b",
+    "n"
+   ]
+  },
+  {
+   "name": "black-capture-expands-to-four",
+   "kind": "expansion",
+   "state": {
+    "occupied": {
+     "h2": "bp",
+     "g1": "wr",
+     "e1": "wk",
+     "a8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "from_square": "h2",
+   "to_square": "g1",
+   "expect_promotions": [
+    "q",
+    "r",
+    "b",
+    "n"
+   ]
   }
  ],
  "terminal": [
