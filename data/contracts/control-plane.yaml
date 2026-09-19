@@ -1,0 +1,351 @@
+# T0473 - Replaceable control-plane contract, schema v2.
+# Machine-readable source of truth for the boundary between the public
+# product (client + AGPL server) and ANY control-plane implementation
+# (hosted private repo, self-hosted, or test mock). Consumers code to
+# this contract, never to an implementation.
+schema_version: 2
+contract:
+  name: replaceable-control-plane
+  versioning:
+    scheme: semver
+    base_path: /cp/v1
+    rule: >-
+      Clients pin MAJOR. MINOR is additive-only: new optional request
+      fields, new response fields, new operations or new provider_kind
+      values. A server MUST accept any client minor within its major and
+      MUST ignore unknown request fields. Rollback: a consumer may
+      downgrade to any earlier MINOR within the same MAJOR without
+      migration, because conformance never asserts absence of extra
+      response fields. MAJOR bumps require a new base path.
+  transport:
+    kind: https-json
+    auth:
+      scheme: bearer
+      header: Authorization
+      format: "Authorization: Bearer <opaque-token>"
+      issued_by: [identity.register, identity.login]
+      public_operations: [identity.register, identity.login]
+      rule: >-
+        A valid bearer token is REQUIRED for every operation not
+        listed in public_operations; operations that REQUIRE it answer
+        401 when the token is missing, unknown or expired: unknown
+        tokens answer auth_invalid, expired tokens answer auth_expired.
+        No cookies, no query tokens, no exceptions.
+
+    read_only_operations: [billing.get_subscription,
+      entitlements.get, provider_routing.route]
+    read_only_rule: >-
+      Operations with mutating: false MUST be listed in
+      read_only_operations, and every listed operation MUST be
+      mutating: false. A state-changing operation flipped to
+      mutating: false without allowlisting is an idempotency bypass and
+      fails the contract lint.
+    self_destructive_operations: [identity.logout,
+      identity.delete_account]
+    self_destructive_rule: >-
+      Operations whose success invalidates the calling credential MUST
+      be listed in self_destructive_operations, MUST be mutating and
+      MUST require auth. For these operations the idempotency replay
+      lookup runs BEFORE credential validity checks, scoped by the
+      presented credential itself, never its validity: a retry with the
+      same Idempotency-Key and a byte-identical body replays the
+      recorded outcome; the same key with a different body answers
+      idempotency_conflict; without a recorded first call a revoked
+      credential answers 401 as usual. Replay returns only what the
+      caller already received and can never authorize new work.
+    idempotency: >-
+      Every mutating operation REQUIRES an Idempotency-Key header
+      (unique nonempty string per logical operation). A replay with the
+      same key AND the same canonical request body returns the original
+      outcome with no duplicate effect. The same key with a DIFFERENT
+      body answers 409 idempotency_conflict. Keys are scoped per
+      authenticated account.
+    errors:
+      additive_note: >-
+        Error payloads MAY carry extra fields beyond the declared shape
+        (MINOR additive); error signalling keys on the HTTP status only,
+        so a 2xx payload containing an 'error' field is data, not an
+        error.
+      shape:
+        error:
+          fields:
+            code: {type: string, required: true, example: not_found}
+            message: {type: string, required: true,
+                      example: human-readable detail}
+            retryable: {type: boolean, required: true, example: false}
+      closed_enum:
+      - auth_expired
+      - auth_invalid
+      - idempotency_conflict
+      - quota_exhausted
+      - quota_reservation_expired
+      - entitlement_missing
+      - provider_key_invalid
+      - provider_unavailable
+      - cost_cap_exceeded
+      - rate_limited
+      - malformed_request
+      - not_found
+      - conflict
+      - internal
+  privacy:
+    chess_content: forbidden
+    chess_content_note: No games, moves, FENs, analysis or notes in any
+      field of any operation, in either direction.
+    key_material: write-only
+    key_material_note: Provider keys and credentials are accepted only in
+      fields flagged write_only and MUST NOT appear in any response, log
+      line or error message.
+    logs: no-secrets
+  cost:
+    reservation_required: true
+    reservation_required_note: Billable operations require a quota
+      reservation first; consumers receive cost_cap_exceeded, never a
+      surprise bill.
+    caps_enforced: server-side
+  recovery:
+    entitlements_cache_ttl_field: cache_ttl_seconds
+    reservation_expiry_field: expires_at
+    recovery_note: entitlements.get responses carry the TTL field;
+      consumers may serve cached entitlements that long when
+      unreachable, then degrade to free tier. Reservations carry the
+      expiry field; consumers MUST treat expired ones as released.
+areas:
+  identity:
+    ops:
+      register:
+        method: POST
+        path: /identity/register
+        auth: public
+        mutating: true
+        request:
+          fields:
+            email: {type: string, required: true, example: ada@example.test}
+            password_hash_client: {type: string, required: true, example: h0}
+            display_name: {type: string, required: false, example: Ada}
+        response:
+          fields:
+            account_id: {type: string, required: true, example: acct-1}
+            token: {type: string, required: true, example: tok-1}
+            token_expires_at: {type: integer, required: true, example: 1893456000}
+            display_name: {type: string, required: false}
+        errors: [malformed_request, conflict, rate_limited,
+                 idempotency_conflict, internal]
+      login:
+        method: POST
+        path: /identity/login
+        auth: public
+        mutating: true
+        request:
+          fields:
+            email: {type: string, required: true, example: ada@example.test}
+            password_hash_client: {type: string, required: true, example: h0}
+        response:
+          fields:
+            account_id: {type: string, required: true, example: acct-1}
+            token: {type: string, required: true, example: tok-2}
+            token_expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [malformed_request, auth_invalid, rate_limited,
+                 idempotency_conflict, internal]
+      refresh:
+        method: POST
+        path: /identity/refresh
+        auth: required
+        mutating: true
+        request:
+          fields: {}
+        response:
+          fields:
+            token: {type: string, required: true, example: tok-3}
+            token_expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [auth_expired, auth_invalid, idempotency_conflict,
+                 internal]
+      logout:
+        method: POST
+        path: /identity/logout
+        auth: required
+        mutating: true
+        request:
+          fields: {}
+        response:
+          fields: {}
+        errors: [auth_invalid, idempotency_conflict, internal]
+      delete_account:
+        method: POST
+        path: /identity/delete-account
+        auth: required
+        mutating: true
+        request:
+          fields:
+            confirm: {type: string, required: true, example: DELETE}
+        response:
+          fields: {}
+        errors: [auth_invalid, malformed_request, idempotency_conflict,
+                 internal]
+  entitlements:
+    ops:
+      get:
+        method: GET
+        path: /entitlements
+        auth: required
+        mutating: false
+        request:
+          fields: {}
+        response:
+          fields:
+            tier: {type: string, required: true, example: free}
+            features: {type: array, items: string, required: true,
+                       example: [local-analysis]}
+            cache_ttl_seconds: {type: integer, required: true, example: 300}
+            cost_caps:
+              type: object
+              required: true
+              fields:
+                per_request_usd: {type: number, required: true, example: 0.10}
+                per_day_usd: {type: number, required: true, example: 2.00}
+        errors: [auth_expired, auth_invalid, internal]
+  quota:
+    ops:
+      reserve:
+        method: POST
+        path: /quota/reserve
+        auth: required
+        mutating: true
+        request:
+          fields:
+            operation_kind: {type: string, required: true, example: analysis}
+            estimated_units: {type: integer, required: true, example: 10}
+            hold_seconds: {type: integer, required: true, example: 60}
+        response:
+          fields:
+            reservation_id: {type: string, required: true, example: rsv-1}
+            granted_units: {type: integer, required: true, example: 10}
+            expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [auth_expired, auth_invalid, quota_exhausted,
+                 malformed_request, idempotency_conflict, internal]
+      commit:
+        method: POST
+        path: /quota/commit
+        auth: required
+        mutating: true
+        request:
+          fields:
+            reservation_id: {type: string, required: true, example: rsv-1}
+            actual_units: {type: integer, required: true, example: 8}
+        response:
+          fields:
+            remaining_units: {type: integer, required: true, example: 990}
+        errors: [auth_expired, auth_invalid, quota_reservation_expired,
+                 not_found, malformed_request, idempotency_conflict,
+                 internal]
+      release:
+        method: POST
+        path: /quota/release
+        auth: required
+        mutating: true
+        request:
+          fields:
+            reservation_id: {type: string, required: true, example: rsv-1}
+        response:
+          fields: {}
+        errors: [auth_expired, auth_invalid, not_found,
+                 idempotency_conflict, internal]
+  billing:
+    ops:
+      create_checkout:
+        method: POST
+        path: /billing/checkout
+        auth: required
+        mutating: true
+        request:
+          fields:
+            price_id: {type: string, required: true, example: price_monthly}
+            success_url: {type: string, required: true,
+                          example: https://app.example/ok}
+            cancel_url: {type: string, required: true,
+                         example: https://app.example/cancel}
+        response:
+          fields:
+            checkout_url: {type: string, required: true,
+                           example: https://payments.example/c/1}
+            expires_at: {type: integer, required: true, example: 1893456000}
+        errors: [auth_expired, auth_invalid, malformed_request,
+                 provider_unavailable, idempotency_conflict, internal]
+      get_subscription:
+        method: GET
+        path: /billing/subscription
+        auth: required
+        mutating: false
+        request:
+          fields: {}
+        response:
+          fields:
+            status: {type: string, required: true, example: active}
+            tier: {type: string, required: true, example: pro}
+            current_period_end: {type: integer, required: true,
+                                 example: 1893456000}
+            cancel_at_period_end: {type: boolean, required: true,
+                                   example: false}
+        errors: [auth_expired, auth_invalid, not_found, internal]
+    pci_boundary: Card details NEVER cross this contract. Checkout is a
+      redirect to the payment provider; the control plane sees only
+      provider webhooks.
+  provider_routing:
+    ops:
+      register_key:
+        method: POST
+        path: /provider-keys/register
+        auth: required
+        mutating: true
+        request:
+          fields:
+            provider_kind: {type: string, required: true,
+                            example: generic-a}
+            key_material: {type: string, required: true,
+                           example: "12345678", write_only: true}
+            label: {type: string, required: false, example: my-key}
+        response:
+          fields:
+            key_ref: {type: string, required: true, example: key-1}
+        errors: [auth_expired, auth_invalid, provider_key_invalid,
+                 malformed_request, idempotency_conflict, internal]
+      revoke_key:
+        method: POST
+        path: /provider-keys/revoke
+        auth: required
+        mutating: true
+        request:
+          fields:
+            key_ref: {type: string, required: true, example: key-1}
+        response:
+          fields: {}
+        errors: [auth_expired, auth_invalid, not_found,
+                 idempotency_conflict, internal]
+      route:
+        method: POST
+        path: /provider-routing/route
+        auth: required
+        mutating: false
+        request:
+          fields:
+            capability: {type: string, required: true,
+                         example: analysis-fast}
+            policy:
+              type: object
+              required: false
+              fields:
+                prefer: {type: string, required: false, example: own-key}
+                max_cost_usd: {type: number, required: false, example: 0.05}
+        response:
+          fields:
+            provider_kind: {type: string, required: true,
+                            example: generic-a}
+            key_ref: {type: string, required: false, example: key-1}
+            estimated_cost_usd: {type: number, required: true,
+                                 example: 0.02}
+        errors: [auth_expired, auth_invalid, entitlement_missing,
+                 cost_cap_exceeded, provider_unavailable,
+                 malformed_request, internal]
+    byok: provider_kind is an open enum (new providers additively, MINOR
+      bump); consumers MUST NOT hardcode provider lists. Field names are
+      vendor-neutral everywhere.
