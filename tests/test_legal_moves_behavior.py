@@ -266,6 +266,57 @@ def test_apply_success_returns_new_state_without_mutation():
         for m in _runtime.legal_moves(promo_state) if "promotion" not in m]
 
 
+def test_apply_results_keep_both_kings_and_stay_readable():
+    """Every state apply returns still contains exactly one king per
+    side and is accepted by all runtime read APIs."""
+    cases = list(CASES["happy"]) + [
+        c for c in CASES["boundary"] if c["kind"] == "move"]
+    for case in cases:
+        before = copy.deepcopy(case["state"])
+        got = _runtime.apply(case["state"], case["move"])
+        assert case["state"] == before, case["name"]
+        for side in ("w", "b"):
+            assert sum(1 for tok in got["occupied"].values()
+                       if tok == side + "k") == 1, case["name"]
+        assert type(_runtime.legal_moves(got)) is list, case["name"]
+        assert _runtime.terminal_status(got) in (
+            {"check", "checkmate", "stalemate", "none"}), case["name"]
+        assert type(_runtime.is_attacked(got, "e4", "w")) is bool, (
+            case["name"])
+
+
+def test_opponent_king_exclusion_mutation_replay(monkeypatch):
+    """Removing the opponent-king exclusion (the v1 defect) makes the
+    king-capture witnesses appear as legal moves AND makes apply
+    accept them - the fixture witnesses catch the defect itself, they
+    do not lint a constant."""
+    import functools
+
+    witnesses = [
+        ({"occupied": {"e1": "wk", "e8": "bk", "e7": "wq"},
+          "side_to_move": "w"}, "e7", "e8"),
+        ({"occupied": {"e1": "wk", "e2": "bk"}, "side_to_move": "w"},
+         "e1", "e2"),
+        ({"occupied": {"e1": "wk", "e2": "bk"}, "side_to_move": "b"},
+         "e2", "e1"),
+    ]
+    for state, fr, to in witnesses:
+        assert all(not (m["from_square"] == fr and m["to_square"] == to)
+                   for m in _runtime.legal_moves(state))
+        with pytest.raises(_runtime.LegalMovesError):
+            _runtime.apply(state, {"from_square": fr, "to_square": to})
+    mutated = functools.partial(
+        _runtime._pseudo_targets, _exclude_enemy_king=False)
+    monkeypatch.setattr(_runtime, "_pseudo_targets", mutated)
+    for state, fr, to in witnesses:
+        assert any(m["from_square"] == fr and m["to_square"] == to
+                   for m in _runtime.legal_moves(state))
+        # and the v1 defect in full: apply removes the opposing king
+        got = _runtime.apply(state, {"from_square": fr, "to_square": to})
+        assert all(tok != ("b" if state["side_to_move"] == "w" else "w")
+                   + "k" for tok in got["occupied"].values())
+
+
 def test_error_constructor_enforces_class_to_code_mapping():
     """The public constructor cannot be built with a mismatched
     class/code pair - the normative mapping holds everywhere, not only

@@ -83,6 +83,10 @@ _RANKS = list(_GRAMMAR["ranks"])
 _EXPANSION = dict(_C["move_model"]["promotion_expansion"])
 _PROMO_VALUES = list(_EXPANSION["values"])
 _MOVEMENT = dict(_C["movement"])
+_OCCUPANCY = dict(_MOVEMENT["occupancy"])
+_ENEMY_KING_NEVER_TARGET = (
+    _OCCUPANCY["enemy_king_square"]
+    == "never-a-capture-target-check-and-checkmate-terminate-first")
 _PAWN = dict(_MOVEMENT["pawn"])
 _KNIGHT_DELTAS = [tuple(d) for d in _MOVEMENT["knight"]["deltas"]]
 _KING_DELTAS = [tuple(d) for d in _MOVEMENT["king"]["deltas"]]
@@ -190,11 +194,19 @@ def _validate_state(state: object) -> None:
             _malformed(f"exactly one {side} king required, found {kings}")
 
 
-def _pseudo_targets(occ: dict, sq: str) -> set:
+def _pseudo_targets(occ: dict, sq: str,
+                  _exclude_enemy_king: bool = _ENEMY_KING_NEVER_TARGET
+                  ) -> set:
     """Pseudo-legal destinations for the piece on sq, derived from the
     contract movement and occupancy sections (no king-safety filter).
     Own-piece squares unreachable, enemy squares capture-only, a
-    slider's ray ends at the first piece (included when enemy)."""
+    slider's ray ends at the first piece (included when enemy). The
+    opposing king's square is NEVER a destination (contract occupancy
+    enemy_king_square / legality opponent_king_capture): check and
+    checkmate terminate the game before any king can be captured. The
+    ATTACK relation is unaffected - king squares stay attacked.
+    _exclude_enemy_king exists for the behavior suite's mutation
+    replay; production callers never pass it."""
     tok = occ[sq]
     side, piece = tok[0], tok[1]
     x, y = _xy(sq)
@@ -236,6 +248,9 @@ def _pseudo_targets(occ: dict, sq: str) -> set:
                 hit = occ.get(_sq(nx, ny))
                 if hit is not None and hit[0] != side:
                     targets.add(_sq(nx, ny))
+    if _exclude_enemy_king:
+        enemy_king = _OTHER[side] + "k"
+        targets = {t for t in targets if occ.get(t) != enemy_king}
     return targets
 
 

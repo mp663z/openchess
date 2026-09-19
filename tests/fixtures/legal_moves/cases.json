@@ -804,6 +804,95 @@
     "b",
     "n"
    ]
+  },
+  {
+   "name": "queen-attacks-opposing-king-square",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e8": "bk",
+     "e7": "wq"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "e8",
+   "expect_attacked": true
+  },
+  {
+   "name": "queen-never-captures-opposing-king",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e8": "bk",
+     "e7": "wq"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e7",
+    "to_square": "e8"
+   }
+  },
+  {
+   "name": "adjacent-kings-white-attacks-black-king-square",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "e2",
+   "expect_attacked": true
+  },
+  {
+   "name": "adjacent-kings-black-attacks-white-king-square",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "attacker": "b",
+   "square": "e1",
+   "expect_attacked": true
+  },
+  {
+   "name": "white-king-never-captures-adjacent-black-king",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e1",
+    "to_square": "e2"
+   }
+  },
+  {
+   "name": "black-king-never-captures-adjacent-white-king",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e1"
+   }
   }
  ],
  "terminal": [
@@ -1106,6 +1195,39 @@
    },
    "defect": "promotion member is a container, not a string",
    "expect_failure": "malformed_move"
+  },
+  {
+   "name": "apply-queen-captures-opposing-king",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e8": "bk",
+     "e7": "wq"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e7",
+    "to_square": "e8"
+   },
+   "defect": "destination is occupied by the opposing king",
+   "expect_failure": "unreachable_target"
+  },
+  {
+   "name": "apply-king-captures-adjacent-opposing-king",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e1",
+    "to_square": "e2"
+   },
+   "defect": "destination is occupied by the opposing king",
+   "expect_failure": "unreachable_target"
   }
  ],
  "rollback": [

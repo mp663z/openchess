@@ -17,20 +17,20 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "legal_moves" / "cases.json"
 SUITE = ROOT / "tests" / "test_legal_moves_behavior.py"
 
-FIXTURE_SHA256 = "7f5d63486aa4bc8aee831342dc3dbcae63e0b94f79d5dec960bb44fcafe270dd"
-SUITE_SHA256 = "eb96d265c05a7980100a27743a28ce7da1d119b2f3eff69567136701b21539d3"
+FIXTURE_SHA256 = "ec7b83083081d3751d463b95feb908afbb155738dd3ee5344293c1db05622a00"
+SUITE_SHA256 = "ed3fe9dea4eb92351549d44bad1fe16f5d18ebc178cfbac2691ffd87b1fad00b"
 
 EXPECTED_COUNTS = {
     "happy": 15,
-    "boundary": 33,
+    "boundary": 39,
     "terminal": 4,
-    "malformed": 14,
+    "malformed": 16,
     "rollback": 2,
 }
-# 15 happy + 33 boundary + 4 terminal + 14 malformed + 2 rollback
-# = 68 fixture cases + 5 static structural API tests = 73 collected,
+# 15 happy + 39 boundary + 4 terminal + 16 malformed + 2 rollback
+# = 76 fixture cases + 7 static structural API tests = 83 collected,
 # no skips.
-EXPECTED_COLLECTED = 73
+EXPECTED_COLLECTED = 83
 
 
 def _sha256(path: Path) -> str:

@@ -95,11 +95,11 @@ KIND_KEYS = {
 MALFORMED_REQUIRED = {"name", "state", "move", "defect", "expect_failure"}
 ROLLBACK_REQUIRED = MALFORMED_REQUIRED | {"expect_state_after"}
 
-SECTION_COUNTS = {"happy": 15, "boundary": 33, "terminal": 4,
-                  "malformed": 14, "rollback": 2}
+SECTION_COUNTS = {"happy": 15, "boundary": 39, "terminal": 4,
+                  "malformed": 16, "rollback": 2}
 TERMINAL_STATUSES = {"checkmate": 1, "stalemate": 1, "check": 1, "none": 1}
 FAILURE_CLASS_COUNTS = {"malformed_move": 7, "no_piece": 1,
-                        "not_players_piece": 1, "unreachable_target": 1,
+                        "not_players_piece": 1, "unreachable_target": 3,
                         "promotion_missing": 1, "promotion_forbidden": 2,
                         "leaves_king_attacked": 1}
 
@@ -154,7 +154,11 @@ def _pseudo_targets(occ: dict, sq: str) -> set:
     """Pseudo-legal destinations for the piece on sq, derived from the
     contract movement and occupancy sections (no king-safety filter).
     Occupancy: own-piece squares unreachable, enemy squares capture-only,
-    a slider's ray ends at the first piece (included when enemy)."""
+    a slider's ray ends at the first piece (included when enemy). The
+    opposing king's square is NEVER a destination (occupancy
+    enemy_king_square / legality opponent_king_capture): check and
+    checkmate terminate the game before any king can be captured. The
+    ATTACK relation below is unaffected - king squares stay attacked."""
     tok = occ[sq]
     side, piece = tok[0], tok[1]
     x, y = _xy(sq)
@@ -192,7 +196,8 @@ def _pseudo_targets(occ: dict, sq: str) -> set:
             hit = occ.get(_sq(nx, ny)) if _on_board(nx, ny) else None
             if hit is not None and hit[0] != side:
                 targets.add(_sq(nx, ny))
-    return targets
+    enemy_king = OTHER[side] + "k"
+    return {t for t in targets if occ.get(t) != enemy_king}
 
 
 def _attacked_squares(occ: dict, side: str) -> set:
@@ -385,6 +390,8 @@ def test_contract_premises():
     assert OCCUPANCY == {
         "own_piece_square": "unreachable",
         "enemy_piece_square": "capture-only",
+        "enemy_king_square": "never-a-capture-target-check-and-"
+                             "checkmate-terminate-first",
         "sliding_block": "any-piece-ends-the-ray-before-it"}
     assert ATTACK["attacker_king_safety"] == "ignored"
     assert set(ATTACK["target_occupancy"].values()) == {"attacked"}
@@ -392,6 +399,8 @@ def test_contract_premises():
     assert ATTACK["pawn_attacks"] == "diagonal-forward-squares"
     assert LEGALITY["filter"] == \
         "resulting-position-leaves-own-king-unattacked"
+    assert LEGALITY["opponent_king_capture"] == \
+        "forbidden-king-squares-attackable-but-never-legal-destinations"
     assert TERMINAL["yields"] == ["check", "checkmate", "stalemate"]
     assert TERMINAL["other_outcomes"]["owner"] == "chess-turn-contract"
     assert set(FAILURE_CLASSES) == set(FAILURE_MAPPING)
@@ -555,6 +564,12 @@ def test_malformed_discriminating():
             del move["promotion"]
         elif name == "pinned-rook-leaves-king-attacked":
             move["to_square"] = "e8"
+        elif name == "apply-queen-captures-opposing-king":
+            move["to_square"] = "e5"  # same queen ray, king-free target
+        elif name == "apply-king-captures-adjacent-opposing-king":
+            # relocate the black king off the destination (the declared
+            # defect is the enemy king occupying it)
+            state["occupied"]["a8"] = state["occupied"].pop("e2")
         else:
             raise AssertionError(f"no repair rule for {name}")
         _validate_state(state, f"repaired {name}")
