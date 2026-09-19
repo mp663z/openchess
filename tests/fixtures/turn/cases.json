@@ -1,0 +1,261 @@
+{
+  "schema": 1,
+  "contract": "data/contracts/turn.yaml",
+  "contract_schema_version": 1,
+  "notes": "T0051 turn conformance fixture. States carry exactly the three declared fields. Moves are classified as pawn_move, capture, or quiet; rollback cases assert the pre-state is bit-identical after a rejected transition.",
+  "happy": [
+    {
+      "name": "quiet-move-white",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 7,
+        "fullmove_number": 12
+      },
+      "move": "quiet",
+      "expect_state": {
+        "side_to_move": "b",
+        "halfmove_clock": 8,
+        "fullmove_number": 12
+      }
+    },
+    {
+      "name": "quiet-move-black-increments-fullmove",
+      "state": {
+        "side_to_move": "b",
+        "halfmove_clock": 0,
+        "fullmove_number": 12
+      },
+      "move": "quiet",
+      "expect_state": {
+        "side_to_move": "w",
+        "halfmove_clock": 1,
+        "fullmove_number": 13
+      }
+    },
+    {
+      "name": "pawn-move-resets-halfmove",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 41,
+        "fullmove_number": 20
+      },
+      "move": "pawn_move",
+      "expect_state": {
+        "side_to_move": "b",
+        "halfmove_clock": 0,
+        "fullmove_number": 20
+      }
+    },
+    {
+      "name": "capture-resets-halfmove-black",
+      "state": {
+        "side_to_move": "b",
+        "halfmove_clock": 99,
+        "fullmove_number": 30
+      },
+      "move": "capture",
+      "expect_state": {
+        "side_to_move": "w",
+        "halfmove_clock": 0,
+        "fullmove_number": 31
+      }
+    }
+  ],
+  "boundary": [
+    {
+      "name": "halfmove-99-to-100-claim-threshold",
+      "kind": "threshold",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 99,
+        "fullmove_number": 50
+      },
+      "move": "quiet",
+      "expect_state": {
+        "side_to_move": "b",
+        "halfmove_clock": 100,
+        "fullmove_number": 50
+      },
+      "expect_termination_available": "fifty_move_claim",
+      "expect_automatic": false
+    },
+    {
+      "name": "halfmove-149-to-150-automatic",
+      "kind": "threshold",
+      "state": {
+        "side_to_move": "b",
+        "halfmove_clock": 149,
+        "fullmove_number": 75
+      },
+      "move": "quiet",
+      "expect_state": {
+        "side_to_move": "w",
+        "halfmove_clock": 150,
+        "fullmove_number": 76
+      },
+      "expect_termination_available": "seventyfive_move_auto",
+      "expect_automatic": true
+    },
+    {
+      "name": "fullmove-minimum-one",
+      "kind": "transition",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 0,
+        "fullmove_number": 1
+      },
+      "move": "quiet",
+      "expect_state": {
+        "side_to_move": "b",
+        "halfmove_clock": 1,
+        "fullmove_number": 1
+      }
+    },
+    {
+      "name": "identity-counters-differ-side-same",
+      "kind": "identity",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 3,
+        "fullmove_number": 9
+      },
+      "other": {
+        "side_to_move": "w",
+        "halfmove_clock": 44,
+        "fullmove_number": 27
+      },
+      "expect_identity": "identical"
+    },
+    {
+      "name": "identity-side-differs-counters-same",
+      "kind": "identity",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 3,
+        "fullmove_number": 9
+      },
+      "other": {
+        "side_to_move": "b",
+        "halfmove_clock": 3,
+        "fullmove_number": 9
+      },
+      "expect_identity": "different"
+    }
+  ],
+  "malformed": [
+    {
+      "name": "side-missing",
+      "state": {
+        "halfmove_clock": 0,
+        "fullmove_number": 1
+      },
+      "move": "quiet",
+      "expect_failure": "no_side_to_move"
+    },
+    {
+      "name": "side-not-in-enum",
+      "state": {
+        "side_to_move": "white",
+        "halfmove_clock": 0,
+        "fullmove_number": 1
+      },
+      "move": "quiet",
+      "expect_failure": "no_side_to_move"
+    },
+    {
+      "name": "halfmove-negative",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": -1,
+        "fullmove_number": 1
+      },
+      "move": "quiet",
+      "expect_failure": "bad_counter"
+    },
+    {
+      "name": "fullmove-zero",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 0,
+        "fullmove_number": 0
+      },
+      "move": "quiet",
+      "expect_failure": "bad_counter"
+    },
+    {
+      "name": "halfmove-bool-not-int",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": true,
+        "fullmove_number": 1
+      },
+      "move": "quiet",
+      "expect_failure": "bad_counter"
+    },
+    {
+      "name": "null-move-rejected",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 5,
+        "fullmove_number": 10
+      },
+      "move": "null",
+      "expect_failure": "illegal_transition"
+    },
+    {
+      "name": "transition-after-termination",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 5,
+        "fullmove_number": 10
+      },
+      "terminated": "checkmate",
+      "move": "quiet",
+      "expect_failure": "illegal_transition"
+    },
+    {
+      "name": "unknown-termination-state",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 5,
+        "fullmove_number": 10
+      },
+      "terminated": "draw_by_mutual_confusion",
+      "move": "quiet",
+      "expect_failure": "unknown_termination"
+    }
+  ],
+  "rollback": [
+    {
+      "name": "rejected-null-move-preserves-state",
+      "state": {
+        "side_to_move": "b",
+        "halfmove_clock": 17,
+        "fullmove_number": 22
+      },
+      "move": "null",
+      "expect_failure": "illegal_transition",
+      "expect_state_after": {
+        "side_to_move": "b",
+        "halfmove_clock": 17,
+        "fullmove_number": 22
+      }
+    },
+    {
+      "name": "rejected-transition-on-terminated-preserves-state",
+      "state": {
+        "side_to_move": "w",
+        "halfmove_clock": 100,
+        "fullmove_number": 51
+      },
+      "terminated": "fifty_move_claim",
+      "move": "quiet",
+      "expect_failure": "illegal_transition",
+      "expect_state_after": {
+        "side_to_move": "w",
+        "halfmove_clock": 100,
+        "fullmove_number": 51
+      }
+    }
+  ]
+}
