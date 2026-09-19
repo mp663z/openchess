@@ -6,12 +6,20 @@ Enforces the funnel identity from the revenue-target contract:
     new_paid_i = eligible_visitors_i * download_or_signup * activation
                  * trial_to_paid
 The revenue-target contract (report-v5) collapses the last two rates
-into free_to_paid = activation * trial_to_paid; the calculator accepts
-either the three-factor form or the combined free_to_paid, and treats
-their product identically.
+into free_to_paid = activation * trial_to_paid; simulate() accepts
+either the three-factor form (activation + trial_to_paid) or the
+combined free_to_paid - mutually exclusive - and treats their product
+identically.
+
+Every public entry point validates every rate: exact numeric types
+(int/float/numeric-str/Fraction, never bool, never NaN/Inf), each in
+[0, 1), non-negative exact-int counts. Bad input fails closed with
+FunnelError, never a raw TypeError or a silently wrong result.
 
 All arithmetic is exact Fraction math internally; output rounds only at
-presentation. Same input -> same versioned output, always.
+presentation and carries the exact string form of every input, rate and
+cohort driving the identity. Same input -> same versioned output,
+always.
 """
 
 from __future__ import annotations
@@ -51,15 +59,15 @@ def _nonneg_int(value: object, name: str) -> int:
     return value
 
 
-def new_paid(eligible_visitors: int, *, download_or_signup: Fraction,
-             activation: Fraction, trial_to_paid: Fraction) -> Fraction:
+def _new_paid(eligible_visitors: int, *, download_or_signup: Fraction,
+              activation: Fraction, trial_to_paid: Fraction) -> Fraction:
     """new_paid = eligible_visitors * the three-factor rate chain."""
     return (Fraction(eligible_visitors) * download_or_signup
             * activation * trial_to_paid)
 
 
-def paid_end(paid_start: int, churn: Fraction,
-             monthly_new_paid: list[Fraction]) -> Fraction:
+def _paid_end(paid_start: int, churn: Fraction,
+              monthly_new_paid: list[Fraction]) -> Fraction:
     """The cohort identity: decayed start plus each new cohort decayed
     over its remaining months."""
     months = len(monthly_new_paid)
@@ -69,26 +77,55 @@ def paid_end(paid_start: int, churn: Fraction,
     return total
 
 
-def simulate(*, months: int, paid_start: int, churn: Fraction,
-             monthly_visitors: list[int], download_or_signup: Fraction,
-             activation: Fraction, trial_to_paid: Fraction) -> dict:
+def simulate(*, months: int, paid_start: int, churn: object,
+             monthly_visitors: list[int], download_or_signup: object,
+             activation: object = None, trial_to_paid: object = None,
+             free_to_paid: object = None) -> dict:
+    """Run the funnel. Rates may be given as activation+trial_to_paid
+    or as the combined free_to_paid (mutually exclusive)."""
     _nonneg_int(months, "months")
     _nonneg_int(paid_start, "paid_start")
+    churn_f = _rate(churn, "churn")
+    if type(monthly_visitors) is not list:
+        raise FunnelError("monthly_visitors: list required")
     if len(monthly_visitors) != months:
         raise FunnelError("monthly_visitors must have months entries")
     for v in monthly_visitors:
         _nonneg_int(v, "monthly_visitors[]")
-    cohorts = [new_paid(v, download_or_signup=download_or_signup,
-                        activation=activation,
-                        trial_to_paid=trial_to_paid)
+    dos_f = _rate(download_or_signup, "download_or_signup")
+    factored = activation is not None or trial_to_paid is not None
+    if free_to_paid is not None:
+        if factored:
+            raise FunnelError("free_to_paid is mutually exclusive with "
+                              "activation/trial_to_paid")
+        activation_f = Fraction(1)
+        trial_f = _rate(free_to_paid, "free_to_paid")
+    else:
+        if activation is None or trial_to_paid is None:
+            raise FunnelError("activation and trial_to_paid are both "
+                              "required (or pass free_to_paid)")
+        activation_f = _rate(activation, "activation")
+        trial_f = _rate(trial_to_paid, "trial_to_paid")
+    cohorts = [_new_paid(v, download_or_signup=dos_f,
+                         activation=activation_f,
+                         trial_to_paid=trial_f)
                for v in monthly_visitors]
-    end = paid_end(paid_start, churn, cohorts)
+    end = _paid_end(paid_start, churn_f, cohorts)
     return {
         "schema_version": SCHEMA_VERSION,
         "months": months,
         "paid_start": paid_start,
-        "churn": float(churn),
+        "monthly_visitors": list(monthly_visitors),
+        "churn": float(churn_f),
+        "churn_exact": str(churn_f),
+        "download_or_signup": float(dos_f),
+        "download_or_signup_exact": str(dos_f),
+        "activation": float(activation_f),
+        "activation_exact": str(activation_f),
+        "trial_to_paid": float(trial_f),
+        "trial_to_paid_exact": str(trial_f),
         "monthly_new_paid": [float(c) for c in cohorts],
+        "monthly_new_paid_exact": [str(c) for c in cohorts],
         "paid_end": float(end),
         "paid_end_exact": str(end),
     }
@@ -110,11 +147,10 @@ def check_target() -> dict:
     monthly = [visitors // months] * months
     monthly[-1] += visitors - sum(monthly)
     result = simulate(
-        months=months, paid_start=0, churn=Fraction(0),
+        months=months, paid_start=0, churn=0,
         monthly_visitors=monthly,
         download_or_signup=visitor_to_free,
-        activation=Fraction(1),  # collapsed into free_to_paid
-        trial_to_paid=free_to_paid)
+        free_to_paid=free_to_paid)
     result["target_active_paying"] = target
     result["meets_target"] = result["paid_end"] >= target
     return result
