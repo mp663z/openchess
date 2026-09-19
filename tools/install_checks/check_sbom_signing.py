@@ -108,6 +108,12 @@ PINNED_JOB_STEPS: list[tuple[str, str]] = [
 # (uses/run), display name, and the exact pinned with/env blocks survive.
 ALLOWED_STEP_KEYS = {"uses", "run", "name", "with", "env"}
 
+# Same fail-closed allowlist at job level: runner, steps and (validated)
+# permissions only. defaults/env/container/services/strategy/
+# continue-on-error/needs/outputs/... pivot the execution environment.
+ALLOWED_JOB_KEYS = {"name", "runs-on", "steps", "permissions", "if"}
+PINNED_RUNS_ON = "ubuntu-latest"
+
 
 def _step_identity(s: dict) -> tuple[str, str] | None:
     has_uses = "uses" in s
@@ -135,6 +141,19 @@ def _workflow_problems(wf: dict) -> list[str]:
                 f"release.yml: release job {name} carries a job-level if "
                 f"({job.get('if')!r}) - fail closed: mandatory release jobs "
                 "must be unconditional"
+            )
+        extra_keys = sorted(set(job) - ALLOWED_JOB_KEYS)
+        if extra_keys:
+            problems.append(
+                f"release.yml: release job {name} carries execution-affecting "
+                f"keys {extra_keys} - only {sorted(ALLOWED_JOB_KEYS - {'if'})} "
+                "are allowed (fail closed on defaults, env, container, "
+                "services, strategy, continue-on-error, ...)"
+            )
+        if job.get("runs-on") != PINNED_RUNS_ON:
+            problems.append(
+                f"release.yml: release job {name} runs-on must be exactly "
+                f"{PINNED_RUNS_ON!r}, got {job.get('runs-on')!r}"
             )
         # effective permissions: job overrides workflow
         perms = job.get("permissions") or wf.get("permissions") or {}
@@ -375,6 +394,24 @@ def run(mode: str) -> None:
                     s["working-directory"] = "/tmp"
         return w
 
+    def _job_defaults_shell(w):
+        for name, job in w["jobs"].items():
+            if name != "other":
+                job["defaults"] = {"run": {"shell": "echo {0}"}}
+        return w
+
+    def _job_env(w):
+        for name, job in w["jobs"].items():
+            if name != "other":
+                job["env"] = {"PATH": "/tmp"}
+        return w
+
+    def _job_container(w):
+        for name, job in w["jobs"].items():
+            if name != "other":
+                job["container"] = "alpine:latest"
+        return w
+
     def _tamper(after_uses=None, after_run=None):
         def m(w):
             for job in w["jobs"].values():
@@ -417,6 +454,9 @@ def run(mode: str) -> None:
         "attestation continue-on-error: true": _attest_continue_on_error,
         "release runs under shell 'echo {0}'": _release_custom_shell,
         "generation in working-directory /tmp": _generation_working_directory,
+        "job defaults.run.shell 'echo {0}'": _job_defaults_shell,
+        "job env PATH /tmp": _job_env,
+        "job container alpine:latest": _job_container,
         "release command echoed, not executed": _echo_release,
         "attestation split into an unrelated job": _split_attest,
     }.items():
