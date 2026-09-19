@@ -1,0 +1,147 @@
+# T2623: lichess response contract (implementation-neutral; the product
+# runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for how the product READS lichess API responses:
+# which endpoint family it uses, what a well-formed game object is,
+# what the error envelope is, and how every failure class maps to a
+# product error. Grounded in the live lichess OpenAPI spec (fetched
+# 2026-09-19, lichess-org/api repo) and live anonymous probes the same
+# day. ALL normative semantics live in STRUCTURED fields the lint
+# compares exactly - prose is documentation, never the enforcement
+# surface.
+schema_version: 1
+
+contract:
+  id: lichess-response
+  endpoint:
+    path: /api/games/user/{username}
+    method: GET
+    auth:
+      spec_security: oauth2-declared
+      anonymous_observed: not-found-envelope-2026-09-19
+      anonymous_fallback: {policy: fall-back-per-failure-mapping,
+        retry_storm: forbidden}
+      throttles:
+        anonymous: 20-games-per-second
+        oauth2: 30-games-per-second
+        oauth2-own-games: 60-games-per-second
+      rule: >-
+        The live spec declares OAuth2 on this endpoint while its text
+        still documents anonymous throttles; on 2026-09-19 anonymous
+        calls returned the not-found envelope for every probed
+        account. The client MUST treat the anonymous path as
+        optional: when it answers not-found, fall back per the
+        failure mapping, never retry-storm.
+    response_format:
+      stream: ndjson
+      one_object_per_line: true
+      malformed_line: {policy: fail-closed-record,
+        effect: never-aborts-parsed-records}
+      rule: >-
+        A 200 response is a STREAM of newline-delimited JSON game
+        objects, parsed line by line; one malformed line fails the
+        affected record fail-closed and never aborts already-parsed
+        records (per-game atomicity per the import contract).
+  request:
+    params:
+      since: {type: integer-ms, required: false}
+      until: {type: integer-ms, required: false}
+      max: {type: integer, min: 1, required: false}
+      vs: {type: string, required: false}
+      rated: {type: boolean, required: false}
+      perfType: {type: string-csv, required: false}
+      color: {type: string, enum: [white, black], required: false}
+      analysed: {type: boolean, required: false}
+      moves: {type: boolean, default: true, required: false}
+      pgnInJson: {type: boolean, default: false, required: false}
+      tags: {type: boolean, default: true, required: false}
+      clocks: {type: boolean, default: false, required: false}
+      evals: {type: boolean, default: false, required: false}
+      accuracy: {type: boolean, default: false, required: false}
+      opening: {type: boolean, default: false, required: false}
+      division: {type: boolean, default: false, required: false}
+      ongoing: {type: boolean, default: false, required: false}
+      finished: {type: boolean, default: true, required: false}
+      literate: {type: boolean, default: false, required: false}
+      lastFen: {type: boolean, default: false, required: false}
+      withBookmarked: {type: boolean, default: false, required: false}
+      sort: {type: string, enum: [dateAsc, dateDesc], default: dateDesc,
+        required: false}
+    incremental_params: [since, until]
+    rule: >-
+      The request uses only the declared params with the declared
+      types; incremental import uses since/until as integer
+      millisecond timestamps.
+  game_object:
+    required_fields: [id, rated, variant, speed, perf, createdAt,
+      lastMoveAt, status, players]
+    optional_fields: [source, initialFen, winner, opening, moves, pgn,
+      daysPerTurn, analysis, arenaTour, swissTour, clock, clocks,
+      division]
+    unknown_field_policy: tolerate-additive
+    field_types:
+      id: string
+      rated: boolean
+      variant: string
+      speed: string
+      perf: string
+      createdAt: integer-int64
+      lastMoveAt: integer-int64
+      status: string-enum
+      players: object-white-black
+    status_values: [created, started, aborted, mate, resign,
+      stalemate, timeout, draw, outoftime, cheat, noStart,
+      unknownFinish, insufficientMaterialClaim, variantEnd]
+    required_violation: {effect: reject-record, error: malformed_request,
+      partial_game: never}
+    unknown_field_storage: never-stored
+    status_violation: {effect: reject-record, error: malformed_request}
+    rule: >-
+      Every required field must be present with its declared type; a
+      missing or mistyped required field rejects that record
+      (malformed_response), never a partial game. Optional fields are
+      taken when present. Unknown fields are tolerated (additive
+      MINOR evolution) and never stored. status is exactly one of
+      status_values; anything else rejects the record fail-closed.
+  error_envelope:
+    shape: {error: string}
+    observed: 404-not-found-plain-error-string
+    statuses:
+      "404": {meaning: not-found-or-anonymous-blocked, class: source_unavailable,
+        scope: endpoint-level-never-per-game}
+      "429": {meaning: rate-limited, class: rate_limited, retry: wait-at-least-60s}
+      "5xx": {meaning: server-error, class: source_unavailable, retry: backoff}
+    rule: >-
+      A non-200 response carries the plain error envelope (verified
+      live 2026-09-19: {"error":"Not found"} on 404, content-type
+      application/json). The mapping above is exact: 404 is never a
+      per-game failure and 429 always backs off at least 60 seconds.
+  failure_classes: [malformed_response, unknown_status_value,
+    source_unavailable, rate_limited, auth_required]
+  failure_mapping:
+    malformed_response: {trigger: line-not-json-or-required-field-missing-or-mistyped, error: malformed_request}
+    unknown_status_value: {trigger: status-not-in-status_values, error: malformed_request}
+    source_unavailable: {trigger: non-200-non-429-or-unreachable, error: source_unavailable}
+    rate_limited: {trigger: http-429, error: rate_limited}
+    auth_required: {trigger: endpoint-demands-credentials-we-do-not-have, error: auth_required}
+  errors:
+    closed_enum: [malformed_request, source_unavailable, rate_limited,
+      auth_required, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  versioning:
+    base_path: /lichess-response/v1
+    client_pin: MAJOR
+    minor_policy: additive-only
+    minor_additions: [new-optional-fields, new-status-values]
+    downgrade_policy: any-earlier-minor-within-major-without-migration
+    major_bump: new-base-path-required
+    rule: >-
+      Clients pin MAJOR. MINOR is additive-only: new optional game
+      fields, new status values appended to the enum. A consumer may
+      downgrade to any earlier MINOR within the same MAJOR without
+      migration. MAJOR bumps require a new base path.
