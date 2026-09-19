@@ -95,12 +95,12 @@ KIND_KEYS = {
 MALFORMED_REQUIRED = {"name", "state", "move", "defect", "expect_failure"}
 ROLLBACK_REQUIRED = MALFORMED_REQUIRED | {"expect_state_after"}
 
-SECTION_COUNTS = {"happy": 10, "boundary": 28, "terminal": 4,
-                  "malformed": 12, "rollback": 2}
+SECTION_COUNTS = {"happy": 15, "boundary": 31, "terminal": 4,
+                  "malformed": 14, "rollback": 2}
 TERMINAL_STATUSES = {"checkmate": 1, "stalemate": 1, "check": 1, "none": 1}
-FAILURE_CLASS_COUNTS = {"malformed_move": 6, "no_piece": 1,
+FAILURE_CLASS_COUNTS = {"malformed_move": 7, "no_piece": 1,
                         "not_players_piece": 1, "unreachable_target": 1,
-                        "promotion_missing": 1, "promotion_forbidden": 1,
+                        "promotion_missing": 1, "promotion_forbidden": 2,
                         "leaves_king_attacked": 1}
 
 
@@ -309,8 +309,12 @@ def _validate_move(state: dict, move: dict) -> None:
         raise LegalMoveFailure("malformed_move")
     if FROM_TO_DISTINCT and fr == to:
         raise LegalMoveFailure("malformed_move")
-    if "promotion" in move and move["promotion"] not in PROMO_ENUM:
+    if "promotion" in move and type(move["promotion"]) is not str:
         raise LegalMoveFailure("malformed_move")
+    # a syntactically valid string outside the enum is NOT a shape
+    # violation: the contract maps it to promotion_forbidden at the
+    # promotion-rules stage (trigger:
+    # promotion-member-on-non-promotion-move-or-outside-enum)
     # piece presence and ownership
     if fr not in occ:
         raise LegalMoveFailure("no_piece")
@@ -319,8 +323,12 @@ def _validate_move(state: dict, move: dict) -> None:
     # reachability
     if to not in _pseudo_targets(occ, fr):
         raise LegalMoveFailure("unreachable_target")
-    # promotion rules: required exactly when a pawn reaches its
-    # promotion rank, forbidden on every other move
+    # promotion rules: an out-of-enum string promotion is
+    # promotion_forbidden per the contract trigger; promotion is
+    # required exactly when a pawn reaches its promotion rank and
+    # forbidden on every other move
+    if "promotion" in move and move["promotion"] not in PROMO_ENUM:
+        raise LegalMoveFailure("promotion_forbidden")
     promoting = occ[fr][1] == "p" and to[1] == PROMO_RANKS[SIDE_NAME[side]]
     if promoting and "promotion" not in move:
         raise LegalMoveFailure("promotion_missing")
@@ -499,7 +507,8 @@ def test_malformed_discriminating():
             move["to_square"] = "e3"
         elif name in ("square-wrong-case", "square-rank-out-of-range"):
             move["to_square"] = "e4"
-        elif name == "promotion-outside-enum":
+        elif name in ("promotion-outside-enum", "promotion-wrong-type-int",
+                      "promotion-wrong-type-list"):
             move["promotion"] = "q"
         elif name == "from-square-empty":
             state["occupied"]["e2"] = "wp"

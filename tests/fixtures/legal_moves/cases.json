@@ -167,6 +167,90 @@
     "to_square": "b8",
     "promotion": "q"
    }
+  },
+  {
+   "name": "black-pawn-single",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e7": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "e7",
+    "to_square": "e6"
+   }
+  },
+  {
+   "name": "black-pawn-double",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e7": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "e7",
+    "to_square": "e5"
+   }
+  },
+  {
+   "name": "black-pawn-capture",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e5": "bp",
+     "d4": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "e5",
+    "to_square": "d4"
+   }
+  },
+  {
+   "name": "black-pawn-quiet-promotion",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "h2": "bp",
+     "e1": "wk",
+     "a8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "h2",
+    "to_square": "h1",
+    "promotion": "n"
+   }
+  },
+  {
+   "name": "black-pawn-capture-promotion",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "h2": "bp",
+     "g1": "wr",
+     "e1": "wk",
+     "a8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "h2",
+    "to_square": "g1",
+    "promotion": "q"
+   }
   }
  ],
  "boundary": [
@@ -627,6 +711,57 @@
    "attacker": "w",
    "square": "d6",
    "expect_attacked": false
+  },
+  {
+   "name": "black-promotion-expands-to-four",
+   "kind": "expansion",
+   "state": {
+    "occupied": {
+     "h2": "bp",
+     "e1": "wk",
+     "a8": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "from_square": "h2",
+   "to_square": "h1",
+   "expect_promotions": [
+    "q",
+    "r",
+    "b",
+    "n"
+   ]
+  },
+  {
+   "name": "empty-square-attacked",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "d4": "wn",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "f5",
+   "expect_attacked": true
+  },
+  {
+   "name": "enemy-occupied-square-attacked",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e4": "wp",
+     "d5": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "d5",
+   "expect_attacked": true
   }
  ],
  "terminal": [
@@ -786,8 +921,8 @@
     "to_square": "a8",
     "promotion": "k"
    },
-   "defect": "promotion member violates the shape enum",
-   "expect_failure": "malformed_move"
+   "defect": "promotion member names a value outside the enum",
+   "expect_failure": "promotion_forbidden"
   },
   {
    "name": "from-square-empty",
@@ -891,6 +1026,44 @@
    },
    "defect": "the resulting position leaves the own king attacked",
    "expect_failure": "leaves_king_attacked"
+  },
+  {
+   "name": "promotion-wrong-type-int",
+   "state": {
+    "occupied": {
+     "a7": "wp",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a7",
+    "to_square": "a8",
+    "promotion": 1
+   },
+   "defect": "promotion member is not a string",
+   "expect_failure": "malformed_move"
+  },
+  {
+   "name": "promotion-wrong-type-list",
+   "state": {
+    "occupied": {
+     "a7": "wp",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a7",
+    "to_square": "a8",
+    "promotion": [
+     "q"
+    ]
+   },
+   "defect": "promotion member is a container, not a string",
+   "expect_failure": "malformed_move"
   }
  ],
  "rollback": [
