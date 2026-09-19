@@ -7,9 +7,14 @@ real linkage classification) and on a tampered manifest.
 
 Signing: release.yml is parsed as YAML and must carry keyless Sigstore
 attestation, not a job merely NAMED attest: OIDC permissions
-(id-token: write + attestations: write), an actions/attest-* step whose
-subject-path covers the SBOM, the release lock and the checksums file, and
-a release step attaching the same artifacts. Fail closed on conditionals:
+(id-token: write + attestations: write), the EXACT action
+actions/attest-build-provenance@v2 (lookalikes like attest-not-real fail)
+whose subject-path covers the SBOM, the release lock and the checksums
+file, and a release step running the EXACT pinned gh release create
+command attaching the same artifacts. Mandatory run/uses values are
+enforced by exact structural equality (whitespace-normalized), not shell
+semantics: echo prefixes, renamed commands (createx) and altered commands
+all fail. Fail closed on conditionals:
 ANY job-level if on the release job and ANY if on a mandatory
 generation/checksum/attestation/release step is a violation (GitHub
 expression syntax is not parsed), and the release step must be a single
@@ -41,24 +46,47 @@ REQUIRED_SUBJECTS = {
 }
 
 
+PINNED_GENERATION_RUN = "python tools/component_inventory.py"
+PINNED_CHECKSUMS_RUN = (
+    "sha256sum docs/component-inventory.json data/release-lock.json > checksums.sha256"
+)
+PINNED_ATTEST_USES = "actions/attest-build-provenance@v2"
+PINNED_RELEASE_RUN = (
+    'gh release create "$GITHUB_REF_NAME" --generate-notes '
+    "docs/component-inventory.json data/release-lock.json checksums.sha256"
+)
+
+
+def _norm(value: object) -> str:
+    """Whitespace-insensitive exact match (yaml block scalars add newlines)."""
+    return " ".join(str(value).split())
+
+
+def _step_idx(steps: list, key: str, exact: str) -> int | None:
+    for i, s in enumerate(steps):
+        if _norm(s.get(key, "")) == exact:
+            return i
+    return None
+
+
 def _release_jobs(wf: dict) -> list[tuple[str, dict]]:
-    """Jobs containing an EXECUTABLE gh release create step (a run line that
-    starts with the command token - echo/comment mentions do not count)."""
-    out = []
-    for name, job in (wf.get("jobs") or {}).items():
-        for s in job.get("steps") or []:
-            lines = str(s.get("run", "")).splitlines()
-            if any(line.strip().startswith("gh release create") for line in lines):
-                out.append((name, job))
-                break
-    return out
+    """Jobs containing the EXACT pinned release command (no shell inference:
+    echo prefixes, lookalike commands and multi-line wrappers do not match)."""
+    return [
+        (name, job)
+        for name, job in (wf.get("jobs") or {}).items()
+        if _step_idx(job.get("steps") or [], "run", PINNED_RELEASE_RUN) is not None
+    ]
 
 
 def _workflow_problems(wf: dict) -> list[str]:
     problems: list[str] = []
     jobs = _release_jobs(wf)
     if not jobs:
-        return ["release.yml: no job with an executable gh release create step"]
+        return [
+            "release.yml: no job running the exact pinned release command "
+            "(echoed, renamed or altered commands do not count)"
+        ]
     for name, job in jobs:
         if job.get("if") not in (None, ""):
             problems.append(
@@ -74,24 +102,16 @@ def _workflow_problems(wf: dict) -> list[str]:
                     f"release.yml: job {name} permissions.{perm} != write"
                 )
         steps = job.get("steps") or []
-
-        def idx(pred, steps=steps):
-            for i, s in enumerate(steps):
-                if pred(s):
-                    return i
-            return None
-
-        gen = idx(lambda s: "component_inventory" in str(s.get("run", "")))
-        chk = idx(lambda s: "sha256sum" in str(s.get("run", ""))
-                  and "checksums.sha256" in str(s.get("run", "")))
-        att = idx(lambda s: str(s.get("uses", "")).startswith("actions/attest"))
-        rel = idx(lambda s, steps=steps: any(
-            line.strip().startswith("gh release create")
-            for line in str(s.get("run", "")).splitlines()))
+        gen = _step_idx(steps, "run", PINNED_GENERATION_RUN)
+        chk = _step_idx(steps, "run", PINNED_CHECKSUMS_RUN)
+        att = _step_idx(steps, "uses", PINNED_ATTEST_USES)
+        rel = _step_idx(steps, "run", PINNED_RELEASE_RUN)
         for label, i in (("SBOM generation", gen), ("checksums", chk),
                          ("attestation", att), ("release", rel)):
             if i is None:
-                problems.append(f"release.yml: job {name} lacks a {label} step")
+                problems.append(
+                    f"release.yml: job {name} lacks the exact pinned {label} step"
+                )
             elif steps[i].get("if") not in (None, ""):
                 problems.append(
                     f"release.yml: job {name} {label} step carries an if "
@@ -112,23 +132,6 @@ def _workflow_problems(wf: dict) -> list[str]:
                 problems.append(
                     f"release.yml: attestation subjects missing {sorted(missing)}"
                 )
-        if rel is not None:
-            run_text = str(steps[rel].get("run", ""))
-            command_lines = [
-                line for line in run_text.splitlines()
-                if line.strip() and not line.strip().startswith("#")
-            ]
-            if len(command_lines) != 1:
-                problems.append(
-                    f"release.yml: job {name} release step must be a single "
-                    f"command ({len(command_lines)} shell lines) - multi-line "
-                    "shell can bypass gh release create (exit 0, false, ...)"
-                )
-            for artifact in REQUIRED_SUBJECTS:
-                if artifact not in run_text:
-                    problems.append(
-                        f"release.yml: {artifact} not attached to the release"
-                    )
     return problems
 
 
@@ -232,6 +235,35 @@ def run(mode: str) -> None:
                     )
         return w
 
+    def _echo_generation(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if _norm(s.get("run", "")) == PINNED_GENERATION_RUN:
+                    s["run"] = "echo " + PINNED_GENERATION_RUN
+        return w
+
+    def _echo_checksums(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if _norm(s.get("run", "")) == PINNED_CHECKSUMS_RUN:
+                    s["run"] = "echo " + PINNED_CHECKSUMS_RUN
+        return w
+
+    def _fake_attest_action(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if str(s.get("uses", "")).startswith("actions/attest"):
+                    s["uses"] = "actions/attest-not-real@v2"
+        return w
+
+    def _release_createx(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if _norm(s.get("run", "")) == PINNED_RELEASE_RUN:
+                    s["run"] = PINNED_RELEASE_RUN.replace(
+                        "gh release create", "gh release createx", 1)
+        return w
+
     def _split_attest(w):
         moved = []
         for job in w["jobs"].values():
@@ -251,6 +283,10 @@ def run(mode: str) -> None:
         "release job disabled (if: ${{ false }})": _disable_job_expr,
         "attestation step gated (if: ${{ false }})": _gate_attest_step,
         "release command after exit 0": _release_after_exit,
+        "generation command echoed, not executed": _echo_generation,
+        "checksums command echoed, not executed": _echo_checksums,
+        "attestation action is a lookalike (attest-not-real)": _fake_attest_action,
+        "release command is a lookalike (createx)": _release_createx,
         "release command echoed, not executed": _echo_release,
         "attestation split into an unrelated job": _split_attest,
     }.items():
