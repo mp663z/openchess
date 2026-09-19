@@ -942,10 +942,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "87034459a8ff65f8a403be66852a89aa7db99a3e",
+   "evidence_manifest": "evidence/T0042.md"
   },
   {
    "id": "T0043",
