@@ -125,6 +125,10 @@ def _validate_state(state: dict, where: str) -> None:
             f"{where}: bad piece token {tok!r}")
     stm = state["side_to_move"]
     assert type(stm) is str and stm in SIDES, f"{where}: bad side_to_move"
+    for side in SIDES:
+        kings = [sq for sq, tok in occ.items() if tok == side + "k"]
+        assert len(kings) == 1, (
+            f"{where}: exactly one {side} king required, found {len(kings)}")
 
 
 def _validate_move(move: dict, where: str) -> None:
@@ -466,9 +470,6 @@ def test_malformed_discriminating():
             state["ep_target"] = state["ep_target"].lower()
         elif case["name"] == "target-wrong-rank-white":
             state["ep_target"] = "e6"
-            state["occupied"] = {"e5": "bp", "d5": "wp", "e1": "wk",
-                                 "e8": "bk"}
-            move = {"type": "ep-capture", "from": "d5", "to": "e6"}
         elif case["name"] == "no-enemy-pawn-on-captured-square":
             state["occupied"]["e5"] = "bp"
         elif case["name"] == "no-adjacent-mover":
@@ -477,12 +478,14 @@ def test_malformed_discriminating():
         elif case["name"] == "stale-target":
             state["ep_target"] = "e6"
         elif case["name"] == "pinned-capture-horizontal":
-            state["occupied"]["h5"] = state["occupied"].pop("a5")
+            state["occupied"]["a4"] = state["occupied"].pop("a5")
         elif case["name"] == "mover-wrong-rank":
             state["occupied"]["d5"] = state["occupied"].pop("d4")
             move["from"] = "d5"
         else:
             raise AssertionError(f"no repair rule for {case['name']}")
+        _validate_state(state, f"repaired {case['name']}")
+        _validate_move(move, f"repaired {case['name']}")
         try:
             _apply(state, move)
         except EnPassantFailure as e:

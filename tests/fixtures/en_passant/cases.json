@@ -268,8 +268,8 @@
    "state": {
     "ep_target": "e3",
     "occupied": {
-     "e4": "bp",
-     "d4": "wp",
+     "e5": "bp",
+     "d5": "wp",
      "e1": "wk",
      "e8": "bk"
     },
@@ -277,8 +277,8 @@
    },
    "move": {
     "type": "ep-capture",
-    "from": "d4",
-    "to": "e3"
+    "from": "d5",
+    "to": "e6"
    },
    "defect": "rank-3 target with white to move: a target is available only to the advancing side's opponent",
    "expect_failure": "target_inconsistent"
