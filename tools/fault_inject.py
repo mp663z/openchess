@@ -76,11 +76,14 @@ def run_under(cmd: list[str], fault: str | None = None,
                 proc.kill()
                 proc.communicate()
                 return Outcome("crash", "ignored SIGTERM, killed at timeout")
-            if proc.returncode != -signal.SIGTERM:
-                # Signal delivered but the process exited on its own
-                # terms: classify what actually happened.
-                return classify_rc(proc.returncode, err or "")
-            return Outcome("crash", "terminated by SIGTERM")
+            if proc.returncode == -signal.SIGTERM:
+                return Outcome("crash", "terminated by SIGTERM")
+            # The harness injected termination while the process was LIVE:
+            # swallowing it and exiting clean is a masked kill, never a
+            # pass/reject.
+            return Outcome(
+                "crash",
+                f"handled/swallowed SIGTERM and exited {proc.returncode}")
         try:
             r = subprocess.run(
                 cmd, cwd=ROOT, env=env, capture_output=True, text=True,

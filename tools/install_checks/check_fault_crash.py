@@ -49,6 +49,10 @@ def run(mode: str) -> None:
             _cmd(str(FIXTURES / "immediate_reject.py")), "kill", timeout=5)
         if out.kind != "reject":
             problems.append(f"kill: immediate reject classified {out.kind}")
+        out = fi.run_under(
+            _cmd(str(FIXTURES / "sigterm_swallow.py")), "kill", timeout=5)
+        if out.kind != "crash" or "swallowed" not in out.detail:
+            problems.append(f"kill: swallowed SIGTERM classified {out.kind}")
         if problems:
             raise CheckError("; ".join(problems))
         return
