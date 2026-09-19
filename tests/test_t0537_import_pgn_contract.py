@@ -406,9 +406,15 @@ class TestAtomicity:
         assert not (store / "index.json").exists()
         orphans = list((store / "games").glob("*.json"))
         assert len(orphans) == 1  # visible only pre-recovery
+        # restart with a DIFFERENT game (different identity): recovery
+        # must remove the orphan (never committed), not leave it beside
+        # the new committed game
+        p.write_text(VALID_PGN.replace('[White "a"]', '[White "other"]'))
         s = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
         assert s["games_imported"] == 1
-        assert len(_stored_records(store)) == 1
+        records = _stored_records(store)
+        assert len(records) == 1
+        assert records[0]["tags"]["White"] == "other"
         assert len(_read_json(store / "index.json")) == 1
 
     def test_crash_after_commit_reads_committed_and_restarts_idempotently(
