@@ -47,6 +47,7 @@ from pathlib import Path
 import yaml
 
 from ingest.pgn import IllegalMove, MalformedPGN, validate_pgn_game
+from ingest.rights import intake_decision
 from ingest.streaming import iter_pgn_games
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -108,7 +109,12 @@ def run_import_pgn(pgn_path: str | Path, store_root: str | Path,
     state for the failed game."""
     pgn_path = Path(pgn_path)
     store_root = Path(store_root)
-    # scenario enforcement FIRST: refuse every source outside the
+    # strict input typing FIRST: a non-string or empty source id is a
+    # structured refusal, never a crash inside registry lookups.
+    if type(source_id) is not str or not source_id.strip():
+        raise ImportFailure("unknown_source",
+                            "source id must be a nonempty string")
+    # scenario enforcement: refuse every source outside the
     # import-pgn scenario before any store state exists.
     if source_id not in SCENARIO_SOURCES:
         raise ImportFailure(
@@ -118,9 +124,11 @@ def run_import_pgn(pgn_path: str | Path, store_root: str | Path,
     source = SOURCES.get(source_id)
     if source is None:
         raise ImportFailure("unknown_source", f"source id {source_id!r} not in registry")
-    rights_class = source["rights_class"]
-    if rights_class not in RIGHTS["classes"]:
-        raise ImportFailure("unknown_rights", f"unverified rights class {rights_class!r}")
+    decision = intake_decision(source_id)
+    if not decision.allowed:
+        raise ImportFailure("unknown_rights",
+                            f"intake refused for {source_id!r}: {decision.reason}")
+    rights_class = decision.rights_class
 
     games_dir = store_root / "games"
     games_dir.mkdir(parents=True, exist_ok=True)
