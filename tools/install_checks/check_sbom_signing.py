@@ -19,7 +19,10 @@ is pinned step-for-step in order (checkout -> setup -> install -> lock
 check -> license audit -> generation -> checksums -> attestation ->
 release): inserted, removed, reordered or altered steps fail closed, so
 released bytes are always the attested bytes; conditionals are rejected
-on every pipeline step. Fail closed on conditionals:
+on every pipeline step. Step metadata is fail-closed: only
+uses/run/name/with/env are allowed (continue-on-error, working-directory,
+shell and any other execution-affecting key is a violation), and with/env
+blocks must match their exact pinned contents. Fail closed on conditionals:
 ANY job-level if on the release job and ANY if on a mandatory
 generation/checksum/attestation/release step is a violation (GitHub
 expression syntax is not parsed), and the release step must be a single
@@ -101,6 +104,11 @@ PINNED_JOB_STEPS: list[tuple[str, str]] = [
 ]
 
 
+# Fail closed on every execution-affecting step key: only identity
+# (uses/run), display name, and the exact pinned with/env blocks survive.
+ALLOWED_STEP_KEYS = {"uses", "run", "name", "with", "env"}
+
+
 def _step_identity(s: dict) -> tuple[str, str] | None:
     has_uses = "uses" in s
     has_run = "run" in s
@@ -142,6 +150,43 @@ def _workflow_problems(wf: dict) -> list[str]:
                     f"release.yml: job {name} step {i} carries an if "
                     f"({s.get('if')!r}) - fail closed: pipeline steps must "
                     "be unconditional"
+                )
+            extra = sorted(set(s) - ALLOWED_STEP_KEYS)
+            if extra:
+                problems.append(
+                    f"release.yml: job {name} step {i} carries "
+                    f"execution-affecting keys {extra} - only "
+                    f"{sorted(ALLOWED_STEP_KEYS)} are allowed (fail closed "
+                    "on continue-on-error, working-directory, shell, ...)"
+                )
+            ident = _step_identity(s)
+            if ident == ("uses", "actions/setup-python@v5"):
+                if s.get("with") != {"python-version": "3.12"}:
+                    problems.append(
+                        f"release.yml: job {name} setup-python step with "
+                        f"block must be exactly python-version 3.12"
+                    )
+            elif ident == ("uses", PINNED_ATTEST_USES):
+                if set(s.get("with") or {}) != {"subject-path"}:
+                    problems.append(
+                        f"release.yml: job {name} attestation step with "
+                        "block must contain only subject-path"
+                    )
+            elif "with" in s:
+                problems.append(
+                    f"release.yml: job {name} step {i} carries an "
+                    "unexpected with block"
+                )
+            if ident == ("run", PINNED_RELEASE_RUN):
+                if s.get("env") != {"GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"}:
+                    problems.append(
+                        f"release.yml: job {name} release step env must be "
+                        "exactly GH_TOKEN from secrets.GITHUB_TOKEN"
+                    )
+            elif "env" in s:
+                problems.append(
+                    f"release.yml: job {name} step {i} carries an "
+                    "unexpected env block"
                 )
         actual = [_step_identity(s) for s in steps]
         if any(a is None for a in actual):
@@ -309,6 +354,27 @@ def run(mode: str) -> None:
                         "gh release create", "gh release createx", 1)
         return w
 
+    def _attest_continue_on_error(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if str(s.get("uses", "")).startswith("actions/attest"):
+                    s["continue-on-error"] = True
+        return w
+
+    def _release_custom_shell(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if _norm(s.get("run", "")) == PINNED_RELEASE_RUN:
+                    s["shell"] = "echo {0}"
+        return w
+
+    def _generation_working_directory(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if _norm(s.get("run", "")) == PINNED_GENERATION_RUN:
+                    s["working-directory"] = "/tmp"
+        return w
+
     def _tamper(after_uses=None, after_run=None):
         def m(w):
             for job in w["jobs"].values():
@@ -348,6 +414,9 @@ def run(mode: str) -> None:
         "release command is a lookalike (createx)": _release_createx,
         "tamper between checksums and attestation": _tamper(after_run=PINNED_CHECKSUMS_RUN),
         "tamper between attestation and release": _tamper(after_uses=True),
+        "attestation continue-on-error: true": _attest_continue_on_error,
+        "release runs under shell 'echo {0}'": _release_custom_shell,
+        "generation in working-directory /tmp": _generation_working_directory,
         "release command echoed, not executed": _echo_release,
         "attestation split into an unrelated job": _split_attest,
     }.items():
