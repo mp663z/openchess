@@ -159,6 +159,37 @@ def _attacks(grid: list[list[str]], r: int, c: int, by_white: bool) -> bool:
     return False
 
 
+def _check_ep_semantics(grid: list[list[str]], ep: str, side: str, where: str) -> None:
+    """En-passant must be a state a real game could reach: the
+    double-stepped pawn exists, its origin and skipped squares are
+    empty, the side to move is the NON-stepping side, and at least one
+    enemy pawn stands adjacent able to capture."""
+    file_idx = ord(ep[0]) - ord("a")
+    if ep[1] == "3":  # white just double-stepped; black to move
+        _need(side == "b", f"{where}: en-passant rank 3 requires black to move")
+        pawn, enemy, row, origin, skipped = "P", "p", 4, 6, 5
+    else:  # rank 6: black just double-stepped; white to move
+        _need(side == "w", f"{where}: en-passant rank 6 requires white to move")
+        pawn, enemy, row, origin, skipped = "p", "P", 3, 1, 2
+    _need(
+        grid[row][file_idx] == pawn,
+        f"{where}: en-passant square {ep} has no double-stepped {pawn!r} pawn",
+    )
+    _need(
+        grid[origin][file_idx] == "." and grid[skipped][file_idx] == ".",
+        f"{where}: en-passant origin/skipped squares must be empty",
+    )
+    adjacent = (
+        grid[row][file_idx - 1] if file_idx > 0 else ".",
+        grid[row][file_idx + 1] if file_idx < 7 else ".",
+    )
+    _need(
+        enemy in adjacent,
+        f"{where}: en-passant square {ep} has no {enemy!r} pawn able to "
+        "capture - unreachable state",
+    )
+
+
 def _check_position_semantics(
     grid: list[list[str]], castling_field: str, side: str, castling_kind: str, where: str
 ) -> None:
@@ -178,6 +209,13 @@ def _check_position_semantics(
         not _attacks(grid, waiting[0], waiting[1], by_white=(side == "w")),
         f"{where}: side not to move is in check - impossible position",
     )
+    if castling_kind == "chess960":
+        _need(
+            castling_field == "-",
+            f"{where}: chess960 castling rights are not yet representable "
+            "in this contract - castling field must be '-' until the "
+            "lint can verify rights against the start arrangement",
+        )
     if castling_kind == "orthodox" and castling_field != "-":
         for right in castling_field:
             kr, kc, rr, rc = ORTHODOX_CASTLING_SQUARES[right]
@@ -210,6 +248,8 @@ def _check_fen(fen: object, where: str, castling_kind: str) -> None:
         ep == "-" or (len(ep) == 2 and ep[0] in "abcdefgh" and ep[1] in "36"),
         f"{where}: en-passant field malformed",
     )
+    if ep != "-":
+        _check_ep_semantics(grid, ep, side, where)
     _need(
         half.isdigit() and full.isdigit() and int(full) >= 1,
         f"{where}: counters must be non-negative/positive ints",
@@ -244,7 +284,10 @@ def lint(doc: object) -> None:
     versioning = _mapping(contract.get("versioning"), "contract.versioning")
     _keys(versioning, ALLOWED_VERSIONING, "contract.versioning")
     base = _text(versioning.get("base_path"), "versioning.base_path")
-    _need(base.startswith("/variant/v"), "versioning.base_path: must be /variant/vN")
+    _need(
+        re.fullmatch(r"/variant/v[1-9][0-9]*", base),
+        "versioning.base_path: must be /variant/vN with numeric N",
+    )
     rule = _text(versioning.get("rule"), "versioning.rule")
     _need(
         "MINOR" in rule and "MAJOR" in rule and "downgrade" in rule,

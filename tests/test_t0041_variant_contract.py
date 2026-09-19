@@ -144,6 +144,97 @@ MUTATIONS = {
     ),
 }
 
+MUTATIONS_V3 = {
+    # verifier probes on a6da578 - each previously passed
+    "ep_impossible_no_pawns": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "7k/8/8/8/8/8/8/K7 w - e3 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "ep_wrong_side_to_move": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(
+        "start_fen",
+        "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e3 0 2",
+    ),
+    "ep_no_double_stepped_pawn": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "7k/8/8/8/8/8/8/K7 b - e3 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "ep_no_capturing_pawn": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "7k/8/8/8/4P3/8/8/K7 b - e3 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "ep_origin_not_empty": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "7k/8/8/8/3pP3/8/4P3/K7 b - e3 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "chess960_with_castling_rights": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "f960",
+            "name": "F960",
+            "start_fen": "bbqnrkrn/pppppppp/8/8/8/8/PPPPPPPP/BBQNRKRN w KQkq - 0 1",
+            "castling": "chess960",
+            "status": "experimental",
+        }
+    ),
+    "base_path_alpha_major": lambda d: d["contract"]["versioning"].__setitem__(
+        "base_path", "/variant/vXYZ"
+    ),
+    "base_path_zero_major": lambda d: d["contract"]["versioning"].__setitem__(
+        "base_path", "/variant/v0"
+    ),
+}
+
+MUTATIONS.update(MUTATIONS_V3)
+
+
+def _doc_with_start(fen, castling="orthodox"):
+    doc = copy.deepcopy(DOC)
+    doc["contract"]["variants"]["entries"].append(
+        {
+            "id": "probe",
+            "name": "Probe",
+            "start_fen": fen,
+            "castling": castling,
+            "status": "experimental",
+        }
+    )
+    return doc
+
+
+def test_valid_en_passant_start_passes():
+    # white double-stepped e2-e4; black pawn d4 can capture - reachable
+    lint(_doc_with_start("7k/8/8/8/3pP3/8/8/K7 b - e3 0 1"))
+    # black double-stepped d7-d5; white pawn e5 can capture
+    lint(_doc_with_start("K7/8/8/3pP3/8/8/8/7k w - d6 0 1"))
+
+
+def test_chess960_without_rights_passes():
+    lint(
+        _doc_with_start(
+            "bbqnrkrn/pppppppp/8/8/8/8/PPPPPPPP/BBQNRKRN w - - 0 1",
+            castling="chess960",
+        )
+    )
+
 
 @pytest.mark.parametrize("name", sorted(MUTATIONS))
 def test_each_mutation_is_rejected(name):
