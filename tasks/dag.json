@@ -47182,11 +47182,13 @@
    "verification": "human checkpoint",
    "resource": "product owner",
    "checkpoint": "C-W1",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "tags": [],
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "71859a82f0bac0964f73aee742e2ff6dbba8ab1a",
+   "evidence_manifest": "evidence/T2357.md"
   },
   {
    "id": "T2358",
