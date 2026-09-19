@@ -601,10 +601,12 @@
    "verification": "auto + fault injection",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "0ebad52d82b9dec62240546b7bbeddb07667415a",
+   "evidence_manifest": "evidence/T0026.md"
   },
   {
    "id": "T0027",
@@ -620,10 +622,12 @@
    "verification": "auto + fault injection",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "d60abc4c8ef620124df7b1ce4ca9e711d6527a02",
+   "evidence_manifest": "evidence/T0027.md"
   },
   {
    "id": "T0028",
@@ -639,10 +643,12 @@
    "verification": "auto + fault injection",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "d60abc4c8ef620124df7b1ce4ca9e711d6527a02",
+   "evidence_manifest": "evidence/T0028.md"
   },
   {
    "id": "T0029",
@@ -679,10 +685,12 @@
    "verification": "auto + fault injection",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "0ebad52d82b9dec62240546b7bbeddb07667415a",
+   "evidence_manifest": "evidence/T0030.md"
   },
   {
    "id": "T0031",
