@@ -6,12 +6,12 @@ Date: 2026-09-20
 ## Context
 
 The v5 architecture (product report v5, section 14) splits the product
-asymmetrically: a local-first desktop core carries all heavy compute, and
-a thin web/mobile habit surface owns the loop - the review queue, the
-approval gate, the quiet-week screen and training - joined to the core by
-end-to-end encrypted sync. The report defers a native mobile app
-explicitly: the web surface covers the behaviour at a fraction of the
-cost. Distribution adds a second constraint (v5 section 11): the
+asymmetrically: a local-first desktop core carries all heavy compute,
+and a thin web/mobile habit surface owns the loop - the review queue,
+the approval gate, the quiet-week screen and training - joined to the
+core by end-to-end encrypted sync. The report defers a native mobile
+app explicitly: the web surface covers the behaviour at a fraction of
+the cost. Distribution adds a second constraint (v5 section 11): the
 app-store/AGPL terms conflict means direct signed downloads ship first
 and there is no store discovery to lose by staying off the stores. The
 standing product directives require the UI to stay neutral and
@@ -33,8 +33,8 @@ code or into the core API.
 - Push/background: web push covers the review-queue nudge on Android
   and desktop; iOS web push exists but is less reliable - accepted as
   the known gap, the loop never depends on push.
-- Evidence gate: if beta shows install or push gaps costing retention,
-  the native question reopens with data, not speculation.
+- Evidence gate: native reopens only under the operational rule in
+  the Native-reopen gate section below, never on anecdote.
 
 ### Option B: Native iOS + Android from day one
 
@@ -66,10 +66,34 @@ The deciding axes are team cost, the AGPL/store terms conflict, and the
 absence of store discovery in the go-to-market plan. All three favor
 Option A; B and C buy capabilities the habit surface does not need yet.
 
-**Proposed: Option A - the responsive PWA is the mobile baseline and
-the only habit-surface shell.** Native mobile is deferred until later evidence
-(beta retention, install-gap or push-gap measurements)
-justifies it; the UI-neutrality directive keeps that reopening cheap.
+**Proposed: Option A - the responsive PWA is the mobile baseline and the only habit-surface shell.** Native mobile is deferred until later evidence
+under the operational gate below justifies it; the UI-neutrality
+directive keeps that reopening cheap.
+
+## Native-reopen gate
+
+Native-shell evaluation reopens only when ALL of the following hold,
+with the cohort query and result recorded in the decision evidence:
+
+- (a) Measurement definitions: install completion is the share of
+  onboarded beta users with the PWA installed, confirmed by the
+  install event in client telemetry; notification delivery is the
+  share of opted-in push notifications confirmed delivered by the client receipt; retention is week-8 active usage, defined as at
+  least one completed review session in the eighth week after
+  onboarding.
+- (b) Cohort and window: the full beta cohort, minimum N = 30 users,
+  minimum observation window W = 8 weeks per user.
+- (c) Baseline: the unaffected sub-cohort - users with install
+  completed and notification delivery confirmed - measured over the
+  same window.
+- (d) Reopen condition: PWA install-completion below 70%, OR opted-in
+  notification delivery below 80%, AND the affected cohort's week-8
+  retention at least 15 percentage points below the unaffected
+  cohort's week-8 retention.
+
+Anecdotes, individual complaints and unmeasured impressions never
+satisfy this gate; only the recorded query result against these
+thresholds does.
 
 ## Consequences
 
@@ -80,6 +104,6 @@ justifies it; the UI-neutrality directive keeps that reopening cheap.
 - The core API and the surface code make no PWA-specific assumptions
   beyond the documented shell boundary, so a later native shell is an
   addition, not a rewrite.
-- The evidence gate for reopening native is recorded here so the
-  deferred decision stays a decision, not a drift: measurable install
-  or push gap costing retention in beta.
+- The native-reopen gate above is part of this decision: the deferred
+  native question stays a decision with a falsifiable, recorded
+  trigger, not a drift.
