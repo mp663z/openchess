@@ -351,7 +351,7 @@
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "done_sha": "a2c6fb7dab1fb2252ed344ead4bc07c9498cf913",
+   "done_sha": "98c8b368f4fe6bb4de0ab6c5f6a1c5aa5254a8d0",
    "evidence_manifest": "evidence/T0014.md"
   },
   {
