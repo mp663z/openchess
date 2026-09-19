@@ -72,8 +72,11 @@ def run_benchmarks(bench_dir: Path) -> list[str]:
             mod = _load(path)
             key, problem = _validate(mod)
         except Exception as e:
-            failures.append(
-                f"{path.name}: malformed ({type(e).__name__}: {e})")
+            try:
+                detail = f"{type(e).__name__}: {e}"
+            except Exception:
+                detail = "unprintable exception"
+            failures.append(f"{path.name}: malformed ({detail})")
             continue
         if key == "<unknown>":
             key = path.name
@@ -108,18 +111,26 @@ def run_benchmarks(bench_dir: Path) -> list[str]:
             if verify is not None:
                 # Verification lives INSIDE the crash boundary: a crashing
                 # verifier is a crash failure, never an escaping exception.
+                # Verifier-RETURNED strings are untrusted too: an exact
+                # builtin str only, or its overridden dunders attack the
+                # report interpolation later.
                 wrong = []
                 for r in results:
                     v = verify(r)
                     if v is None:
                         continue
-                    if not (isinstance(v, str) and v.strip()):
+                    if type(v) is not str or not v.strip():
                         wrong.append(
-                            "verify must return None or a nonempty string")
+                            "verify must return None or a nonempty exact str")
                     else:
                         wrong.append(v)
         except Exception as e:  # a crash is a failure, never a skip
-            failures.append(f"{key}: crash ({type(e).__name__}: {e})")
+            # Even the exception object is hostile: its __str__ may raise.
+            try:
+                detail = f"{type(e).__name__}: {e}"
+            except Exception:
+                detail = "unprintable exception"
+            failures.append(f"{key}: crash ({detail})")
             continue
         if verify is not None and wrong:
             failures.append(f"{key}: wrong result ({wrong[0]})")

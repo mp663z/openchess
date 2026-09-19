@@ -31,6 +31,8 @@ EXPECTED = {
     "evil-float": "malformed",
     "bench_evil_str.py": "malformed",
     "bench_evil_getattr.py": "malformed",
+    "evil-verify-str": "wrong result",
+    "evil-exception": "crash",
 }
 
 
