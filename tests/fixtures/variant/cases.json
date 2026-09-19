@@ -1,0 +1,243 @@
+{
+  "schema": "variant-fixture-1",
+  "contract": "data/contracts/variant.yaml",
+  "contract_schema_version": 1,
+  "notes": "T0042: conformance cases for the chess variant + position-identity contract. Strict shapes throughout: an unknown key, a typo'd expectation, or a duplicate name is a violation, never inert data. Boundary cases are structured records carrying the variant id; identity is the exact five-field canonical tuple [variant, board, side_to_move, castling_rights, en_passant]. A deferred case is an explicit NON-executable marker with a re-verify hook, never a behavior claim. T0043 turns these cases red against implementations.",
+  "happy": [
+    {
+      "name": "orthodox-start",
+      "variant": "standard",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "expect_identity": {
+        "variant": "standard",
+        "board": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
+        "side_to_move": "w",
+        "castling_rights": "KQkq",
+        "en_passant": "-"
+      }
+    },
+    {
+      "name": "after-1e4",
+      "variant": "standard",
+      "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      "expect_identity": {
+        "variant": "standard",
+        "board": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR",
+        "side_to_move": "b",
+        "castling_rights": "KQkq",
+        "en_passant": "-"
+      }
+    },
+    {
+      "name": "black-to-move-no-castling",
+      "variant": "standard",
+      "fen": "r1bk1bnr/ppqppppp/2n5/2p5/4P3/2N2N2/PPPP1PPP/R1BQKB1R b - - 4 4",
+      "expect_identity": {
+        "variant": "standard",
+        "board": "r1bk1bnr/ppqppppp/2n5/2p5/4P3/2N2N2/PPPP1PPP/R1BQKB1R",
+        "side_to_move": "b",
+        "castling_rights": "-",
+        "en_passant": "-"
+      }
+    }
+  ],
+  "boundary": [
+    {
+      "name": "identity-ignores-counters",
+      "note": "same position, different half/fullmove counters: identity MUST be equal (counters are metadata, never identity)",
+      "pair": [
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        },
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 7 42"
+        }
+      ],
+      "changed_fields": [],
+      "expect": "identical"
+    },
+    {
+      "name": "identity-differs-board",
+      "pair": [
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        },
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+        }
+      ],
+      "changed_fields": [
+        "board"
+      ],
+      "expect": "different"
+    },
+    {
+      "name": "identity-differs-side-to-move",
+      "pair": [
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        },
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"
+        }
+      ],
+      "changed_fields": [
+        "side_to_move"
+      ],
+      "expect": "different"
+    },
+    {
+      "name": "identity-differs-castling",
+      "pair": [
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        },
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b Kkq - 0 1"
+        }
+      ],
+      "changed_fields": [
+        "castling_rights"
+      ],
+      "expect": "different"
+    },
+    {
+      "name": "identity-differs-en-passant",
+      "note": "the EP base state is a reachable one (black pawn d4 can capture)",
+      "pair": [
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 2"
+        },
+        {
+          "variant": "standard",
+          "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2"
+        }
+      ],
+      "changed_fields": [
+        "en_passant"
+      ],
+      "expect": "different"
+    },
+    {
+      "name": "identity-differs-variant",
+      "note": "identity carries the variant id: the same board under a different variant is a DIFFERENT position",
+      "changed_fields": [
+        "variant"
+      ],
+      "expect": "different",
+      "deferred": {
+        "reason": "the contract registry declares a single variant (standard); a two-variant pair is not expressible without inventing a variant the contract does not declare - presence of the field in every identity tuple is enforced via the happy/boundary shapes instead",
+        "reverify": "when variants.entries gains a second id, replace this marker with an executable pair spanning both declared variants and drop the deferred block",
+        "hook": "contract.variants.entries"
+      }
+    }
+  ],
+  "malformed": [
+    {
+      "name": "five-fields",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0",
+      "expect_failure": "wrong_field_count"
+    },
+    {
+      "name": "seven-fields",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 extra",
+      "expect_failure": "wrong_field_count"
+    },
+    {
+      "name": "short-rank",
+      "fen": "rnbqkbnr/ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "expect_failure": "bad_board"
+    },
+    {
+      "name": "bad-piece-char",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBXKBNR w KQkq - 0 1",
+      "expect_failure": "bad_board"
+    },
+    {
+      "name": "digit-zero",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN0 w KQkq - 0 1",
+      "expect_failure": "bad_board"
+    },
+    {
+      "name": "adjacent-digits",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK11R w KQkq - 0 1",
+      "expect_failure": "bad_board"
+    },
+    {
+      "name": "bad-side",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR x KQkq - 0 1",
+      "expect_failure": "bad_side"
+    },
+    {
+      "name": "bad-castling",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KZq - 0 1",
+      "expect_failure": "bad_castling"
+    },
+    {
+      "name": "bad-en-passant",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq e4 0 1",
+      "expect_failure": "bad_en_passant"
+    },
+    {
+      "name": "bad-counters",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 01",
+      "expect_failure": "bad_counters"
+    },
+    {
+      "name": "missing-king",
+      "fen": "rnbq1bnr/ppppkppp/8/8/8/8/PPPPPPPP/RNBQ1BNR w KQkq - 0 1",
+      "expect_failure": "illegal_position",
+      "note": "white king missing: grammatical but nonsensical"
+    },
+    {
+      "name": "pawn-on-back-rank",
+      "fen": "rnbqkbnP/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "expect_failure": "illegal_position"
+    },
+    {
+      "name": "castling-inconsistent",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN1 w KQkq - 0 1",
+      "expect_failure": "illegal_position",
+      "note": "K right without an h1 rook"
+    },
+    {
+      "name": "pinned-en-passant",
+      "fen": "3k4/8/8/8/3pP3/8/8/3RK3 b - e3 0 1",
+      "expect_failure": "illegal_position",
+      "note": "the only adjacent capturer is pinned: no legal EP capture exists"
+    }
+  ],
+  "rollback": [
+    {
+      "name": "unknown-variant-fails-closed",
+      "kind": "unknown-variant",
+      "note": "a consumer at an earlier MINOR meets a variant id it does not know: fail closed, never coerce to standard. The registry_rule pins malformed_request for this path (request-shape validation before variant resolution); unknown_variant stays in the closed enum as required but is NOT this path's code. The FEN payload is fully legal, so the failure is attributable to the variant id alone.",
+      "input": {
+        "variant": "crazyhouse",
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+      },
+      "expect_failure": "malformed_request",
+      "expect_error_code": "malformed_request"
+    },
+    {
+      "name": "extra-fields-tolerated",
+      "kind": "additive-fields",
+      "note": "a consumer at an earlier MINOR must not assert absence of additive fields: the canonical-field projection of an augmented record is unchanged",
+      "base_case": "orthodox-start",
+      "extra_fields": {
+        "future_optional_field": "minor-v2-data",
+        "variant_display_hint": "Standard"
+      },
+      "expect": "identity_unchanged"
+    }
+  ]
+}
