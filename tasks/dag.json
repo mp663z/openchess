@@ -10920,10 +10920,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O1 first plan from connected games",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "287be9883adb78f78a58b17b97578751bc8e45d9",
+   "evidence_manifest": "evidence/T0538.md"
   },
   {
    "id": "T0539",
