@@ -300,8 +300,11 @@ def _check_fen(fen: object, where: str, castling_kind: str) -> None:
     _need(side in ("w", "b"), f"{where}: side must be w or b", failure_class="bad_side")
     _need(
         castling == "-"
-        or all(c in "KQkq" for c in castling)
-        and len(set(castling)) == len(castling),
+        or (
+            castling != ""
+            and all(c in "KQkq" for c in castling)
+            and len(set(castling)) == len(castling)
+        ),
         f"{where}: castling field malformed",
         failure_class="bad_castling",
     )
