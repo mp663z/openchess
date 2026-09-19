@@ -157,6 +157,31 @@ def test_tasks_not_a_list_rejected():
     assert verify({"tasks": None}) == ["board: tasks must be a list"]
 
 
+def test_board_not_a_mapping_rejected():
+    assert verify(None) == ["board must be a mapping, got NoneType"]
+    assert verify([]) == ["board must be a mapping, got list"]
+
+
+def test_unhashable_status_rejected_not_crash():
+    problems = verify({"tasks": [_minimal_task(status=[])]})
+    assert any("invalid status" in p for p in problems)
+
+
+def test_duplicate_dependency_rejected_not_cycle():
+    tasks = [_minimal_task(), _minimal_task(id="T2", dependencies=["T1", "T1"])]
+    problems = verify({"tasks": tasks})
+    assert any("duplicate dependency T1" in p for p in problems)
+    assert not any("cycle" in p for p in problems)
+
+
+def test_meta_fields_type_checked():
+    for field, bad in (("milestone", None), ("phase", 123),
+                       ("roadmap_layer", []), ("spine_outcome", {}),
+                       ("track", False), ("week", None)):
+        problems = verify({"tasks": [_minimal_task(**{field: bad})]})
+        assert any(f"{field} must be a string" in p for p in problems), field
+
+
 def test_empty_acceptance_rejected(tmp_path):
     board = json.loads((REAL_BOARD_PATH).read_text())
     board["tasks"][0]["acceptance"] = "   "

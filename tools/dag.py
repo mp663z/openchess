@@ -75,6 +75,8 @@ def verify(board: dict) -> list[str]:
     null/empty/nonstring ids or fields) are reported as problems.
     """
     problems: list[str] = []
+    if not isinstance(board, dict):
+        return [f"board must be a mapping, got {type(board).__name__}"]
     tasks = board.get("tasks")
     if not isinstance(tasks, list):
         return ["board: tasks must be a list"]
@@ -100,24 +102,31 @@ def verify(board: dict) -> list[str]:
         missing = REQUIRED_FIELDS - set(t)
         if missing:
             problems.append(f"{tid}: missing fields {sorted(missing)}")
-        for field in ("title", "acceptance", "verification"):
+        for field in ("title", "acceptance", "verification", "milestone",
+                      "phase", "roadmap_layer", "spine_outcome", "track", "week"):
             if field in t:
                 v = t[field]
                 if not isinstance(v, str):
                     problems.append(f"{tid}: {field} must be a string, got {type(v).__name__}")
                 elif not v.strip():
                     problems.append(f"{tid}: empty {field}")
-        if t.get("status") not in VALID_STATUS:
-            problems.append(f"{tid}: invalid status {t.get('status')!r}")
+        status = t.get("status")
+        if not isinstance(status, str) or status not in VALID_STATUS:
+            problems.append(f"{tid}: invalid status {status!r}")
         deps = t.get("dependencies", [])
         if not isinstance(deps, list):
             problems.append(f"{tid}: dependencies must be a list, got {type(deps).__name__}")
         else:
+            seen_deps: set[str] = set()
             for dep in deps:
                 if not isinstance(dep, str):
                     problems.append(f"{tid}: dependency must be a string, got {dep!r}")
+                elif dep in seen_deps:
+                    problems.append(f"{tid}: duplicate dependency {dep}")
                 elif dep not in known:
                     problems.append(f"{tid}: unknown dependency {dep}")
+                else:
+                    seen_deps.add(dep)
         if t.get("status") == "done":
             sha = t.get("done_sha") or ""
             if not SHA_RE.fullmatch(str(sha)):
@@ -128,16 +137,22 @@ def verify(board: dict) -> list[str]:
                     f"{tid}: evidence_manifest must be exactly {want}"
                 )
     # cycle detection (Kahn) over well-formed entries only
+    id_counts: dict[str, int] = {}
+    for t in tasks:
+        if isinstance(t, dict) and isinstance(t.get("id"), str):
+            id_counts[t["id"]] = id_counts.get(t["id"], 0) + 1
     clean = [
         t for t in tasks
         if isinstance(t, dict)
         and isinstance(t.get("id"), str) and t["id"].strip()
+        and id_counts.get(t["id"], 0) == 1
         and isinstance(t.get("dependencies", []), list)
         and all(isinstance(d, str) for d in t.get("dependencies", []))
     ]
+    dep_sets = {t["id"]: set(t["dependencies"]) for t in clean}
     indeg = {t["id"]: 0 for t in clean}
     for t in clean:
-        for dep in t["dependencies"]:
+        for dep in dep_sets[t["id"]]:
             if dep in indeg:
                 indeg[t["id"]] += 1
     queue = [i for i, d in indeg.items() if d == 0]
@@ -146,7 +161,7 @@ def verify(board: dict) -> list[str]:
         node = queue.pop()
         seen += 1
         for t in clean:
-            if node in t["dependencies"]:
+            if node in dep_sets[t["id"]]:
                 indeg[t["id"]] -= 1
                 if indeg[t["id"]] == 0:
                     queue.append(t["id"])

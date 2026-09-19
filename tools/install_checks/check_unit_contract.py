@@ -32,6 +32,10 @@ VIOLATIONS = {
     "bad_nonstring_field.json": "must be a string",
     "bad_status.json": "invalid status",
     "bad_missing_field.json": "missing fields",
+    "bad_board_list.json": "board must be a mapping",
+    "bad_status_unhashable.json": "invalid status",
+    "bad_dup_dep.json": "duplicate dependency",
+    "bad_meta_field.json": "milestone must be a string",
 }
 
 
