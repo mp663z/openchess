@@ -1,0 +1,104 @@
+# T0059: chess castling contract (implementation-neutral; the product
+# runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for castling rights and the castling move everywhere
+# in the product: position application, game import, repertoire replay,
+# review and drill generation all share THESE semantics. ALL normative
+# semantics live in STRUCTURED fields the lint compares exactly - prose
+# is documentation, never the enforcement surface. The v5 report treats
+# castling rights as position identity; this contract fixes how rights
+# are represented, lost, and exercised.
+schema_version: 1
+
+contract:
+  id: chess-castling
+  rights:
+    values: [K, Q, k, q]
+    grammar:
+      none_sentinel: "-"
+      ordering: KQkq
+      duplicates: forbidden
+      empty: forbidden
+      membership: subset-of-values
+    canonical_form: >-
+      A rights field is exactly the none sentinel or the nonempty
+      duplicate-free subset of values in canonical order; the grammar
+      fields above are normative, this prose is documentation.
+    home_squares:
+      K: {king: e1, rook: h1}
+      Q: {king: e1, rook: a1}
+      k: {king: e8, rook: h8}
+      q: {king: e8, rook: a8}
+    irrevocable: true
+    rule: >-
+      Rights name home-square pairs; a right exists only while BOTH the
+      king and its rook have never moved and the rook still stands on
+      its home square. Rights are irrevocable: once lost they are never
+      regained, by any mechanism.
+  loss:
+    on_king_move: [K, Q]
+    on_king_move_black: [k, q]
+    on_rook_move_from: {h1: K, a1: Q, h8: k, a8: q}
+    on_rook_capture_on: {h1: K, a1: Q, h8: k, a8: q}
+    rule: >-
+      A side's king move loses BOTH its rights; a rook move FROM a home
+      square or a rook capture ON a home square loses exactly that
+      right. No other event changes rights.
+  move:
+    per_side_paths:
+      K: {king_from: e1, king_to: g1, rook_from: h1, rook_to: f1,
+          king_transit: [f1], empty_required: [f1, g1]}
+      Q: {king_from: e1, king_to: c1, rook_from: a1, rook_to: d1,
+          king_transit: [d1], empty_required: [d1, c1, b1]}
+      k: {king_from: e8, king_to: g8, rook_from: h8, rook_to: f8,
+          king_transit: [f8], empty_required: [f8, g8]}
+      q: {king_from: e8, king_to: c8, rook_from: a8, rook_to: d8,
+          king_transit: [d8], empty_required: [d8, c8, b8]}
+    king_deltas: exactly-two-squares-toward-rook
+    preconditions:
+      - right held for that side and path
+      - king and rook on their home squares
+      - empty_required squares all empty
+      - king not in check on king_from
+      - king not attacked on any king_transit square
+      - king not attacked on king_to
+    rule: >-
+      Castling is exactly one move: the king moves exactly two squares
+      toward the rook and the rook jumps to the square the king passed
+      over. ALL preconditions hold or the move is illegal; there is no
+      partial castling.
+  turn_linkage:
+    transitions: exactly-one
+    halfmove_clock: increment  # castling is neither pawn move nor capture
+    fullmove_number: increment-when-black
+    rule: >-
+      A castling move advances the turn machine exactly once per the
+      chess-turn contract: it is never a halfmove reset and increments
+      the fullmove number exactly when black castles.
+  identity:
+    rights_participate: true
+    rule: >-
+      Castling rights always participate in position identity, per the
+      chess-variant contract's canonical fields.
+  failure_classes: [rights_malformed, rights_inconsistent, path_blocked,
+    king_unmoved_required, through_check]
+  failure_mapping:
+    rights_malformed: {trigger: rights-field-not-canonical, error: malformed_request}
+    rights_inconsistent: {trigger: right-held-but-home-squares-not-occupied, error: illegal_position}
+    path_blocked: {trigger: empty_required-square-occupied, error: illegal_move}
+    king_unmoved_required: {trigger: right-not-held-or-piece-already-moved, error: illegal_move}
+    through_check: {trigger: king-from-transit-or-to-attacked, error: illegal_move}
+  errors:
+    closed_enum: [malformed_request, illegal_position, illegal_move,
+      internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  links:
+    variant_contract: data/contracts/variant.yaml
+    turn_contract: data/contracts/turn.yaml
+  versioning:
+    base_path: /castling/v1
