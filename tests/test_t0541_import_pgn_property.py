@@ -241,27 +241,75 @@ def test_header_complete_edit_is_update_with_recovery(tmp_path):
     assert set(ids_after) == set(ids_before)  # identity stable under edit
     changed = [g for g in ids_after if ids_after[g] != ids_before[g]]
     assert len(changed) == 1
-    # stale record version is removed by recovery on the NEXT run
+    # the stale record version is pinned: present after the update
+    # commit, removed by recovery at the start of the NEXT run
     stale = ids_before[changed[0]]
-    assert (store / "games" / stale).exists() or True  # may linger pre-recovery
+    assert (store / "games" / stale).exists()
     import_ok(pgn2, store)  # no-op run triggers recovery
     assert not (store / "games" / stale).exists()
     assert len(list((store / "games").glob("*.json"))) == GAME_COUNT
 
 
-def test_corrupted_game_refused_atomically(tmp_path):
-    cases = []
-    # illegal move injected mid-game
-    bad1 = CORPUS.replace(" Nf3 ", " Nf9 ", 1) if " Nf3 " in CORPUS else None
-    # truncation mid-movetext
-    cut = CORPUS[: len(CORPUS) * 3 // 4]
-    cut = cut[: cut.rindex(" ")]
-    cases.append(cut)
-    # unbalanced comment
-    cases.append(CORPUS.replace("\n\n1.", "\n\n{unterminated\n1.", 1))
-    for i, bad in enumerate(c for c in [bad1, *cases] if c is not None):
-        pgn = tmp_path / f"bad{i}.pgn"
-        pgn.write_text(bad)
+def _split_games(corpus: str) -> list[str]:
+    parts = corpus.split("\n[Event ")
+    return [parts[0]] + ["[Event " + p for p in parts[1:]]
+
+
+def _corrupt_game(game: str) -> str:
+    """Inject a malformed move token before the result token of exactly
+    this game - a deterministic single-game defect."""
+    lines = game.rstrip("\n").split("\n\n")
+    tokens = lines[1].split()
+    assert tokens[-1] in {"1-0", "0-1", "1/2-1/2", "*"}
+    tokens.insert(-1, "Ke9")
+    return lines[0] + "\n\n" + " ".join(tokens) + "\n"
+
+
+def _telemetry_events(store: Path) -> list[str]:
+    path = store / "telemetry.jsonl"
+    if not path.exists():
+        return []
+    return [json.loads(line)["event"] for line in path.read_text().splitlines()]
+
+
+def _snapshot(store: Path) -> dict:
+    """Externally inspectable committed state: index entries, record
+    bytes, telemetry event sequence."""
+    return {
+        "index": index_entries(store),
+        "records": {f.name: f.read_bytes() for f in (store / "games").glob("*.json")},
+        "telemetry": _telemetry_events(store),
+    }
+
+
+def test_corrupted_game_refusal_preserves_committed_prefix(tmp_path):
+    games = _split_games(CORPUS)
+    assert len(games) == GAME_COUNT
+
+    # reference: clean import gives the expected state for every prefix.
+    # One shared corpus path is used for the reference AND every case so
+    # provenance.retrieval_detail (the importing file) matches byte-for-byte.
+    corpus_pgn = tmp_path / "corpus.pgn"
+    corpus_pgn.write_text(CORPUS)
+    ref = tmp_path / "ref"
+    import_ok(corpus_pgn, ref)
+    ref_snap = _snapshot(ref)
+
+    # (case, expected number of committed games)
+    cases: list[tuple[str, int]] = []
+    # first-game corruption: zero commits
+    cases.append((_corrupt_game(games[0]) + "\n" + "\n".join(games[1:]), 0))
+    # middle-game corruption: exactly the preceding two survive
+    cases.append(("\n".join(games[:2]) + "\n" + _corrupt_game(games[2])
+                  + "\n" + "\n".join(games[3:]), 2))
+    # last-game corruption: all but the last survive
+    cases.append(("\n".join(games[:5]) + "\n" + _corrupt_game(games[5]), 5))
+    # truncation after five complete games: exactly those five survive
+    cases.append(("\n".join(games[:5]) + "\n[Event \"Property Cup\"]\n[White \"cut\"]\n\n1. e", 5))
+
+    for i, (bad_corpus, prefix_len) in enumerate(cases):
+        pgn = corpus_pgn
+        pgn.write_text(bad_corpus)
         store = tmp_path / f"bs{i}"
         cp = run_cli(str(pgn), "--store", str(store),
                      "--retrieved-at", RETRIEVED_AT)
@@ -270,24 +318,35 @@ def test_corrupted_game_refused_atomically(tmp_path):
         assert "Traceback" not in cp.stderr
         err = json.loads(cp.stderr)
         assert err["code"] in {"malformed_request", "illegal_move"}
-        # refusal is per-game atomic, not file-atomic: games committed
-        # before the corrupt one stay committed, and the store must be
-        # internally consistent - every index entry's record exists, no
-        # dangling candidate/tmp files, index unique
-        if (store / "index.json").exists():
-            for e in index_entries(store):
-                assert (store / "games" / e["record"]).exists()
-            assert not list(store.rglob("*.tmp"))
-            ids = [e["game_id"] for e in index_entries(store)]
-            assert len(ids) == len(set(ids))
-        # resumability: the corrected full corpus imports cleanly and
-        # ends with exactly the full game set, no duplicates
-        good = tmp_path / f"good{i}.pgn"
-        good.write_text(CORPUS)
-        summary = import_ok(good, store)
+
+        # EXACTLY the committed prefix survives - no earlier record
+        # removed or changed, no later record committed
+        if prefix_len == 0:
+            assert not (store / "index.json").exists() or index_entries(store) == []
+            assert not (store / "games").exists() or \
+                list((store / "games").glob("*.json")) == []
+            assert _telemetry_events(store) == ["import.started"]
+        else:
+            snap = _snapshot(store)
+            expected_index = ref_snap["index"][:prefix_len]
+            assert snap["index"] == expected_index
+            expected_records = {e["record"]: ref_snap["records"][e["record"]]
+                                for e in expected_index}
+            assert snap["records"] == expected_records  # byte-identical
+            assert snap["telemetry"] == \
+                ["import.started"] + ["import.game_stored"] * prefix_len
+
+        # resume: only the missing games import; survivors are duplicates.
+        # The corrected corpus is written over the SAME path so survivor
+        # provenance (retrieval_detail names the importing file) stays
+        # byte-identical to the reference.
+        pgn.write_text(CORPUS)
+        summary = import_ok(pgn, store)
         assert summary["games_updated"] == 0
-        assert len(index_entries(store)) == GAME_COUNT
-        assert len(list((store / "games").glob("*.json"))) == GAME_COUNT
+        assert summary["games_already_imported"] == prefix_len
+        assert summary["games_imported"] == GAME_COUNT - prefix_len
+        assert _snapshot(store)["records"] == ref_snap["records"]
+        assert index_entries(store) == ref_snap["index"]
 
 
 def test_header_sparse_distinct_games_never_replace(tmp_path):
