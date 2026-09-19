@@ -47,12 +47,23 @@ def expression_ok(expr: str) -> bool:
     expr = expr.strip()
     if not expr or "(" in expr or ")" in expr:
         return False
+    # printable ASCII only - newlines/NULs/control characters make the
+    # whitespace-based splits ambiguous; reject rather than guess
+    if not re.fullmatch(r"[\x20-\x7e]+", expr):
+        return False
     tokens = expr.split()
     if tokens[0].upper() in _OPERATORS or tokens[-1].upper() in _OPERATORS:
         return False
     or_parts = [p.strip() for p in re.split(r"\s+OR\s+", expr, flags=re.IGNORECASE)]
     if any(not p for p in or_parts):
         return False
+    # Every OR-branch must be STRUCTURALLY valid (AND of bare ids, no stray
+    # operators) before acceptance semantics apply: malformed expressions
+    # like "MIT OR OR Apache-2.0" are rejected, not salvaged.
+    for part in or_parts:
+        for tok in re.split(r"\s+AND\s+", part, flags=re.IGNORECASE):
+            if not re.fullmatch(r"[A-Za-z0-9.\-]+", tok) or tok.upper() in _OPERATORS:
+                return False
     for part in or_parts:
         and_parts = re.split(r"\s+AND\s+", part, flags=re.IGNORECASE)
         if and_parts and all(_token_ok(p) for p in and_parts):
