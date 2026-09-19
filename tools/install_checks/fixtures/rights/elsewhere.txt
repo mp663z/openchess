@@ -1,0 +1,4 @@
+fetched_from: https://example.com/terms
+fetched_at: 2026-09-18
+---
+You may download, modify and redistribute this data.

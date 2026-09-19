@@ -9,9 +9,15 @@ Signing: release.yml is parsed as YAML and must carry keyless Sigstore
 attestation, not a job merely NAMED attest: OIDC permissions
 (id-token: write + attestations: write), an actions/attest-* step whose
 subject-path covers the SBOM, the release lock and the checksums file, and
-a release step attaching the same artifacts. Seeded violations: attestation
-step removed, SBOM dropped from subjects, OIDC permission downgraded,
-checksums detached from the release - each must be caught.
+a release step attaching the same artifacts. Fail closed on conditionals:
+ANY job-level if on the release job and ANY if on a mandatory
+generation/checksum/attestation/release step is a violation (GitHub
+expression syntax is not parsed), and the release step must be a single
+command line (multi-line shell like "exit 0" before gh release create is a
+bypass). Seeded violations: attestation step removed, SBOM dropped from
+subjects, OIDC permission downgraded, checksums detached from the release,
+job disabled via if:false and if:${{ false }}, attestation step gated via
+if:${{ false }}, release command after exit 0 - each must be caught.
 """
 
 from __future__ import annotations
@@ -54,9 +60,12 @@ def _workflow_problems(wf: dict) -> list[str]:
     if not jobs:
         return ["release.yml: no job with an executable gh release create step"]
     for name, job in jobs:
-        cond = str(job.get("if", "")).strip().lower()
-        if cond in ("false", "!true", "0"):
-            problems.append(f"release.yml: release job {name} is disabled (if: {cond})")
+        if job.get("if") not in (None, ""):
+            problems.append(
+                f"release.yml: release job {name} carries a job-level if "
+                f"({job.get('if')!r}) - fail closed: mandatory release jobs "
+                "must be unconditional"
+            )
         # effective permissions: job overrides workflow
         perms = job.get("permissions") or wf.get("permissions") or {}
         for perm in ("id-token", "attestations"):
@@ -83,6 +92,12 @@ def _workflow_problems(wf: dict) -> list[str]:
                          ("attestation", att), ("release", rel)):
             if i is None:
                 problems.append(f"release.yml: job {name} lacks a {label} step")
+            elif steps[i].get("if") not in (None, ""):
+                problems.append(
+                    f"release.yml: job {name} {label} step carries an if "
+                    f"({steps[i].get('if')!r}) - fail closed: mandatory steps "
+                    "must be unconditional"
+                )
         if None not in (gen, chk, att, rel) and not (gen < chk < att < rel):
             problems.append(
                 f"release.yml: job {name} step order must be "
@@ -99,6 +114,16 @@ def _workflow_problems(wf: dict) -> list[str]:
                 )
         if rel is not None:
             run_text = str(steps[rel].get("run", ""))
+            command_lines = [
+                line for line in run_text.splitlines()
+                if line.strip() and not line.strip().startswith("#")
+            ]
+            if len(command_lines) != 1:
+                problems.append(
+                    f"release.yml: job {name} release step must be a single "
+                    f"command ({len(command_lines)} shell lines) - multi-line "
+                    "shell can bypass gh release create (exit 0, false, ...)"
+                )
             for artifact in REQUIRED_SUBJECTS:
                 if artifact not in run_text:
                     problems.append(
@@ -184,6 +209,29 @@ def run(mode: str) -> None:
                     )
         return w
 
+    def _disable_job_expr(w):
+        for job in w["jobs"].values():
+            job["if"] = "${{ false }}"
+        return w
+
+    def _gate_attest_step(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if str(s.get("uses", "")).startswith("actions/attest"):
+                    s["if"] = "${{ false }}"
+        return w
+
+    def _release_after_exit(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if "gh release create" in str(s.get("run", "")):
+                    s["run"] = (
+                        "exit 0\ngh release create \"$GITHUB_REF_NAME\""
+                        " --generate-notes docs/component-inventory.json"
+                        " data/release-lock.json checksums.sha256"
+                    )
+        return w
+
     def _split_attest(w):
         moved = []
         for job in w["jobs"].values():
@@ -200,6 +248,9 @@ def run(mode: str) -> None:
         "OIDC permissions downgraded": _downgrade_perms,
         "checksums detached from release": _detach_checksums,
         "release job disabled (if: false)": _disable_job,
+        "release job disabled (if: ${{ false }})": _disable_job_expr,
+        "attestation step gated (if: ${{ false }})": _gate_attest_step,
+        "release command after exit 0": _release_after_exit,
         "release command echoed, not executed": _echo_release,
         "attestation split into an unrelated job": _split_attest,
     }.items():

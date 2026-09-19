@@ -33,8 +33,15 @@ VIOLATIONS = {
     "bad_self_authored.yaml": "statement not contained in evidence file",
     "bad_local_missing.yaml": "local path missing",
     "bad_fetched_at.yaml": "fetched_at is not an ISO date",
+    "bad_fetched_at_trailing.yaml": "fetched_at is not an ISO date",
     "bad_future_fetch.yaml": "fetched_at in the future",
     "bad_path_escape.yaml": "evidence_path escapes its base",
+}
+
+# Violations only the full audit catches (directory confinement is resolved,
+# not lexical): the path resolves inside the base but outside statements/.
+FULL_AUDIT_VIOLATIONS = {
+    "bad_dir_escape.yaml": "evidence must live under",
 }
 
 
@@ -47,6 +54,13 @@ def run(mode: str) -> None:
     uncaught = []
     for fname, expect in sorted(VIOLATIONS.items()):
         problems = rights_audit.validate_sources(
+            yaml.safe_load((FIXTURES / fname).read_text()),
+            FIXTURES,
+        )
+        if not any(expect in p for p in problems):
+            uncaught.append(f"{fname}: expected problem containing {expect!r}, got {problems}")
+    for fname, expect in sorted(FULL_AUDIT_VIOLATIONS.items()):
+        problems = rights_audit.validate(
             yaml.safe_load((FIXTURES / fname).read_text()),
             FIXTURES,
         )

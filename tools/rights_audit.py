@@ -205,7 +205,7 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
                         problems.append(f"{sid}: evidence file lacks fetched_at")
                     else:
                         try:
-                            fetched = date.fromisoformat(header_at.group(1).strip()[:10])
+                            fetched = date.fromisoformat(header_at.group(1).strip())
                             if fetched > date.today():
                                 problems.append(
                                     f"{sid}: evidence fetched_at in the future: "
@@ -232,10 +232,12 @@ def validate(doc: dict, base: Path = ROOT) -> list[str]:
     missing = REQUIRED_SOURCES - ids
     if missing:
         problems.append(f"missing required sources: {sorted(missing)}")
+    stmts_dir = (base / "data/datasets/statements").resolve()
     for s in (doc.get("sources") or []):
         if isinstance(s, dict) and s.get("statement") is not None:
             ev = s.get("evidence_path") or ""
-            if not ev.startswith("data/datasets/statements/"):
+            resolved = (base / ev).resolve()
+            if not resolved.is_relative_to(stmts_dir):
                 problems.append(
                     f"{s.get('id')}: evidence must live under "
                     f"data/datasets/statements/ (got {ev!r})"
