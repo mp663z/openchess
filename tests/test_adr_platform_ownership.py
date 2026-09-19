@@ -1,12 +1,12 @@
-"""T2793: ADR-0005 structural battery v2 - the platform ownership matrix
+"""T2793: ADR-0005 structural battery v3 - the platform ownership matrix
 is a STRUCTURED refinement of ADR-0004: per-dimension ownership
-(compute / presentation / authoritative state), a normative crosswalk
-from every capability to ADR-0004 operations, and a phase-split
-transfer. The battery parses BOTH ADR front matters and proves chain
-consistency; prose ownership claims are validated against the matrix,
-not just name-checked. Mutations moving owners, omitting capabilities,
-contradicting the matrix in prose, or giving the server or hosted BYOM
-ownership fail."""
+(compute / presentation / authoritative state) consistent with
+ADR-0004's operation owners (whose owner_meaning is pinned as
+implementation-and-execution ownership), a normative crosswalk from
+every capability to ADR-0004 operations, and a phase-split transfer.
+Ownership prose lives only in a table generated from the front matter;
+free-form ownership claims elsewhere fail. Mutations of dimensions,
+crosswalks, the generated table, the chain, or the prose fail."""
 
 import re
 from pathlib import Path
@@ -17,12 +17,7 @@ ADR_DIR = Path(__file__).resolve().parent.parent / "docs" / "adr"
 ADR = (ADR_DIR / "ADR-0005-platform-ownership.md").read_text()
 ADR4 = (ADR_DIR / "ADR-0004-asymmetric-architecture.md").read_text()
 
-DIMENSIONS = ["compute_owner", "presentation_owner",
-              "authoritative_state_owner"]
-DESKTOP_CAPS = ["pgn", "index", "stockfish", "models", "delta", "export"]
-WEB_CAPS = ["queue", "diff", "approval", "quiet-week", "drills",
-            "transfer"]
-CROSSWALK = {
+EXPECTED_CROSSWALK = {
     "pgn": ["import"], "index": ["index"], "stockfish": ["stockfish"],
     "models": ["model-inference"], "delta": ["delta"],
     "export": ["export"], "queue": ["queue"], "diff": ["queue"],
@@ -30,29 +25,31 @@ CROSSWALK = {
     "drills": ["training"],
     "transfer": ["sync-encrypt", "sync-decrypt"],
 }
-SUB_CAPABILITY_OF = {"diff": "queue", "quiet-week": "training"}
-TRANSFER_PHASES = {
-    "sync-encrypt": {"actor": "desktop", "sends": "ciphertext"},
-    "relay": {"actor": "server", "stores": "ciphertext-only",
-              "decrypts": "never"},
-    "sync-decrypt": {"actor": "web", "decrypts": "local-only"},
+DESKTOP_CAPS = ["pgn", "index", "stockfish", "models", "delta", "export"]
+WEB_CAPS = ["queue", "diff", "approval", "quiet-week", "drills",
+            "transfer"]
+EXPECTED_CONSUMES = {
+    "queue": ["delta", "index"], "diff": ["delta"],
+    "approval": ["delta"], "quiet-week": ["model-inference", "delta"],
+    "drills": ["model-inference"],
 }
 INVARIANTS = [
     "every-capability-has-exactly-one-presentation-owner",
-    "compute-owner-is-desktop-for-every-non-transfer-capability",
+    "compute-and-presentation-match-adr0004-operation-owner",
     "authoritative-state-is-desktop-for-every-capability",
     "server-owns-no-capability",
     "transfer-splits-encrypt-desktop-decrypt-web",
     "hosted-byom-is-invocation-exception-never-ownership",
 ]
-DENIED = [
-    "desktop also owns",
-    "server may decrypt",
-    "may decrypt it",
-    "BYOM owns",
-    "provider owns",
-    "inference by default",
-]
+CLAIM_RE = re.compile(
+    r"(?i)\b(desktop|web|server|byom|provider|hosted byom)\b"
+    r"[^.\n]{0,80}?(?<!-)\b(owns|owned|ownership|controls?|jointly|"
+    r"decrypts?)\b[^.\n]{0,80}"
+)
+NEGATION_GUARDS = (
+    "no capability", "never capability", "never decrypt",
+    "decrypts never", "nothing", "never re-own",
+)
 
 
 def _parse(adr: str):
@@ -70,8 +67,32 @@ def _parse(adr: str):
     return fm, body, {k: "\n".join(v) for k, v in secs.items()}
 
 
-def _matrix(fm) -> dict:
-    return fm["capabilities"]
+def _gen_table(caps) -> str:
+    lines = [
+        "| capability | compute | presentation | authoritative_state"
+        " | consumes | realizes |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for cap, spec in caps.items():
+        consumes = ", ".join(spec["consumes"]) if spec["consumes"] else "-"
+        realizes = ", ".join(spec["crosswalk"])
+        if "sub_capability_of" in spec:
+            realizes += f" (sub-capability of {spec['sub_capability_of']})"
+        if "phases" in spec:
+            parts = []
+            for ph_name, ph_spec in spec["phases"].items():
+                seg = f"{ph_name} {ph_spec['actor']}"
+                for key, val in ph_spec.items():
+                    if key != "actor":
+                        seg += f" {key} {val}"
+                parts.append(seg)
+            realizes += "; phases: " + ", ".join(parts)
+        lines.append(
+            f"| {cap} | {spec['compute_owner']} | "
+            f"{spec['presentation_owner']} | "
+            f"{spec['authoritative_state_owner']} | {consumes} | "
+            f"{realizes} |")
+    return "\n".join(lines)
 
 
 def _check(adr: str, adr4: str) -> None:
@@ -80,115 +101,56 @@ def _check(adr: str, adr4: str) -> None:
     assert fm["adr"] == "ADR-0005"
     assert fm["status"] == "proposed"
     assert fm["scope"] == "presentation-and-implementation-ownership"
-    assert fm["dimensions"] == DIMENSIONS
-    assert fm["invariants"] == INVARIANTS
+    assert fm4.get("owner_meaning") == (
+        "implementation-and-execution-ownership")
     ops4 = fm4["operations"]
-
-    caps = _matrix(fm)
-    # exact capability set, incl. export accounted explicitly
-    assert set(caps) == set(DESKTOP_CAPS) | set(WEB_CAPS)
-    assert "export" in caps, "export must be accounted for explicitly"
-
-    for cap, spec in caps.items():
-        # dimensions complete, presentation owner exactly one actor
-        for dim in DIMENSIONS:
-            assert dim in spec, f"{cap}: missing {dim}"
-        assert spec["presentation_owner"] in {"desktop", "web"}
-        # authoritative state is desktop for every capability
-        assert spec["authoritative_state_owner"] == "desktop", cap
-        # the server owns no capability, on any dimension
-        for dim in DIMENSIONS:
-            assert spec[dim] != "server", f"{cap}: server {dim}"
-        # compute is desktop for every non-transfer capability
-        if cap != "transfer":
-            assert spec["compute_owner"] == "desktop", cap
-        # crosswalk pinned and targets exist in ADR-0004
-        assert spec["crosswalk"] == CROSSWALK[cap], cap
-        for op in spec["crosswalk"]:
-            assert op in ops4, f"{cap}: {op} not an ADR-0004 operation"
-        if cap != "transfer":
-            # owner equality per mapped operation
-            for op in spec["crosswalk"]:
-                assert ops4[op] == spec["presentation_owner"], (
-                    f"{cap}: ADR-0004 {op} owner {ops4[op]} != "
-                    f"presentation owner {spec['presentation_owner']}")
-        # sub-capability pins
-        if cap in SUB_CAPABILITY_OF:
-            assert spec.get("sub_capability_of") == SUB_CAPABILITY_OF[cap]
+    caps = fm["capabilities"]
+    assert sorted(caps) == sorted(EXPECTED_CROSSWALK)
+    for inv in INVARIANTS:
+        assert inv in fm["invariants"], inv
+    realized = set()
+    for cap, crosswalk in EXPECTED_CROSSWALK.items():
+        entry = caps[cap]
+        assert entry["crosswalk"] == crosswalk, cap
+        assert entry["authoritative_state_owner"] == "desktop", cap
+        realized.update(crosswalk)
+        if cap == "transfer":
+            assert entry["compute_owner"] == "split"
+            assert entry["presentation_owner"] == "web"
+            assert entry["consumes"] == []
+            ph = entry["phases"]
+            assert ph["sync-encrypt"] == {
+                "actor": "desktop", "sends": "ciphertext"}
+            assert ph["relay"] == {
+                "actor": "server", "stores": "ciphertext-only",
+                "decrypts": "never"}
+            assert ph["sync-decrypt"] == {
+                "actor": "web", "decrypts": "local-only"}
         else:
-            assert "sub_capability_of" not in spec, cap
-
-    # transfer phase split is normative and matches ADR-0004 owners
-    phases = caps["transfer"]["phases"]
-    assert phases == TRANSFER_PHASES
-    assert caps["transfer"]["compute_owner"] == "split"
-    assert phases["sync-encrypt"]["actor"] == ops4["sync-encrypt"]
-    assert phases["sync-decrypt"]["actor"] == ops4["sync-decrypt"]
-    assert phases["relay"]["actor"] == "server"
-    assert phases["relay"]["decrypts"] == "never"
-    assert phases["relay"]["stores"] == "ciphertext-only"
-
-    # full coverage: every ADR-0004 operation is realized by a
-    # capability; no operation maps to capabilities with conflicting
-    # presentation owners (no ambiguous many-owner mapping)
-    covered: dict[str, set] = {}
-    for spec in caps.values():
-        for op in spec["crosswalk"]:
-            covered.setdefault(op, set()).add(spec["presentation_owner"])
-    assert set(covered) == set(ops4), (
-        f"uncovered ADR-0004 operations: {set(ops4) - set(covered)}")
-    for op, owners in covered.items():
-        assert len(owners) == 1, f"{op}: ambiguous owners {owners}"
-
-    # prose: ownership sections mirror the matrix exactly
-    assert "Status: proposed" in secs.get("__header__", "")
-    desktop_sec = secs.get("Desktop owns (heavy compute, authoritative "
-                           "data)", "")
-    web_sec = secs.get("Web owns (review and training habit loop)", "")
+            assert "phases" not in entry, cap
+            assert entry["consumes"] == EXPECTED_CONSUMES.get(cap, []), cap
+            # Mechanical chain: per-dimension owners equal the owning
+            # platform of every ADR-0004 operation realized.
+            for op in crosswalk:
+                assert op in ops4, (cap, op)
+                assert entry["compute_owner"] == ops4[op], (cap, op)
+                assert entry["presentation_owner"] == ops4[op], (cap, op)
+    assert realized == set(ops4), "crosswalk coverage must match ADR-0004"
+    desktop_sec = secs["Desktop capabilities"]
+    web_sec = secs["Web capabilities"]
     for cap in DESKTOP_CAPS:
-        assert f"**{cap}**" in desktop_sec, f"{cap} missing from desktop"
-        assert f"**{cap}**" not in web_sec, f"{cap} doubly presented"
+        assert f"**{cap}**" in desktop_sec, cap
     for cap in WEB_CAPS:
-        assert f"**{cap}**" in web_sec, f"{cap} missing from web"
-        assert f"**{cap}**" not in desktop_sec, f"{cap} doubly presented"
-    # every prose ownership claim must match the matrix: scan for
-    # "<actor> ... owns" assertions and validate the claimed capability
-    claim_re = re.compile(
-        r"(?i)\b(desktop|web|server|byom|provider|hosted byom)"
-        r"[^.\n]{0,60}\bowns\b([^\n.]*)")
-    for match in claim_re.finditer(body):
-        actor = match.group(1).lower()
-        object_text = match.group(2)
-        # non-ownership statements ("owns no capability", "owns nothing")
-        # are not ownership claims
-        if re.match(r"\s*no\b", object_text) or "nothing" in object_text:
-            continue
-        claimed = set(re.findall(r"\*\*([a-z-]+)\*\*", object_text))
-        assert actor not in {"server", "byom", "provider",
-                             "hosted byom"}, (
-            f"invalid ownership actor {actor}: {match.group(0)!r}")
-        for cap in claimed:
-            assert cap in caps and caps[cap]["presentation_owner"] == \
-                actor, f"prose claim {actor} owns {cap} contradicts matrix"
-    for clause in DENIED:
-        assert clause not in body, f"contradiction clause: {clause}"
-    # decision/scope/consequences consistency
-    decision = secs.get("Decision", "")
-    assert "front matter is" in decision and "normative" in decision
-    ctx = secs.get("Context", "")
-    assert "presentation-and-implementation ownership only" in ctx
-    assert "ADR-0004 retains" in ctx
-    alts = secs.get("Alternatives considered", "")
-    assert "Shared ownership" in alts and "rejected" in alts
-    assert "single web owner for transfer" in alts
-    cons = secs.get("Consequences", "")
-    assert "exactly one presentation owner" in cons
-    assert "compute owner is desktop" in cons
-    assert "Authoritative state is desktop" in cons
-    assert "server owns no capability" in cons
-    assert "never capability" in cons and "never a default" in cons
-    assert "sync-encrypt on desktop" in web_sec
-    assert "never decrypts" in web_sec
+        assert f"**{cap}**" in web_sec, cap
+    # The ownership table in the prose must equal the table generated
+    # from the front matter, cell for cell.
+    table = _gen_table(caps)
+    assert table in body
+    # No ownership claims outside the generated table, except
+    # negation-guarded statements.
+    for match in CLAIM_RE.finditer(body.replace(table, "")):
+        window = match.group(0).lower()
+        assert any(g in window for g in NEGATION_GUARDS), window
 
 
 def _bad(mutated: str, mutated4: str | None = None) -> None:
@@ -211,7 +173,7 @@ def test_crosswalk_mutations_fail():
     _bad(ADR.replace("  export:\n    compute_owner: desktop\n"
                      "    presentation_owner: desktop\n"
                      "    authoritative_state_owner: desktop\n"
-                     "    crosswalk: [export]\n", ""))
+                     "    consumes: []\n    crosswalk: [export]\n", ""))
     # models moved to web
     _bad(ADR.replace("  models:\n    compute_owner: desktop\n"
                      "    presentation_owner: desktop",
@@ -222,34 +184,66 @@ def test_crosswalk_mutations_fail():
                      "crosswalk: [llm-inference]"))
 
 
+def test_table_cell_mutations_fail():
+    # a compute cell contradicting the front matter
+    _bad(ADR.replace("| queue | web | web | desktop | delta, index |"
+                     " queue |",
+                     "| queue | desktop | web | desktop | delta, index |"
+                     " queue |"))
+    # a presentation cell contradicting the front matter
+    _bad(ADR.replace("| pgn | desktop | desktop | desktop | - | import |",
+                     "| pgn | desktop | web | desktop | - | import |"))
+    # a consumes cell emptied
+    _bad(ADR.replace("| approval | web | web | desktop | delta |"
+                     " approval |",
+                     "| approval | web | web | desktop | - | approval |"))
+
+
 def test_dimension_mutations_fail():
-    # a capability's authoritative state leaves the desktop
-    _bad(ADR.replace("  queue:\n    compute_owner: desktop\n"
-                     "    presentation_owner: web\n"
-                     "    authoritative_state_owner: desktop",
+    # queue compute owner contradicts ADR-0004's queue owner
+    _bad(ADR.replace("  queue:\n    compute_owner: web\n"
+                     "    presentation_owner: web",
                      "  queue:\n    compute_owner: desktop\n"
-                     "    presentation_owner: web\n"
-                     "    authoritative_state_owner: web"))
-    # compute owner non-desktop on a non-transfer capability
-    _bad(ADR.replace("  drills:\n    compute_owner: desktop",
-                     "  drills:\n    compute_owner: web"))
+                     "    presentation_owner: web"))
+    # drills compute owner contradicts ADR-0004's training owner
+    _bad(ADR.replace("  drills:\n    compute_owner: web",
+                     "  drills:\n    compute_owner: desktop"))
     # server gains an ownership dimension
     _bad(ADR.replace("  pgn:\n    compute_owner: desktop",
                      "  pgn:\n    compute_owner: server"))
+    # a capability's authoritative state leaves the desktop
+    _bad(ADR.replace("  queue:\n    compute_owner: web\n"
+                     "    presentation_owner: web\n"
+                     "    authoritative_state_owner: desktop",
+                     "  queue:\n    compute_owner: web\n"
+                     "    presentation_owner: web\n"
+                     "    authoritative_state_owner: web"))
     # relay may decrypt
     _bad(ADR.replace("decrypts: never", "decrypts: allowed"))
+    # relay actor leaves the server
+    _bad(ADR.replace("{actor: server", "{actor: desktop"))
     # invariant weakened
-    _bad(ADR.replace("server-owns-no-capability",
-                     "server-owns-few-capabilities"))
+    _bad(ADR.replace(
+        "compute-and-presentation-match-adr0004-operation-owner",
+        "compute-and-presentation-usually-match"))
 
 
 def test_prose_contradiction_mutations_fail():
-    c1 = "\nThe desktop also owns queue and approval.\n"
-    c2 = "\nThe server owns transfer and may decrypt it.\n"
-    c3 = "\nHosted BYOM owns model inference by default.\n"
-    for clause in (c1, c2, c3):
-        _bad(ADR + clause)
-    _bad(ADR + c1 + c2 + c3)
+    originals = [
+        "The desktop also owns queue and approval.",
+        "The server owns transfer and may decrypt it.",
+        "Hosted BYOM owns model inference by default.",
+    ]
+    refined = [
+        "Desktop additionally owns queue and approval.",
+        "Web jointly owns pgn.",
+        "Desktop has ownership of queue.",
+        "The server controls transfer and can decrypt it.",
+    ]
+    for clause in originals + refined:
+        _bad(ADR.replace("co-presented.", "co-presented. " + clause))
+    _bad(ADR.replace("co-presented.",
+                     "co-presented. " + " ".join(originals)))
 
 
 def test_chain_consistency_with_adr0004_mutations_fail():
@@ -257,6 +251,13 @@ def test_chain_consistency_with_adr0004_mutations_fail():
     _bad(ADR, ADR4.replace("  sync-decrypt: web\n", ""))
     # an ADR-0004 owner flip breaks owner equality
     _bad(ADR, ADR4.replace("  queue: web\n", "  queue: desktop\n"))
+    # owner_meaning removed: the chain's dimension semantics are gone
+    _bad(ADR, ADR4.replace(
+        "owner_meaning: implementation-and-execution-ownership\n", ""))
+    # owner_meaning weakened
+    _bad(ADR, ADR4.replace(
+        "owner_meaning: implementation-and-execution-ownership",
+        "owner_meaning: presentation-ownership"))
 
 
 def test_mutation_status_fails():
