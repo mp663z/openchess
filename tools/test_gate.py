@@ -42,15 +42,18 @@ def gate_problems(root: Path = ROOT, timeout: int = PYTEST_TIMEOUT_S) -> list[st
     for e in entries:
         cmd += ["--deselect", e["test_id"]]
     try:
-        rc = subprocess.run(
+        out = subprocess.run(
             cmd, cwd=root,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            capture_output=True, text=True,
             timeout=timeout,
-        ).returncode
+        )
     except subprocess.TimeoutExpired:
         return [f"pytest timed out after {timeout}s"]
-    if rc != 0:
-        problems.append(f"test gate failed: pytest exited {rc}")
+    if out.returncode != 0:
+        tail = "\n".join((out.stdout + out.stderr).splitlines()[-15:])
+        problems.append(
+            f"test gate failed: pytest exited {out.returncode}\n{tail}"
+        )
     return problems
 
 
