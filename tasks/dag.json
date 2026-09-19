@@ -52584,11 +52584,13 @@
    "verification": "auto",
    "resource": "real users/provider/payment where needed",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "tags": [],
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "13bd957cfe02e26b7e041260cabcac4f43f00aa4",
+   "evidence_manifest": "evidence/T2624.md"
   },
   {
    "id": "T2625",
