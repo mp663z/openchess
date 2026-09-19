@@ -49,10 +49,11 @@ def _validate(mod, path: Path) -> str | None:
     if not isinstance(bench_id, str) or not bench_id.strip():
         return "BENCH_ID must be a nonempty string"
     threshold = getattr(mod, "THRESHOLD_MS", None)
-    if (isinstance(threshold, bool)
-            or not isinstance(threshold, (int, float))
+    # Exact builtin numeric types only: a float/int subclass can raise in
+    # __float__ during normalization, escaping the crash boundary.
+    if (type(threshold) not in (int, float)
             or not math.isfinite(threshold) or threshold <= 0):
-        return "THRESHOLD_MS must be a finite positive number"
+        return "THRESHOLD_MS must be a finite positive number (exact int/float)"
     if not callable(getattr(mod, "run", None)):
         return "run must be callable"
     verify = getattr(mod, "verify", None)
@@ -95,9 +96,9 @@ def run_benchmarks(bench_dir: Path) -> list[str]:
             continue  # fail closed: shadowed identities never run
         runnable.append((key, mod))
     for key, mod in runnable:
-        threshold = float(mod.THRESHOLD_MS)
         verify = mod.verify if callable(getattr(mod, "verify", None)) else None
         try:
+            threshold = float(mod.THRESHOLD_MS)  # inside the crash boundary
             samples = []
             results = []
             for _ in range(REPEATS):

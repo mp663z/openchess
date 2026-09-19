@@ -28,6 +28,7 @@ EXPECTED = {
     "dup": "duplicate",
     "verify-crash": "crash",
     "verify-badreturn": "wrong result",
+    "evil-float": "malformed",
 }
 
 
