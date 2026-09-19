@@ -52,9 +52,18 @@ contract:
     identity_rule: >-
       A stored game is exactly the declared fields; game_id is the
       dedup identity and never participates in position identity
-      (positions follow the chess-variant contract). content_sha256
-      covers the canonical record bytes so duplicate, updated and
-      roundtrip detection are byte-exact, never heuristic.
+      (positions follow the chess-variant contract). game_id follows a
+      two-tier collision-safe rule: when all six identity headers
+      (Site, White, Black, UTCDate, Date, Round) are present and
+      nonempty, identity is the header tuple, so an edited PGN of the
+      same game classifies as an update; otherwise identity derives
+      from the canonical game content (normalized validated tags plus
+      movetext), so distinct header-sparse games never silently replace
+      each other and a content edit of a header-sparse game imports as
+      a new game rather than guessing. The read side recomputes the
+      same rule. content_sha256 covers the canonical record bytes so
+      duplicate, updated and roundtrip detection are byte-exact, never
+      heuristic.
   idempotency:
     dedup_key: game_id
     duplicate: {policy: no-op-visible, outcome: already-imported}
