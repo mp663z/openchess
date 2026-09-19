@@ -40,7 +40,8 @@ the task, carry the grant wamid, and contain every required field
 (Task, What the human would have done, Why no human pass happened,
 Provisional substitute decision, Re-verify hook); every hook must be a
 real dag task distinct from the source task, not done, tagged
-reverify:<task>, and carry a human/independent re-verification mode.
+reverify:<task>, and carry a mode from the pinned ACCEPTED_HOOK_MODES
+set (exact governance vocabulary, never substrings).
 Auto+human, human/external, human/legal-audit and every other
 human-like mode are NOT substitutable. Repo content never authorizes
 itself: the grant content is verified against trusted owner-channel
@@ -49,6 +50,7 @@ evidence before the pin is set.
 
 from __future__ import annotations
 
+import datetime
 import hashlib
 import json
 import re
@@ -71,7 +73,46 @@ GRANT_KEY_RE = re.compile(r"^T\d{4}$")
 GRANT_RECORD_RE = re.compile(r"^evidence/substitutions/(T\d{4})\.md$")
 WAMID_RE = re.compile(r"^wamid\.[A-Za-z0-9+/=]+$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _real_date(value: str) -> bool:
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
 SUBSTITUTABLE_MODES = frozenset({"human checkpoint"})
+# Re-verify hooks must carry a human/independent gate from the board's
+# EXACT governance vocabulary - substring checks authorize lookalikes
+# ("inhuman automated", "not human", "independently automatic").
+ACCEPTED_HOOK_MODES = frozenset(
+    {
+        "human",
+        "human checkpoint",
+        "human research",
+        "human/external",
+        "human/legal audit",
+        "human/legal/expert review",
+        "human/architecture review",
+        "human/financial review",
+        "human/independent",
+        "human/independent review",
+        "human/independent verifier",
+        "independent verifier",
+        "independent visual verifier",
+        "independent review",
+        "independent analyst",
+        "independent finance/security verifier",
+        "independent product/legal review",
+        "independent AI verifier",
+        "independent ML verifier",
+        "independent benchmark",
+        "auto + human",
+        "auto + independent review",
+    }
+)
 REQUIRED_RECORD_FIELDS = (
     "Task:",
     "What the human would have done:",
@@ -211,11 +252,12 @@ def _check_substitution(
             errors.append(
                 f"{rel}: re-verify hook {hook} is not linked back (missing reverify:{task} tag)"
             )
-        hook_mode = hook_task.get("verification") or ""
-        if not any(k in hook_mode for k in ("human", "independent")):
+        hook_mode = hook_task.get("verification")
+        if hook_mode not in ACCEPTED_HOOK_MODES:
             errors.append(
-                f"{rel}: re-verify hook {hook} mode {hook_mode!r} is "
-                "not a human/independent re-verification shape"
+                f"{rel}: re-verify hook {hook} mode {hook_mode!r} is not in "
+                "the pinned accepted hook-mode set (exact governance "
+                "vocabulary required, no substrings)"
             )
     return errors
 
@@ -277,6 +319,8 @@ def _parse_grants(text: str) -> tuple[dict[str, dict], list[str]]:
         date = value.get("date")
         if type(date) is not str or not DATE_RE.match(date):
             errors.append(f"grant {key}: date must be YYYY-MM-DD")
+        elif not _real_date(date):
+            errors.append(f"grant {key}: date {date!r} is not a real calendar date")
         record = value.get("record")
         m = GRANT_RECORD_RE.match(record) if type(record) is str else None
         if m is None or m.group(1) != key:

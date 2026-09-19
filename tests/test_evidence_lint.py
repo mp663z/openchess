@@ -485,10 +485,33 @@ def test_substitution_hook_rules(tmp_path, monkeypatch):
     tasks = {**TASKS, "T9001": {**TASKS["T9001"], "tags": []}}
     problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
     assert any("missing reverify:T9996 tag" in p for p in problems)
-    # hook without a human/independent re-verification shape
-    tasks = {**TASKS, "T9001": {**TASKS["T9001"], "verification": "auto"}}
-    problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
-    assert any("re-verification shape" in p for p in problems)
+    # hook mode must be in the pinned accepted set - exact governance
+    # vocabulary, no substrings
+    for mode in (
+        "auto",
+        "inhuman automated",
+        "not human",
+        "independently automatic",
+        "humanity audit",
+        "Human checkpoint",
+        "human-checkpoint",
+        "human  checkpoint",
+        "HUMAN CHECKPOINT",
+        "auto + HUMAN",
+    ):
+        tasks = {**TASKS, "T9001": {**TASKS["T9001"], "verification": mode}}
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+        assert any("pinned accepted hook-mode set" in p for p in problems), mode
+    for mode in (
+        "human checkpoint",
+        "independent verifier",
+        "human/independent",
+        "auto + human",
+        "independent benchmark",
+    ):
+        tasks = {**TASKS, "T9001": {**TASKS["T9001"], "verification": mode}}
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+        assert not any("hook" in p for p in problems), mode
 
 
 def test_grant_registry_tampering_fails_closed(tmp_path):
@@ -603,3 +626,15 @@ def test_grant_registry_schema_fails_closed():
     # non-string grant key rejected
     mapping, errors = el._parse_grants("grants:\n  5:\n    wamid: x\n")
     assert any("not TNNNN" in e for e in errors)
+
+
+def test_grant_registry_impossible_date_fails_closed():
+    good = (
+        "grants:\n  T9996:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-99-99"\n'
+        '    record: "evidence/substitutions/T9996.md"\n'
+        "    hooks: [T9001]\n"
+    )
+    mapping, errors = el._parse_grants(good)
+    assert any("not a real calendar date" in e for e in errors)
