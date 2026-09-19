@@ -136,7 +136,16 @@ CASES = {
     ),
     "setup.sh missing the pinned line": dict(
         setup="#!/bin/bash\ngit config core.hooksPath hooks\n",
-        expect="does not contain exactly",
+        expect="does not match the pinned script",
+    ),
+    "setup.sh early exit": dict(
+        setup="#!/bin/bash\nexit 0\n" + SETUP.split("\n", 1)[1],
+        expect="does not match the pinned script",
+    ),
+    "setup.sh inert echo": dict(
+        setup=SETUP.replace("git config core.hooksPath .githooks",
+                            "echo git config core.hooksPath .githooks"),
+        expect="does not match the pinned script",
     ),
 }
 

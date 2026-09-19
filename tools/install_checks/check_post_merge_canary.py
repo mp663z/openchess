@@ -113,6 +113,11 @@ def run(mode: str) -> None:
         root, gates=[["-c", "import sys; sys.exit(1)"]])
     if not any(sha in p for p in problems):
         uncaught.append(f"failing gate did not name head sha: {problems}")
+    # hung gate times out, naming the head SHA
+    problems = canary.check(
+        root, gates=[["-c", "import time; time.sleep(30)"]], timeout=1)
+    if not any("timed out" in p and sha in p for p in problems):
+        uncaught.append(f"hung gate not reported naming head sha: {problems}")
     if uncaught:
         return  # harness FAILS: a canary defect escaped
     raise CheckError("all seeded canary defects caught")

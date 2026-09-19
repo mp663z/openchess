@@ -123,14 +123,27 @@ def verify(
             fresh_copy(root, dest)
         except (subprocess.CalledProcessError, RuntimeError) as exc:
             return problems + [f"clean-copy preparation failed: {exc}"]
-        setup_rc = subprocess.run(
-            ["bash", "tools/setup.sh"], cwd=dest,
-            env=scrub_env(env),
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        ).returncode
+        clean_env = scrub_env(env)
+        # HOME isolation: a fresh temp HOME per clean run, so a gate whose
+        # verdict depends on $HOME-resident state cannot pass both sides and
+        # evade divergence detection.
+        clean_home = Path(td) / "home"
+        clean_home.mkdir()
+        clean_env["HOME"] = str(clean_home)
+        try:
+            setup_rc = subprocess.run(
+                ["bash", "tools/setup.sh"], cwd=dest,
+                env=clean_env, timeout=60,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            ).returncode
+        except subprocess.TimeoutExpired:
+            setup_rc = 124  # a hung setup is a failed setup
         if setup_rc != 0:
-            problems.append("documented setup (tools/setup.sh) failed in the clean copy")
-        rc_clean = _run(cmd, dest, scrub_env(env), timeout)
+            problems.append(
+                f"documented setup (tools/setup.sh) failed in the clean copy "
+                f"(exit {setup_rc})"
+            )
+        rc_clean = _run(cmd, dest, clean_env, timeout)
     if rc_clean != 0:
         problems.append(
             f"clean-copy gate run failed (exit {rc_clean}): the in-tree pass "

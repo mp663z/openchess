@@ -32,10 +32,17 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 POLICY = ROOT / "data" / "branch-protection.yaml"
 
-# The documented fresh-clone install step; tools/setup.sh must carry it
-# verbatim so any clone (CI, clean verifier, a new contributor) can install
-# the machinery hermetically.
-REQUIRED_SETUP_LINE = "git config core.hooksPath .githooks"
+# The documented fresh-clone install step; tools/setup.sh must equal this
+# pinned script exactly (shebang + every non-comment, non-blank line) so any
+# clone (CI, clean verifier, a new contributor) installs the machinery
+# hermetically. An early exit or inert echo before the config line fails.
+REQUIRED_SETUP_SHEBANG = "#!/bin/bash"
+REQUIRED_SETUP_LINES = [
+    "set -e",
+    'cd "$(git rev-parse --show-toplevel)"',
+    "git config core.hooksPath .githooks",
+]
+REQUIRED_SETUP_LINE = REQUIRED_SETUP_LINES[-1]
 
 REQUIRED_HOOK_SHEBANG = "#!/bin/bash"
 
@@ -170,10 +177,18 @@ def verify_setup(root: Path) -> list[str]:
         return ["tools/setup.sh missing: no documented fresh-clone install step"]
     if not (setup.stat().st_mode & stat.S_IXUSR):
         problems.append("tools/setup.sh is not executable")
-    if REQUIRED_SETUP_LINE not in setup.read_text().splitlines():
+    lines = setup.read_text().splitlines()
+    if not lines or lines[0] != REQUIRED_SETUP_SHEBANG:
         problems.append(
-            f"tools/setup.sh does not contain exactly: {REQUIRED_SETUP_LINE}"
+            f"tools/setup.sh shebang must be exactly {REQUIRED_SETUP_SHEBANG!r}"
         )
+    effective = [
+        ln for ln in lines[1:]
+        if ln.strip() and not ln.lstrip().startswith("#")
+    ]
+    if effective != REQUIRED_SETUP_LINES:
+        diff = first_diff(REQUIRED_SETUP_LINES, effective, "setup")
+        problems.append(f"tools/setup.sh does not match the pinned script: {diff}")
     return problems
 
 

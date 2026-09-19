@@ -58,11 +58,14 @@ def validate(
         dates: dict[str, datetime.date] = {}
         for field in ("added", "expires"):
             v = e[field]
-            if isinstance(v, datetime.date):
+            if isinstance(v, datetime.datetime):
+                problems.append(
+                    f"entry {i}: {field} must be an ISO date, got datetime {v!r}"
+                )
+            elif isinstance(v, datetime.date):
                 dates[field] = v  # PyYAML parses ISO dates natively
-                continue
-            if _is_iso(str(v)):
-                dates[field] = datetime.date.fromisoformat(str(v))
+            elif isinstance(v, str) and _is_iso(v):
+                dates[field] = datetime.date.fromisoformat(v)
             else:
                 problems.append(f"entry {i}: {field} must be an ISO date, got {v!r}")
         if "added" in dates and "expires" in dates:

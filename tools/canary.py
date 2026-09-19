@@ -60,15 +60,25 @@ def head_sha(root: Path = ROOT) -> str:
     return out.stdout.strip()
 
 
-def check(root: Path = ROOT, gates: list[list[str]] | None = None) -> list[str]:
+GATE_TIMEOUT_S = 900  # a hung gate is a failed gate
+
+
+def check(root: Path = ROOT, gates: list[list[str]] | None = None,
+          timeout: int = GATE_TIMEOUT_S) -> list[str]:
     """Run every gate against root; each failure names the head SHA."""
     problems: list[str] = []
     sha = head_sha(root)
     for gate in gates if gates is not None else full_gates():
-        rc = subprocess.run(
-            [sys.executable, *gate], cwd=root,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        ).returncode
+        try:
+            rc = subprocess.run(
+                [sys.executable, *gate], cwd=root, timeout=timeout,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            ).returncode
+        except subprocess.TimeoutExpired:
+            problems.append(
+                f"head {sha}: gate {' '.join(gate)} timed out after {timeout}s"
+            )
+            continue
         if rc != 0:
             problems.append(f"head {sha}: gate {' '.join(gate)} exited {rc}")
     return problems

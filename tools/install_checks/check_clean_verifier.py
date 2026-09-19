@@ -70,7 +70,19 @@ def run(mode: str) -> None:
     problems = clean_verify.verify(root, cmd=["ok.py"], env=poisoned, timeout=1)
     if not any("exit 124" in p for p in problems):
         uncaught.append(f"timeout not treated as failure: {problems}")
-    # (c) leaked-env-dependent pass must be caught in the clean copy
+    # (c) $HOME-dependent pass must diverge under the fresh clean-copy HOME
+    root = _fixture_repo(
+        "import os, sys, pathlib\n"
+        "sys.exit(0 if (pathlib.Path(os.environ['HOME']) / 'marker').exists()"
+        " else 1)\n"
+    )
+    fake_home = Path(tempfile.mkdtemp())
+    (fake_home / "marker").write_text("x")
+    env = {"PATH": os.environ.get("PATH", ""), "HOME": str(fake_home)}
+    problems = clean_verify.verify(root, cmd=["ok.py"], env=env)
+    if not any("clean-copy" in p or "diverges" in p for p in problems):
+        uncaught.append(f"HOME-dependent pass not caught: {problems}")
+    # (d) leaked-env-dependent pass must be caught in the clean copy
     root = _fixture_repo(
         'import os, sys\nsys.exit(0 if os.environ.get("LEAK_OK") == "1" else 1)\n'
     )

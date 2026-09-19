@@ -67,13 +67,24 @@ CASES = {
         [_entry(added="2026-10-01", expires="2026-09-30")],
         "before added",
     ),
+    "integer date coerced": (
+        [_entry(added=20260901, expires=20261231)],
+        "must be an ISO date",
+    ),
+    "datetime is not a date": (
+        [_entry(added=datetime.datetime(2026, 9, 1, 12, 0))],
+        "must be an ISO date",
+    ),
 }
 
 
 def run(mode: str) -> None:
     if mode == "good":
         entries = flake_quarantine.load()
-        collected = flake_quarantine.collected_tests()
+        try:
+            collected = flake_quarantine.collected_tests()
+        except RuntimeError as exc:
+            raise CheckError(f"pytest collection failed: {exc}") from exc
         problems = flake_quarantine.validate(entries, collected)
         if not flake_quarantine.gate_set(collected, entries):
             problems.append("gate set is empty")
