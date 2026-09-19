@@ -16,6 +16,8 @@ jobs:
           python-version: "3.12"
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
+      - name: Install git hooks
+        run: bash tools/setup.sh
       - name: Release lock is current
         run: python tools/lock_release.py --check
       - name: Lint
@@ -32,8 +34,6 @@ jobs:
         run: python tools/license_lint.py
       - name: Governance docs lint
         run: python tools/governance_doc_lint.py
-      - name: Install git hooks
-        run: bash tools/setup.sh
       - name: Install checks (good passes, seeded violation caught)
         run: python -m tools.install_checks.runner
       - name: CLA gate
