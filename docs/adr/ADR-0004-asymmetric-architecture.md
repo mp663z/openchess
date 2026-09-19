@@ -42,6 +42,10 @@ data_flow:
 phone_training:
   surface: web-pwa
   export_required: false
+web_offline_capable:
+  - queue
+  - approval
+  - training
 external_providers:
   hosted-byom:
     allowed: true
@@ -144,9 +148,12 @@ privacy and cost together.
 - Heavy compute runs only on desktop: import, index, stockfish,
   model-inference and delta are desktop-owned; web and server run
   none of them.
-- The full loop runs offline on desktop: import, index, stockfish,
-  model-inference, delta, queue, approval, training and export
-  complete with no network; only sync transport needs one.
+- The full loop runs offline: the desktop-owned operations import,
+  index, stockfish, model-inference, delta and export run on desktop
+  with no network, and the web-owned habit operations queue, approval
+  and training are offline-capable in the PWA over its synced decrypted
+  local cache, synchronized with desktop authority; only sync
+  transport needs one.
 - The server never receives or stores plaintext content or keys; it
   stores ciphertext blobs and account entitlements only.
 - Phone training goes through the web/PWA surface over encrypted
