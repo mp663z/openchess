@@ -56336,11 +56336,13 @@
    "verification": "human/architecture review",
    "resource": "security/privacy review",
    "checkpoint": "ARCH",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel/crypto diff + verifier",
    "tags": [],
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "e6ad1846cb5e0152dab2a88594f95e0d38825230",
+   "evidence_manifest": "evidence/T2793.md"
   },
   {
    "id": "T2794",
@@ -56356,11 +56358,13 @@
    "verification": "human/architecture review",
    "resource": "security/privacy review",
    "checkpoint": "ARCH",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel/crypto diff + verifier",
    "tags": [],
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "9f137235ec710e6e1008138c3d9b542ffd1c4372",
+   "evidence_manifest": "evidence/T2794.md"
   },
   {
    "id": "T2795",
