@@ -309,3 +309,29 @@ def test_spec_provenance_exact():
     _bad(lambda d: d["spec_provenance"]
          .__setitem__("endpoint_spec_last_commit", "2026-09-01"), "top-c")
     _bad(lambda d: d["spec_provenance"].__setitem__("bogus", 1), "top-c")
+
+
+def test_request_boundary_constraints():
+    """Boundary family (v3): spec-minimum timestamps and the closed
+    PerfType enum are exactly pinned."""
+    # minimum deleted / lowered / raised / wrong type
+    _bad(lambda d: d["request"]["params"]["since"].__delitem__("min"))
+    _bad(lambda d: d["request"]["params"]["since"]
+         .__setitem__("min", 1356998400069))
+    _bad(lambda d: d["request"]["params"]["until"]
+         .__setitem__("min", 1356998400071))
+    _bad(lambda d: d["request"]["params"]["until"]
+         .__setitem__("min", "1356998400070"))
+    _bad(lambda d: d["request"]["params"]["since"]
+         .__setitem__("min", True))  # bool is not the integer min
+    # perfType enum deleted / shrunk / extended / reordered
+    _bad(lambda d: d["request"]["params"]["perfType"].__delitem__("enum"))
+    _bad(lambda d: d["request"]["params"]["perfType"]["enum"].remove("atomic"))
+    _bad(lambda d: d["request"]["params"]["perfType"]["enum"]
+         .append("garbage"))
+    _bad(lambda d: d["request"]["params"]["perfType"]["enum"].reverse())
+    _bad(lambda d: d["request"]["params"]["perfType"]
+         .__setitem__("enum", "bullet"))
+    # csv semantics retained: type flip rejected
+    _bad(lambda d: d["request"]["params"]["perfType"]
+         .__setitem__("type", "string"))

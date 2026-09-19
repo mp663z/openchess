@@ -46,12 +46,15 @@ contract:
     headers:
       Accept: {required: true, value: application/x-ndjson}
     params:
-      since: {type: integer-ms, required: false}
-      until: {type: integer-ms, required: false}
+      since: {type: integer-ms, min: 1356998400070, required: false}
+      until: {type: integer-ms, min: 1356998400070, required: false}
       max: {type: integer, min: 1, required: false}
       vs: {type: string, required: false}
       rated: {type: boolean, required: false}
-      perfType: {type: string-csv, required: false}
+      perfType: {type: string-csv, enum: [ultraBullet, bullet, blitz,
+        rapid, classical, correspondence, chess960, crazyhouse,
+        antichess, atomic, horde, kingOfTheHill, racingKings,
+        threeCheck], required: false}
       color: {type: string, enum: [white, black], required: false}
       analysed: {type: boolean, required: false}
       moves: {type: boolean, default: true, required: false}

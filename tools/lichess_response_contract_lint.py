@@ -65,12 +65,18 @@ REQUIRED_VIOLATION = {"effect": "reject-record", "error": "malformed_request",
 UNKNOWN_FIELD_STORAGE = "never-stored"
 STATUS_VIOLATION = {"effect": "reject-record", "error": "malformed_request"}
 PARAMS = {
-    "since": {"type": "integer-ms", "required": False},
-    "until": {"type": "integer-ms", "required": False},
+    "since": {"type": "integer-ms", "min": 1356998400070,
+              "required": False},
+    "until": {"type": "integer-ms", "min": 1356998400070,
+              "required": False},
     "max": {"type": "integer", "min": 1, "required": False},
     "vs": {"type": "string", "required": False},
     "rated": {"type": "boolean", "required": False},
-    "perfType": {"type": "string-csv", "required": False},
+    "perfType": {"type": "string-csv", "enum": [
+        "ultraBullet", "bullet", "blitz", "rapid", "classical",
+        "correspondence", "chess960", "crazyhouse", "antichess",
+        "atomic", "horde", "kingOfTheHill", "racingKings",
+        "threeCheck"], "required": False},
     "color": {"type": "string", "enum": ["white", "black"],
               "required": False},
     "analysed": {"type": "boolean", "required": False},
