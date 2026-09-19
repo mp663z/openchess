@@ -56382,11 +56382,13 @@
    "verification": "human/architecture review",
    "resource": "security/privacy review",
    "checkpoint": "ARCH",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel/crypto diff + verifier",
    "tags": [],
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "1e9433c23198b4e9c0d01d905d1c74697bd68197",
+   "evidence_manifest": "evidence/T2795.md"
   },
   {
    "id": "T2796",
