@@ -11,3 +11,4 @@ build/
 /data/normalized/
 !/data/raw/.gitkeep
 !/data/normalized/.gitkeep
+.venv
