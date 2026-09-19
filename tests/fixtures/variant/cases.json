@@ -2,7 +2,7 @@
   "schema": "variant-fixture-1",
   "contract": "data/contracts/variant.yaml",
   "contract_schema_version": 1,
-  "notes": "T0042: conformance cases for the chess variant + position-identity contract. Every case is checked against the contract itself (declared variants, failure classes, canonical fields); T0043 turns them red against implementations.",
+  "notes": "T0042: conformance cases for the chess variant + position-identity contract. Strict shapes throughout: an unknown key, a typo'd expectation, or a duplicate name is a violation, never inert data. Boundary cases are structured records carrying the variant id; identity is the exact five-field canonical tuple [variant, board, side_to_move, castling_rights, en_passant]. A deferred case is an explicit NON-executable marker with a re-verify hook, never a behavior claim. T0043 turns these cases red against implementations.",
   "happy": [
     {
       "name": "orthodox-start",
@@ -46,44 +46,58 @@
       "name": "identity-ignores-counters",
       "note": "same position, different half/fullmove counters: identity MUST be equal (counters are metadata, never identity)",
       "pair": [
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 7 42"
+        {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"},
+        {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 7 42"}
       ],
+      "changed_fields": [],
       "expect": "identical"
+    },
+    {
+      "name": "identity-differs-board",
+      "pair": [
+        {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"},
+        {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"}
+      ],
+      "changed_fields": ["board"],
+      "expect": "different"
     },
     {
       "name": "identity-differs-side-to-move",
       "pair": [
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"
+        {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"},
+        {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"}
       ],
+      "changed_fields": ["side_to_move"],
+      "expect": "different"
+    },
+    {
+      "name": "identity-differs-castling",
+      "pair": [
+        {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"},
+        {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b Kkq - 0 1"}
+      ],
+      "changed_fields": ["castling_rights"],
       "expect": "different"
     },
     {
       "name": "identity-differs-en-passant",
       "note": "the EP base state is a reachable one (black pawn d4 can capture)",
       "pair": [
-        "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 2",
-        "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2"
+        {"variant": "standard", "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 2"},
+        {"variant": "standard", "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2"}
       ],
+      "changed_fields": ["en_passant"],
       "expect": "different"
     },
     {
-      "name": "identity-differs-castling",
-      "pair": [
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b Kkq - 0 1"
-      ],
-      "expect": "different"
-    },
-    {
-      "name": "identity-includes-variant-field",
-      "note": "identity carries the variant id: the same board under a different variant is a DIFFERENT position. A two-variant pair lands when the registry gains a second variant; this case pins the field's presence in every identity tuple.",
-      "pair": [
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
-      ],
-      "expect": "identical"
+      "name": "identity-differs-variant",
+      "note": "identity carries the variant id: the same board under a different variant is a DIFFERENT position",
+      "changed_fields": ["variant"],
+      "expect": "different",
+      "deferred": {
+        "reason": "the contract registry declares a single variant (standard); a two-variant pair is not expressible without inventing a variant the contract does not declare - presence of the field in every identity tuple is enforced via the happy/boundary shapes instead",
+        "reverify": "when variants.entries gains a second id, replace this marker with an executable pair spanning both declared variants and drop the deferred block"
+      }
     }
   ],
   "malformed": [
@@ -164,14 +178,25 @@
   "rollback": [
     {
       "name": "unknown-variant-fails-closed",
-      "note": "a consumer at an earlier MINOR meets a variant id it does not know: fail closed (malformed_request), never coerce to standard",
-      "variant": "crazyhouse",
+      "kind": "unknown-variant",
+      "note": "a consumer at an earlier MINOR meets a variant id it does not know: fail closed (malformed_request), never coerce to standard. The FEN payload is fully legal, so the failure is attributable to the variant id alone.",
+      "input": {
+        "variant": "crazyhouse",
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+      },
       "expect_failure": "malformed_request",
       "expect_error_code": "malformed_request"
     },
     {
       "name": "extra-fields-tolerated",
-      "note": "a consumer at an earlier MINOR must not assert absence of additive fields/variants; conformance asserts presence of declared behavior only"
+      "kind": "additive-fields",
+      "note": "a consumer at an earlier MINOR must not assert absence of additive fields: the canonical-field projection of an augmented record is unchanged",
+      "base_case": "orthodox-start",
+      "extra_fields": {
+        "future_optional_field": "minor-v2-data",
+        "variant_display_hint": "Standard"
+      },
+      "expect": "identity_unchanged"
     }
   ]
 }

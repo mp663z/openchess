@@ -312,6 +312,18 @@ def _check_fen(fen: object, where: str, castling_kind: str) -> None:
         _check_ep_semantics(grid, ep, side, where)
 
 
+def check_variant_id(vid: object, known: set[str]) -> None:
+    """Registry gate for position records: every record carries a
+    variant id from the contract registry; unknown ids fail closed as
+    malformed_request and are NEVER coerced to standard (the T0041
+    registry_rule made executable for fixture validation)."""
+    _need(type(vid) is str, "malformed_request: variant id must be a string")
+    _need(
+        vid in known,
+        f"malformed_request: unknown variant id {vid!r} - fail closed, never coerced to standard",
+    )
+
+
 def _check_shape(node: object, expected: dict, where: str) -> None:
     node = _mapping(node, where)
     _keys(node, set(expected), where)  # same non-string/exact-key gate
