@@ -265,6 +265,52 @@ MUTATIONS_V4 = {
 
 MUTATIONS.update(MUTATIONS_V4)
 
+MUTATIONS_V5 = {
+    # verifier probes on 8187e49 - each previously crashed or passed
+    "ep_missing_black_king": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "8/8/8/8/3pP3/8/8/K7 b - e3 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "ep_missing_white_king": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "7k/8/8/3pP3/8/8/8/8 w - d6 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "ep_two_white_kings": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "7k/8/8/3pP3/8/8/8/KK6 w - d6 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "board_digit_zero": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(
+        "start_fen", "07k/8/8/8/8/8/8/K7 w - - 0 1"
+    ),
+    "board_digit_nine": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(
+        "start_fen", "9k/8/8/8/8/8/8/K7 w - - 0 1"
+    ),
+    "board_adjacent_digits": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(
+        "start_fen", "11k5/8/8/8/8/8/8/K7 w - - 0 1"
+    ),
+    "counters_leading_zeros": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(
+        "start_fen",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 00 01",
+    ),
+}
+
+MUTATIONS.update(MUTATIONS_V5)
+
 
 def _doc_with_start(fen, castling="orthodox"):
     doc = copy.deepcopy(DOC)
@@ -316,3 +362,22 @@ def test_each_mutation_is_rejected(name):
 def test_non_dict_document_is_rejected():
     with pytest.raises(ContractError):
         lint(["not", "a", "mapping"])
+
+
+def test_cli_rejects_malformed_without_traceback(tmp_path, capsys):
+    """Every malformed contract must exit 1 with a classified FAIL, not
+    an uncaught exception."""
+    from tools.variant_contract_lint import main
+
+    for fen in (
+        "8/8/8/8/3pP3/8/8/K7 b - e3 0 1",  # missing black king (StopIteration probe)
+        "7k/8/8/3pP3/8/8/8/8 w - d6 0 1",  # missing white king
+        "07k/8/8/8/8/8/8/K7 w - - 0 1",  # digit 0
+    ):
+        doc = _doc_with_start(fen)
+        path = tmp_path / "contract.yaml"
+        path.write_text(yaml.safe_dump(doc))
+        assert main(["prog", str(path)]) == 1
+        out = capsys.readouterr()
+        assert out.out.startswith("FAIL variant contract lint:")
+        assert "Traceback" not in out.err

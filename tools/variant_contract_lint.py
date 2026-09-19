@@ -111,11 +111,19 @@ def _parse_board(board: str, where: str) -> list[list[str]]:
     grid: list[list[str]] = []
     for rank in ranks:
         row: list[str] = []
+        prev_digit = False
         for ch in rank:
             if ch.isdigit():
+                _need(
+                    ch in "12345678",
+                    f"{where}: FEN empty-square digits are exactly 1-8, got {ch!r}",
+                )
+                _need(not prev_digit, f"{where}: adjacent digits are noncanonical FEN")
+                prev_digit = True
                 row.extend(["."] * int(ch))
             else:
                 _need(ch in PIECE_CHARS, f"{where}: bad piece char {ch!r}")
+                prev_digit = False
                 row.append(ch)
         _need(len(row) == 8, f"{where}: every rank must have 8 squares")
         grid.append(row)
@@ -182,8 +190,10 @@ def _ep_capture_legal(
         sim[row][cf] = "."
         sim[row][file_idx] = "."
         sim[ep_row][file_idx] = enemy
-        kr, kc = next((r, c) for r in range(8) for c in range(8) if sim[r][c] == king_char)
-        if not _attacks(sim, kr, kc, by_white=(side == "b")):
+        kings = [(r, c) for r in range(8) for c in range(8) if sim[r][c] == king_char]
+        if len(kings) != 1:
+            continue  # malformed position: no capture counts as legal
+        if not _attacks(sim, kings[0][0], kings[0][1], by_white=(side == "b")):
             return True
     return False
 
@@ -288,13 +298,17 @@ def _check_fen(fen: object, where: str, castling_kind: str) -> None:
         ep == "-" or (len(ep) == 2 and ep[0] in "abcdefgh" and ep[1] in "36"),
         f"{where}: en-passant field malformed",
     )
-    if ep != "-":
-        _check_ep_semantics(grid, ep, side, where)
     _need(
-        half.isdigit() and full.isdigit() and int(full) >= 1,
-        f"{where}: counters must be non-negative/positive ints",
+        half.isdigit()
+        and full.isdigit()
+        and int(full) >= 1
+        and half == str(int(half))
+        and full == str(int(full)),
+        f"{where}: counters must be canonical non-negative/positive ints (no leading zeros)",
     )
     _check_position_semantics(grid, castling, side, castling_kind, where)
+    if ep != "-":
+        _check_ep_semantics(grid, ep, side, where)
 
 
 def _check_shape(node: object, expected: dict, where: str) -> None:
