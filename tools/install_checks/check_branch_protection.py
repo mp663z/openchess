@@ -83,7 +83,7 @@ def _step(ci: dict, name: str) -> dict:
 
 def _reordered(lines):
     lines = list(lines)
-    i, j = lines.index("ruff check ."), lines.index("pytest -q")
+    i, j = lines.index("ruff check ."), lines.index("python tools/test_gate.py")
     lines[i], lines[j] = lines[j], lines[i]
     return lines
 
@@ -91,7 +91,7 @@ def _reordered(lines):
 CASES = {
     "hook missing a gate": dict(
         hook=_hook_text([ln for ln in branch_guard.REQUIRED_HOOK_LINES
-                         if ln != "pytest -q"]),
+                         if ln != "python tools/test_gate.py"]),
         expect="does not match the pinned script",
     ),
     "hook not executable": dict(

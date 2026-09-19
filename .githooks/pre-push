@@ -7,7 +7,7 @@ cd "$(git rev-parse --show-toplevel)"
 "$(dirname "$0")/tree-guard.sh"
 if [ -d .venv ]; then . .venv/bin/activate; fi
 ruff check .
-pytest -q
+python tools/test_gate.py
 python tools/dag.py verify
 python tools/evidence_lint.py
 python tools/license_audit.py

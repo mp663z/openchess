@@ -11,9 +11,12 @@ extra key, empty gate set - each caught for its own reason.
 from __future__ import annotations
 
 import datetime
+import tempfile
 from pathlib import Path
 
-from tools import flake_quarantine
+import yaml
+
+from tools import flake_quarantine, test_gate
 from tools.install_checks import CheckError
 
 CHECK_ID = "T0037"
@@ -78,6 +81,41 @@ CASES = {
 }
 
 
+def _fixture_tree(quarantine: dict | None) -> Path:
+    """One passing test, one deliberately failing test, plus the quarantine
+    file (None = file absent)."""
+    root = Path(tempfile.mkdtemp())
+    (root / "tests").mkdir()
+    (root / "tests" / "test_ok.py").write_text("def test_ok():\n    assert True\n")
+    (root / "tests" / "test_flaky.py").write_text(
+        "def test_bad():\n    assert False\n")
+    if quarantine is not None:
+        (root / "data").mkdir()
+        (root / "data" / "flake-quarantine.yaml").write_text(
+            yaml.safe_dump(quarantine))
+    return root
+
+
+Q_ENTRY = {"test_id": "tests/test_flaky.py::test_bad", "reason": "seeded flake",
+           "added": "2026-09-01", "expires": "2099-01-01"}
+
+
+def _integration_cases() -> dict:
+    return {
+        "quarantined failing test excluded": (
+            _fixture_tree({"tests": [Q_ENTRY]}), None),
+        "entry removed -> gate fails": (
+            _fixture_tree({"tests": []}), "test gate failed"),
+        "entry expired -> gate fails": (
+            _fixture_tree({"tests": [{**Q_ENTRY, "expires": "2026-09-01"}]}),
+            "expired"),
+        "non-quarantined failure still fails": (
+            _fixture_tree({"tests": [{**Q_ENTRY,
+                                      "test_id": "tests/test_ok.py::test_ok"}]}),
+            "test gate failed"),
+    }
+
+
 def run(mode: str) -> None:
     if mode == "good":
         entries = flake_quarantine.load()
@@ -103,12 +141,20 @@ def run(mode: str) -> None:
     if flake_quarantine.gate_set(COLLECTED, all_quarantined):
         uncaught.append("empty gate set not detected")
     # pytest collection failure must fail closed, not yield an empty set
-    import tempfile
     try:
         flake_quarantine.collected_tests(Path(tempfile.mkdtemp()))
         uncaught.append("collection failure did not raise")
     except RuntimeError:
         pass
+    # integration: the executable gate honors the quarantine
+    integ = _integration_cases()
+    for label, (root, expect) in integ.items():
+        problems = test_gate.gate_problems(root)
+        if expect is None:
+            if problems:
+                uncaught.append(f"{label}: expected pass, got {problems}")
+        elif not any(expect in p for p in problems):
+            uncaught.append(f"{label}: expected {expect!r}, got {problems}")
     if uncaught:
         return  # harness FAILS: a quarantine defect escaped
     raise CheckError("all seeded quarantine defects caught")

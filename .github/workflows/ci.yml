@@ -19,7 +19,7 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Tests
-        run: pytest -q
+        run: python tools/test_gate.py
       - name: DAG integrity
         run: python tools/dag.py verify
       - name: Evidence contract

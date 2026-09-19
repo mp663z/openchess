@@ -98,6 +98,8 @@ def run(mode: str) -> None:
         full = canary.full_gates()
         if not any("tools.install_checks.runner" in g for g in full):
             raise CheckError("canary gates must include the nested runner")
+        if canary.TEST_GATE not in full:
+            raise CheckError("canary gates must include the test gate")
         if "T0039" not in runner.INNER_EXCLUDE:
             raise CheckError("nested runner must exclude T0039 (recursion)")
         return

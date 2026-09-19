@@ -28,8 +28,12 @@ from tools.install_checks import runner  # noqa: E402
 WORKFLOW = ROOT / ".github" / "workflows" / "canary.yml"
 
 # The merge-relevant gate set, re-run verbatim against the checked-out HEAD.
-# full_gates() appends the nested install-check runner (checks that shell
-# the runner are excluded, or the canary would recurse into itself).
+# full_gates() (direct `python tools/canary.py`, e.g. the canary workflow)
+# appends the quarantine-aware test gate and the nested install-check runner
+# (checks that shell the runner are excluded, or the canary would recurse
+# into itself). static_gates() omits the test gate: under the install-check
+# runner the Tests step / an enclosing test_gate run already covers it, and
+# including it would recurse (test_gate -> pytest -> runner -> canary).
 GATES = [
     ["tools/dag.py", "verify"],
     ["tools/dag_reconcile.py"],
@@ -38,6 +42,7 @@ GATES = [
     ["tools/license_lint.py"],
     ["tools/governance_doc_lint.py"],
 ]
+TEST_GATE = ["tools/test_gate.py"]
 
 
 def static_gates() -> list[list[str]]:
@@ -45,7 +50,7 @@ def static_gates() -> list[list[str]]:
 
 
 def full_gates() -> list[list[str]]:
-    return static_gates() + [runner.nested_cmd()]
+    return [list(TEST_GATE)] + static_gates() + [runner.nested_cmd()]
 
 
 def _git_env() -> dict[str, str]:
