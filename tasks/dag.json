@@ -875,11 +875,13 @@
    "verification": "auto + fault injection",
    "resource": "none",
    "checkpoint": "",
-   "status": "in_progress",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "d0a2ef7c4f3eb2414acff90b8dbf528c3c8a2a23",
+   "evidence_manifest": "evidence/T0040.md"
   },
   {
    "id": "T0041",
