@@ -3,7 +3,16 @@ from pathlib import Path
 
 import pytest
 
-from tools.dag import DagError, claimable, cmd_complete, load, save_atomic, verify
+from tools.dag import (
+    EXPECTED_SCHEMA_VERSION,
+    DagError,
+    claimable,
+    cmd_complete,
+    index,
+    load,
+    save_atomic,
+    verify,
+)
 
 REAL_BOARD_PATH = Path(__file__).resolve().parent.parent / "tasks" / "dag.json"
 
@@ -12,7 +21,7 @@ SHA40 = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4"
 
 def make_board(tmp_path: Path) -> Path:
     board = {
-        "schema_version": "test",
+        "schema_version": EXPECTED_SCHEMA_VERSION,
         "tasks": [
             {
                 "id": "T1",
@@ -111,8 +120,103 @@ def test_real_board_is_valid():
 def test_duplicate_ids_rejected(tmp_path):
     board = json.loads((REAL_BOARD_PATH).read_text())
     board["tasks"].append(dict(board["tasks"][0]))
+    problems = verify(board)
+    assert any("duplicate task id" in p for p in problems)
+    # claimable/index still raise fail-closed on duplicates
     with pytest.raises(DagError, match="duplicate task ids"):
-        verify(board)
+        index(board)
+
+
+def _minimal_task(**over):
+    t = {
+        "id": "T1", "title": "t", "acceptance": "a", "verification": "v",
+        "status": "todo", "dependencies": [], "milestone": "m", "phase": "p",
+        "roadmap_layer": "r", "spine_outcome": "s", "track": "x", "week": 1,
+    }
+    t.update(over)
+    return t
+
+
+def test_null_dependencies_reported_not_crash():
+    problems = verify({"tasks": [_minimal_task(dependencies=None)]})
+    assert any("dependencies must be a list" in p for p in problems)
+
+
+def test_nonstring_dependency_rejected():
+    problems = verify({"tasks": [_minimal_task(dependencies=[123])]})
+    assert any("dependency must be a string" in p for p in problems)
+
+
+def test_null_id_rejected():
+    problems = verify({"tasks": [_minimal_task(id=None)]})
+    assert any("non-empty string" in p for p in problems)
+
+
+def test_empty_id_rejected():
+    problems = verify({"tasks": [_minimal_task(id="")]})
+    assert any("non-empty string" in p for p in problems)
+
+
+def test_nonstring_title_rejected():
+    problems = verify({"tasks": [_minimal_task(title=123)]})
+    assert any("title must be a string" in p for p in problems)
+
+
+def test_tasks_not_a_list_rejected():
+    problems = verify({"schema_version": EXPECTED_SCHEMA_VERSION, "tasks": None})
+    assert problems == ["board: tasks must be a list"]
+
+
+def test_missing_schema_version_rejected():
+    assert any("schema_version" in p for p in verify({"tasks": [_minimal_task()]}))
+
+
+def test_wrong_schema_version_rejected():
+    problems = verify({"schema_version": 99, "tasks": [_minimal_task()]})
+    assert any("schema_version" in p for p in problems)
+
+
+def test_empty_tasks_rejected():
+    problems = verify({"schema_version": EXPECTED_SCHEMA_VERSION, "tasks": []})
+    assert any("tasks list is empty" in p for p in problems)
+
+
+def test_integer_done_sha_rejected():
+    problems = verify({"schema_version": EXPECTED_SCHEMA_VERSION, "tasks": [
+        _minimal_task(status="done", done_sha=1111111111111111111111111111111111111111,
+                      evidence_manifest="evidence/T1.md")]})
+    assert any("done_sha is not a full 40-hex SHA" in p for p in problems)
+
+
+def test_whitespace_padded_id_rejected():
+    problems = verify({"schema_version": EXPECTED_SCHEMA_VERSION,
+                       "tasks": [_minimal_task(id=" T1 ")]})
+    assert any("surrounding whitespace" in p for p in problems)
+
+
+def test_board_not_a_mapping_rejected():
+    assert verify(None) == ["board must be a mapping, got NoneType"]
+    assert verify([]) == ["board must be a mapping, got list"]
+
+
+def test_unhashable_status_rejected_not_crash():
+    problems = verify({"tasks": [_minimal_task(status=[])]})
+    assert any("invalid status" in p for p in problems)
+
+
+def test_duplicate_dependency_rejected_not_cycle():
+    tasks = [_minimal_task(), _minimal_task(id="T2", dependencies=["T1", "T1"])]
+    problems = verify({"tasks": tasks})
+    assert any("duplicate dependency T1" in p for p in problems)
+    assert not any("cycle" in p for p in problems)
+
+
+def test_meta_fields_type_checked():
+    for field, bad in (("milestone", None), ("phase", 123),
+                       ("roadmap_layer", []), ("spine_outcome", {}),
+                       ("track", False), ("week", None)):
+        problems = verify({"tasks": [_minimal_task(**{field: bad})]})
+        assert any(f"{field} must be a string" in p for p in problems), field
 
 
 def test_empty_acceptance_rejected(tmp_path):

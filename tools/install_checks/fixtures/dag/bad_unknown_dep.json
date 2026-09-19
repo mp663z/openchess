@@ -1,0 +1,21 @@
+{
+ "schema_version": 1,
+ "tasks": [
+  {
+   "id": "T1",
+   "title": "t",
+   "acceptance": "a",
+   "verification": "v",
+   "status": "todo",
+   "dependencies": [
+    "T9"
+   ],
+   "milestone": "m",
+   "phase": "p",
+   "roadmap_layer": "r",
+   "spine_outcome": "s",
+   "track": "x",
+   "week": 1
+  }
+ ]
+}
