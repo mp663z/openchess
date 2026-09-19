@@ -94,6 +94,8 @@ def _mapping(node: object, where: str) -> dict:
 
 
 def _keys(node: dict, allowed: set[str], where: str) -> None:
+    for key in node:
+        _need(type(key) is str, f"{where}: non-string key {key!r}")
     unknown = set(node) - allowed
     _need(not unknown, f"{where}: unknown keys {sorted(unknown)}")
     missing = allowed - set(node)
@@ -299,12 +301,11 @@ def _check_fen(fen: object, where: str, castling_kind: str) -> None:
         f"{where}: en-passant field malformed",
     )
     _need(
-        half.isdigit()
-        and full.isdigit()
-        and int(full) >= 1
-        and half == str(int(half))
-        and full == str(int(full)),
-        f"{where}: counters must be canonical non-negative/positive ints (no leading zeros)",
+        re.fullmatch(r"0|[1-9][0-9]{0,9}", half) is not None
+        and re.fullmatch(r"[1-9][0-9]{0,9}", full) is not None,
+        f"{where}: counters must be canonical bounded ints (halfmove "
+        "'0' or 1-9 leading, fullmove >= 1, no leading zeros, at most "
+        "10 digits - conversion never runs on unbounded input)",
     )
     _check_position_semantics(grid, castling, side, castling_kind, where)
     if ep != "-":
@@ -452,6 +453,9 @@ def main(argv: list[str]) -> int:
         lint(doc)
     except ContractError as exc:
         print(f"FAIL variant contract lint: {exc}")
+        return 1
+    except Exception as exc:  # classified rejection, never a traceback
+        print(f"FAIL variant contract lint: internal error: {exc!r}")
         return 1
     print("OK variant contract lint: chess variant + position-identity contract v1 clean")
     return 0

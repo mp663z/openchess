@@ -311,6 +311,23 @@ MUTATIONS_V5 = {
 
 MUTATIONS.update(MUTATIONS_V5)
 
+MUTATIONS_V6 = {
+    # verifier probes on 44503a3
+    "counter_fullmove_huge": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(
+        "start_fen",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 " + "9" * 5000,
+    ),
+    "counter_halfmove_huge": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(
+        "start_fen",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - " + "9" * 5000 + " 1",
+    ),
+    "mixed_type_top_key": lambda d: d.__setitem__(5, "x"),
+    "mixed_type_contract_key": lambda d: d["contract"].__setitem__(7, "x"),
+    "mixed_type_entry_key": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(9, "x"),
+}
+
+MUTATIONS.update(MUTATIONS_V6)
+
 
 def _doc_with_start(fen, castling="orthodox"):
     doc = copy.deepcopy(DOC)
@@ -362,6 +379,57 @@ def test_each_mutation_is_rejected(name):
 def test_non_dict_document_is_rejected():
     with pytest.raises(ContractError):
         lint(["not", "a", "mapping"])
+
+
+CLI_MATRIX = [
+    "8/8/8/8/3pP3/8/8/K7 b - e3 0 1",  # missing black king
+    "7k/8/8/3pP3/8/8/8/8 w - d6 0 1",  # missing white king
+    "07k/8/8/8/8/8/8/K7 w - - 0 1",  # digit 0
+    "7k/8/8/8/8/8/8/K7 w - - 0 " + "9" * 5000,  # oversized fullmove
+    "7k/8/8/8/8/8/8/K7 w - - " + "9" * 5000 + " 1",  # oversized halfmove
+]
+
+
+@pytest.mark.parametrize("fen", CLI_MATRIX)
+def test_cli_malformed_matrix(tmp_path, capsys, fen):
+    from tools.variant_contract_lint import main
+
+    path = tmp_path / "contract.yaml"
+    path.write_text(yaml.safe_dump(_doc_with_start(fen)))
+    assert main(["prog", str(path)]) == 1
+    out = capsys.readouterr()
+    assert out.out.startswith("FAIL variant contract lint:")
+    assert "Traceback" not in out.err
+
+
+@pytest.mark.parametrize("level", ["top", "contract", "entry"])
+def test_cli_mixed_type_keys(tmp_path, capsys, level):
+    from tools.variant_contract_lint import main
+
+    doc = copy.deepcopy(DOC)
+    if level == "top":
+        doc[5] = "x"
+    elif level == "contract":
+        doc["contract"][5] = "x"
+    else:
+        doc["contract"]["variants"]["entries"][0][5] = "x"
+    path = tmp_path / "contract.yaml"
+    path.write_text(yaml.safe_dump(doc))
+    assert main(["prog", str(path)]) == 1
+    out = capsys.readouterr()
+    assert out.out.startswith("FAIL variant contract lint:")
+    assert "Traceback" not in out.err
+
+
+def test_cli_unhashable_yaml_key(tmp_path, capsys):
+    from tools.variant_contract_lint import main
+
+    path = tmp_path / "contract.yaml"
+    path.write_text("?\n- 1\n- 2\n: value\n")
+    assert main(["prog", str(path)]) == 1
+    out = capsys.readouterr()
+    assert out.out.startswith("FAIL variant contract lint:")
+    assert "Traceback" not in out.err
 
 
 def test_cli_rejects_malformed_without_traceback(tmp_path, capsys):
