@@ -12,7 +12,10 @@ misclassification means the harness cannot tell green from broken.
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 from tools import fault_inject as fi
@@ -53,6 +56,76 @@ def run(mode: str) -> None:
             _cmd(str(FIXTURES / "sigterm_swallow.py")), "kill", timeout=5)
         if out.kind != "crash" or "swallowed" not in out.detail:
             problems.append(f"kill: swallowed SIGTERM classified {out.kind}")
+
+        # Group-kill probe: a gate whose forked child holds the pipes must
+        # still die at the timeout - the kill has to reach the process
+        # group, not just the direct child.
+        pidfile = Path(tempfile.mkdtemp()) / "child.pid"
+        os.environ["FAULT_CHILD_PIDFILE"] = str(pidfile)
+        try:
+            started = time.monotonic()
+            out = fi.run_under(
+                _cmd(str(FIXTURES / "spawn_child_ignore_term.py")),
+                "kill", timeout=2)
+            elapsed = time.monotonic() - started
+        finally:
+            os.environ.pop("FAULT_CHILD_PIDFILE", None)
+        if out.kind != "crash":
+            problems.append(f"group-kill: classified {out.kind}")
+        if elapsed > 6:
+            problems.append(
+                f"group-kill: took {elapsed:.1f}s for a 2s timeout - "
+                "a pipe-holding child survived")
+        child_gone = False
+        if pidfile.exists():
+            child_pid = int(pidfile.read_text().strip())
+            for _ in range(30):
+                try:
+                    os.kill(child_pid, 0)
+                except ProcessLookupError:
+                    child_gone = True
+                    break
+                time.sleep(0.1)
+        if not child_gone:
+            problems.append("group-kill: forked child survived the kill")
+
+        # Mutation probe: with group signaling reverted to direct-process
+        # signaling, the probe above MUST fail - otherwise it proves
+        # nothing about the group kill.
+        def _direct_only(proc, sig):
+            try:
+                proc.send_signal(sig)
+            except ProcessLookupError:
+                pass
+
+        original = fi._signal_group
+        fi._signal_group = _direct_only
+        try:
+            pidfile2 = Path(tempfile.mkdtemp()) / "child.pid"
+            os.environ["FAULT_CHILD_PIDFILE"] = str(pidfile2)
+            try:
+                started = time.monotonic()
+                fi.run_under(
+                    _cmd(str(FIXTURES / "spawn_child_ignore_term.py")),
+                    "kill", timeout=2)
+                mutated_elapsed = time.monotonic() - started
+            finally:
+                os.environ.pop("FAULT_CHILD_PIDFILE", None)
+        finally:
+            fi._signal_group = original
+        survived = False
+        if pidfile2.exists():
+            child_pid = int(pidfile2.read_text().strip())
+            try:
+                os.kill(child_pid, 0)
+                survived = True
+                os.kill(child_pid, 9)  # clean up the mutation-run survivor
+            except ProcessLookupError:
+                pass
+        if not (survived or mutated_elapsed > 6):
+            problems.append(
+                "mutation: direct-only signaling was NOT detected - the "
+                "group-kill probe proves nothing")
         if problems:
             raise CheckError("; ".join(problems))
         return

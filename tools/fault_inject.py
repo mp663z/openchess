@@ -53,6 +53,26 @@ def classify_rc(returncode: int, stderr: str) -> Outcome:
         return Outcome("crash", f"terminated by signal {-returncode}")
     return Outcome("crash", f"exit {returncode}")
 
+def _popen_group(cmd: list[str], env: dict[str, str]) -> subprocess.Popen:
+    """Spawn the target as a process-group leader (start_new_session) so
+    kills reach the whole group - a gate's hung or pipe-holding children
+    die with it instead of surviving the parent and stalling
+    communicate() on inherited pipes. Limit: a child that calls setsid()
+    itself escapes the group; that escape is documented, not hidden."""
+    return subprocess.Popen(
+        cmd, cwd=ROOT, env=env, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, text=True, start_new_session=True)
+
+
+def _signal_group(proc: subprocess.Popen, sig: int) -> None:
+    try:
+        os.killpg(proc.pid, sig)
+    except (ProcessLookupError, PermissionError):
+        try:
+            proc.send_signal(sig)
+        except ProcessLookupError:
+            pass
+
 
 def run_under(cmd: list[str], fault: str | None = None,
               timeout: float = 10.0) -> Outcome:
@@ -60,22 +80,22 @@ def run_under(cmd: list[str], fault: str | None = None,
         tmp = Path(tmp_s)
         env = _fault_env(fault, tmp)
         if fault == "kill":
-            proc = subprocess.Popen(
-                cmd, cwd=ROOT, env=env, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, text=True)
+            proc = _popen_group(cmd, env)
             time.sleep(0.3)
             if proc.poll() is not None:
                 # Already exited before the signal: classify the ACTUAL
                 # outcome - a fast pass is a pass, never a fake crash.
                 _, err = proc.communicate()
                 return classify_rc(proc.returncode, err or "")
-            proc.send_signal(signal.SIGTERM)
+            _signal_group(proc, signal.SIGTERM)
             try:
                 _, err = proc.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
-                proc.kill()
+                _signal_group(proc, signal.SIGKILL)
                 proc.communicate()
-                return Outcome("crash", "ignored SIGTERM, killed at timeout")
+                return Outcome(
+                    "crash",
+                    "ignored SIGTERM, process group killed at timeout")
             if proc.returncode == -signal.SIGTERM:
                 return Outcome("crash", "terminated by SIGTERM")
             # The harness injected termination while the process was LIVE:
@@ -84,13 +104,16 @@ def run_under(cmd: list[str], fault: str | None = None,
             return Outcome(
                 "crash",
                 f"handled/swallowed SIGTERM and exited {proc.returncode}")
+        proc = _popen_group(cmd, env)
         try:
-            r = subprocess.run(
-                cmd, cwd=ROOT, env=env, capture_output=True, text=True,
-                timeout=timeout)
+            _, err = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
-            return Outcome("crash", f"timeout after {timeout}s (killed)")
-        return classify_rc(r.returncode, r.stderr)
+            _signal_group(proc, signal.SIGKILL)
+            proc.communicate()
+            return Outcome(
+                "crash",
+                f"timeout after {timeout}s (process group killed)")
+        return classify_rc(proc.returncode, err or "")
 
 
 def expect(outcome: Outcome, wanted: str) -> str | None:
