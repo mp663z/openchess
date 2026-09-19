@@ -122,11 +122,16 @@ class TestExpectedPath:
     def test_visible_output_exact_shape(self, tmp_path):
         summary, store = _import(tmp_path)
         # closed key set, exact order
-        assert list(summary) == ["kind", "source_id", "games_imported"]
+        assert list(summary) == ["kind", "source_id", "games_imported",
+                                 "games_already_imported", "games_updated"]
         assert summary["kind"] == SCENARIO["visible_output"]
         assert summary["source_id"] == "pgn-file"
         assert summary["games_imported"] == 1
+        assert summary["games_already_imported"] == 0
+        assert summary["games_updated"] == 0
         assert isinstance(summary["games_imported"], int)
+        assert isinstance(summary["games_already_imported"], int)
+        assert isinstance(summary["games_updated"], int)
         # summary is also persisted for external inspection
         assert _read_json(store / "summary.json") == summary
 
@@ -306,6 +311,178 @@ class TestMalformedBattery:
     def test_each_case_differs_from_valid(self):
         for name, pgn, _ in MALFORMED_CASES:
             assert pgn != VALID_PGN, name
+
+
+class TestIdempotency:
+    def test_duplicate_within_one_file_is_visible_noop(self, tmp_path):
+        summary, store = _import(tmp_path, VALID_PGN + "\n" + VALID_PGN)
+        assert summary["games_imported"] == 1
+        assert summary["games_already_imported"] == 1
+        assert summary["games_updated"] == 0
+        records = _stored_records(store)
+        assert len(records) == 1
+        index = _read_json(store / "index.json")
+        assert index == [records[0]["game_id"]]  # unique membership
+        assert _telemetry_events(store) == ["import.started", "import.game_stored",
+                                            "import.game_duplicate",
+                                            "import.completed"]
+
+    def test_reimport_identical_file_is_noop(self, tmp_path):
+        p = tmp_path / "in.pgn"
+        p.write_text(VALID_PGN)
+        store = tmp_path / "store"
+        s1 = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s1["games_imported"] == 1
+        rec_path = next((store / "games").glob("*.json"))
+        before = rec_path.read_bytes()
+        s2 = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s2["games_imported"] == 0
+        assert s2["games_already_imported"] == 1
+        assert s2["games_updated"] == 0
+        assert rec_path.read_bytes() == before  # untouched no-op
+        assert len(_read_json(store / "index.json")) == 1
+
+    def test_same_id_new_content_is_recorded_replacement(self, tmp_path):
+        changed = VALID_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
+        assert changed != VALID_PGN
+        p = tmp_path / "in.pgn"
+        store = tmp_path / "store"
+        p.write_text(VALID_PGN)
+        run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        p.write_text(changed)
+        s2 = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s2["games_imported"] == 0
+        assert s2["games_updated"] == 1
+        index = _read_json(store / "index.json")
+        assert len(index) == 1  # still unique
+        rec = _stored_records(store)[0]
+        assert "2. Nf3 d6" in rec["movetext"]
+        assert rec["content_sha256"] == hashlib.sha256(
+            changed.rstrip("\n").encode()).hexdigest()
+        assert "import.game_updated" in _telemetry_events(store)
+
+
+class TestAtomicity:
+    def test_crash_on_record_rename_reads_precommit(self, tmp_path, monkeypatch):
+        import ingest.import_pgn as imp
+        real = imp.os.replace
+
+        def bomb(src, dst):
+            if Path(dst).parent.name == "games":
+                raise OSError("injected")
+            return real(src, dst)
+
+        monkeypatch.setattr(imp.os, "replace", bomb)
+        p = tmp_path / "in.pgn"
+        p.write_text(VALID_PGN)
+        store = tmp_path / "store"
+        with pytest.raises(OSError):
+            run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        monkeypatch.undo()
+        assert _stored_records(store) == []
+        assert not (store / "index.json").exists()
+        # restart recovers and imports cleanly
+        s = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s["games_imported"] == 1
+        assert len(_read_json(store / "index.json")) == 1
+
+    def test_crash_on_index_rename_leaves_recoverable_orphan(self, tmp_path, monkeypatch):
+        import ingest.import_pgn as imp
+        real = imp.os.replace
+
+        def bomb(src, dst):
+            if Path(dst).name == "index.json":
+                raise OSError("injected")
+            return real(src, dst)
+
+        monkeypatch.setattr(imp.os, "replace", bomb)
+        p = tmp_path / "in.pgn"
+        p.write_text(VALID_PGN)
+        store = tmp_path / "store"
+        with pytest.raises(OSError):
+            run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        monkeypatch.undo()
+        # crash window: orphan record on disk, never committed to an index
+        assert not (store / "index.json").exists()
+        orphans = list((store / "games").glob("*.json"))
+        assert len(orphans) == 1  # visible only pre-recovery
+        s = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s["games_imported"] == 1
+        assert len(_stored_records(store)) == 1
+        assert len(_read_json(store / "index.json")) == 1
+
+    def test_crash_after_commit_reads_committed_and_restarts_idempotently(
+            self, tmp_path, monkeypatch):
+        real_open = Path.open
+        appends = {"n": 0}
+
+        def bomb(self, mode="r", *a, **kw):
+            if self.name == "telemetry.jsonl" and mode == "a":
+                appends["n"] += 1
+                if appends["n"] == 2:  # first game_stored append
+                    raise OSError("injected")
+            return real_open(self, mode, *a, **kw)
+
+        monkeypatch.setattr(Path, "open", bomb)
+        p = tmp_path / "in.pgn"
+        p.write_text(VALID_PGN)
+        store = tmp_path / "store"
+        with pytest.raises(OSError):
+            run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        monkeypatch.undo()
+        # crash AFTER the commit point: record + index are committed state
+        assert len(_stored_records(store)) == 1
+        assert len(_read_json(store / "index.json")) == 1
+        # restart is idempotent through dedup: already-imported no-op
+        s = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s["games_imported"] == 0
+        assert s["games_already_imported"] == 1
+        assert len(_read_json(store / "index.json")) == 1
+
+    def test_stale_tmp_artifacts_removed_by_recovery(self, tmp_path):
+        store = tmp_path / "store"
+        (store / "games").mkdir(parents=True)
+        (store / "index.json.tmp").write_text("[]")
+        (store / "games" / "stale.json.tmp").write_text("{}")
+        p = tmp_path / "in.pgn"
+        p.write_text(VALID_PGN)
+        s = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s["games_imported"] == 1
+        assert list(store.glob("*.tmp")) == []
+        assert list((store / "games").glob("*.tmp")) == []
+
+
+class TestParserPinning:
+    def test_late_tag_rejected(self, tmp_path):
+        late = '[Event "x"]\n[Result "1-0"]\n\n1. e4 e5\n[White "late"]\n 1-0\n'
+        with pytest.raises(ImportFailure) as ei:
+            _import(tmp_path, late)
+        assert ei.value.code == "malformed_request"
+
+    def test_duplicate_tag_rejected(self, tmp_path):
+        dup = '[Event "x"]\n[Event "y"]\n[Result "1-0"]\n\n1. e4 e5 1-0\n'
+        with pytest.raises(ImportFailure) as ei:
+            _import(tmp_path, dup)
+        assert ei.value.code == "malformed_request"
+
+    def test_star_terminal_conflicting_result_tag_rejected(self, tmp_path):
+        star = '[Event "x"]\n[Result "1-0"]\n\n1. e4 e5 *\n'
+        with pytest.raises(ImportFailure) as ei:
+            _import(tmp_path, star)
+        assert ei.value.code == "malformed_request"
+
+    def test_star_terminal_with_star_result_accepted(self, tmp_path):
+        star = '[Event "x"]\n[Result "*"]\n\n1. e4 e5 *\n'
+        summary, _ = _import(tmp_path, star)
+        assert summary["games_imported"] == 1
+
+    def test_compact_move_numbers_accepted(self, tmp_path):
+        compact = '[Event "x"]\n[Result "1-0"]\n\n1.e4 e5 2.Nf3 Nc6 1-0\n'
+        summary, _ = _import(tmp_path, compact)
+        assert summary["games_imported"] == 1
+        compact_black = '[Event "x"]\n[Result "1-0"]\n\n1. e4 1...e5 2. Nf3 2...Nc6 1-0\n'
+        summary2, _ = _import(tmp_path / "b", compact_black)
+        assert summary2["games_imported"] == 1
 
 
 class TestIdentityStability:

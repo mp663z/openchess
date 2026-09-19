@@ -365,6 +365,10 @@ def _strip_movetext(movetext: str) -> list[str]:
         i = j
         if re.fullmatch(r"\d+\.(\.\.)?", tok):
             continue
+        # compact move-number prefix attached to the SAN: 1.e4, 12...a6
+        m_compact = re.fullmatch(r"\d+\.(\.\.)?(\S+)", tok)
+        if m_compact:
+            tok = m_compact.group(2)
         out.append(tok)
     if depth != 0:
         raise MalformedPGN("unbalanced variation open")
@@ -381,10 +385,14 @@ def _parse_tags(game_text: str) -> tuple[dict[str, str], str]:
         if not s:
             continue
         if s.startswith("["):
+            if not in_tags:
+                raise MalformedPGN(f"tag line after movetext: {s!r}")
             m = re.fullmatch(r'\[([A-Za-z0-9_]+) "((?:[^"\\]|\\[\\"])*)"\]', s)
             if not m:
                 raise MalformedPGN(f"malformed tag line: {s!r}")
             name, value = m.group(1), m.group(2)
+            if name in tags:
+                raise MalformedPGN(f"duplicate tag: {name!r}")
             tags[name] = value.replace('\\"', '"').replace("\\\\", "\\")
         else:
             in_tags = False
@@ -448,7 +456,7 @@ def validate_pgn_game(game_text: str) -> ParsedGame:
     if result not in RESULTS:
         raise MalformedPGN("movetext missing terminal result token (truncated?)")
     tag_result = tags.get("Result")
-    if tag_result and result != "*" and tag_result != result:
+    if tag_result is not None and tag_result != result:
         raise MalformedPGN(f"result token {result!r} != Result tag {tag_result!r}")
     board = Board.initial()
     variant = tags.get("Variant", "Standard")
