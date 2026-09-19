@@ -85,6 +85,40 @@ contract:
       daysPerTurn, analysis, arenaTour, swissTour, clock, clocks,
       division]
     unknown_field_policy: tolerate-additive
+    variant_values: [standard, chess960, crazyhouse, antichess,
+      atomic, horde, kingOfTheHill, racingKings, threeCheck,
+      fromPosition]
+    variant_violation: {effect: reject-record, error: malformed_request}
+    speed_values: [ultraBullet, bullet, blitz, rapid, classical,
+      correspondence]
+    speed_violation: {effect: reject-record, error: malformed_request}
+    players_shape:
+      type: object
+      required: [white, black]
+      side_shape: oneOf-user-or-ai
+      user_required: [user, rating]
+      ai_required: [aiLevel]
+      nested_field_validation: delegated-unpinned
+    optional_field_types:
+      source: string
+      initialFen: string
+      winner: {type: string, enum: [white, black]}
+      opening: {type: object, required: [eco, name, ply],
+        field_types: {eco: string, name: string, ply: integer}}
+      moves: string
+      pgn: string
+      daysPerTurn: integer
+      analysis: {type: array, items: object,
+        item_field_validation: delegated-unpinned}
+      arenaTour: {type: object,
+        field_types: {id: string, name: string}}
+      swissTour: {type: object, field_types: {id: string}}
+      clock: {type: object, required: [initial, increment, totalTime],
+        field_types: {initial: integer, increment: integer,
+          totalTime: integer}}
+      clocks: {type: array, items: integer}
+      division: {type: object,
+        field_types: {middle: integer, end: integer}}
     field_types:
       id: string
       rated: boolean

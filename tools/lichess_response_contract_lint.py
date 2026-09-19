@@ -63,6 +63,44 @@ SPEC_PROVENANCE = {
 REQUIRED_VIOLATION = {"effect": "reject-record", "error": "malformed_request",
                       "partial_game": "never"}
 UNKNOWN_FIELD_STORAGE = "never-stored"
+VARIANT_VALUES = ["standard", "chess960", "crazyhouse", "antichess",
+                  "atomic", "horde", "kingOfTheHill", "racingKings",
+                  "threeCheck", "fromPosition"]
+SPEED_VALUES = ["ultraBullet", "bullet", "blitz", "rapid", "classical",
+                "correspondence"]
+ENUM_VIOLATION = {"effect": "reject-record", "error": "malformed_request"}
+PLAYERS_SHAPE = {
+    "type": "object",
+    "required": ["white", "black"],
+    "side_shape": "oneOf-user-or-ai",
+    "user_required": ["user", "rating"],
+    "ai_required": ["aiLevel"],
+    "nested_field_validation": "delegated-unpinned",
+}
+OPTIONAL_FIELD_TYPES = {
+    "source": "string",
+    "initialFen": "string",
+    "winner": {"type": "string", "enum": ["white", "black"]},
+    "opening": {"type": "object", "required": ["eco", "name", "ply"],
+                "field_types": {"eco": "string", "name": "string",
+                                "ply": "integer"}},
+    "moves": "string",
+    "pgn": "string",
+    "daysPerTurn": "integer",
+    "analysis": {"type": "array", "items": "object",
+                 "item_field_validation": "delegated-unpinned"},
+    "arenaTour": {"type": "object",
+                  "field_types": {"id": "string", "name": "string"}},
+    "swissTour": {"type": "object", "field_types": {"id": "string"}},
+    "clock": {"type": "object",
+              "required": ["initial", "increment", "totalTime"],
+              "field_types": {"initial": "integer",
+                              "increment": "integer",
+                              "totalTime": "integer"}},
+    "clocks": {"type": "array", "items": "integer"},
+    "division": {"type": "object",
+                 "field_types": {"middle": "integer", "end": "integer"}},
+}
 STATUS_VIOLATION = {"effect": "reject-record", "error": "malformed_request"}
 PARAMS = {
     "since": {"type": "integer-ms", "min": 1356998400070,
@@ -174,7 +212,10 @@ ALLOWED_PARAM = {"type", "required", "min", "default", "enum"}
 ALLOWED_GAME_OBJECT = {"required_fields", "optional_fields",
                        "unknown_field_policy", "field_types",
                        "status_values", "required_violation",
-                       "unknown_field_storage", "status_violation", "rule"}
+                       "unknown_field_storage", "status_violation",
+                       "variant_values", "variant_violation",
+                       "speed_values", "speed_violation",
+                       "players_shape", "optional_field_types", "rule"}
 ALLOWED_ENVELOPE_STATUS = {"meaning", "class", "retry", "scope"}
 
 
@@ -306,6 +347,23 @@ def lint(doc: object, root: Path = ROOT) -> None:
           "contract.game_object.unknown_field_storage")
     _strict_eq(_get(game, "status_violation", "contract.game_object"),
                STATUS_VIOLATION, "contract.game_object.status_violation")
+    _strict_eq(_get(game, "variant_values", "contract.game_object"),
+               VARIANT_VALUES, "contract.game_object.variant_values")
+    _strict_eq(_get(game, "variant_violation", "contract.game_object"),
+               ENUM_VIOLATION, "contract.game_object.variant_violation")
+    _strict_eq(_get(game, "speed_values", "contract.game_object"),
+               SPEED_VALUES, "contract.game_object.speed_values")
+    _strict_eq(_get(game, "speed_violation", "contract.game_object"),
+               ENUM_VIOLATION, "contract.game_object.speed_violation")
+    _strict_eq(_get(game, "players_shape", "contract.game_object"),
+               PLAYERS_SHAPE, "contract.game_object.players_shape")
+    oft = _get(game, "optional_field_types", "contract.game_object")
+    _strict_eq(oft, OPTIONAL_FIELD_TYPES,
+               "contract.game_object.optional_field_types")
+    _need(sorted(oft) == sorted(
+        _get(game, "optional_fields", "contract.game_object")),
+        "contract.game_object.optional_field_types: keys must equal "
+        "optional_fields")
     _text(_get(game, "rule", "contract.game_object"),
           "contract.game_object.rule")
     _need(set(FIELD_TYPES) == set(REQUIRED_FIELDS),

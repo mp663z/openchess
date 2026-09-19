@@ -335,3 +335,49 @@ def test_request_boundary_constraints():
     # csv semantics retained: type flip rejected
     _bad(lambda d: d["request"]["params"]["perfType"]
          .__setitem__("type", "string"))
+
+
+def test_game_object_full_schema_boundary():
+    """Whole-GameJson sweep (v4): closed enums, optional type map,
+    structural players delegation - all exactly pinned."""
+    g = "game_object"
+    # variant/speed closed enums
+    _bad(lambda d: d[g]["variant_values"].append("garbage"))
+    _bad(lambda d: d[g]["variant_values"].remove("fromPosition"))
+    _bad(lambda d: d[g]["variant_values"].reverse())
+    _bad(lambda d: d[g].__delitem__("variant_values"))
+    _bad(lambda d: d[g]["speed_values"].remove("correspondence"))
+    _bad(lambda d: d[g]["speed_values"].append("hyperBullet"))
+    _bad(lambda d: d[g]["variant_violation"].__setitem__("effect", "warn"))
+    _bad(lambda d: d[g]["speed_violation"]
+         .__setitem__("error", "illegal_position"))
+    _bad(lambda d: d[g].__delitem__("speed_violation"))
+    # optional type map: wrong types, bogus field, missing field
+    _bad(lambda d: d[g]["optional_field_types"].__setitem__("moves", []))
+    _bad(lambda d: d[g]["optional_field_types"]
+         .__setitem__("daysPerTurn", "string"))
+    _bad(lambda d: d[g]["optional_field_types"]
+         .__setitem__("clocks", {"type": "array", "items": "string"}))
+    _bad(lambda d: d[g]["optional_field_types"]
+         .__setitem__("winner", {"type": "string", "enum": ["white"]}))
+    _bad(lambda d: d[g]["optional_field_types"]
+         .__setitem__("bogusField", "string"))
+    _bad(lambda d: d[g]["optional_field_types"].__delitem__("pgn"))
+    _bad(lambda d: d[g]["optional_field_types"]["opening"]["required"]
+         .remove("ply"))
+    _bad(lambda d: d[g]["optional_field_types"]["clock"]["field_types"]
+         .__setitem__("totalTime", "string"))
+    _bad(lambda d: d[g]["optional_field_types"]["analysis"]
+         .__setitem__("item_field_validation", "pinned-here"))
+    _bad(lambda d: d[g].__delitem__("optional_field_types"))
+    # players shape: delegation must be structural, not implicit
+    _bad(lambda d: d[g]["players_shape"]
+         .__setitem__("nested_field_validation", "implicit"))
+    _bad(lambda d: d[g]["players_shape"]["required"].remove("black"))
+    _bad(lambda d: d[g]["players_shape"]
+         .__setitem__("side_shape", "always-user"))
+    _bad(lambda d: d[g]["players_shape"]["user_required"]
+         .remove("rating"))
+    _bad(lambda d: d[g]["players_shape"]
+         .__setitem__("ai_required", []))
+    _bad(lambda d: d[g].__delitem__("players_shape"))
