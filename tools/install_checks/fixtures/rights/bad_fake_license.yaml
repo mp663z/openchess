@@ -1,0 +1,11 @@
+schema_version: 2
+sources:
+- id: somesource
+  url: https://example.com/data
+  license: totally fake
+  transformation_permission: true
+  decision: allow
+  statement: You may download, modify and redistribute this data.
+  statement_source_url: https://example.com/terms
+  evidence_path: evidence/good.txt
+  evidence_sha256: 349d8b4b7f04437719f4804eb1fe6ea2336e183f1e8e9a226c4263712a18a73f

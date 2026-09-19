@@ -1,0 +1,4 @@
+fetched_from: https://database.nikonoel.fr/
+fetched_at: 2026-09-18
+---
+Site describes itself as a filtered collection of lichess.org games from database.lichess.org but states no license terms of its own (fetched 2026-09-18); CC0 lineage alone does not prove the operator's grant for this derivative.

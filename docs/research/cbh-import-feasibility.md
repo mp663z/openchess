@@ -62,3 +62,10 @@ fidelity incl. annotations via clean-room implementation informed by public
 format knowledge - more work, proven achievable. Chess960 and 2CBH are known
 gaps to size. S1 can proceed to counsel review without waiting on samples;
 golden-file testing still needs one authorized user database (T2220).
+
+## Cited permission statement (rights manifest)
+
+The rights manifest (data/datasets/public-source-rights.yaml,
+user_own_cbh_files) cites this statement verbatim:
+
+> Interoperability import of the user's own purchased files on their machine at their request; {{PRODUCT_NAME}} never acquires database content itself.

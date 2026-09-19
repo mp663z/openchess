@@ -1,0 +1,4 @@
+fetched_from: docs/research/cbh-import-feasibility.md
+fetched_at: 2026-09-18
+---
+Interoperability import of the user's own purchased files on their machine at their request; {{PRODUCT_NAME}} never acquires database content itself.

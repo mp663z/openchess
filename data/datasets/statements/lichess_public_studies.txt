@@ -1,0 +1,4 @@
+fetched_from: https://lichess.org/study
+fetched_at: 2026-09-18
+---
+Lichess studies are user-created content; no general license grant for corpus use located (checked 2026-09-18). Per-study owner permission required.
