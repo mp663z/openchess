@@ -14,7 +14,12 @@ file, and a release step running the EXACT pinned gh release create
 command attaching the same artifacts. Mandatory run/uses values are
 enforced by exact structural equality (whitespace-normalized), not shell
 semantics: echo prefixes, renamed commands (createx) and altered commands
-all fail. Fail closed on conditionals:
+all fail. Beyond the mandatory steps, the COMPLETE release-job pipeline
+is pinned step-for-step in order (checkout -> setup -> install -> lock
+check -> license audit -> generation -> checksums -> attestation ->
+release): inserted, removed, reordered or altered steps fail closed, so
+released bytes are always the attested bytes; conditionals are rejected
+on every pipeline step. Fail closed on conditionals:
 ANY job-level if on the release job and ANY if on a mandatory
 generation/checksum/attestation/release step is a violation (GitHub
 expression syntax is not parsed), and the release step must be a single
@@ -79,6 +84,35 @@ def _release_jobs(wf: dict) -> list[tuple[str, dict]]:
     ]
 
 
+# The COMPLETE release-job pipeline, pinned step for step: identity
+# (uses/run, whitespace-normalized) and order. Any inserted, removed,
+# reordered or altered step is a violation - bytes attested and bytes
+# released cannot drift apart between pinned steps.
+PINNED_JOB_STEPS: list[tuple[str, str]] = [
+    ("uses", "actions/checkout@v4"),
+    ("uses", "actions/setup-python@v5"),
+    ("run", "pip install -r requirements-dev.txt"),
+    ("run", "python tools/lock_release.py --check"),
+    ("run", "python tools/license_audit.py"),
+    ("run", PINNED_GENERATION_RUN),
+    ("run", PINNED_CHECKSUMS_RUN),
+    ("uses", PINNED_ATTEST_USES),
+    ("run", PINNED_RELEASE_RUN),
+]
+
+
+def _step_identity(s: dict) -> tuple[str, str] | None:
+    has_uses = "uses" in s
+    has_run = "run" in s
+    if has_uses and has_run:
+        return None  # invalid: both
+    if has_uses:
+        return ("uses", _norm(s["uses"]))
+    if has_run:
+        return ("run", _norm(s["run"]))
+    return None
+
+
 def _workflow_problems(wf: dict) -> list[str]:
     problems: list[str] = []
     jobs = _release_jobs(wf)
@@ -102,27 +136,38 @@ def _workflow_problems(wf: dict) -> list[str]:
                     f"release.yml: job {name} permissions.{perm} != write"
                 )
         steps = job.get("steps") or []
-        gen = _step_idx(steps, "run", PINNED_GENERATION_RUN)
-        chk = _step_idx(steps, "run", PINNED_CHECKSUMS_RUN)
-        att = _step_idx(steps, "uses", PINNED_ATTEST_USES)
-        rel = _step_idx(steps, "run", PINNED_RELEASE_RUN)
-        for label, i in (("SBOM generation", gen), ("checksums", chk),
-                         ("attestation", att), ("release", rel)):
-            if i is None:
+        for i, s in enumerate(steps):
+            if s.get("if") not in (None, ""):
                 problems.append(
-                    f"release.yml: job {name} lacks the exact pinned {label} step"
+                    f"release.yml: job {name} step {i} carries an if "
+                    f"({s.get('if')!r}) - fail closed: pipeline steps must "
+                    "be unconditional"
                 )
-            elif steps[i].get("if") not in (None, ""):
-                problems.append(
-                    f"release.yml: job {name} {label} step carries an if "
-                    f"({steps[i].get('if')!r}) - fail closed: mandatory steps "
-                    "must be unconditional"
-                )
-        if None not in (gen, chk, att, rel) and not (gen < chk < att < rel):
+        actual = [_step_identity(s) for s in steps]
+        if any(a is None for a in actual):
             problems.append(
-                f"release.yml: job {name} step order must be "
-                "generate -> checksums -> attestation -> release"
+                f"release.yml: job {name} has a step with both/neither "
+                "run/uses - pipeline shape unrecognized, failing closed"
             )
+            continue
+        if actual != PINNED_JOB_STEPS:
+            padded = actual + [None] * max(0, len(PINNED_JOB_STEPS) - len(actual))
+            for i, (exp, got) in enumerate(
+                zip(PINNED_JOB_STEPS, padded, strict=False)
+            ):
+                if exp != got:
+                    problems.append(
+                        f"release.yml: job {name} step {i} must be exactly "
+                        f"{exp!r}, got {got!r} - the complete pinned pipeline "
+                        "may not be inserted into, reordered or altered"
+                    )
+                    break
+            if len(actual) != len(PINNED_JOB_STEPS) and len(actual) > len(PINNED_JOB_STEPS):
+                problems.append(
+                    f"release.yml: job {name} has {len(actual) - len(PINNED_JOB_STEPS)} "
+                    "extra step(s) beyond the pinned pipeline"
+                )
+        att = _step_idx(steps, "uses", PINNED_ATTEST_USES)
         if att is not None:
             subjects = set(
                 str((steps[att].get("with") or {}).get("subject-path", "")).split()
@@ -264,6 +309,20 @@ def run(mode: str) -> None:
                         "gh release create", "gh release createx", 1)
         return w
 
+    def _tamper(after_uses=None, after_run=None):
+        def m(w):
+            for job in w["jobs"].values():
+                steps = job["steps"]
+                for i, s in enumerate(steps):
+                    if after_uses and str(s.get("uses", "")).startswith("actions/attest"):
+                        steps.insert(i + 1, {"run": "echo MALICE >> docs/component-inventory.json"})
+                        return w
+                    if after_run and _norm(s.get("run", "")) == after_run:
+                        steps.insert(i + 1, {"run": "echo MALICE >> docs/component-inventory.json"})
+                        return w
+            return w
+        return m
+
     def _split_attest(w):
         moved = []
         for job in w["jobs"].values():
@@ -287,6 +346,8 @@ def run(mode: str) -> None:
         "checksums command echoed, not executed": _echo_checksums,
         "attestation action is a lookalike (attest-not-real)": _fake_attest_action,
         "release command is a lookalike (createx)": _release_createx,
+        "tamper between checksums and attestation": _tamper(after_run=PINNED_CHECKSUMS_RUN),
+        "tamper between attestation and release": _tamper(after_uses=True),
         "release command echoed, not executed": _echo_release,
         "attestation split into an unrelated job": _split_attest,
     }.items():
