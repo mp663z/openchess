@@ -1506,10 +1506,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "0f23140ddd05bb014024e46e69bfb8096188aec3",
+   "evidence_manifest": "evidence/T0068.md"
   },
   {
    "id": "T0069",
@@ -97479,7 +97481,7 @@
    "dependencies": [
     "T4794"
    ],
-   "acceptance": "UI/API permits “absent from named corpus through cutoff”, “underexplored”, “engine-sound at stated budget”, “simulation” and “unresolved”; forbids guaranteed novelty/new theory/forced truth.",
+   "acceptance": "UI/API permits \u201cabsent from named corpus through cutoff\u201d, \u201cunderexplored\u201d, \u201cengine-sound at stated budget\u201d, \u201csimulation\u201d and \u201cunresolved\u201d; forbids guaranteed novelty/new theory/forced truth.",
    "verification": "auto",
    "resource": "counsel + titled reviewers",
    "checkpoint": "GM-LABEL",
@@ -105961,7 +105963,7 @@
    "dependencies": [
     "T5243"
    ],
-   "acceptance": "Private/deleted/unavailable/variant/rate-limited gaps show partial coverage and never report “all games imported.”",
+   "acceptance": "Private/deleted/unavailable/variant/rate-limited gaps show partial coverage and never report \u201call games imported.\u201d",
    "verification": "auto",
    "resource": "provider test accounts",
    "checkpoint": "ALPHA-IMPORT",
