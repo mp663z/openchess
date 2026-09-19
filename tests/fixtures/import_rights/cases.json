@@ -1,0 +1,15 @@
+{
+ "schema": 1,
+ "contracts": ["data/contracts/import.yaml", "data/contracts/rights_policy.yaml"],
+ "notes": "T0538 import rights fixture. Every expectation derives from the structured fields of the two pinned contracts, never from this file: the source registry rights classes, the policy class flags (ownership/persistence/third_party_storage/redistribution/provenance_required), fail-closed unknown handling, and the user-own-only ownership condition. Happy cases assert exact intake decisions on the shipped rights gate plus persisted provenance through the shipped import-pgn runner; negative cases are discriminating (each names exactly one rights defect).",
+ "happy": [
+  {"name": "user-file-user-own", "source_id": "pgn-file", "expect": {"known": true, "rights_class": "user-own", "allowed": true, "reason": ""}},
+  {"name": "lichess-cc0", "source_id": "lichess-public", "expect": {"known": true, "rights_class": "cc0", "allowed": true, "reason": ""}},
+  {"name": "cbh-licensed-own", "source_id": "cbh-licensed", "expect": {"known": true, "rights_class": "licensed-own", "allowed": true, "reason": ""}},
+  {"name": "chesscom-user-own-only-verified", "source_id": "chesscom-public", "ownership_verified": true, "expect": {"known": true, "rights_class": "user-own-only", "allowed": true, "reason": ""}}
+ ],
+ "negative": [
+  {"name": "chesscom-user-own-only-unverified", "source_id": "chesscom-public", "defect": "ownership condition not verified", "expect": {"known": true, "rights_class": "user-own-only", "allowed": false, "reason": "ownership_unverified"}},
+  {"name": "unknown-source-id", "source_id": "not-a-source", "defect": "source id absent from registry", "expect": {"known": false, "rights_class": null, "allowed": false, "reason": "unknown_source"}}
+ ]
+}
