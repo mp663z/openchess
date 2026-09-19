@@ -1,0 +1,135 @@
+# T0095: chess SAN contract (implementation-neutral; the product
+# runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for Standard Algebraic Notation everywhere in the
+# product: PGN import, game display, repertoire storage, coach output,
+# and move input all share THESE semantics. ALL normative semantics
+# live in STRUCTURED fields the lint compares exactly - prose is
+# documentation, never the enforcement surface. A SAN string denotes a
+# move only in the context of a position: parsing is resolution
+# against the position's legal move set (owned by the legal-moves
+# contract), and a string that parses but matches zero or several
+# legal moves is rejected, never guessed.
+schema_version: 1
+
+contract:
+  id: chess-san
+  context:
+    requires_position: true
+    resolution: against-legal-move-set-of-position
+    move_output_shape: legal-moves-contract-move_model
+    rule: >-
+      SAN is never interpreted without a position. Resolution matches
+      the string against exactly the legal move set of that position
+      per the legal-moves contract; the output is that contract's
+      move shape (from_square, to_square, optional promotion).
+  tokens:
+    piece_letters: [N, B, R, Q, K]
+    pawn_letter: none
+    castling_kingside: O-O
+    castling_queenside: O-O-O
+    castling_character: capital-letter-O-never-digit-zero
+    capture_marker: x
+    promotion_marker: "="
+    promotion_pieces: [Q, R, B, N]
+    check_suffix: "+"
+    checkmate_suffix: "#"
+    annotation_suffixes: forbidden
+    square_grammar: exactly-file-char-then-rank-char-per-legal-moves
+    rule: >-
+      Canonical SAN uses exactly these tokens. Annotation glyphs
+      (! ? !! ?? !? ?!) are NEVER part of canonical SAN; they are
+      commentary owned by other surfaces.
+  grammar:
+    pawn_quiet: destination-square
+    pawn_capture: origin-file-then-x-then-destination
+    piece_quiet: letter-then-disambiguation-then-destination
+    piece_capture: letter-then-disambiguation-then-x-then-destination
+    promotion: pawn-move-then-equals-then-piece-letter
+    castling: castling-token
+    suffix_position: immediately-after-move-body
+    rule: >-
+      A SAN body is exactly one of the declared forms. Pawn quiet
+      moves are the bare destination; pawn captures prefix the origin
+      FILE; piece moves prefix the uppercase piece letter; a capture
+      inserts exactly one "x" before the destination; a promotion
+      appends "=" and the promoted piece letter; castling is the
+      declared token. The check/checkmate suffix follows the body
+      directly.
+  disambiguation:
+    applies_when: two-or-more-legal-moves-same-piece-same-destination
+    preference_order: [file, rank, both]
+    minimal: true
+    never_for_pawns: file-prefix-is-always-present-on-pawn-capture
+    never_for_king_moves_ambiguity: disambiguation-applies-to-king-too
+    noncanonical_disambiguation: rejected-as-malformed_san
+    rule: >-
+      Disambiguation appears exactly when two or more legal moves of
+      the same piece type reach the same destination square, and is
+      minimal under the declared preference: the origin file alone if
+      it distinguishes, else the origin rank alone, else both. A pawn
+      capture ALWAYS carries its origin file (that is grammar, not
+      disambiguation).
+  suffix:
+    values: [none, "+", "#"]
+    semantics: checkmate-iff-result-is-checkmate-else-check-iff-result-is-check-else-none
+    rule: >-
+      The suffix reflects the RESULTING position exactly: "#" if and
+      only if the move delivers checkmate, "+" if and only if it
+      delivers check without mate, otherwise no suffix. A claimed
+      suffix that does not match the resulting position is a
+      no-legal-match failure, not a warning.
+  castling_link:
+    ownership: castling-contract-owns-rights-and-legality
+    denotation: king-two-squares-toward-rook-with-rook-hop
+    state_rights_field: castling_rights
+    rights_irrevocable: per-castling-contract-never-infer-from-occupancy
+    application: atomic-king-move-plus-rook-hop
+    link: data/contracts/castling.yaml
+    rule: >-
+      O-O and O-O-O denote the castling move of the side to move.
+      Whether that move exists and is legal is owned ENTIRELY by the
+      castling and legal-moves contracts; SAN adds nothing.
+  resolution_failures:
+    malformed_san: any-grammar-or-token-violation
+    ambiguous_san: more-than-one-legal-move-matches
+    no_legal_match: parses-but-matches-zero-legal-moves
+    rule: >-
+      Resolution has exactly three failure classes. A grammatically
+      valid string matching several legal moves is ambiguous
+      (insufficient disambiguation); matching none is a no-legal-
+      match (includes false suffix claims and impossible promotion
+      pieces). Rejection never falls back to a nearest move.
+  failure_classes: [malformed_san, ambiguous_san, no_legal_match]
+  failure_mapping:
+    malformed_san: {trigger: any-token-or-grammar-violation, error: malformed_request}
+    ambiguous_san: {trigger: several-legal-moves-match, error: ambiguous_move}
+    no_legal_match: {trigger: zero-legal-moves-match-or-false-suffix, error: illegal_move}
+  errors:
+    closed_enum: [malformed_request, ambiguous_move, illegal_move, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  serialization:
+    canonical: true
+    roundtrip: parse-of-emit-is-move-identity
+    rule: >-
+      Every legal move in a position has exactly one canonical SAN;
+      emitting a move yields it, and parsing that string in the same
+      position resolves to the identical move. Emitting requires the
+      position's legal move set for disambiguation and suffix, never
+      just the move.
+  links:
+    legal_moves_contract: data/contracts/legal_moves.yaml
+    turn_contract: data/contracts/turn.yaml
+    castling_contract: data/contracts/castling.yaml
+  versioning:
+    base_path: /san/v1
+    rule: >-
+      MINOR additions (new optional fields) keep the base path; MAJOR
+      changes (tokens, grammar, disambiguation, suffix semantics,
+      error enum narrowing) bump it; a consumer must never silently
+      downgrade a document to a lower major version.
