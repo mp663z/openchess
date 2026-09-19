@@ -399,7 +399,8 @@ def _parse_tags(game_text: str) -> tuple[dict[str, str], str]:
             move_lines.append(line)
     if in_tags and not move_lines:
         raise MalformedPGN("no movetext")
-    return tags, " ".join(move_lines)
+    # line boundaries are semantic: ';' comments run to end-of-LINE
+    return tags, "\n".join(move_lines)
 
 
 def _match_san(board: Board, token: str) -> Move:

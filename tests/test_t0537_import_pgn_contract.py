@@ -155,10 +155,17 @@ class TestExpectedPath:
             VALID_PGN.rstrip("\n").encode()).hexdigest()
         assert rec["tags"]["White"] == "a"
         assert rec["variant"] == "standard"
-        # index entries: exactly the stored game ids, in order
+        # index manifest: ordered unique entries, exact key set/order,
+        # game_id -> referenced content-addressed record filename
         index = _read_json(store / "index.json")
-        assert index == [rec["game_id"]]
-        assert all(isinstance(g, str) and len(g) == 16 for g in index)
+        assert len(index) == 1
+        entry = index[0]
+        assert list(entry) == ["game_id", "record"]
+        assert entry["game_id"] == rec["game_id"]
+        assert len(entry["game_id"]) == 16
+        referenced = store / "games" / entry["record"]
+        assert referenced.exists()
+        assert _read_json(referenced) == rec
 
     def test_record_field_order_mutation_detected(self, tmp_path):
         _, store = _import(tmp_path)
@@ -322,7 +329,8 @@ class TestIdempotency:
         records = _stored_records(store)
         assert len(records) == 1
         index = _read_json(store / "index.json")
-        assert index == [records[0]["game_id"]]  # unique membership
+        assert [e["game_id"] for e in index] == [records[0]["game_id"]]
+        assert all(list(e) == ["game_id", "record"] for e in index)
         assert _telemetry_events(store) == ["import.started", "import.game_stored",
                                             "import.game_duplicate",
                                             "import.completed"]
@@ -458,6 +466,101 @@ class TestAtomicity:
         assert list((store / "games").glob("*.tmp")) == []
 
 
+class TestSourceEnforcement:
+    @pytest.mark.parametrize("source_id", [
+        "pgn-multi", "pgn-folder", "pgn-watch",
+        "lichess-public", "chesscom-public", "cbh-licensed",
+        "made-up-source",
+    ])
+    def test_out_of_scenario_sources_refused_before_state(self, source_id, tmp_path):
+        """The scenario's structured sources are exactly [pgn-file];
+        every other source id is refused at intake - a rights-class
+        label alone is not authorization, and no store state may exist."""
+        with pytest.raises(ImportFailure) as ei:
+            _import(tmp_path, source_id=source_id)
+        assert ei.value.code == "unknown_rights"
+        assert not (tmp_path / "store").exists()
+
+    def test_scenario_source_list_is_exactly_pinned(self):
+        assert SCENARIO["sources"] == ["pgn-file"]
+
+
+class TestUpdateAtomicity:
+    def test_update_crash_before_commit_keeps_old_indexed_version(
+            self, tmp_path, monkeypatch):
+        import ingest.import_pgn as imp
+        p = tmp_path / "in.pgn"
+        store = tmp_path / "store"
+        p.write_text(VALID_PGN)
+        run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        old_index = _read_json(store / "index.json")
+        old_record_name = old_index[0]["record"]
+        changed = VALID_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
+        p.write_text(changed)
+        real = imp.os.replace
+
+        def bomb(src, dst):
+            if Path(dst).name == "index.json":
+                raise OSError("injected")
+            return real(src, dst)
+
+        monkeypatch.setattr(imp.os, "replace", bomb)
+        with pytest.raises(OSError):
+            run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        monkeypatch.undo()
+        # pre-commit reads: the index STILL references the old version
+        assert _read_json(store / "index.json") == old_index
+        old_rec = _read_json(store / "games" / old_record_name)
+        assert "2. Nf3 Nc6" in old_rec["movetext"]
+        # restart: recovery discards the unreferenced candidate, then the
+        # update commits deterministically
+        s = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s["games_updated"] == 1
+        idx2 = _read_json(store / "index.json")
+        assert len(idx2) == 1
+        assert idx2[0]["game_id"] == old_index[0]["game_id"]
+        assert idx2[0]["record"] != old_record_name
+        rec = _read_json(store / "games" / idx2[0]["record"])
+        assert "2. Nf3 d6" in rec["movetext"]
+        # the old version becomes unreferenced at commit; the NEXT
+        # recovery removes it
+        run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        remaining = [f.name for f in (store / "games").glob("*.json")]
+        assert remaining == [idx2[0]["record"]]
+
+    def test_update_crash_after_commit_recovers_old_version(
+            self, tmp_path, monkeypatch):
+        p = tmp_path / "in.pgn"
+        store = tmp_path / "store"
+        p.write_text(VALID_PGN)
+        run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        old_name = _read_json(store / "index.json")[0]["record"]
+        changed = VALID_PGN.replace("2. Nf3 Nc6", "2. Nf3 d6")
+        p.write_text(changed)
+        real_open = Path.open
+        appends = {"n": 0}
+
+        def bomb(self, mode="r", *a, **kw):
+            if self.name == "telemetry.jsonl" and mode == "a":
+                appends["n"] += 1
+                if appends["n"] == 2:  # the game_updated append
+                    raise OSError("injected")
+            return real_open(self, mode, *a, **kw)
+
+        monkeypatch.setattr(Path, "open", bomb)
+        with pytest.raises(OSError):
+            run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        monkeypatch.undo()
+        # crash AFTER the commit point: the new version is referenced
+        idx = _read_json(store / "index.json")
+        assert len(idx) == 1 and idx[0]["record"] != old_name
+        # restart: old unreferenced version removed; dedup no-op
+        s = run_import_pgn(p, store, "pgn-file", retrieved_at=RETRIEVED_AT)
+        assert s["games_already_imported"] == 1
+        remaining = [f.name for f in (store / "games").glob("*.json")]
+        assert remaining == [idx[0]["record"]]
+
+
 class TestParserPinning:
     def test_late_tag_rejected(self, tmp_path):
         late = '[Event "x"]\n[Result "1-0"]\n\n1. e4 e5\n[White "late"]\n 1-0\n'
@@ -481,6 +584,16 @@ class TestParserPinning:
         star = '[Event "x"]\n[Result "*"]\n\n1. e4 e5 *\n'
         summary, _ = _import(tmp_path, star)
         assert summary["games_imported"] == 1
+
+    def test_semicolon_comments_keep_line_boundaries(self, tmp_path):
+        pgn = ('[Event "x"]\n[Result "1-0"]\n\n'
+               '1. e4 ; comment ends at the newline\n'
+               'e5 2. Nf3 Nc6 ; trailing comment\n'
+               '1-0\n')
+        summary, store = _import(tmp_path, pgn)
+        assert summary["games_imported"] == 1
+        rec = _stored_records(store)[0]
+        assert "Nc6" in rec["movetext"]
 
     def test_compact_move_numbers_accepted(self, tmp_path):
         compact = '[Event "x"]\n[Result "1-0"]\n\n1.e4 e5 2.Nf3 Nc6 1-0\n'
