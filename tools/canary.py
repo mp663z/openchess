@@ -1,10 +1,12 @@
 """Post-merge canary (T0039): after every merge, the full gate must be
 re-run against main HEAD and any failure must name the head SHA.
 
-The canary workflow (.github/workflows/canary.yml) is pinned to
-on.push.branches == [main] exactly and runs this tool. This module also
-validates that workflow pin, so a widened trigger or a removed step is a
-gate failure, not a silent drift.
+The canary workflow (.github/workflows/canary.yml) must equal the pinned
+structure EXACTLY: trigger, job, step order, action versions, install and
+setup commands, the exact `python tools/canary.py` invocation. An echoed
+lookalike command, a disabled job (`if:`), continue-on-error, a custom
+shell, an extra trigger or any other drift fails the pin. Editing the
+workflow deliberately requires updating the pin in the same change.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(ROOT))  # sibling-tool import when run as a script
 
+from tools.branch_guard import first_diff  # noqa: E402
 from tools.install_checks import runner  # noqa: E402
 
 WORKFLOW = ROOT / ".github" / "workflows" / "canary.yml"
@@ -71,30 +74,37 @@ def check(root: Path = ROOT, gates: list[list[str]] | None = None) -> list[str]:
     return problems
 
 
+# Pinned canary workflow: the parsed .github/workflows/canary.yml must
+# equal this structure exactly (PyYAML 1.1 parses the bare `on` key as True).
+EXPECTED_WORKFLOW = {
+    "name": "Canary",
+    True: {"push": {"branches": ["main"]}},
+    "jobs": {
+        "canary": {
+            "runs-on": "ubuntu-latest",
+            "steps": [
+                {"uses": "actions/checkout@v4"},
+                {"uses": "actions/setup-python@v5",
+                 "with": {"python-version": "3.12"}},
+                {"name": "Install dev dependencies",
+                 "run": "pip install -r requirements-dev.txt"},
+                {"name": "Install git hooks", "run": "bash tools/setup.sh"},
+                {"name": "Post-merge canary", "run": "python tools/canary.py"},
+            ],
+        },
+    },
+}
+
+
 def workflow_problems(wf: Path) -> list[str]:
-    """The canary workflow must be pinned to main exactly and run the canary."""
-    problems: list[str] = []
+    """Whole-structure pin: the canary workflow must match EXPECTED_WORKFLOW."""
     if not wf.is_file():
         return ["canary workflow missing: .github/workflows/canary.yml"]
     data = yaml.safe_load(wf.read_text())
-    if not isinstance(data, dict):
-        return ["canary workflow must be a mapping"]
-    on = data.get("on", data.get(True))  # PyYAML 1.1 parses bare `on` as True
-    branches = ((on or {}).get("push") or {}).get("branches")
-    if branches != ["main"]:
-        problems.append(
-            f"canary trigger must be on.push.branches == ['main'] exactly, "
-            f"got {branches!r}"
-        )
-    jobs = data.get("jobs")
-    if not isinstance(jobs, dict) or "canary" not in jobs:
-        problems.append("canary workflow must define a 'canary' job")
-    else:
-        steps = (jobs["canary"] or {}).get("steps") or []
-        runs = [s.get("run", "") for s in steps if isinstance(s, dict)]
-        if not any("tools/canary.py" in r for r in runs):
-            problems.append("canary job has no step running tools/canary.py")
-    return problems
+    diff = first_diff(EXPECTED_WORKFLOW, data, "canary")
+    if diff:
+        return [f"canary workflow does not match the pinned structure: {diff}"]
+    return []
 
 
 def main() -> int:

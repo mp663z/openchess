@@ -2,18 +2,20 @@
 hook, CI workflow, policy file) must be installed, pinned and biting.
 
 Good mode: tools/branch_guard.py verifies the real repo - hooks path pinned,
-pre-push hook executable with the pinned gate commands in exact order, CI
-workflow carrying the pinned steps in exact order, policy schema-exact with
-required_checks naming real workflow jobs.
-Violation mode: eight seeded fixture trees - hook missing a gate, hook not
-executable, gates reordered, CI workflow missing a pinned step, policy
-required_check naming a nonexistent job, policy wrong-type ref, setup.sh
-missing, setup.sh missing the pinned install line - each caught for its own
-reason.
+pre-push hook executable and matching the pinned script exactly (shebang +
+every effective line), CI workflow matching the pinned structure exactly
+(names, commands, action versions, the CLA gate's condition and env), policy
+schema-exact with required_checks naming real workflow jobs.
+Violation mode: seeded fixture trees - hook missing a gate, hook not
+executable, gates reordered, early-exit line prepended, inert CI step
+(echo), CI conditional, continue-on-error, custom shell, policy naming a
+nonexistent job, wrong-type protected_ref, setup.sh missing, setup.sh
+missing the pinned line - each caught for its own reason.
 """
 
 from __future__ import annotations
 
+import copy
 import stat
 import tempfile
 from pathlib import Path
@@ -25,41 +27,31 @@ from tools.install_checks import CheckError
 
 CHECK_ID = "T0036"
 
-HOOK = """#!/bin/bash
-set -e
-cd "$(git rev-parse --show-toplevel)"
-"$(dirname "$0")/tree-guard.sh"
-if [ -d .venv ]; then . .venv/bin/activate; fi
-ruff check .
-pytest -q
-python tools/dag.py verify
-python tools/evidence_lint.py
-python tools/license_audit.py
-python tools/license_lint.py
-python tools/governance_doc_lint.py
-"""
 
-CI = {
-    "name": "CI",
-    "on": {"push": None, "pull_request": None},
-    "jobs": {
-        "build-test-lint": {
-            "runs-on": "ubuntu-latest",
-            "steps": [{"name": n, "run": "true"} for n in
-                      branch_guard.REQUIRED_CI_STEPS],
-        },
-    },
-}
+def _hook_text(lines) -> str:
+    return "\n".join(
+        ["#!/bin/bash", "# Run the same gates CI runs, locally, before pushing."]
+        + list(lines)
+    ) + "\n"
+
+
+HOOK = _hook_text(branch_guard.REQUIRED_HOOK_LINES)
+
+SETUP = ("#!/bin/bash\nset -e\ncd \"$(git rev-parse --show-toplevel)\"\n"
+         + branch_guard.REQUIRED_SETUP_LINE + "\n")
 
 POLICY = {"protected_ref": "main",
           "required_checks": ["CI / build-test-lint"]}
 
 
-SETUP = ("#!/bin/bash\nset -e\ncd \"$(git rev-parse --show-toplevel)\"\n"
-         + branch_guard.REQUIRED_SETUP_LINE + "\n")
+def _ci(mutator=None) -> dict:
+    ci = copy.deepcopy(branch_guard.EXPECTED_CI)
+    if mutator:
+        mutator(ci)
+    return ci
 
 
-def _fixture(hook=HOOK, executable=True, ci=CI, policy=POLICY,
+def _fixture(hook=HOOK, executable=True, ci=None, policy=POLICY,
              setup=SETUP) -> Path:
     td = tempfile.mkdtemp()
     root = Path(td)
@@ -69,7 +61,8 @@ def _fixture(hook=HOOK, executable=True, ci=CI, policy=POLICY,
     if executable:
         h.chmod(h.stat().st_mode | stat.S_IXUSR)
     (root / ".github" / "workflows").mkdir(parents=True)
-    (root / ".github" / "workflows" / "ci.yml").write_text(yaml.safe_dump(ci))
+    (root / ".github" / "workflows" / "ci.yml").write_text(
+        yaml.safe_dump(ci if ci is not None else _ci()))
     (root / "data").mkdir()
     (root / "data" / "branch-protection.yaml").write_text(yaml.safe_dump(policy))
     if setup is not None:
@@ -80,24 +73,54 @@ def _fixture(hook=HOOK, executable=True, ci=CI, policy=POLICY,
     return root
 
 
+def _steps(ci: dict) -> list:
+    return ci["jobs"]["build-test-lint"]["steps"]
+
+
+def _step(ci: dict, name: str) -> dict:
+    return next(s for s in _steps(ci) if s.get("name") == name)
+
+
+def _reordered(lines):
+    lines = list(lines)
+    i, j = lines.index("ruff check ."), lines.index("pytest -q")
+    lines[i], lines[j] = lines[j], lines[i]
+    return lines
+
+
 CASES = {
     "hook missing a gate": dict(
-        hook=HOOK.replace("pytest -q\n", ""),
-        expect="pinned gate commands",
+        hook=_hook_text([ln for ln in branch_guard.REQUIRED_HOOK_LINES
+                         if ln != "pytest -q"]),
+        expect="does not match the pinned script",
     ),
     "hook not executable": dict(
         executable=False,
         expect="not executable",
     ),
     "hook gates reordered": dict(
-        hook=HOOK.replace("ruff check .\npytest -q", "pytest -q\nruff check ."),
-        expect="pinned gate commands",
+        hook=_hook_text(_reordered(branch_guard.REQUIRED_HOOK_LINES)),
+        expect="does not match the pinned script",
     ),
-    "ci missing a pinned step": dict(
-        ci={**CI, "jobs": {"build-test-lint": {"runs-on": "ubuntu-latest",
-            "steps": [{"name": n, "run": "true"} for n in
-                      branch_guard.REQUIRED_CI_STEPS if n != "Tests"]}}},
-        expect="pinned steps",
+    "early-exit prepended": dict(
+        hook=_hook_text(["exit 0"] + branch_guard.REQUIRED_HOOK_LINES),
+        expect="does not match the pinned script",
+    ),
+    "inert CI step (echo)": dict(
+        ci=_ci(lambda c: _step(c, "Tests").update(run="echo tests skipped")),
+        expect="does not match the pinned structure",
+    ),
+    "CI conditional added": dict(
+        ci=_ci(lambda c: _step(c, "Tests").update(**{"if": "false"})),
+        expect="does not match the pinned structure",
+    ),
+    "CI continue-on-error": dict(
+        ci=_ci(lambda c: _step(c, "Lint").update(**{"continue-on-error": True})),
+        expect="does not match the pinned structure",
+    ),
+    "CI custom shell": dict(
+        ci=_ci(lambda c: _step(c, "Lint").update(shell="pwsh")),
+        expect="does not match the pinned structure",
     ),
     "policy names a nonexistent job": dict(
         policy={**POLICY, "required_checks": ["CI / no-such-job"]},

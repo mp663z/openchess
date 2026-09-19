@@ -2,10 +2,16 @@
 installed, pinned and biting.
 
 Three sources are reconciled against data/branch-protection.yaml:
-  1. .githooks/pre-push: the local gate - must exist, be executable, and run
-     the pinned gate commands as full lines in exact relative order.
-  2. .github/workflows/*.yml: the remote gate - the pinned CI step names must
-     appear as full step names in exact relative order.
+  1. .githooks/pre-push: the local gate - must exist, be executable, and its
+     effective script (shebang + every non-comment, non-blank line) must
+     equal the pinned script EXACTLY. A prepended "exit 0", a reordered or
+     replaced gate, or any extra executable line fails.
+  2. .github/workflows/ci.yml: the remote gate - the parsed workflow must
+     equal the pinned structure EXACTLY: step names AND commands, action
+     versions, the CLA gate's condition and env, everything. A step whose
+     run is swapped for an echo, an added conditional or continue-on-error,
+     a custom shell, a changed action version - all fail. Editing CI
+     deliberately requires updating the pin in the same change.
   3. the policy file itself: strict schema, and every required_checks entry
      must name a real "<workflow> / <job>" found in the workflows.
 
@@ -26,9 +32,21 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 POLICY = ROOT / "data" / "branch-protection.yaml"
 
-# Pinned gate commands in .githooks/pre-push: full lines, exact order.
-REQUIRED_HOOK_GATES = [
+# The documented fresh-clone install step; tools/setup.sh must carry it
+# verbatim so any clone (CI, clean verifier, a new contributor) can install
+# the machinery hermetically.
+REQUIRED_SETUP_LINE = "git config core.hooksPath .githooks"
+
+REQUIRED_HOOK_SHEBANG = "#!/bin/bash"
+
+# Pinned pre-push script: every non-comment, non-blank line, exact order,
+# exact content. Whole-file pin: nothing executable may be added, removed,
+# or reordered without updating this pin in the same change.
+REQUIRED_HOOK_LINES = [
+    "set -e",
+    'cd "$(git rev-parse --show-toplevel)"',
     '"$(dirname "$0")/tree-guard.sh"',
+    "if [ -d .venv ]; then . .venv/bin/activate; fi",
     "ruff check .",
     "pytest -q",
     "python tools/dag.py verify",
@@ -38,26 +56,77 @@ REQUIRED_HOOK_GATES = [
     "python tools/governance_doc_lint.py",
 ]
 
-# The documented fresh-clone install step; tools/setup.sh must carry it
-# verbatim so any clone (CI, clean verifier, a new contributor) can install
-# the machinery hermetically.
-REQUIRED_SETUP_LINE = "git config core.hooksPath .githooks"
+# Pinned CI workflow: the parsed .github/workflows/ci.yml must equal this
+# structure exactly (PyYAML 1.1 parses the bare `on` key as True).
+EXPECTED_CI = {
+    "name": "CI",
+    True: {"push": None, "pull_request": None},
+    "jobs": {
+        "build-test-lint": {
+            "runs-on": "ubuntu-latest",
+            "steps": [
+                {"uses": "actions/checkout@v4"},
+                {"uses": "actions/setup-python@v5",
+                 "with": {"python-version": "3.12"}},
+                {"name": "Install dev dependencies",
+                 "run": "pip install -r requirements-dev.txt"},
+                {"name": "Release lock is current",
+                 "run": "python tools/lock_release.py --check"},
+                {"name": "Lint", "run": "ruff check ."},
+                {"name": "Tests", "run": "pytest -q"},
+                {"name": "DAG integrity", "run": "python tools/dag.py verify"},
+                {"name": "Evidence contract",
+                 "run": "python tools/evidence_lint.py"},
+                {"name": "License audit", "run": "python tools/license_audit.py"},
+                {"name": "License lint (T0008)",
+                 "run": "python tools/license_lint.py"},
+                {"name": "Governance docs lint",
+                 "run": "python tools/governance_doc_lint.py"},
+                {"name": "Install git hooks", "run": "bash tools/setup.sh"},
+                {"name": "Install checks (good passes, seeded violation caught)",
+                 "run": "python -m tools.install_checks.runner"},
+                {"name": "CLA gate",
+                 "if": "github.event_name == 'pull_request'",
+                 "env": {"GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
+                 "run": "python tools/cla_check.py"},
+                {"name": "Docs parse",
+                 "run": 'python -c "import json,yaml,pathlib; '
+                        "json.load(open('tasks/dag.json')); "
+                        "yaml.safe_load(open('scope/v0.1.yaml')); "
+                        "print('docs ok', "
+                        "pathlib.Path('README.md').stat().st_size)\""},
+            ],
+        },
+    },
+}
 
-# Pinned CI step names in the CI workflow's build-test-lint job, exact order.
-REQUIRED_CI_STEPS = [
-    "Install dev dependencies",
-    "Release lock is current",
-    "Lint",
-    "Tests",
-    "DAG integrity",
-    "Evidence contract",
-    "License audit",
-    "License lint (T0008)",
-    "Governance docs lint",
-    "Install git hooks",
-    "Install checks (good passes, seeded violation caught)",
-    "Docs parse",
-]
+
+def first_diff(expected, actual, path: str = "") -> str | None:
+    """First structural difference between two parsed documents, as a path."""
+    if type(expected) is not type(actual):
+        return f"{path or '<root>'}: type {type(expected).__name__} != {type(actual).__name__}"
+    if isinstance(expected, dict):
+        for k in expected:
+            if k not in actual:
+                return f"{path}.{k!r} missing"
+            d = first_diff(expected[k], actual[k], f"{path}.{k!r}")
+            if d:
+                return d
+        for k in actual:
+            if k not in expected:
+                return f"{path}.{k!r} unexpected"
+        return None
+    if isinstance(expected, list):
+        if len(expected) != len(actual):
+            return f"{path}: length {len(expected)} != {len(actual)}"
+        for i, (e, a) in enumerate(zip(expected, actual, strict=True)):
+            d = first_diff(e, a, f"{path}[{i}]")
+            if d:
+                return d
+        return None
+    if expected != actual:
+        return f"{path}: {expected!r} != {actual!r}"
+    return None
 
 
 def _git_env() -> dict[str, str]:
@@ -94,12 +163,6 @@ def load_policy(path: Path) -> list[str]:
     return problems
 
 
-def _subsequence(haystack: list[str], needle: list[str]) -> bool:
-    """needle appears in haystack as full elements in exact relative order."""
-    it = iter(haystack)
-    return all(any(n == h for h in it) for n in needle)
-
-
 def verify_setup(root: Path) -> list[str]:
     problems: list[str] = []
     setup = root / "tools" / "setup.sh"
@@ -133,11 +196,17 @@ def verify_hook(root: Path, hooks_path: str | None = None) -> list[str]:
     if not (mode & stat.S_IXUSR):
         problems.append("pre-push hook is not executable")
     lines = hook.read_text().splitlines()
-    if not _subsequence(lines, REQUIRED_HOOK_GATES):
+    if not lines or lines[0] != REQUIRED_HOOK_SHEBANG:
         problems.append(
-            "pre-push hook does not run the pinned gate commands "
-            "as full lines in exact order"
+            f"pre-push hook shebang must be exactly {REQUIRED_HOOK_SHEBANG!r}"
         )
+    effective = [
+        ln for ln in lines[1:]
+        if ln.strip() and not ln.lstrip().startswith("#")
+    ]
+    if effective != REQUIRED_HOOK_LINES:
+        diff = first_diff(REQUIRED_HOOK_LINES, effective, "hook")
+        problems.append(f"pre-push hook does not match the pinned script: {diff}")
     return problems
 
 
@@ -161,23 +230,14 @@ def _workflow_jobs(root: Path) -> dict[str, list[dict]]:
 
 
 def verify_ci(root: Path) -> list[str]:
-    problems: list[str] = []
     ci = root / ".github" / "workflows" / "ci.yml"
     if not ci.is_file():
         return ["CI workflow missing: .github/workflows/ci.yml"]
     data = yaml.safe_load(ci.read_text())
-    steps = (
-        (data.get("jobs") or {}).get("build-test-lint", {}).get("steps") or []
-        if isinstance(data, dict) else []
-    )
-    names = [s.get("name") for s in steps if isinstance(s, dict)]
-    names = [n for n in names if isinstance(n, str)]
-    if not _subsequence(names, REQUIRED_CI_STEPS):
-        problems.append(
-            "CI workflow does not run the pinned steps as full step names "
-            "in exact order"
-        )
-    return problems
+    diff = first_diff(EXPECTED_CI, data, "ci")
+    if diff:
+        return [f"CI workflow does not match the pinned structure: {diff}"]
+    return []
 
 
 def verify_policy_links(root: Path) -> list[str]:

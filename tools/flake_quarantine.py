@@ -55,21 +55,30 @@ def validate(
             continue
         if not isinstance(reason, str) or not reason.strip():
             problems.append(f"entry {i}: reason must be a non-empty string")
+        dates: dict[str, datetime.date] = {}
         for field in ("added", "expires"):
             v = e[field]
             if isinstance(v, datetime.date):
-                continue  # PyYAML parses ISO dates natively
-            try:
-                datetime.date.fromisoformat(str(v))
-            except ValueError:
+                dates[field] = v  # PyYAML parses ISO dates natively
+                continue
+            if _is_iso(str(v)):
+                dates[field] = datetime.date.fromisoformat(str(v))
+            else:
                 problems.append(f"entry {i}: {field} must be an ISO date, got {v!r}")
-        exp = e["expires"]
-        exp_date = exp if isinstance(exp, datetime.date) else (
-            datetime.date.fromisoformat(str(exp))
-            if _is_iso(str(exp)) else None
-        )
-        if exp_date is not None and exp_date < today:
-            problems.append(f"entry {i}: quarantine for {tid} expired {exp_date}")
+        if "added" in dates and "expires" in dates:
+            if dates["expires"] < dates["added"]:
+                problems.append(
+                    f"entry {i}: expires {dates['expires']} before added "
+                    f"{dates['added']}"
+                )
+            if dates["added"] > today:
+                problems.append(
+                    f"entry {i}: added {dates['added']} is in the future"
+                )
+            if dates["expires"] < today:
+                problems.append(
+                    f"entry {i}: quarantine for {tid} expired {dates['expires']}"
+                )
         if tid in seen:
             problems.append(f"entry {i}: duplicate quarantined test_id {tid}")
         seen.add(tid)
@@ -91,6 +100,11 @@ def collected_tests(root: Path = ROOT) -> set[str]:
         [sys.executable, "-m", "pytest", "--collect-only", "-q"],
         cwd=root, capture_output=True, text=True,
     )
+    if out.returncode != 0:
+        raise RuntimeError(
+            f"pytest collection failed (exit {out.returncode}): "
+            f"{out.stderr.strip()[-300:] or out.stdout.strip()[-300:]}"
+        )
     return {
         line.strip() for line in out.stdout.splitlines()
         if "::" in line and not line.startswith(("=", "<"))
@@ -107,7 +121,11 @@ def gate_set(collected: set[str], entries: list[dict]) -> set[str]:
 
 def main() -> int:
     entries = load()
-    collected = collected_tests()
+    try:
+        collected = collected_tests()
+    except RuntimeError as exc:
+        print(f"FAIL {exc}")
+        return 1
     problems = validate(entries, collected)
     if not gate_set(collected, entries):
         problems.append("gate set is empty: every test is quarantined")

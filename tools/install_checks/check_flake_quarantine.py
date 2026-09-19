@@ -11,6 +11,7 @@ extra key, empty gate set - each caught for its own reason.
 from __future__ import annotations
 
 import datetime
+from pathlib import Path
 
 from tools import flake_quarantine
 from tools.install_checks import CheckError
@@ -58,6 +59,14 @@ CASES = {
         ["tests/test_a.py::test_one"],
         "must be a mapping",
     ),
+    "added in the future": (
+        [_entry(added="2099-01-01", expires="2099-12-31")],
+        "in the future",
+    ),
+    "expires before added": (
+        [_entry(added="2026-10-01", expires="2026-09-30")],
+        "before added",
+    ),
 }
 
 
@@ -82,6 +91,13 @@ def run(mode: str) -> None:
     ]
     if flake_quarantine.gate_set(COLLECTED, all_quarantined):
         uncaught.append("empty gate set not detected")
+    # pytest collection failure must fail closed, not yield an empty set
+    import tempfile
+    try:
+        flake_quarantine.collected_tests(Path(tempfile.mkdtemp()))
+        uncaught.append("collection failure did not raise")
+    except RuntimeError:
+        pass
     if uncaught:
         return  # harness FAILS: a quarantine defect escaped
     raise CheckError("all seeded quarantine defects caught")

@@ -43,11 +43,21 @@ def _git_env() -> dict[str, str]:
 
 def fresh_copy(root: Path, dest: Path) -> None:
     """Clone root and detach at its exact HEAD sha: committed content only,
-    full history (git-dependent gates need it), no untracked state."""
+    full history (git-dependent gates need it), no untracked state.
+
+    origin/main inside the clone is PINNED to the source's origin/main sha
+    read before cloning: the source's main could otherwise move between
+    clone and verification, drifting the history anchor mid-run. If the
+    pinned sha is not present in the clone the update fails closed."""
     sha = subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=root, env=_git_env(),
         capture_output=True, text=True, check=True,
     ).stdout.strip()
+    main_probe = subprocess.run(
+        ["git", "rev-parse", "--verify", "origin/main"], cwd=root,
+        env=_git_env(), capture_output=True, text=True,
+    )
+    main_sha = main_probe.stdout.strip() if main_probe.returncode == 0 else None
     subprocess.run(
         ["git", "clone", "--quiet", str(root), str(dest)], env=_git_env(),
         check=True,
@@ -56,13 +66,33 @@ def fresh_copy(root: Path, dest: Path) -> None:
         ["git", "checkout", "--quiet", sha], cwd=dest, env=_git_env(),
         check=True,
     )
+    if main_sha:
+        subprocess.run(
+            ["git", "update-ref", "refs/remotes/origin/main", main_sha],
+            cwd=dest, env=_git_env(), check=True,
+        )
+        pinned = subprocess.run(
+            ["git", "rev-parse", "origin/main"], cwd=dest, env=_git_env(),
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        if pinned != main_sha:
+            raise RuntimeError(
+                f"origin/main pin drifted: wanted {main_sha[:12]}, got {pinned[:12]}"
+            )
 
 
-def _run(cmd: list[str], cwd: Path, env: dict[str, str]) -> int:
-    return subprocess.run(
-        [sys.executable, *cmd], cwd=cwd, env=env,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    ).returncode
+TIMEOUT_S = 600  # a hung gate is a failed gate
+
+
+def _run(cmd: list[str], cwd: Path, env: dict[str, str],
+         timeout: int = TIMEOUT_S) -> int:
+    try:
+        return subprocess.run(
+            [sys.executable, *cmd], cwd=cwd, env=env, timeout=timeout,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        ).returncode
+    except subprocess.TimeoutExpired:
+        return 124  # timeout is a failure, in-tree or clean copy
 
 
 def verify(
@@ -70,6 +100,7 @@ def verify(
     cmd: list[str] | None = None,
     env: dict[str, str] | None = None,
     rc_tree: int | None = None,
+    timeout: int = TIMEOUT_S,
 ) -> list[str]:
     """Run cmd in-tree (current env) and in a clean copy (scrubbed env).
 
@@ -83,12 +114,15 @@ def verify(
     env = dict(os.environ) if env is None else dict(env)
     problems: list[str] = []
     if rc_tree is None:
-        rc_tree = _run(cmd, root, env)
+        rc_tree = _run(cmd, root, env, timeout)
     if rc_tree != 0:
         problems.append(f"in-tree gate run failed (exit {rc_tree})")
     with tempfile.TemporaryDirectory() as td:
         dest = Path(td) / "clean"
-        fresh_copy(root, dest)
+        try:
+            fresh_copy(root, dest)
+        except (subprocess.CalledProcessError, RuntimeError) as exc:
+            return problems + [f"clean-copy preparation failed: {exc}"]
         setup_rc = subprocess.run(
             ["bash", "tools/setup.sh"], cwd=dest,
             env=scrub_env(env),
@@ -96,7 +130,7 @@ def verify(
         ).returncode
         if setup_rc != 0:
             problems.append("documented setup (tools/setup.sh) failed in the clean copy")
-        rc_clean = _run(cmd, dest, scrub_env(env))
+        rc_clean = _run(cmd, dest, scrub_env(env), timeout)
     if rc_clean != 0:
         problems.append(
             f"clean-copy gate run failed (exit {rc_clean}): the in-tree pass "

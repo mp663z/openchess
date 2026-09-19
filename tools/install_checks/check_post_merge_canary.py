@@ -5,9 +5,10 @@ Good mode: tools/canary.py's workflow pin validates the real
 .github/workflows/canary.yml (on.push.branches == ["main"] exactly, canary
 job runs tools/canary.py) and the canary's gate set passes against the real
 repo HEAD.
-Violation mode: (a) trigger widened beyond main; (b) no step running the
-canary; (c) no 'canary' job; (d) a failing gate against a fixture repo HEAD
-must be reported naming the head SHA.
+Violation mode: whole-structure pin attacks - echoed lookalike command,
+disabled job (`if:`), extra trigger, wrong action version,
+continue-on-error, removed canary step - plus a failing gate against a
+fixture repo HEAD, which must be reported naming the head SHA.
 """
 
 from __future__ import annotations
@@ -24,12 +25,12 @@ from tools.install_checks import CheckError, runner
 
 CHECK_ID = "T0039"
 
-WF = {
-    "name": "Canary",
-    "on": {"push": {"branches": ["main"]}},
-    "jobs": {"canary": {"runs-on": "ubuntu-latest",
-                        "steps": [{"run": "python tools/canary.py"}]}},
-}
+def _wf_dict(mutator=None) -> dict:
+    import copy
+    wf = copy.deepcopy(canary.EXPECTED_WORKFLOW)
+    if mutator:
+        mutator(wf)
+    return wf
 
 
 def _wf(text: str) -> Path:
@@ -39,22 +40,32 @@ def _wf(text: str) -> Path:
 
 
 CASES = {
-    "trigger widened": (
-        {**WF, "on": {"push": {"branches": ["main", "dev"]}}},
-        "exactly",
+    "echo lookalike command": (
+        _wf_dict(lambda w: w["jobs"]["canary"]["steps"][4].update(
+            run="echo python tools/canary.py")),
+        "does not match the pinned structure",
     ),
-    "trigger not main": (
-        {**WF, "on": {"push": {"branches": ["release"]}}},
-        "exactly",
+    "disabled job": (
+        _wf_dict(lambda w: w["jobs"]["canary"].update(**{"if": "${{ false }}"})),
+        "does not match the pinned structure",
     ),
-    "no canary step": (
-        {**WF, "jobs": {"canary": {"runs-on": "ubuntu-latest",
-                                   "steps": [{"run": "echo hi"}]}}},
-        "no step running tools/canary.py",
+    "extra trigger": (
+        _wf_dict(lambda w: w[True].update(pull_request=None)),
+        "does not match the pinned structure",
     ),
-    "no canary job": (
-        {**WF, "jobs": {"build": {"runs-on": "ubuntu-latest", "steps": []}}},
-        "must define a 'canary' job",
+    "wrong action version": (
+        _wf_dict(lambda w: w["jobs"]["canary"]["steps"][0].update(
+            uses="actions/checkout@v3")),
+        "does not match the pinned structure",
+    ),
+    "continue-on-error": (
+        _wf_dict(lambda w: w["jobs"]["canary"]["steps"][4].update(
+            **{"continue-on-error": True})),
+        "does not match the pinned structure",
+    ),
+    "canary step removed": (
+        _wf_dict(lambda w: w["jobs"]["canary"]["steps"].pop()),
+        "does not match the pinned structure",
     ),
 }
 
@@ -92,7 +103,7 @@ def run(mode: str) -> None:
         return
     uncaught = []
     for label, (wf, expect) in CASES.items():
-        problems = canary.workflow_problems(_wf(yaml.safe_dump(wf)))
+        problems = canary.workflow_problems(_wf(yaml.safe_dump(wf, sort_keys=False)))
         if not any(expect in p for p in problems):
             uncaught.append(f"{label}: expected {expect!r}, got {problems}")
     # failing gate names the head SHA

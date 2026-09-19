@@ -65,7 +65,12 @@ def run(mode: str) -> None:
     scrubbed = clean_verify.scrub_env(poisoned)
     if scrubbed != {"PATH": poisoned["PATH"]}:
         uncaught.append(f"scrub_env leaked: {sorted(scrubbed)}")
-    # (b) leaked-env-dependent pass must be caught in the clean copy
+    # (b) a hung gate is a failed gate (bounded timeout, both sides)
+    root = _fixture_repo("import time\ntime.sleep(30)\n")
+    problems = clean_verify.verify(root, cmd=["ok.py"], env=poisoned, timeout=1)
+    if not any("exit 124" in p for p in problems):
+        uncaught.append(f"timeout not treated as failure: {problems}")
+    # (c) leaked-env-dependent pass must be caught in the clean copy
     root = _fixture_repo(
         'import os, sys\nsys.exit(0 if os.environ.get("LEAK_OK") == "1" else 1)\n'
     )
