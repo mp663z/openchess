@@ -1,28 +1,15 @@
-"""T0043 red suite: every T0042 fixture case executed against the
-variant runtime (tools/variant_runtime - the T0044 deliverable).
-
-NEVER collected by the default gate: this filename intentionally does
-not match the python_files pattern (test_*.py), so directory discovery
-skips it; tests/test_t0043_variant_red.py runs it by explicit path and
-asserts the red signature. When tools/variant_runtime lands, these
-tests must turn green and the T0043 harness flips in the same PR.
-
-Runtime API under test (T0044 target, derived from the T0041 contract):
-- parse_position(variant: str, fen: str) -> position record
-- identity(record) -> exact canonical five-field dict
-- VariantError(Exception) with .code (closed error enum) and
-  .failure_class (FEN failure class) attributes
-"""
+"""T0044 behavior suite (the T0043 red suite turned green): every
+T0042 fixture case executed against the variant runtime
+(tools/variant_runtime). Collected by the default gate."""
 
 from __future__ import annotations
 
-import importlib
 import json
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 CASES = json.loads((ROOT / "tests" / "fixtures" / "variant" / "cases.json").read_text())
 HAPPY = CASES["happy"]
 BOUNDARY = CASES["boundary"]
@@ -36,20 +23,9 @@ ADDITIVE = [c for c in ROLLBACK if c["kind"] == "additive-fields"]
 
 
 def _rt():
-    """Import the T0044 runtime. A genuine resolution absence (the import
-    system itself raising ModuleNotFoundError with .name set to the
-    missing module) is re-raised as a marked error so the redness
-    harness can distinguish it from a module that EXISTS but raises a
-    hand-crafted ModuleNotFoundError internally."""
-    try:
-        return importlib.import_module("tools.variant_runtime")
-    except ModuleNotFoundError as exc:
-        if exc.name == "tools.variant_runtime":
-            raise RuntimeError(
-                "RED-EXPECTED-ABSENT: import system could not resolve "
-                "tools.variant_runtime"
-            ) from exc
-        raise
+    from tools import variant_runtime
+
+    return variant_runtime
 
 
 @pytest.mark.parametrize("case", HAPPY, ids=[c["name"] for c in HAPPY])
