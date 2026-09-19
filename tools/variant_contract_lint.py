@@ -159,6 +159,35 @@ def _attacks(grid: list[list[str]], r: int, c: int, by_white: bool) -> bool:
     return False
 
 
+def _ep_capture_legal(
+    grid: list[list[str]],
+    ep: str,
+    side: str,
+    row: int,
+    file_idx: int,
+    enemy: str,
+) -> bool:
+    """True iff at least one adjacent enemy pawn can legally capture en
+    passant: the capture is simulated (capturer to the EP square, the
+    double-stepped pawn removed) and must not leave the CAPTURING
+    side's own king attacked - an adjacent-but-pinned pawn cannot
+    capture."""
+    ep_row = 5 if ep[1] == "3" else 2
+    king_char = "k" if side == "b" else "K"
+    for df in (-1, 1):
+        cf = file_idx + df
+        if not (0 <= cf < 8) or grid[row][cf] != enemy:
+            continue
+        sim = [r[:] for r in grid]
+        sim[row][cf] = "."
+        sim[row][file_idx] = "."
+        sim[ep_row][file_idx] = enemy
+        kr, kc = next((r, c) for r in range(8) for c in range(8) if sim[r][c] == king_char)
+        if not _attacks(sim, kr, kc, by_white=(side == "b")):
+            return True
+    return False
+
+
 def _check_ep_semantics(grid: list[list[str]], ep: str, side: str, where: str) -> None:
     """En-passant must be a state a real game could reach: the
     double-stepped pawn exists, its origin and skipped squares are
@@ -179,14 +208,11 @@ def _check_ep_semantics(grid: list[list[str]], ep: str, side: str, where: str) -
         grid[origin][file_idx] == "." and grid[skipped][file_idx] == ".",
         f"{where}: en-passant origin/skipped squares must be empty",
     )
-    adjacent = (
-        grid[row][file_idx - 1] if file_idx > 0 else ".",
-        grid[row][file_idx + 1] if file_idx < 7 else ".",
-    )
     _need(
-        enemy in adjacent,
-        f"{where}: en-passant square {ep} has no {enemy!r} pawn able to "
-        "capture - unreachable state",
+        _ep_capture_legal(grid, ep, side, row, file_idx, enemy),
+        f"{where}: en-passant square {ep} has no LEGAL {enemy!r} capture "
+        "- unreachable state or every candidate capture leaves its own "
+        "king in check",
     )
 
 
@@ -196,6 +222,20 @@ def _check_position_semantics(
     flat = [sq for row in grid for sq in row]
     _need(flat.count("K") == 1, f"{where}: exactly one white king")
     _need(flat.count("k") == 1, f"{where}: exactly one black king")
+    for pawn_char, color in (("P", "white"), ("p", "black")):
+        pawns = flat.count(pawn_char)
+        _need(
+            pawns <= 8,
+            f"{where}: {color} has {pawns} pawns - at most 8 can exist",
+        )
+        upper = color == "white"
+        total = sum(1 for sq in flat if sq != "." and sq.isupper() == upper)
+        _need(
+            total <= 16,
+            f"{where}: {color} has {total} pieces - at most 16 can exist "
+            "(promotion can exceed original piece counts, never the "
+            "piece or pawn supply)",
+        )
     _need(
         not any(p in ("P", "p") for p in grid[0] + grid[-1]),
         f"{where}: pawns on the back rank are illegal",

@@ -205,6 +205,66 @@ MUTATIONS_V3 = {
 
 MUTATIONS.update(MUTATIONS_V3)
 
+MUTATIONS_V4 = {
+    # verifier probes on a094a1e - each previously passed
+    "ep_capture_pinned_black": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "3k4/8/8/8/3pP3/8/8/3RK3 b - e3 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "ep_capture_pinned_white": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "3r3k/8/8/3Pp3/8/8/8/3K4 w - e6 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "ep_capture_pinned_b_file": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "1k6/8/8/8/Pp6/8/8/KR6 b - a3 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "nine_white_pawns": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "7k/8/8/8/8/P7/PPPPPPPP/K7 w - - 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "nine_black_pawns": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "7k/1p6/pppppppp/8/8/8/8/K7 w - - 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+    "seventeen_black_pieces": lambda d: d["contract"]["variants"]["entries"].append(
+        {
+            "id": "foo",
+            "name": "Foo",
+            "start_fen": "rnbqkbnr/pppppppp/n7/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1",
+            "castling": "orthodox",
+            "status": "experimental",
+        }
+    ),
+}
+
+MUTATIONS.update(MUTATIONS_V4)
+
 
 def _doc_with_start(fen, castling="orthodox"):
     doc = copy.deepcopy(DOC)
@@ -225,6 +285,17 @@ def test_valid_en_passant_start_passes():
     lint(_doc_with_start("7k/8/8/8/3pP3/8/8/K7 b - e3 0 1"))
     # black double-stepped d7-d5; white pawn e5 can capture
     lint(_doc_with_start("K7/8/8/3pP3/8/8/8/7k w - d6 0 1"))
+
+
+def test_promotion_aware_material_passes():
+    # two queens (promotion) with few pieces is fine: pawn count and
+    # total-piece supply are the hard limits
+    lint(_doc_with_start("7k/8/8/8/8/8/8/KQQ5 w - - 0 1"))
+
+
+def test_ep_capture_unpinned_passes():
+    # adjacent capturer whose capture is legal (no pin) still passes
+    lint(_doc_with_start("3k4/8/8/8/3pP3/8/8/4K3 b - e3 0 1"))
 
 
 def test_chess960_without_rights_passes():
