@@ -1,0 +1,5 @@
+{
+  "title": "Low contrast card",
+  "palette": {"bg": "#888888", "fg": "#777777"},
+  "rows": [{"label": "Move", "text": "e4", "color": "fg"}]
+}

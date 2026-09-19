@@ -1,0 +1,9 @@
+{
+  "title": "Fixture card",
+  "palette": {"bg": "#ffffff", "fg": "#111111", "accent": "#2b6cb0"},
+  "rows": [
+    {"label": "Move", "text": "e4", "color": "fg"},
+    {"label": "Reply", "text": "c5", "color": "accent", "tone": "key", "marker": "*"}
+  ],
+  "grid": {"rows": 4, "cols": 4, "colors": ["#ffffff", "#111111"]}
+}

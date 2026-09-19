@@ -1,0 +1,5 @@
+{
+  "title": "Color-only card",
+  "palette": {"bg": "#ffffff", "fg": "#111111"},
+  "rows": [{"label": "Move", "text": "e4", "color": "fg", "tone": "key"}]
+}

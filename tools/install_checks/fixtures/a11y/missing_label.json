@@ -1,0 +1,5 @@
+{
+  "title": "Unlabeled card",
+  "palette": {"bg": "#ffffff", "fg": "#111111"},
+  "rows": [{"text": "e4", "color": "fg"}]
+}
