@@ -1,3 +1,28 @@
+---
+adr: ADR-0002
+status: proposed
+gate:
+  combiner: ALL
+  metrics:
+    install_completion: install-event-in-client-telemetry
+    notification_delivery: client-delivery-receipt
+    retention: week-8-active-usage-completed-review-session
+  sample:
+    cohort_min_users: 30
+    window_min_weeks: 8
+    subgroup_min_users: 10
+    subgroup_fallback: gate-unevaluable-cannot-reopen-native
+  reopen_expression:
+    and:
+      - or: [install_completion_below_threshold, notification_delivery_below_threshold]
+      - retention_gap_at_least_threshold
+  thresholds:
+    install_completion_pct: 70
+    notification_delivery_pct: 80
+    retention_gap_points: 15
+  prohibition: anecdotes-never-satisfy
+---
+
 # ADR-0002: PWA first (T2794)
 
 Status: proposed
@@ -72,24 +97,33 @@ directive keeps that reopening cheap.
 
 ## Native-reopen gate
 
-Native-shell evaluation reopens only when ALL of the following hold,
-with the cohort query and result recorded in the decision evidence:
+The gate is the structured data in this document's YAML front matter
+(the gate block); this prose mirrors it exactly and is documentation.
+If the two ever disagree, the front matter is normative and the
+disagreement is a defect.
+
+Native-shell evaluation reopens only when ALL of the following
+requirements hold; the cohort query and result are recorded in the decision evidence:
 
 - (a) Measurement definitions: install completion is the share of
   onboarded beta users with the PWA installed, confirmed by the
   install event in client telemetry; notification delivery is the
-  share of opted-in push notifications confirmed delivered by the client receipt; retention is week-8 active usage, defined as at
-  least one completed review session in the eighth week after
-  onboarding.
+  share of opted-in push notifications confirmed delivered by the client receipt; retention is week-8
+  active usage, defined as at least one completed review session in
+  the eighth week after onboarding.
 - (b) Cohort and window: the full beta cohort, minimum N = 30 users,
   minimum observation window W = 8 weeks per user.
 - (c) Baseline: the unaffected sub-cohort - users with install
   completed and notification delivery confirmed - measured over the
-  same window.
-- (d) Reopen condition: PWA install-completion below 70%, OR opted-in
-  notification delivery below 80%, AND the affected cohort's week-8
-  retention at least 15 percentage points below the unaffected
-  cohort's week-8 retention.
+  same window. BOTH the affected and the unaffected sub-cohort must
+  contain at least 10 users; if either is smaller, the gate is
+  unevaluable and cannot reopen native until the requirement is met
+  (no external baseline is substituted).
+- (d) Reopen condition, with explicit grouping: reopen only if
+  (PWA install completion is below 70% OR opted-in notification
+  delivery is below 80%) AND the affected cohort's week-8 retention
+  is at least 15 percentage points below the unaffected cohort's
+  week-8 retention.
 
 Anecdotes, individual complaints and unmeasured impressions never
 satisfy this gate; only the recorded query result against these
