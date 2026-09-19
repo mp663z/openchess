@@ -333,7 +333,7 @@ def test_enum_requires_codes(code):
 def test_error_shape_exact():
     doc = fresh()
     doc["contract"]["errors"]["shape"]["error"]["fields"]["code"]["type"] = "integer"
-    bad(doc, "exact value")
+    bad(doc, "exact")
 
 
 @pytest.mark.parametrize("base", ["/turn/v0", "/turn/vx", "/variant/v1", "turn/v1", "/turn/v1/"])
@@ -350,6 +350,79 @@ def test_versioning_markers(marker):
         marker, "REDACTED"
     )
     bad(doc, f"must state {marker!r}")
+
+
+# --- bool/int conflation: strict equality at every nested node ---------
+
+
+def _set_path(doc: dict, path: tuple, value: object) -> None:
+    node = doc
+    for segment in path[:-1]:
+        node = node[segment]
+    node[path[-1]] = value
+
+
+CONFLATIONS = [
+    (("contract", "state", "bounds", "halfmove_clock", "min"), False),
+    (("contract", "state", "bounds", "fullmove_number", "min"), True),
+    (("contract", "transition", "on_move", "fullmove_number", "amount"), True),
+    (("contract", "transition", "on_move", "halfmove_clock", "reset_to"), False),
+    (("contract", "transition", "on_move", "halfmove_clock", "reset_to"), 0.0),
+    (
+        ("contract", "transition", "on_move", "halfmove_clock", "otherwise", "amount"),
+        True,
+    ),
+    (("contract", "transition", "identity", "counters_participate"), 0),
+    (("contract", "transition", "identity", "side_to_move_participates"), 1),
+    (("contract", "termination", "closed_after"), 1),
+    (("contract", "termination", "fifty_move", "claim", "threshold"), True),
+    (("contract", "termination", "fifty_move", "claim", "automatic"), 0),
+    (("contract", "termination", "fifty_move", "automatic", "automatic"), 1),
+    (("contract", "errors", "shape", "error", "fields", "code", "required"), 1),
+    (("contract", "errors", "shape", "error", "fields", "message", "required"), 0),
+    (("contract", "errors", "shape", "error", "fields", "retryable", "required"), 0),
+]
+
+
+@pytest.mark.parametrize("path,value", CONFLATIONS)
+def test_bool_int_conflation_rejected(path, value):
+    doc = fresh()
+    _set_path(doc, path, value)
+    bad(doc, "exact")
+
+
+# --- malformed linked artifacts ---------------------------------------
+
+
+def test_linked_duplicate_variant_ids_rejected(tmp_path):
+    vdoc = copy.deepcopy(VARIANT_DOC)
+    entry = vdoc["contract"]["variants"]["entries"][0]
+    vdoc["contract"]["variants"]["entries"].append(copy.deepcopy(entry))
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
+
+
+def test_linked_canonical_fields_replaced_rejected(tmp_path):
+    vdoc = copy.deepcopy(VARIANT_DOC)
+    vdoc["contract"]["identity"]["canonical_fields"] = ["x", "side_to_move"]
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
+
+
+def test_linked_bool_castling_rejected(tmp_path):
+    vdoc = copy.deepcopy(VARIANT_DOC)
+    vdoc["contract"]["variants"]["entries"][0]["castling"] = True
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
+
+
+def test_linked_bad_schema_version_rejected(tmp_path):
+    vdoc = copy.deepcopy(VARIANT_DOC)
+    vdoc["schema_version"] = 2
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
+
+
+def test_linked_missing_entries_rejected(tmp_path):
+    vdoc = copy.deepcopy(VARIANT_DOC)
+    del vdoc["contract"]["variants"]["entries"]
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
 
 
 # --- schema scalars --------------------------------------------------------
@@ -391,7 +464,7 @@ def test_variant_link_path_pinned():
 
 def test_variant_link_missing_artifact_fails(tmp_path):
     doc = fresh()
-    bad(doc, "linked contract must be a mapping", root=_tmp_root(tmp_path, {}))
+    bad(doc, "fails its own lint", root=_tmp_root(tmp_path, {}))
     (tmp_path / "data" / "contracts" / "variant.yaml").unlink()
     bad(doc, "does not exist", root=tmp_path)
 
@@ -399,7 +472,7 @@ def test_variant_link_missing_artifact_fails(tmp_path):
 def test_variant_link_id_mismatch_fails(tmp_path):
     vdoc = copy.deepcopy(VARIANT_DOC)
     vdoc["contract"]["id"] = "chess-variants"
-    bad(fresh(), "linked id", root=_tmp_root(tmp_path, vdoc))
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
 
 
 def test_variant_link_requires_side_to_move_in_identity(tmp_path):
@@ -407,14 +480,14 @@ def test_variant_link_requires_side_to_move_in_identity(tmp_path):
     vdoc["contract"]["identity"]["canonical_fields"] = [
         f for f in vdoc["contract"]["identity"]["canonical_fields"] if f != "side_to_move"
     ]
-    bad(fresh(), "must include side_to_move", root=_tmp_root(tmp_path, vdoc))
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
 
 
 @pytest.mark.parametrize("counter", ["halfmove_clock", "fullmove_number"])
 def test_variant_link_rejects_counters_in_identity(tmp_path, counter):
     vdoc = copy.deepcopy(VARIANT_DOC)
     vdoc["contract"]["identity"]["canonical_fields"].append(counter)
-    bad(fresh(), "must NOT include counter field", root=_tmp_root(tmp_path, vdoc))
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
 
 
 def test_variant_link_requires_orthodox_castling(tmp_path):
@@ -422,7 +495,7 @@ def test_variant_link_requires_orthodox_castling(tmp_path):
     for entry in vdoc["contract"]["variants"]["entries"]:
         if entry["id"] == "standard":
             entry["castling"] = "chess960"
-    bad(fresh(), "castling must be orthodox", root=_tmp_root(tmp_path, vdoc))
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
 
 
 def test_variant_link_requires_registry_membership(tmp_path):
@@ -430,7 +503,7 @@ def test_variant_link_requires_registry_membership(tmp_path):
     vdoc["contract"]["variants"]["entries"] = [
         e for e in vdoc["contract"]["variants"]["entries"] if e["id"] != "standard"
     ]
-    bad(fresh(), "not in the variant registry", root=_tmp_root(tmp_path, vdoc))
+    bad(fresh(), "fails its own lint", root=_tmp_root(tmp_path, vdoc))
 
 
 # --- CLI boundary -----------------------------------------------------------

@@ -25,6 +25,12 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))  # sibling-tool import when run as a script
+
+from tools.variant_contract_lint import ContractError as _VariantContractError  # noqa: E402
+from tools.variant_contract_lint import lint as _variant_lint  # noqa: E402
+
 CONTRACT = ROOT / "data" / "contracts" / "turn.yaml"
 
 STATE_FIELDS = ["side_to_move", "halfmove_clock", "fullmove_number"]
@@ -164,18 +170,33 @@ def _text(node: object, where: str) -> str:
     return node
 
 
+def _strict_eq(actual: object, expected: object, where: str) -> None:
+    """Recursive exact comparison: type(actual) is type(expected) at
+    EVERY scalar node (bool/int conflation is a violation), containers
+    match in exact keys/order and length. Ordinary == accepts 0 for
+    False and 1 for True; this never does."""
+    if type(expected) is dict:
+        _need(type(actual) is dict, f"{where}: mapping required")
+        _need(
+            list(actual) == list(expected),
+            f"{where}: exact keys/order {list(expected)!r}",
+        )
+        for key in expected:
+            _strict_eq(actual[key], expected[key], f"{where}.{key}")
+    elif type(expected) is list:
+        _need(type(actual) is list, f"{where}: list required")
+        _need(len(actual) == len(expected), f"{where}: exact {expected!r}")
+        for i in range(len(expected)):
+            _strict_eq(actual[i], expected[i], f"{where}[{i}]")
+    else:
+        _need(
+            type(actual) is type(expected) and actual == expected,
+            f"{where}: exact {expected!r}",
+        )
+
+
 def _exact(node: object, expected: object, where: str) -> None:
-    _need(type(node) is type(expected) and node == expected, f"{where}: exact {expected!r}")
-
-
-def _check_shape(node: object, expected: dict, where: str) -> None:
-    node = _mapping(node, where)
-    _keys(node, set(expected), where)
-    for key, sub in expected.items():
-        if isinstance(sub, dict) and sub and all(isinstance(v, dict) for v in sub.values()):
-            _check_shape(node[key], sub, f"{where}.{key}")
-        else:
-            _need(node[key] == sub, f"{where}.{key}: exact value {sub!r} required")
+    _strict_eq(node, expected, where)
 
 
 def _check_variant_link(link: dict, root: Path) -> None:
@@ -189,9 +210,16 @@ def _check_variant_link(link: dict, root: Path) -> None:
         vdoc = yaml.safe_load(path.read_text())
     except yaml.YAMLError as exc:
         raise ContractError(f"variant_link.path: malformed YAML: {exc}") from exc
-    _need(type(vdoc) is dict, "variant_link.path: linked document must be a mapping")
-    vcontract = vdoc.get("contract")
-    _need(type(vcontract) is dict, "variant_link.path: linked contract must be a mapping")
+    # the linked artifact must pass its OWN contract lint before any
+    # claim relies on it: exact canonical tuple, unique variant ids,
+    # declared castling kinds, exact schema - never a projection of it
+    try:
+        _variant_lint(vdoc)
+    except _VariantContractError as exc:
+        raise ContractError(
+            f"variant_link.path: linked contract fails its own lint: {exc}"
+        ) from exc
+    vcontract = vdoc["contract"]
     _need(
         vcontract.get("id") == link["contract"],
         f"variant_link: linked id {vcontract.get('id')!r} != {link['contract']!r}",
@@ -216,7 +244,12 @@ def _check_variant_link(link: dict, root: Path) -> None:
     registry = {}
     for entry in entries:
         _need(type(entry) is dict, "variants.entries: mapping entries required")
-        registry[entry.get("id")] = entry.get("castling")
+        vid = entry.get("id")
+        _need(
+            type(vid) is str and vid not in registry,
+            f"variants.entries: unique string variant ids required, got {vid!r}",
+        )
+        registry[vid] = entry.get("castling")
     for vid in link["applies_to_variants"]:
         _need(vid in registry, f"variant_link: {vid!r} not in the variant registry")
         _need(
@@ -302,7 +335,7 @@ def lint(doc: object, root: Path = ROOT) -> None:
     _need(len(set(enum)) == len(enum), "errors.closed_enum: duplicate codes")
     for code in ("malformed_request", "illegal_transition", "unknown_termination"):
         _need(code in enum, f"errors.closed_enum: {code} required")
-    _check_shape(errors.get("shape"), ERROR_SHAPE, "errors.shape")
+    _exact(errors.get("shape"), ERROR_SHAPE, "errors.shape")
     # every error code the failure mapping names must be declared
     for cls, mapping in FAILURE_MAPPING.items():
         _need(
