@@ -44,7 +44,12 @@ def registry_yaml(entries):
 # --- registry validation -------------------------------------------------
 
 def test_real_registry_validates():
-    reg = cla_check.load_registry()
+    # The real registry references the real repo, independent of the
+    # hermetic GITHUB_REPOSITORY override the autouse fixture installs.
+    reg = cla_check.validate_registry(
+        yaml.safe_load(cla_check.REGISTRY.read_text()),
+        repo=cla_check.DEFAULT_REPO,
+    )
     assert isinstance(reg, dict)
 
 

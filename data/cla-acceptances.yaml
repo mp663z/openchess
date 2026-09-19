@@ -2,4 +2,7 @@
 # Maintainers add an entry before merging a contributor's first non-de-minimis
 # pull request. CI validates the schema; empty registry is valid pre-launch.
 schema_version: 1
-acceptances: []
+acceptances:
+  - github_handle: mp663z
+    accepted_at: "2026-09-19T02:21:15Z"
+    reference: "https://github.com/mp663z/openchess/pull/69"
