@@ -80,12 +80,14 @@ ORTHODOX_CASTLING_SQUARES = {
 
 
 class ContractError(Exception):
-    pass
+    def __init__(self, problem: str, failure_class: str | None = None) -> None:
+        super().__init__(problem)
+        self.failure_class = failure_class
 
 
-def _need(cond: bool, problem: str) -> None:
+def _need(cond: bool, problem: str, failure_class: str | None = None) -> None:
     if not cond:
-        raise ContractError(problem)
+        raise ContractError(problem, failure_class=failure_class)
 
 
 def _mapping(node: object, where: str) -> dict:
@@ -284,21 +286,29 @@ def _check_position_semantics(
 
 
 def _check_fen(fen: object, where: str, castling_kind: str) -> None:
-    _need(type(fen) is str, f"{where}: FEN string required")
+    """FEN validation with stage-classified failures: every raised
+    ContractError carries failure_class set to the exact declared class
+    of the stage that rejected the input."""
+    _need(type(fen) is str, f"{where}: FEN string required", failure_class="wrong_field_count")
     fields = fen.split(" ")
-    _need(len(fields) == 6, f"{where}: FEN must have 6 fields")
+    _need(len(fields) == 6, f"{where}: FEN must have 6 fields", failure_class="wrong_field_count")
     board, side, castling, ep, half, full = fields
-    grid = _parse_board(board, where)
-    _need(side in ("w", "b"), f"{where}: side must be w or b")
+    try:
+        grid = _parse_board(board, where)
+    except ContractError as exc:
+        raise ContractError(str(exc), failure_class="bad_board") from exc
+    _need(side in ("w", "b"), f"{where}: side must be w or b", failure_class="bad_side")
     _need(
         castling == "-"
         or all(c in "KQkq" for c in castling)
         and len(set(castling)) == len(castling),
         f"{where}: castling field malformed",
+        failure_class="bad_castling",
     )
     _need(
         ep == "-" or (len(ep) == 2 and ep[0] in "abcdefgh" and ep[1] in "36"),
         f"{where}: en-passant field malformed",
+        failure_class="bad_en_passant",
     )
     _need(
         re.fullmatch(r"0|[1-9][0-9]{0,9}", half) is not None
@@ -306,10 +316,14 @@ def _check_fen(fen: object, where: str, castling_kind: str) -> None:
         f"{where}: counters must be canonical bounded ints (halfmove "
         "'0' or 1-9 leading, fullmove >= 1, no leading zeros, at most "
         "10 digits - conversion never runs on unbounded input)",
+        failure_class="bad_counters",
     )
-    _check_position_semantics(grid, castling, side, castling_kind, where)
-    if ep != "-":
-        _check_ep_semantics(grid, ep, side, where)
+    try:
+        _check_position_semantics(grid, castling, side, castling_kind, where)
+        if ep != "-":
+            _check_ep_semantics(grid, ep, side, where)
+    except ContractError as exc:
+        raise ContractError(str(exc), failure_class="illegal_position") from exc
 
 
 def check_variant_id(vid: object, known: set[str]) -> None:
