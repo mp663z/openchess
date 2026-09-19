@@ -1,0 +1,9 @@
+# T0036: protected-branch policy for the default branch. tools/branch_guard.py
+# verifies the LOCAL machinery (pre-push hook, CI workflow) matches this
+# policy exactly. The remote GitHub branch-protection settings are fetched
+# for evidence (gh api) and reviewed by a human: no hermetic check of remote
+# state is claimed.
+protected_ref: main
+required_checks:
+  - CI / build-test-lint
+  - Canary / canary

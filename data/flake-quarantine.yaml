@@ -1,0 +1,5 @@
+# T0037: tests under flake quarantine. A quarantined test still runs in the
+# informational job but is excluded from the required gate set until its
+# expiry. tools/flake_quarantine.py validates this file strictly and proves
+# every quarantined node id exists in the collected suite.
+tests: []
