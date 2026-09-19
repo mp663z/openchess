@@ -1,16 +1,18 @@
 """T0029: performance gate - benchmarks must stay under pinned thresholds.
 
-A benchmark module defines BENCH_ID, THRESHOLD_MS and run(); it may define
-verify(result) -> str | None for a deterministic correctness check. The
-gate runs each benchmark 3 times and fails on: wrong result, median over
-threshold, or a crash (exception). Thresholds are generous (order-of-
-magnitude guards), not micro-benchmarks - they catch real regressions
-without flaking CI.
+A benchmark module defines BENCH_ID (nonempty unique string), THRESHOLD_MS
+(finite positive number) and run(); it may define verify(result) ->
+str | None. Every timed run's result is verified - a benchmark correct on
+a warmup call but wrong when timed is caught. Duplicate or empty IDs,
+non-finite or non-positive thresholds, and non-callable run/verify are
+malformed and fail closed. A crash is a failure, never a skip.
+Thresholds are generous order-of-magnitude guards, not micro-benchmarks.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import math
 import sys
 import time
 from pathlib import Path
@@ -29,41 +31,91 @@ def _load(path: Path):
     return mod
 
 
+def _key_of(path: Path) -> str:
+    """Identity for failure reporting: the module's BENCH_ID if it parses
+    as a string at all, else the filename."""
+    try:
+        mod = _load(path)
+        bench_id = getattr(mod, "BENCH_ID", None)
+        if isinstance(bench_id, str) and bench_id.strip():
+            return bench_id.strip()
+    except Exception:
+        pass
+    return path.name
+
+
+def _validate(mod, path: Path) -> str | None:
+    bench_id = getattr(mod, "BENCH_ID", None)
+    if not isinstance(bench_id, str) or not bench_id.strip():
+        return "BENCH_ID must be a nonempty string"
+    threshold = getattr(mod, "THRESHOLD_MS", None)
+    if (isinstance(threshold, bool)
+            or not isinstance(threshold, (int, float))
+            or not math.isfinite(threshold) or threshold <= 0):
+        return "THRESHOLD_MS must be a finite positive number"
+    if not callable(getattr(mod, "run", None)):
+        return "run must be callable"
+    verify = getattr(mod, "verify", None)
+    if verify is not None and not callable(verify):
+        return "verify must be callable when present"
+    return None
+
+
 def run_benchmarks(bench_dir: Path) -> list[str]:
+    """Failures as '<id>: <class> (<detail>)', class one of malformed,
+    duplicate, crash, wrong result, slow."""
     failures: list[str] = []
     benches = sorted(bench_dir.glob("bench_*.py"))
     if not benches:
-        return [f"no benchmarks found in {bench_dir}"]
+        return [f"{bench_dir.name}: malformed (no benchmarks found)"]
+    loaded = []
     for path in benches:
+        key = _key_of(path)
         try:
             mod = _load(path)
-            bench_id = str(mod.BENCH_ID)
-            threshold = float(mod.THRESHOLD_MS)
-            run = mod.run
-            verify = getattr(mod, "verify", None)
-        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-            failures.append(f"{path.name}: malformed benchmark ({e})")
+        except Exception as e:
+            failures.append(f"{key}: malformed (load: {type(e).__name__}: {e})")
             continue
+        problem = _validate(mod, path)
+        if problem is not None:
+            failures.append(f"{key}: malformed ({problem})")
+            continue
+        loaded.append((key, mod))
+    seen: dict[str, str] = {}
+    for key, mod in loaded:
+        if key in seen:
+            failures.append(
+                f"{key}: duplicate (BENCH_ID shadows another benchmark)")
+        else:
+            seen[key] = mod.__name__
+    runnable = []
+    duped = {f.split(":", 1)[0] for f in failures}
+    for key, mod in loaded:
+        if key in duped:
+            continue  # fail closed: shadowed identities never run
+        runnable.append((key, mod))
+    for key, mod in runnable:
+        threshold = float(mod.THRESHOLD_MS)
+        verify = mod.verify if callable(getattr(mod, "verify", None)) else None
         try:
             samples = []
-            result = run()  # warmup + result under test
+            results = []
             for _ in range(REPEATS):
                 t0 = time.perf_counter()
-                run()
+                results.append(mod.run())
                 samples.append((time.perf_counter() - t0) * 1000.0)
         except Exception as e:  # a crash is a failure, never a skip
-            failures.append(f"{bench_id}: crash ({type(e).__name__}: {e})")
+            failures.append(f"{key}: crash ({type(e).__name__}: {e})")
             continue
         if verify is not None:
-            problem = verify(result)
-            if problem is not None:
-                failures.append(f"{bench_id}: wrong result ({problem})")
+            wrong = [verify(r) for r in results]
+            wrong = [w for w in wrong if w is not None]
+            if wrong:
+                failures.append(f"{key}: wrong result ({wrong[0]})")
                 continue
         median = sorted(samples)[len(samples) // 2]
         if median > threshold:
-            failures.append(
-                f"{bench_id}: slow ({median:.0f}ms > {threshold:.0f}ms)"
-            )
+            failures.append(f"{key}: slow ({median:.0f}ms > {threshold:.0f}ms)")
     return failures
 
 
