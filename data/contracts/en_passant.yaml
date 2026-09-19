@@ -43,15 +43,15 @@ contract:
         never carried across a turn.
     storage_vs_identity:
       storage: recorded-on-every-two-square-advance
-      identity_participation: only-when-a-legal-capture-exists
+      identity_value: target-when-legal-capture-else-none
       rule: >-
         The stored target field records the square after EVERY
         two-square advance, whether or not a capture is possible.
-        For position identity (repetition detection per the
-        chess-turn contract's threefold/fivefold states) the target
-        participates ONLY when at least one legal en-passant
-        capture exists against it; a target no pawn can legally
-        take never distinguishes two positions.
+        Position identity is separate (contract.identity): the
+        canonical en_passant identity VALUE is the target square
+        only when at least one legal en-passant capture exists
+        against it, and the none sentinel otherwise - a target no
+        pawn can legally take never distinguishes two positions.
   capture:
     mover:
       piece: pawn-of-side-to-move
@@ -88,13 +88,15 @@ contract:
       reset (both a pawn move and a capture) and increments the
       fullmove number exactly when black captures.
   identity:
-    target_participates: conditionally
-    condition: at-least-one-legal-capture
+    canonical_field: en_passant
+    participates: always
+    value_rule: target-when-at-least-one-legal-capture-else-none-sentinel
     rule: >-
-      The en-passant target participates in position identity only
-      under the storage_vs_identity condition above; the stored
-      field itself is state, not identity, when no legal capture
-      exists.
+      The en_passant canonical identity field ALWAYS participates
+      in position identity per the chess-variant contract's
+      canonical_fields; what varies is its VALUE, per the
+      storage_vs_identity section above. Repetition states in the
+      chess-turn contract consume this identity tuple unchanged.
   failure_classes: [target_malformed, target_inconsistent,
     capture_precondition, pinned_capture]
   failure_mapping:
