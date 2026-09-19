@@ -83,8 +83,13 @@ def reconcile(board: dict, evidence_dir: Path, history: set[str],
         grandfathered = _grandfathered(evidence_dir)
     board_by_id = {}
     for t in tasks:
-        if isinstance(t, dict) and isinstance(t.get("id"), str):
-            board_by_id[t["id"]] = t
+        if not isinstance(t, dict) or not isinstance(t.get("id"), str):
+            problems.append(f"board task entry is malformed: {str(t)[:40]!r}")
+            continue
+        if t["id"] in board_by_id:
+            problems.append(f"duplicate board task id {t['id']}")
+            continue
+        board_by_id[t["id"]] = t
 
     evidence_done: dict[str, str] = {}  # task id -> recorded sha
     evidence_other: set[str] = set()
@@ -106,24 +111,23 @@ def reconcile(board: dict, evidence_dir: Path, history: set[str],
         status = t.get("status")
         sha = t.get("done_sha")
         if status == "done":
-            if tid in grandfathered and tid not in evidence_done:
-                continue  # pre-contract evidence: exempt from the done-format
-            if tid not in evidence_done and tid in evidence_other:
-                problems.append(f"{tid}: board done but evidence is not done")
-            elif (
-                tid in evidence_done
-                and isinstance(sha, str)
-                and evidence_done[tid] != sha
-            ):
+            # evidence-format comparison (grandfathering exempts ONLY this)
+            if tid not in grandfathered:
+                if tid in evidence_other:
+                    problems.append(f"{tid}: board done but evidence is not done")
+                elif tid not in evidence_done:
+                    problems.append(f"{tid}: board done but evidence file missing")
+                elif isinstance(sha, str) and evidence_done[tid] != sha:
                     problems.append(
                         f"{tid}: evidence recorded SHA {evidence_done[tid][:12]} "
                         f"!= board done_sha {sha[:12]}"
                     )
-            if (
-                isinstance(sha, str)
-                and SHA_RE.fullmatch(sha)
-                and sha not in history
-            ):
+            # done_sha validity + reachability: ALWAYS, grandfathered or not
+            if not isinstance(sha, str) or not SHA_RE.fullmatch(sha):
+                problems.append(
+                    f"{tid}: board done_sha missing or not a full 40-hex string"
+                )
+            elif sha not in history:
                 problems.append(
                     f"{tid}: board done_sha {sha[:12]} not found in main "
                     "history - fabricated provenance"

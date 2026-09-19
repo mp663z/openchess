@@ -53,30 +53,71 @@ CASES = {
         {"T0001": _evidence("T0001", status="in-progress")},
         {SHA_A},
         "board done but evidence is not done",
+        set(),
     ),
     "SHA mismatch board vs evidence": (
         {"schema_version": SV, "tasks": [_task("T0001", sha=SHA_A)]},
         {"T0001": _evidence("T0001", sha=SHA_B)},
         {SHA_A, SHA_B},
         "!= board done_sha",
+        set(),
     ),
     "orphan SHA (fabricated provenance)": (
         {"schema_version": SV, "tasks": [_task("T0001", sha=SHA_ORPHAN)]},
         {"T0001": _evidence("T0001", sha=SHA_ORPHAN)},
         {SHA_A},
         "not found in main history",
+        set(),
     ),
     "evidence done, board not done": (
         {"schema_version": SV, "tasks": [_task("T0001", status="in_progress")]},
         {"T0001": _evidence("T0001")},
         {SHA_A},
         "evidence claims done",
+        set(),
+    ),
+    "grandfathered task with orphan SHA still anchored": (
+        {"schema_version": SV, "tasks": [_task("T0001", sha=SHA_ORPHAN)]},
+        {},
+        {SHA_A},
+        "not found in main history",
+        {"T0001"},
+    ),
+    "board done, evidence file missing entirely": (
+        {"schema_version": SV, "tasks": [_task("T0001")]},
+        {},
+        {SHA_A},
+        "evidence file missing",
+        set(),
+    ),
+    "board done, done_sha missing": (
+        {"schema_version": SV, "tasks": [
+            {k: v for k, v in _task("T0001").items() if k != "done_sha"}]},
+        {"T0001": _evidence("T0001")},
+        {SHA_A},
+        "done_sha missing or not a full 40-hex string",
+        set(),
+    ),
+    "board done, integer done_sha": (
+        {"schema_version": SV, "tasks": [_task("T0001", sha=int("1" * 40))]},
+        {"T0001": _evidence("T0001")},
+        {SHA_A},
+        "done_sha missing or not a full 40-hex string",
+        set(),
+    ),
+    "duplicate board task ids": (
+        {"schema_version": SV, "tasks": [_task("T0001"), _task("T0001")]},
+        {"T0001": _evidence("T0001")},
+        {SHA_A},
+        "duplicate board task id",
+        set(),
     ),
     "evidence for absent task": (
         {"schema_version": SV, "tasks": [_task("T0001")]},
         {"T0001": _evidence("T0001"), "T0999": _evidence("T0999", sha=SHA_B)},
         {SHA_A, SHA_B},
         "absent from the board",
+        set(),
     ),
 }
 
@@ -92,14 +133,14 @@ def run(mode: str) -> None:
             raise CheckError(f"real repo reconcile: {problems}")
         return
     uncaught = []
-    for label, (board, ev_files, history, expect) in CASES.items():
+    for label, (board, ev_files, history, expect, grandfathered) in CASES.items():
         with tempfile.TemporaryDirectory() as td:
             evdir = Path(td) / "evidence"
             evdir.mkdir()
             for tid, text in ev_files.items():
                 (evdir / f"{tid}.md").write_text(text)
             problems = dag_reconcile.reconcile(board, evdir, history,
-                                               grandfathered=set())
+                                               grandfathered=grandfathered)
         if not any(expect in p for p in problems):
             uncaught.append(f"{label}: expected {expect!r}, got {problems}")
     if uncaught:
