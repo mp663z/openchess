@@ -2,6 +2,9 @@
 # Run the same gates CI runs, locally, before pushing.
 set -e
 cd "$(git rev-parse --show-toplevel)"
+
+# The tree the gates lint must be exactly what gets pushed.
+"$(dirname "$0")/tree-guard.sh"
 if [ -d .venv ]; then . .venv/bin/activate; fi
 ruff check .
 pytest -q
