@@ -52560,11 +52560,13 @@
    "verification": "auto",
    "resource": "real users/provider/payment where needed",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "tags": [],
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "72c165f777787f9c006e8097d6d6784dbe6446ac",
+   "evidence_manifest": "evidence/T2623.md"
   },
   {
    "id": "T2624",
