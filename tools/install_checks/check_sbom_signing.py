@@ -14,15 +14,13 @@ file, and a release step running the EXACT pinned gh release create
 command attaching the same artifacts. Mandatory run/uses values are
 enforced by exact structural equality (whitespace-normalized), not shell
 semantics: echo prefixes, renamed commands (createx) and altered commands
-all fail. Beyond the mandatory steps, the COMPLETE release-job pipeline
-is pinned step-for-step in order (checkout -> setup -> install -> lock
-check -> license audit -> generation -> checksums -> attestation ->
-release): inserted, removed, reordered or altered steps fail closed, so
-released bytes are always the attested bytes; conditionals are rejected
-on every pipeline step. Step metadata is fail-closed: only
-uses/run/name/with/env are allowed (continue-on-error, working-directory,
-shell and any other execution-affecting key is a violation), and with/env
-blocks must match their exact pinned contents. Fail closed on conditionals:
+all fail. The ENTIRE release.yml effective structure is pinned as one
+canonical object (PINNED_CANONICAL): trigger, global permissions, job
+keys, the full ordered step list, exact with/env contents - any inserted,
+removed, reordered, renamed or reconfigured node at ANY level
+(workflow/job/step) fails closed with the differing paths named, so
+released bytes are always the attested bytes and no unchecked scope level
+remains. Fail closed on conditionals:
 ANY job-level if on the release job and ANY if on a mandatory
 generation/checksum/attestation/release step is a violation (GitHub
 expression syntax is not parsed), and the release step must be a single
@@ -104,144 +102,105 @@ PINNED_JOB_STEPS: list[tuple[str, str]] = [
 ]
 
 
-# Fail closed on every execution-affecting step key: only identity
-# (uses/run), display name, and the exact pinned with/env blocks survive.
-ALLOWED_STEP_KEYS = {"uses", "run", "name", "with", "env"}
-
-# Same fail-closed allowlist at job level: runner, steps and (validated)
-# permissions only. defaults/env/container/services/strategy/
-# continue-on-error/needs/outputs/... pivot the execution environment.
-ALLOWED_JOB_KEYS = {"name", "runs-on", "steps", "permissions", "if"}
 PINNED_RUNS_ON = "ubuntu-latest"
 
 
-def _step_identity(s: dict) -> tuple[str, str] | None:
-    has_uses = "uses" in s
-    has_run = "run" in s
-    if has_uses and has_run:
-        return None  # invalid: both
-    if has_uses:
-        return ("uses", _norm(s["uses"]))
-    if has_run:
-        return ("run", _norm(s["run"]))
-    return None
+def _canonical_workflow(wf: dict) -> dict:
+    """Normalize the parsed workflow to its effective structure: whitespace-
+    normalized run/uses, subject-path as a sorted list, `on` keyed as "on"
+    (yaml parses it as True). Every key at every level is preserved - any
+    structural deviation anywhere shows up as a mismatch."""
+    jobs = {}
+    for jn, job in (wf.get("jobs") or {}).items():
+        steps = []
+        for s in job.get("steps") or []:
+            cs = dict(s)
+            if "uses" in cs:
+                cs["uses"] = _norm(cs["uses"])
+            if "run" in cs:
+                cs["run"] = _norm(cs["run"])
+            w = cs.get("with")
+            if isinstance(w, dict) and "subject-path" in w:
+                cs["with"] = {**w, "subject-path": sorted(str(w["subject-path"]).split())}
+            steps.append(cs)
+        jobs[jn] = {**job, "steps": steps}
+    top = {**wf, "jobs": jobs}
+    if True in top:  # yaml 1.1 parses the `on` key as boolean True
+        top["on"] = top.pop(True)
+    return top
+
+
+# The complete pinned effective structure of release.yml. Any inserted,
+# removed, reordered, renamed or reconfigured node at ANY level - trigger,
+# permissions, job keys, step keys, with/env contents - fails closed.
+PINNED_CANONICAL: dict = {
+    "name": "Release",
+    "on": {"push": {"tags": ["v*"]}},
+    "permissions": {
+        "contents": "write",
+        "id-token": "write",
+        "attestations": "write",
+    },
+    "jobs": {
+        "attest": {
+            "runs-on": PINNED_RUNS_ON,
+            "steps": [
+                {"uses": "actions/checkout@v4"},
+                {"uses": "actions/setup-python@v5",
+                 "with": {"python-version": "3.12"}},
+                {"run": "pip install -r requirements-dev.txt"},
+                {"run": "python tools/lock_release.py --check"},
+                {"run": "python tools/license_audit.py"},
+                {"run": PINNED_GENERATION_RUN},
+                {"run": PINNED_CHECKSUMS_RUN},
+                {"name": "Attest build provenance (SBOM, lock, checksums)",
+                 "uses": PINNED_ATTEST_USES,
+                 "with": {"subject-path": sorted(REQUIRED_SUBJECTS)}},
+                {"name": "Create release with SBOM and checksums",
+                 "env": {"GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
+                 "run": PINNED_RELEASE_RUN},
+            ],
+        },
+    },
+}
+
+
+def _first_diffs(want: object, got: object, path: str, out: list, limit: int = 5) -> None:
+    if len(out) >= limit:
+        return
+    if type(want) is not type(got):
+        out.append(f"{path}: expected {want!r}, got {got!r}")
+        return
+    if isinstance(want, dict):
+        for k in sorted(set(want) | set(got), key=str):
+            if k not in want:
+                out.append(f"{path}.{k}: unexpected key (value {got[k]!r})")
+            elif k not in got:
+                out.append(f"{path}.{k}: missing (expected {want[k]!r})")
+            else:
+                _first_diffs(want[k], got[k], f"{path}.{k}", out, limit)
+            if len(out) >= limit:
+                return
+    elif isinstance(want, list):
+        if len(want) != len(got):
+            out.append(f"{path}: expected {len(want)} items, got {len(got)}")
+            return
+        for i, (a, b) in enumerate(zip(want, got, strict=True)):
+            _first_diffs(a, b, f"{path}[{i}]", out, limit)
+            if len(out) >= limit:
+                return
+    elif want != got:
+        out.append(f"{path}: expected {want!r}, got {got!r}")
 
 
 def _workflow_problems(wf: dict) -> list[str]:
-    problems: list[str] = []
-    jobs = _release_jobs(wf)
-    if not jobs:
-        return [
-            "release.yml: no job running the exact pinned release command "
-            "(echoed, renamed or altered commands do not count)"
-        ]
-    for name, job in jobs:
-        if job.get("if") not in (None, ""):
-            problems.append(
-                f"release.yml: release job {name} carries a job-level if "
-                f"({job.get('if')!r}) - fail closed: mandatory release jobs "
-                "must be unconditional"
-            )
-        extra_keys = sorted(set(job) - ALLOWED_JOB_KEYS)
-        if extra_keys:
-            problems.append(
-                f"release.yml: release job {name} carries execution-affecting "
-                f"keys {extra_keys} - only {sorted(ALLOWED_JOB_KEYS - {'if'})} "
-                "are allowed (fail closed on defaults, env, container, "
-                "services, strategy, continue-on-error, ...)"
-            )
-        if job.get("runs-on") != PINNED_RUNS_ON:
-            problems.append(
-                f"release.yml: release job {name} runs-on must be exactly "
-                f"{PINNED_RUNS_ON!r}, got {job.get('runs-on')!r}"
-            )
-        # effective permissions: job overrides workflow
-        perms = job.get("permissions") or wf.get("permissions") or {}
-        for perm in ("id-token", "attestations"):
-            if perms.get(perm) != "write":
-                problems.append(
-                    f"release.yml: job {name} permissions.{perm} != write"
-                )
-        steps = job.get("steps") or []
-        for i, s in enumerate(steps):
-            if s.get("if") not in (None, ""):
-                problems.append(
-                    f"release.yml: job {name} step {i} carries an if "
-                    f"({s.get('if')!r}) - fail closed: pipeline steps must "
-                    "be unconditional"
-                )
-            extra = sorted(set(s) - ALLOWED_STEP_KEYS)
-            if extra:
-                problems.append(
-                    f"release.yml: job {name} step {i} carries "
-                    f"execution-affecting keys {extra} - only "
-                    f"{sorted(ALLOWED_STEP_KEYS)} are allowed (fail closed "
-                    "on continue-on-error, working-directory, shell, ...)"
-                )
-            ident = _step_identity(s)
-            if ident == ("uses", "actions/setup-python@v5"):
-                if s.get("with") != {"python-version": "3.12"}:
-                    problems.append(
-                        f"release.yml: job {name} setup-python step with "
-                        f"block must be exactly python-version 3.12"
-                    )
-            elif ident == ("uses", PINNED_ATTEST_USES):
-                if set(s.get("with") or {}) != {"subject-path"}:
-                    problems.append(
-                        f"release.yml: job {name} attestation step with "
-                        "block must contain only subject-path"
-                    )
-            elif "with" in s:
-                problems.append(
-                    f"release.yml: job {name} step {i} carries an "
-                    "unexpected with block"
-                )
-            if ident == ("run", PINNED_RELEASE_RUN):
-                if s.get("env") != {"GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"}:
-                    problems.append(
-                        f"release.yml: job {name} release step env must be "
-                        "exactly GH_TOKEN from secrets.GITHUB_TOKEN"
-                    )
-            elif "env" in s:
-                problems.append(
-                    f"release.yml: job {name} step {i} carries an "
-                    "unexpected env block"
-                )
-        actual = [_step_identity(s) for s in steps]
-        if any(a is None for a in actual):
-            problems.append(
-                f"release.yml: job {name} has a step with both/neither "
-                "run/uses - pipeline shape unrecognized, failing closed"
-            )
-            continue
-        if actual != PINNED_JOB_STEPS:
-            padded = actual + [None] * max(0, len(PINNED_JOB_STEPS) - len(actual))
-            for i, (exp, got) in enumerate(
-                zip(PINNED_JOB_STEPS, padded, strict=False)
-            ):
-                if exp != got:
-                    problems.append(
-                        f"release.yml: job {name} step {i} must be exactly "
-                        f"{exp!r}, got {got!r} - the complete pinned pipeline "
-                        "may not be inserted into, reordered or altered"
-                    )
-                    break
-            if len(actual) != len(PINNED_JOB_STEPS) and len(actual) > len(PINNED_JOB_STEPS):
-                problems.append(
-                    f"release.yml: job {name} has {len(actual) - len(PINNED_JOB_STEPS)} "
-                    "extra step(s) beyond the pinned pipeline"
-                )
-        att = _step_idx(steps, "uses", PINNED_ATTEST_USES)
-        if att is not None:
-            subjects = set(
-                str((steps[att].get("with") or {}).get("subject-path", "")).split()
-            )
-            missing = REQUIRED_SUBJECTS - subjects
-            if missing:
-                problems.append(
-                    f"release.yml: attestation subjects missing {sorted(missing)}"
-                )
-    return problems
+    diffs: list[str] = []
+    _first_diffs(PINNED_CANONICAL, _canonical_workflow(wf), "release.yml", diffs)
+    return [
+        f"{d} - the pinned release pipeline may not be inserted into, "
+        "reordered, reconfigured or extended at any level"
+        for d in diffs
+    ]
 
 
 def run(mode: str) -> None:
@@ -412,6 +371,14 @@ def run(mode: str) -> None:
                 job["container"] = "alpine:latest"
         return w
 
+    def _top_defaults_shell(w):
+        w["defaults"] = {"run": {"shell": "echo {0}"}}
+        return w
+
+    def _top_env(w):
+        w["env"] = {"PATH": "/tmp"}
+        return w
+
     def _tamper(after_uses=None, after_run=None):
         def m(w):
             for job in w["jobs"].values():
@@ -457,6 +424,8 @@ def run(mode: str) -> None:
         "job defaults.run.shell 'echo {0}'": _job_defaults_shell,
         "job env PATH /tmp": _job_env,
         "job container alpine:latest": _job_container,
+        "top-level defaults.run.shell 'echo {0}'": _top_defaults_shell,
+        "top-level env PATH /tmp": _top_env,
         "release command echoed, not executed": _echo_release,
         "attestation split into an unrelated job": _split_attest,
     }.items():
