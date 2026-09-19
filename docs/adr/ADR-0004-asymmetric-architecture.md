@@ -52,8 +52,14 @@ external_providers:
     mode: hosted
     opt_in: true
     default: off
-    allowed_send_fields: [fen, moves, task, max-tokens]
-    mandatory_send_fields: [fen, task]
+    invocation_additional_properties: false
+    payload_schema:
+      fen: {type: string, max_length: 128, mandatory: true}
+      moves: {type: string-list, max_items: 512, item_max_length: 16,
+        mandatory: false}
+      task: {type: enum, values: [delta-explanation, error-diagnosis,
+        weekly-plan, review-conversation], mandatory: true}
+      max-tokens: {type: integer, min: 1, max: 4096, mandatory: false}
     never_receives: [account-keys, full-corpus, sync-keys]
     relay_plaintext: false
     local_completeness: true
@@ -164,8 +170,9 @@ privacy and cost together.
 - Hosted BYOM inference is opt-in, default off, never on the
   critical path, with detection, scoring, evidence, diagnosis,
   planning and training fully functional without it. A hosted BYOM
-  request may carry exactly the declared send fields - fen, moves,
-  task, max-tokens - always including fen and task, and nothing else;
+  request payload carries exactly the declared schema fields -
+  fen, moves, task, max-tokens - always including fen and task, with
+  bounded values, no unknown keys anywhere, and nothing else;
   account keys, the full corpus and sync keys never leave. The local
   large-LLM opt-in is a local-mode provider: it sends no outbound
   payload at all, and its activation suspends the reference-machine

@@ -38,10 +38,21 @@ DATA_FLOW = {
                "account-metadata": "store-entitlements"},
 }
 PHONE_TRAINING = {"surface": "web-pwa", "export_required": False}
+PAYLOAD_SCHEMA = {
+    "fen": {"type": "string", "max_length": 128, "mandatory": True},
+    "moves": {"type": "string-list", "max_items": 512,
+              "item_max_length": 16, "mandatory": False},
+    "task": {"type": "enum",
+             "values": ["delta-explanation", "error-diagnosis",
+                        "weekly-plan", "review-conversation"],
+             "mandatory": True},
+    "max-tokens": {"type": "integer", "min": 1, "max": 4096,
+                   "mandatory": False},
+}
 HOSTED_BYOM = {
     "allowed": True, "mode": "hosted", "opt_in": True, "default": False,
-    "allowed_send_fields": ["fen", "moves", "task", "max-tokens"],
-    "mandatory_send_fields": ["fen", "task"],
+    "invocation_additional_properties": False,
+    "payload_schema": PAYLOAD_SCHEMA,
     "never_receives": ["account-keys", "full-corpus", "sync-keys"],
     "relay_plaintext": False, "local_completeness": True,
     "critical_path": False, "suspends_reference_claims": False,
@@ -65,16 +76,71 @@ DENIED = [
     "may run Stockfish",
     "primary phone story",
 ]
-INVOCATION_FACTS = ["opt_in", "sends", "persistence",
-                    "relay_plaintext", "critical_path"]
+INVOCATION_KEYS = {"provider", "opt_in", "payload", "persistence",
+                   "relay_plaintext", "critical_path"}
+GOOD_PAYLOAD = {
+    "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+    "moves": ["e2e4", "e7e5"],
+    "task": "delta-explanation",
+}
 GOOD_INVOCATION = {
     "provider": "hosted-byom", "opt_in": True,
-    "sends": ["fen", "moves", "task"], "persistence": "none",
+    "payload": dict(GOOD_PAYLOAD), "persistence": "none",
     "relay_plaintext": False, "critical_path": False,
 }
 GOOD_LOCAL_INVOCATION = {
-    "provider": "local-large-llm", "opt_in": True, "sends": [],
+    "provider": "local-large-llm", "opt_in": True, "payload": {},
 }
+
+
+def _check_payload(schema: dict, payload, name: str,
+                   violations: list) -> None:
+    """Canonical payload validation: keys exactly satisfy the declared
+    field policy (allowlist + mandatory), values match bounded typed
+    shapes; nested objects/bytes in scalar fields and unknown keys are
+    rejected. The sent-field set is derived from payload.keys()."""
+    if not isinstance(payload, dict):
+        violations.append(f"provider {name} payload is not a mapping")
+        return
+    fields = set(payload.keys())
+    allowed = set(schema)
+    mandatory = {k for k, v in schema.items() if v.get("mandatory")}
+    for field in sorted(fields - allowed):
+        violations.append(f"provider {name} sends undeclared field {field}")
+    for field in sorted(mandatory - fields):
+        violations.append(f"provider {name} missing mandatory field "
+                          f"{field}")
+    for field, value in payload.items():
+        spec = schema.get(field)
+        if spec is None:
+            continue
+        t = spec["type"]
+        if t == "string":
+            bad = (not isinstance(value, str)
+                   or not (1 <= len(value) <= spec["max_length"]))
+            if bad:
+                violations.append(f"provider {name} field {field} "
+                                  f"violates bounded-string shape")
+        elif t == "string-list":
+            bad = (not isinstance(value, list)
+                   or len(value) > spec["max_items"]
+                   or any(not isinstance(m, str)
+                          or not (1 <= len(m) <= spec["item_max_length"])
+                          for m in value))
+            if bad:
+                violations.append(f"provider {name} field {field} "
+                                  f"violates bounded-string-list shape")
+        elif t == "enum":
+            if not isinstance(value, str) or value not in spec["values"]:
+                violations.append(f"provider {name} field {field} "
+                                  f"outside the task enum")
+        elif t == "integer":
+            bad = (not isinstance(value, int)
+                   or isinstance(value, bool)
+                   or not (spec["min"] <= value <= spec["max"]))
+            if bad:
+                violations.append(f"provider {name} field {field} "
+                                  f"violates bounded-integer shape")
 
 
 def evaluate(policy: dict, scenario: dict) -> list[str]:
@@ -128,26 +194,30 @@ def evaluate(policy: dict, scenario: dict) -> list[str]:
             violations.append(
                 f"provider {name} mode {prov.get('mode')} is not hosted")
             continue
-        missing = [f for f in INVOCATION_FACTS if f not in inv]
+        # canonical invocation schema: additionalProperties false -
+        # every unknown invocation key fails; every declared key is
+        # required (fail closed on missing facts)
+        for key in sorted(set(inv) - INVOCATION_KEYS):
+            violations.append(f"provider {name} unknown invocation "
+                              f"key {key}")
+        missing = sorted(INVOCATION_KEYS - set(inv) - {"provider"})
         if missing:
             violations.append(
                 f"provider {name} invocation missing facts: {missing}")
+        if violations and (set(inv) - INVOCATION_KEYS or missing):
             continue
         if inv["opt_in"] is not True:
             violations.append(f"provider {name} used without opt-in")
-        sends = inv["sends"] if isinstance(inv["sends"], list) else []
-        allowed = set(prov.get("allowed_send_fields", []))
-        mandatory = set(prov.get("mandatory_send_fields", []))
-        for field in sorted(set(sends) - allowed):
-            violations.append(
-                f"provider {name} sends undeclared field {field}")
-        for field in sorted(mandatory - set(sends)):
-            violations.append(
-                f"provider {name} missing mandatory field {field}")
+        # the payload object itself is validated; no caller-supplied
+        # projection metadata is consulted
+        _check_payload(prov["payload_schema"], inv["payload"], name,
+                       violations)
         # defense in depth: forbidden classes still named explicitly
-        leaked = set(prov.get("never_receives", [])) & set(sends)
-        for item in sorted(leaked):
-            violations.append(f"provider {name} receives {item}")
+        if isinstance(inv["payload"], dict):
+            leaked = set(prov.get("never_receives", [])) \
+                & set(inv["payload"].keys())
+            for item in sorted(leaked):
+                violations.append(f"provider {name} receives {item}")
         if inv["persistence"] != "none":
             violations.append(
                 f"provider {name} granted persistence "
@@ -167,9 +237,12 @@ def evaluate(policy: dict, scenario: dict) -> list[str]:
             violations.append(
                 f"provider {name} mode {prov.get('mode')} is not local")
             continue
+        for key in sorted(set(inv) - {"provider", "opt_in", "payload"}):
+            violations.append(f"local provider {name} unknown invocation "
+                              f"key {key}")
         if inv.get("opt_in") is not True:
             violations.append(f"local provider {name} used without opt-in")
-        if inv.get("sends"):
+        if inv.get("payload"):
             violations.append(
                 f"local provider {name} has outbound payload")
     return violations
@@ -238,6 +311,7 @@ def _check(adr: str) -> None:
     assert "fen, moves, task, max-tokens" in flat
     assert "nothing else" in flat
     assert "no outbound payload" in flat
+    assert "no unknown keys" in flat
     # the web-owned habit operations are offline-capable, not desktop-owned
     assert "offline-capable in the PWA" in cons
     assert "desktop-owned operations" in cons
@@ -304,19 +378,55 @@ def test_evaluator_rejects_export_required_phone_training():
 
 def test_evaluator_hosted_byom_invocation_facts():
     base = {"owners": dict(OPERATIONS)}
-    # subset-projection laundering: forbidden or unknown fields fail
-    # even alongside allowed ones
+    # unknown payload fields fail, incl. aliases and laundering names
     for field in ("full-corpus", "sync-keys", "account-keys",
-                  "passwords", "all-games", "games", "api-key"):
+                  "passwords", "all-games", "games", "api-key",
+                  "Full-Corpus"):
         _violating({**base, "hosted_inference": [
             {**GOOD_INVOCATION,
-             "sends": GOOD_INVOCATION["sends"] + [field]}]})
+             "payload": {**GOOD_PAYLOAD, field: "x"}}]})
     # mandatory fields must all be present
-    for field in HOSTED_BYOM["mandatory_send_fields"]:
+    for field in ("fen", "task"):
         _violating({**base, "hosted_inference": [
             {**GOOD_INVOCATION,
-             "sends": [f for f in GOOD_INVOCATION["sends"]
-                       if f != field]}]})
+             "payload": {k: v for k, v in GOOD_PAYLOAD.items()
+                         if k != field}}]})
+    # unknown invocation keys fail (the raw_body replay)
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION, "raw_body": "FULL CORPUS"}]})
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION, "sends": ["fen", "task"]}]})
+    # nested object inside a scalar field (the payload.fen replay)
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION,
+         "payload": {**GOOD_PAYLOAD, "fen": {"full-corpus": "SECRET"},
+                     "task": "delta-explanation"}}]})
+    # overlong values and wrong scalar types
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION,
+         "payload": {**GOOD_PAYLOAD, "fen": "x" * 5000}}]})
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION,
+         "payload": {**GOOD_PAYLOAD,
+                     "moves": ["e2e4"] * 10000}}]})
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION,
+         "payload": {**GOOD_PAYLOAD, "moves": ["e2e4", {"n": 1}]}}]})
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION,
+         "payload": {**GOOD_PAYLOAD, "task": "anything"}}]})
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION,
+         "payload": {**GOOD_PAYLOAD, "task": 7}}]})
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION,
+         "payload": {**GOOD_PAYLOAD, "max-tokens": 10**9}}]})
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION,
+         "payload": {**GOOD_PAYLOAD, "max-tokens": "4096"}}]})
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION, "payload": "fen=... task=..."}]})
+    # per-use facts
     _violating({**base, "hosted_inference": [
         {**GOOD_INVOCATION, "persistence": "store-plaintext"}]})
     _violating({**base, "hosted_inference": [
@@ -327,12 +437,13 @@ def test_evaluator_hosted_byom_invocation_facts():
         {**GOOD_INVOCATION, "critical_path": True}]})
     _violating({**base, "hosted_inference": [
         {**GOOD_INVOCATION, "relay_plaintext": True}]})
-    for fact in INVOCATION_FACTS:
+    for fact in INVOCATION_KEYS - {"provider"}:
         inv = {k: v for k, v in GOOD_INVOCATION.items() if k != fact}
         _violating({**base, "hosted_inference": [inv]})
-    _violating({**base, "hosted_inference": [{"provider": "acme-cloud",
-                                              **{f: None for f in
-                                                 INVOCATION_FACTS}}]})
+    _violating({**base, "hosted_inference": [{"provider": "acme-cloud"}]})
+    # one exact bounded payload passes
+    assert evaluate(_policy(), {**base, "hosted_inference": [
+        GOOD_INVOCATION]}) == []
 
 
 def test_evaluator_provider_execution_mode():
@@ -342,14 +453,19 @@ def test_evaluator_provider_execution_mode():
         {**GOOD_INVOCATION, "provider": "local-large-llm"}]})
     # a hosted provider invoked as local fails
     _violating({**base, "local_inference": [
-        {"provider": "hosted-byom", "opt_in": True, "sends": []}]})
+        {"provider": "hosted-byom", "opt_in": True, "payload": {}}]})
     # a local provider with any outbound payload fails
     _violating({**base, "local_inference": [
         {"provider": "local-large-llm", "opt_in": True,
-         "sends": ["fen"]}]})
+         "payload": {"fen": "..."}}]})
+    # unknown keys on a local invocation fail
+    _violating({**base, "local_inference": [
+        {"provider": "local-large-llm", "opt_in": True, "payload": {},
+         "raw_body": "x"}]})
     # a local provider without opt-in fails
     _violating({**base, "local_inference": [
-        {"provider": "local-large-llm", "opt_in": False, "sends": []}]})
+        {"provider": "local-large-llm", "opt_in": False,
+         "payload": {}}]})
     # a properly modeled local invocation passes and its provider
     # suspends the reference-machine claims
     assert evaluate(_policy(), {**base, "local_inference": [
