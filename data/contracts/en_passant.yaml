@@ -52,6 +52,10 @@ contract:
         only when at least one legal en-passant capture exists
         against it, and the none sentinel otherwise - a target no
         pawn can legally take never distinguishes two positions.
+    rule: >-
+      The en-passant target is exactly the grammar above, set only by
+      the set_on event, living only for the lifetime above, with the
+      storage-vs-identity split above. There is no other target state.
   capture:
     mover:
       piece: pawn-of-side-to-move
@@ -118,6 +122,11 @@ contract:
     turn_contract: data/contracts/turn.yaml
   versioning:
     base_path: /en-passant/v1
+    client_pin: MAJOR
+    minor_policy: additive-only
+    minor_additions: [new-optional-fields]
+    downgrade_policy: any-earlier-minor-within-major-without-migration
+    major_bump: new-base-path-required
     rule: >-
       Clients pin MAJOR. MINOR is additive-only: new optional fields.
       A consumer may downgrade to any earlier MINOR within the same
