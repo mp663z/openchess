@@ -472,3 +472,38 @@ def test_cli_rejects_malformed_without_traceback(tmp_path, capsys):
         out = capsys.readouterr()
         assert out.out.startswith("FAIL variant contract lint:")
         assert "Traceback" not in out.err
+
+
+# --- recursive strict equality: bool/int conflation matrix (hardening) ---
+
+
+def _set_path(doc: dict, path: tuple, value: object) -> None:
+    node = doc
+    for segment in path[:-1]:
+        node = node[segment]
+    node[path[-1]] = value
+
+
+SHAPE_LEAVES = [
+    ("contract", "errors", "shape", "error", "fields", field, leaf)
+    for field in ("code", "message", "retryable")
+    for leaf in ("type", "required")
+]
+
+
+@pytest.mark.parametrize(
+    "path,value",
+    [
+        *((p, 1) for p in SHAPE_LEAVES if p[-1] == "required"),
+        *((p, 0) for p in SHAPE_LEAVES if p[-1] == "required"),
+        *((p, True) for p in SHAPE_LEAVES if p[-1] == "type"),
+        *((p, 1) for p in SHAPE_LEAVES if p[-1] == "type"),
+        (("contract", "schema_version"), True),
+    ],
+)
+def test_bool_int_conflation_rejected_at_shape_leaves(path, value):
+    """Ordinary == accepts 1 for True and 0 for False; the exact error
+    shape (and schema_version) must not."""
+    doc = _mutate(lambda d: _set_path(d, path, value))
+    with pytest.raises(ContractError):
+        lint(doc)

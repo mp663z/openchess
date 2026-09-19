@@ -324,14 +324,38 @@ def check_variant_id(vid: object, known: set[str]) -> None:
     )
 
 
+def _strict_eq(actual: object, expected: object, where: str) -> None:
+    """Recursive exact comparison: type(actual) is type(expected) at
+    EVERY scalar node (0/False and 1/True conflation is a violation),
+    containers match in exact keys/order and length. Ordinary == accepts
+    0 for False and 1 for True; this never does."""
+    if type(expected) is dict:
+        _need(type(actual) is dict, f"{where}: mapping required")
+        for key in actual:
+            _need(type(key) is str, f"{where}: non-string key {key!r}")
+        _need(
+            list(actual) == list(expected),
+            f"{where}: exact keys/order {list(expected)!r}",
+        )
+        for key in expected:
+            _strict_eq(actual[key], expected[key], f"{where}.{key}")
+    elif type(expected) is list:
+        _need(type(actual) is list, f"{where}: list required")
+        _need(len(actual) == len(expected), f"{where}: exact {expected!r}")
+        for i in range(len(expected)):
+            _strict_eq(actual[i], expected[i], f"{where}[{i}]")
+    else:
+        _need(
+            type(actual) is type(expected) and actual == expected,
+            f"{where}: exact value {expected!r} required",
+        )
+
+
 def _check_shape(node: object, expected: dict, where: str) -> None:
     node = _mapping(node, where)
     _keys(node, set(expected), where)  # same non-string/exact-key gate
     for key, sub in expected.items():
-        if isinstance(sub, dict) and sub and all(isinstance(v, dict) for v in sub.values()):
-            _check_shape(node[key], sub, f"{where}.{key}")
-        else:
-            _need(node[key] == sub, f"{where}.{key}: exact value {sub!r} required")
+        _strict_eq(node[key], sub, f"{where}.{key}")
 
 
 def lint(doc: object) -> None:
