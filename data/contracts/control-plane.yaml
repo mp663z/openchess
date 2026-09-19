@@ -1,0 +1,188 @@
+# T0473 - Replaceable control-plane contract.
+# Machine-readable source of truth for the boundary between the public
+# product (client + AGPL server) and ANY control-plane implementation
+# (hosted private repo, self-hosted, or test mock). The control plane is
+# replaceable: a consumer coded to this contract works against any
+# conforming implementation, and the chess product never depends on one.
+#
+# Boundary rules (enforced by tools/contract_lint.py):
+# - No chess logic lives behind this contract: no game state, moves,
+#   analysis, openings, or user content crosses it. Identity, billing,
+#   entitlements, quota and provider routing ONLY.
+# - Provider-neutral (BYOK): provider keys are opaque references; the
+#   contract never names a specific AI vendor in required fields.
+# - Neutral/swappable UI: consumers render from these types only; no
+#   control-plane implementation details leak into client code.
+schema_version: 1
+contract:
+  name: replaceable-control-plane
+  versioning:
+    scheme: semver
+    rule: >-
+      Clients pin MAJOR. MINOR is additive-only; a server MUST accept any
+      client minor within its major. Rollback: a consumer may downgrade to
+      any earlier MINOR within the same MAJOR without migration. MAJOR
+      bumps require a new base path.
+    base_path: /cp/v1
+  transport:
+    kind: https-json
+    auth: bearer opaque-token (identity.issue); 401 + error code
+      auth_expired on expiry; no cookies, no sessions
+    idempotency: Every mutating operation REQUIRES an Idempotency-Key
+      header (unique nonempty string per logical operation). Retries with
+      the same key return the original outcome, never a duplicate effect.
+    errors:
+      closed_enum:
+      - auth_expired
+      - auth_invalid
+      - idempotency_conflict
+      - quota_exhausted
+      - quota_reservation_expired
+      - entitlement_missing
+      - provider_key_invalid
+      - provider_unavailable
+      - cost_cap_exceeded
+      - rate_limited
+      - malformed_request
+      - not_found
+      - conflict
+      - internal
+      shape: '{ "error": { "code": <enum>, "message": <human string>,
+        "retryable": <bool> } }'
+  privacy:
+    - No chess content (games, moves, FENs, analysis, notes) in any field.
+    - Provider keys are write-only opaque references; implementations MUST
+      NOT return key material in any response.
+    - Logs and error messages MUST NOT contain secrets or key material.
+  cost:
+    - Mutating billable operations require a quota reservation first.
+    - Per-request and per-day cost caps are entitlements, enforced
+      server-side; consumers receive cost_cap_exceeded, never a surprise
+      bill.
+  recovery:
+    - entitlements.get responses carry a cache_ttl_seconds; consumers may
+      serve cached entitlements for that long when the control plane is
+      unreachable (offline grace), then degrade to free tier.
+    - quota.reserve reservations carry expires_at; consumers MUST treat
+      expired reservations as released.
+areas:
+  identity:
+    ops:
+      register:
+        method: POST
+        path: /identity/register
+        mutating: true
+        request: '{ email, password_hash_client, display_name? }'
+        response: '{ account_id, token, token_expires_at }'
+        errors: [malformed_request, conflict, rate_limited, internal]
+      login:
+        method: POST
+        path: /identity/login
+        mutating: true
+        request: '{ email, password_hash_client }'
+        response: '{ account_id, token, token_expires_at }'
+        errors: [malformed_request, auth_invalid, rate_limited, internal]
+      refresh:
+        method: POST
+        path: /identity/refresh
+        mutating: true
+        request: '{ token }'
+        response: '{ token, token_expires_at }'
+        errors: [auth_expired, auth_invalid, internal]
+      logout:
+        method: POST
+        path: /identity/logout
+        mutating: true
+        request: '{ token }'
+        response: '{ }'
+        errors: [auth_invalid, internal]
+      delete_account:
+        method: POST
+        path: /identity/delete-account
+        mutating: true
+        request: '{ token, confirm: "DELETE" }'
+        response: '{ }'
+        errors: [auth_invalid, internal]
+  entitlements:
+    ops:
+      get:
+        method: GET
+        path: /entitlements
+        mutating: false
+        request: '{ }'
+        response: '{ tier, features: [string], cache_ttl_seconds,
+          cost_caps: { per_request_usd, per_day_usd } }'
+        errors: [auth_expired, auth_invalid, internal]
+  quota:
+    ops:
+      reserve:
+        method: POST
+        path: /quota/reserve
+        mutating: true
+        request: '{ operation_kind, estimated_units, hold_seconds }'
+        response: '{ reservation_id, granted_units, expires_at }'
+        errors: [auth_expired, quota_exhausted, malformed_request,
+          internal]
+      commit:
+        method: POST
+        path: /quota/commit
+        mutating: true
+        request: '{ reservation_id, actual_units }'
+        response: '{ remaining_units }'
+        errors: [auth_expired, quota_reservation_expired, not_found,
+          internal]
+      release:
+        method: POST
+        path: /quota/release
+        mutating: true
+        request: '{ reservation_id }'
+        response: '{ }'
+        errors: [auth_expired, not_found, internal]
+  billing:
+    ops:
+      create_checkout:
+        method: POST
+        path: /billing/checkout
+        mutating: true
+        request: '{ price_id, success_url, cancel_url }'
+        response: '{ checkout_url, expires_at }'
+        errors: [auth_expired, malformed_request, provider_unavailable,
+          internal]
+      get_subscription:
+        method: GET
+        path: /billing/subscription
+        mutating: false
+        request: '{ }'
+        response: '{ status, tier, current_period_end, cancel_at_period_end }'
+        errors: [auth_expired, auth_invalid, not_found, internal]
+    pci_boundary: Card details NEVER cross this contract. Checkout is a
+      redirect to the payment provider; the control plane sees only
+      provider webhooks.
+  provider_routing:
+    ops:
+      register_key:
+        method: POST
+        path: /provider-keys/register
+        mutating: true
+        request: '{ provider_kind, key_material, label? }'
+        response: '{ key_ref }'
+        errors: [auth_expired, provider_key_invalid, malformed_request,
+          internal]
+      revoke_key:
+        method: POST
+        path: /provider-keys/revoke
+        mutating: true
+        request: '{ key_ref }'
+        response: '{ }'
+        errors: [auth_expired, not_found, internal]
+      route:
+        method: POST
+        path: /provider-routing/route
+        mutating: false
+        request: '{ capability, policy: { prefer?: "own-key"|"platform",
+          max_cost_usd? } }'
+        response: '{ provider_kind, key_ref?, estimated_cost_usd }'
+        errors: [auth_expired, entitlement_missing, cost_cap_exceeded,
+          provider_unavailable, internal]
+    byok: provider_kind is an open enum (new providers additively, MINOR
+      bump); consumers MUST NOT hardcode provider lists.
