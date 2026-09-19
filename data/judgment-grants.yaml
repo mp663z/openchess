@@ -1,0 +1,13 @@
+# Judgment grants: owner-delegated provisional decisions for human
+# checkpoint gates. This registry is PINNED: its sha256 is hardcoded as
+# GRANTS_SHA256 in tools/evidence_lint.py, so editing an entry (or the
+# count) without changing trusted code fails closed and every
+# substitution is refused. The registry content is verified against
+# trusted owner-channel evidence (the named wamids) by the main agent
+# before the pin is set; the lint checks the pin, never the claim.
+grants:
+  T2357:
+    wamid: "wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0E2NDE0QzQ5MzI5NjgyNUIzREQA"
+    date: "2026-09-19"
+    record: "evidence/substitutions/T2357.md"
+    hooks: ["T2228", "T2288", "T2356"]

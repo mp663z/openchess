@@ -45,3 +45,39 @@ completed.
   pre-push hook run it.
 - tools/dag.py complete refuses without --sha and --evidence (existing).
 - tests/test_evidence_lint.py locks the lint behavior with adversarial fixtures.
+
+## Judgment-substituted human checkpoints (owner-delegated, 2026-09-19)
+
+A task whose board verification mode is EXACTLY `human checkpoint` AND
+whose board `checkpoint` is nonempty may complete on a judgment-
+substituted verdict instead of a human PASS:
+
+    Verification: human checkpoint - judgment-substituted per owner
+    wamid.<id> (YYYY-MM-DD); provisional decision:
+    evidence/substitutions/TNNNN.md; re-verify hooks: Txxxx, Tyyyy
+
+The mode is pinned, not self-authorizing:
+
+- `data/judgment-grants.yaml` is the grant registry; its sha256 is
+  pinned in `tools/evidence_lint.py` (`GRANTS_SHA256`). Editing the
+  registry without changing trusted code fails closed and every
+  substitution is refused. The registry content is verified against the
+  trusted owner-channel evidence (the named wamids) before the pin is
+  set; the lint checks the pin, never the claim.
+- The verdict must match the grant exactly: owner wamid, date,
+  substitution-record path, and the full hook list.
+- The record must exist, title-name the task, carry the grant wamid,
+  and contain every required field: `Task:`, `What the human would
+  have done:`, `Why no human pass happened:`, `Provisional substitute
+  decision:`, `Re-verify hook:`.
+- Every hook must be a real dag task distinct from the source task,
+  not done, tagged `reverify:<task>` in `tasks/dag.json`, and carry a
+  human/independent re-verification mode. When the hook later runs,
+  its result supersedes the substitution.
+- `auto + human`, `human/external`, `human/legal audit`,
+  `independent verifier`, and every other mode are NOT substitutable.
+  Widening the class is a trusted-code change.
+
+First grants: T2357 (Week-1 product-code gate) per owner wamid
+...MzI5NjgyNUIzREQA (2026-09-19), hooks T2228/T2288/T2356. See
+evidence/substitutions/README.md.

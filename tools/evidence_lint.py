@@ -26,6 +26,25 @@ Rules (docs/governance/evidence-contract.md):
   / independent-verifier / human modes require a "PASS at <sha>" verdict
   naming the same SHA; a task not done on the board must not claim done.
 UNVERIFIED is never done.
+
+Judgment-substituted human checkpoints (owner-delegated, 2026-09-19):
+a task whose board verification mode is EXACTLY "human checkpoint" AND
+whose board checkpoint is nonempty may complete on a judgment-substituted
+verdict instead of a human PASS. Eligibility also requires a pinned
+grant in data/judgment-grants.yaml (sha256 pinned below as
+GRANTS_SHA256 - the registry is trusted-code-adjacent: editing it
+without changing the pin fails closed and every substitution is
+refused). The verdict must match the grant exactly (owner wamid, date,
+substitution record path, re-verify hooks); the record must exist, name
+the task, carry the grant wamid, and contain every required field
+(Task, What the human would have done, Why no human pass happened,
+Provisional substitute decision, Re-verify hook); every hook must be a
+real dag task distinct from the source task, not done, tagged
+reverify:<task>, and carry a human/independent re-verification mode.
+Auto+human, human/external, human/legal-audit and every other
+human-like mode are NOT substitutable. Repo content never authorizes
+itself: the grant content is verified against trusted owner-channel
+evidence before the pin is set.
 """
 
 from __future__ import annotations
@@ -45,6 +64,21 @@ ALLOWLIST = ROOT / "data" / "evidence-pre-contract.yaml"
 
 # sha256 of data/evidence-pre-contract.yaml bytes - the frozen grandfather list
 ALLOWLIST_SHA256 = "1475352ad9092f9e676096948476c2eb1b650a0d513f4021aa0a53fa17fd5a42"
+GRANTS = ROOT / "data" / "judgment-grants.yaml"
+# sha256 of data/judgment-grants.yaml bytes - the pinned grant registry
+GRANTS_SHA256 = "f1f74738f148ad26a30c0291f59d1fa16d9eb325a230f3a6dc442b948948b993"
+GRANT_KEY_RE = re.compile(r"^T\d{4}$")
+GRANT_RECORD_RE = re.compile(r"^evidence/substitutions/(T\d{4})\.md$")
+WAMID_RE = re.compile(r"^wamid\.[A-Za-z0-9+/=]+$")
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+SUBSTITUTABLE_MODES = frozenset({"human checkpoint"})
+REQUIRED_RECORD_FIELDS = (
+    "Task:",
+    "What the human would have done:",
+    "Why no human pass happened:",
+    "Provisional substitute decision:",
+    "Re-verify hook:",
+)
 SHA_RE = re.compile(r"\b[0-9a-f]{40}\b")
 DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 ALLOWLIST_KEY_RE = re.compile(r"^evidence/T\d{4}\.md$")
@@ -64,7 +98,8 @@ SUBST_RE = re.compile(
     r"\Ajudgment-substituted per owner (wamid\.[A-Za-z0-9+/=]+) "
     r"\((\d{4}-\d{2}-\d{2})\); provisional decision: "
     r"(evidence/substitutions/(T\d{4})\.md); "
-    r"re-verify hooks: (T\d{4}(?:, T\d{4})*)\Z")
+    r"re-verify hooks: (T\d{4}(?:, T\d{4})*)\Z"
+)
 
 
 def _tasks(dag_path: Path) -> dict[str, dict]:
@@ -78,13 +113,136 @@ def _field(text: str, name: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
+def _check_substitution(
+    task: str,
+    board: dict,
+    mode: str,
+    groups: tuple,
+    tasks: dict[str, dict],
+    grants: dict[str, dict],
+    rel: str,
+) -> list[str]:
+    """Grant-pinned judgment-substitution checks (fail closed)."""
+    errors: list[str] = []
+    wamid, date, record, record_task, hooks_s = groups
+    if mode not in SUBSTITUTABLE_MODES:
+        errors.append(
+            f"{rel}: mode {mode!r} is not substitutable - only "
+            f"{sorted(SUBSTITUTABLE_MODES)} with a nonempty checkpoint"
+        )
+    if not str(board.get("checkpoint") or "").strip():
+        errors.append(f"{rel}: substitution requires a nonempty board checkpoint")
+    grant = grants.get(task)
+    if grant is None:
+        errors.append(
+            f"{rel}: no pinned judgment grant for {task} - repo content "
+            "cannot authorize its own substitution"
+        )
+        return errors
+    if record_task != task:
+        errors.append(f"{rel}: substitution record {record} is for {record_task}, not {task}")
+    if wamid != grant["wamid"]:
+        errors.append(f"{rel}: verdict wamid != pinned grant wamid")
+    if date != grant["date"]:
+        errors.append(f"{rel}: verdict date != pinned grant date")
+    if record != grant["record"]:
+        errors.append(f"{rel}: verdict record != pinned grant record")
+    hooks = hooks_s.split(", ")
+    if hooks != grant["hooks"]:
+        errors.append(f"{rel}: verdict hooks != pinned grant hooks")
+    record_path = ROOT / record
+    if not record_path.is_file():
+        errors.append(f"{rel}: substitution record {record} missing")
+    else:
+        body = record_path.read_text()
+        lines = body.splitlines()
+        if not lines or task not in lines[0]:
+            errors.append(f"{rel}: substitution record {record} title must name {task}")
+        if grant["wamid"] not in body:
+            errors.append(
+                f"{rel}: substitution record {record} does not carry the pinned grant wamid"
+            )
+        for field in REQUIRED_RECORD_FIELDS:
+            m = re.search(rf"^- {re.escape(field)}\s*(\S.*)$", body, re.M)
+            if not m:
+                errors.append(
+                    f"{rel}: substitution record {record} lacks a nonempty {field!r} field"
+                )
+    for hook in hooks:
+        if hook == task:
+            errors.append(f"{rel}: re-verify hook cannot be {task} itself")
+            continue
+        hook_task = tasks.get(hook)
+        if hook_task is None:
+            errors.append(f"{rel}: re-verify hook {hook} is not a dag task")
+            continue
+        if hook_task.get("status") == "done":
+            errors.append(
+                f"{rel}: re-verify hook {hook} is already done - the "
+                "substitution is superseded, not re-verifiable"
+            )
+        if f"reverify:{task}" not in (hook_task.get("tags") or []):
+            errors.append(
+                f"{rel}: re-verify hook {hook} is not linked back (missing reverify:{task} tag)"
+            )
+        hook_mode = hook_task.get("verification") or ""
+        if not any(k in hook_mode for k in ("human", "independent")):
+            errors.append(
+                f"{rel}: re-verify hook {hook} mode {hook_mode!r} is "
+                "not a human/independent re-verification shape"
+            )
+    return errors
+
+
+def load_grants(path: Path) -> tuple[dict[str, dict], list[str]]:
+    """Load the pinned judgment-grant registry, failing closed on any
+    tampering (same trust model as the grandfather allowlist)."""
+    raw = path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != GRANTS_SHA256:
+        return {}, [
+            "data/judgment-grants.yaml: digest != GRANTS_SHA256 pinned "
+            "in tools/evidence_lint.py - grant registry tampered; "
+            "substitutions refused (fail closed)"
+        ]
+    errors: list[str] = []
+    mapping = (yaml.safe_load(raw.decode()) or {}).get("grants", {})
+    for key, value in mapping.items():
+        if not GRANT_KEY_RE.match(key):
+            errors.append(f"grant key {key!r} is not TNNNN")
+            continue
+        if not isinstance(value, dict):
+            errors.append(f"grant {key}: mapping required")
+            continue
+        wamid = value.get("wamid")
+        if not isinstance(wamid, str) or not WAMID_RE.match(wamid):
+            errors.append(f"grant {key}: wamid malformed")
+        date = value.get("date")
+        if not isinstance(date, str) or not DATE_RE.match(date):
+            errors.append(f"grant {key}: date must be YYYY-MM-DD")
+        record = value.get("record")
+        m = GRANT_RECORD_RE.match(record) if isinstance(record, str) else None
+        if m is None or m.group(1) != key:
+            errors.append(f"grant {key}: record must be evidence/substitutions/{key}.md")
+        hooks = value.get("hooks")
+        if (
+            not isinstance(hooks, list)
+            or not hooks
+            or any(not isinstance(h, str) or not GRANT_KEY_RE.match(h) for h in hooks)
+            or len(set(hooks)) != len(hooks)
+        ):
+            errors.append(f"grant {key}: hooks must be unique TNNNN ids")
+    return mapping, errors
+
+
 def lint_file(
     path: Path,
     tasks: dict[str, dict],
     allowlist: dict[str, str],
+    grants: dict[str, dict] | None = None,
     rel: str | None = None,
 ) -> list[str]:
     errors: list[str] = []
+    grants = grants or {}
     task = path.stem
     rel = rel or f"evidence/{path.name}"
     text = path.read_text()
@@ -96,9 +254,7 @@ def lint_file(
         if recorded is None:
             errors.append(f"{rel}: pre-contract marker on a non-allowlisted file")
         elif hashlib.sha256(path.read_bytes()).hexdigest() != recorded:
-            errors.append(
-                f"{rel}: edited since grandfathering - must meet the full contract"
-            )
+            errors.append(f"{rel}: edited since grandfathering - must meet the full contract")
         else:
             return []  # frozen grandfathered file
 
@@ -142,9 +298,7 @@ def lint_file(
         if mode is not None:
             vmode, _, detail = verification.partition(" - ")
             if vmode != mode:
-                errors.append(
-                    f"{rel}: Verification mode {vmode!r} != board mode {mode!r}"
-                )
+                errors.append(f"{rel}: Verification mode {vmode!r} != board mode {mode!r}")
             if status == "done" and any(k in mode for k in INDEPENDENT):
                 m = re.search(r"\bPASS at ([0-9a-f]{40})\b", detail)
                 subst = SUBST_RE.match(detail.strip())
@@ -153,41 +307,17 @@ def lint_file(
                         errors.append(
                             f"{rel}: verifier PASS SHA {m.group(1)[:12]} != board done_sha"
                         )
-                elif subst and "human" in mode and "independent" not in mode:
-                    wamid, _date, record, record_task, hooks = subst.groups()
-                    if record_task != task:
-                        errors.append(
-                            f"{rel}: substitution record {record} is for "
-                            f"{record_task}, not {task}")
-                    record_path = ROOT / record
-                    if not record_path.is_file():
-                        errors.append(
-                            f"{rel}: substitution record {record} missing")
-                    else:
-                        body = record_path.read_text()
-                        if task not in body.splitlines()[0]:
-                            errors.append(
-                                f"{rel}: substitution record {record} title "
-                                f"must name {task}")
-                        if wamid not in body:
-                            errors.append(
-                                f"{rel}: substitution record {record} does "
-                                "not carry the owner wamid it cites")
-                        if "Re-verify hook" not in body:
-                            errors.append(
-                                f"{rel}: substitution record {record} lacks "
-                                "a Re-verify hook section")
-                    for hook in hooks.split(", "):
-                        if hook not in tasks:
-                            errors.append(
-                                f"{rel}: re-verify hook {hook} is not a "
-                                "dag task")
+                elif subst:
+                    errors.extend(
+                        _check_substitution(task, board, mode, subst.groups(), tasks, grants, rel)
+                    )
                 elif "human" in mode and "independent" not in mode:
                     errors.append(
                         f"{rel}: human mode requires a `PASS at <sha>` "
                         "verdict or a judgment-substituted verdict naming "
                         "owner wamid, substitution record and re-verify "
-                        "hooks")
+                        "hooks"
+                    )
                 else:
                     errors.append(
                         f"{rel}: independent/human mode requires a `PASS at <sha>` verdict"
@@ -235,11 +365,13 @@ def lint_tree(root: Path = ROOT) -> list[str]:
     allowlist_path = root / "data" / "evidence-pre-contract.yaml"
     tasks = _tasks(dag)
     allowlist, errors = load_allowlist(allowlist_path)
+    grants, grant_errors = load_grants(root / "data" / "judgment-grants.yaml")
+    errors.extend(grant_errors)
     files = sorted(evidence.glob("T*.md"))
     if not files:
         errors.append("no evidence files found")
     for path in files:
-        errors.extend(lint_file(path, tasks, allowlist))
+        errors.extend(lint_file(path, tasks, allowlist, grants))
     return errors
 
 
