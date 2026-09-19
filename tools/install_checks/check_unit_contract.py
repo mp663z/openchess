@@ -36,6 +36,11 @@ VIOLATIONS = {
     "bad_status_unhashable.json": "invalid status",
     "bad_dup_dep.json": "duplicate dependency",
     "bad_meta_field.json": "milestone must be a string",
+    "bad_int_sha.json": "done_sha is not a full 40-hex SHA",
+    "bad_no_schema.json": "schema_version must be exactly",
+    "bad_wrong_schema.json": "schema_version must be exactly",
+    "bad_empty_tasks.json": "tasks list is empty",
+    "bad_padded_id.json": "surrounding whitespace",
 }
 
 

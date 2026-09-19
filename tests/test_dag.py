@@ -3,7 +3,16 @@ from pathlib import Path
 
 import pytest
 
-from tools.dag import DagError, claimable, cmd_complete, index, load, save_atomic, verify
+from tools.dag import (
+    EXPECTED_SCHEMA_VERSION,
+    DagError,
+    claimable,
+    cmd_complete,
+    index,
+    load,
+    save_atomic,
+    verify,
+)
 
 REAL_BOARD_PATH = Path(__file__).resolve().parent.parent / "tasks" / "dag.json"
 
@@ -12,7 +21,7 @@ SHA40 = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4"
 
 def make_board(tmp_path: Path) -> Path:
     board = {
-        "schema_version": "test",
+        "schema_version": EXPECTED_SCHEMA_VERSION,
         "tasks": [
             {
                 "id": "T1",
@@ -154,7 +163,35 @@ def test_nonstring_title_rejected():
 
 
 def test_tasks_not_a_list_rejected():
-    assert verify({"tasks": None}) == ["board: tasks must be a list"]
+    problems = verify({"schema_version": EXPECTED_SCHEMA_VERSION, "tasks": None})
+    assert problems == ["board: tasks must be a list"]
+
+
+def test_missing_schema_version_rejected():
+    assert any("schema_version" in p for p in verify({"tasks": [_minimal_task()]}))
+
+
+def test_wrong_schema_version_rejected():
+    problems = verify({"schema_version": 99, "tasks": [_minimal_task()]})
+    assert any("schema_version" in p for p in problems)
+
+
+def test_empty_tasks_rejected():
+    problems = verify({"schema_version": EXPECTED_SCHEMA_VERSION, "tasks": []})
+    assert any("tasks list is empty" in p for p in problems)
+
+
+def test_integer_done_sha_rejected():
+    problems = verify({"schema_version": EXPECTED_SCHEMA_VERSION, "tasks": [
+        _minimal_task(status="done", done_sha=1111111111111111111111111111111111111111,
+                      evidence_manifest="evidence/T1.md")]})
+    assert any("done_sha is not a full 40-hex SHA" in p for p in problems)
+
+
+def test_whitespace_padded_id_rejected():
+    problems = verify({"schema_version": EXPECTED_SCHEMA_VERSION,
+                       "tasks": [_minimal_task(id=" T1 ")]})
+    assert any("surrounding whitespace" in p for p in problems)
 
 
 def test_board_not_a_mapping_rejected():

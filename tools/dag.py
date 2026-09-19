@@ -13,6 +13,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Board-level contract: exact schema version of the real board; a missing
+# or wrong version and an empty task list are contract violations.
+EXPECTED_SCHEMA_VERSION = "5.2-alpha-casual-autoimport"
+
 REQUIRED_FIELDS = {
     "id",
     "phase",
@@ -77,9 +81,17 @@ def verify(board: dict) -> list[str]:
     problems: list[str] = []
     if not isinstance(board, dict):
         return [f"board must be a mapping, got {type(board).__name__}"]
+    problems: list[str] = []
+    sv = board.get("schema_version")
+    if sv != EXPECTED_SCHEMA_VERSION:
+        problems.append(
+            f"board: schema_version must be exactly {EXPECTED_SCHEMA_VERSION!r}, got {sv!r}"
+        )
     tasks = board.get("tasks")
     if not isinstance(tasks, list):
-        return ["board: tasks must be a list"]
+        return problems + ["board: tasks must be a list"]
+    if not tasks:
+        problems.append("board: tasks list is empty")
     for t in tasks:
         if not isinstance(t, dict):
             problems.append(f"task entry is not a mapping: {t!r}")
@@ -87,6 +99,8 @@ def verify(board: dict) -> list[str]:
         tid = t.get("id")
         if not isinstance(tid, str) or not tid.strip():
             problems.append(f"task id must be a non-empty string, got {tid!r}")
+        elif tid != tid.strip():
+            problems.append(f"task id has surrounding whitespace: {tid!r}")
     ids = [t.get("id") for t in tasks if isinstance(t, dict)]
     seen: set[str] = set()
     for i in ids:
@@ -128,8 +142,8 @@ def verify(board: dict) -> list[str]:
                 else:
                     seen_deps.add(dep)
         if t.get("status") == "done":
-            sha = t.get("done_sha") or ""
-            if not SHA_RE.fullmatch(str(sha)):
+            sha = t.get("done_sha")
+            if not isinstance(sha, str) or not SHA_RE.fullmatch(sha):
                 problems.append(f"{tid}: done_sha is not a full 40-hex SHA")
             want = f"evidence/{tid}.md"
             if t.get("evidence_manifest") != want:
