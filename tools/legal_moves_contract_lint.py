@@ -6,7 +6,8 @@ against the pinned values below - prose rules are checked only for presence
 as nonempty documentation strings, never for content. Also validates the
 cross-artifact linkage: the variant, turn, castling and en-passant contracts
 must exist, pass their own lints, and carry the fields this contract relies
-on. Any deviation raises ContractError and the CLI exits nonzero.
+on (including the turn contract's ownership of every non-move-set terminal
+outcome). Any deviation raises ContractError and the CLI exits nonzero.
 """
 from __future__ import annotations
 
@@ -25,10 +26,31 @@ from tools.turn_contract_lint import lint as _turn_lint  # noqa: E402
 from tools.variant_contract_lint import ContractError  # noqa: E402
 from tools.variant_contract_lint import lint as _variant_lint  # noqa: E402
 
-MOVE_MODEL = {
-    "fields": ["from_square", "to_square", "promotion"],
-    "promotion_values": ["q", "r", "b", "n"],
-    "promotion_required": "pawn-reaching-last-rank",
+MOVE_SHAPE = {
+    "required": ["from_square", "to_square"],
+    "optional": ["promotion"],
+    "closed_keys": True,
+    "from_to_distinct": True,
+    "types": {
+        "from_square": {"kind": "string", "grammar": "square"},
+        "to_square": {"kind": "string", "grammar": "square"},
+        "promotion": {"kind": "string", "enum": ["q", "r", "b", "n"],
+                      "presence": "required-exactly-when-promoting"},
+    },
+}
+SQUARE_GRAMMAR = {
+    "files": list("abcdefgh"),
+    "ranks": ["1", "2", "3", "4", "5", "6", "7", "8"],
+    "form": "exactly-file-char-then-rank-char",
+}
+PROMO_EXPANSION = {
+    "expands_to": 4,
+    "values": ["q", "r", "b", "n"],
+    "applies_to": ["quiet", "capture"],
+    "unpromoted_last_rank_move": "none",
+}
+MOVE_MODEL_EXTRA = {
+    "promotion_required": "pawn-reaching-promotion-rank",
     "promotion_forbidden": "all-other-moves",
 }
 KNIGHT_DELTAS = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1],
@@ -39,10 +61,19 @@ ROOK_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]]
 BISHOP_DIRS = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
 QUEEN_DIRS = ROOK_DIRS + BISHOP_DIRS
 PAWN = {
+    "forward": {
+        "white": {"file_delta": 0, "rank_delta": 1},
+        "black": {"file_delta": 0, "rank_delta": -1},
+    },
     "forward_empty": "single-square-advance-requires-empty",
     "double": {"requires": ["on-start-rank", "both-squares-empty"],
                "ranks": {"white": "2", "black": "7"}},
+    "capture_deltas": {
+        "white": [[1, 1], [-1, 1]],
+        "black": [[1, -1], [-1, -1]],
+    },
     "capture": "diagonal-one-square-requires-enemy-or-en-passant",
+    "promotion_ranks": {"white": "8", "black": "1"},
     "never_backward": True,
 }
 OCCUPANCY = {
@@ -53,22 +84,34 @@ OCCUPANCY = {
 ATTACK = {
     "definition": "pseudo-legal-capture-to-square",
     "attacker_king_safety": "ignored",
+    "target_occupancy": {"empty": "attacked", "enemy_occupied": "attacked",
+                         "own_occupied": "attacked"},
     "king_attacks": "adjacent-squares",
     "pawn_attacks": "diagonal-forward-squares",
+    "castling_transit": "king-transit-squares-evaluated-with-this-relation",
 }
 LEGALITY = {
     "filter": "resulting-position-leaves-own-king-unattacked",
     "in_check_rule": "while-in-check-only-evasions-legal",
 }
-TERMINAL = {
+MOVE_SET_TERMINAL = {
+    "yields": ["check", "checkmate", "stalemate"],
     "check": "side-to-move-king-attacked",
     "checkmate": {"requires": ["check", "zero-legal-moves"]},
     "stalemate": {"requires": ["no-check", "zero-legal-moves"]},
+    "scope": "move-set-and-check-state-only",
+    "other_outcomes": {
+        "owner": "chess-turn-contract",
+        "states": ["resignation", "timeout", "draw_agreement",
+                   "fifty_move_claim", "seventyfive_move_auto",
+                   "fivefold_auto", "threefold_claim",
+                   "insufficient_material", "variant_specific"],
+    },
 }
 LINKAGE = {
     "castling": "castling-contract-owns-rights-paths-preconditions",
     "en_passant": "en-passant-contract-owns-target-capture-preconditions",
-    "turn": "turn-contract-owns-clocks-and-advance",
+    "turn": "turn-contract-owns-clocks-advance-and-non-move-set-termination",
     "variant": "variant-contract-owns-identity-and-start",
 }
 FAILURE_CLASSES = ["malformed_move", "no_piece", "not_players_piece",
@@ -76,16 +119,16 @@ FAILURE_CLASSES = ["malformed_move", "no_piece", "not_players_piece",
                    "promotion_forbidden", "leaves_king_attacked",
                    "wrong_variant"]
 FAILURE_MAPPING = {
-    "malformed_move": {"trigger": "move-not-the-declared-field-shape",
+    "malformed_move": {"trigger": "move-fails-move_model-shape-schema",
                        "error": "malformed_request"},
     "no_piece": {"trigger": "from-square-empty", "error": "illegal_move"},
     "not_players_piece": {"trigger": "from-square-holds-enemy-piece",
                           "error": "illegal_move"},
     "unreachable_target": {"trigger": "to-square-not-pseudo-legal-for-the-piece",
                            "error": "illegal_move"},
-    "promotion_missing": {"trigger": "pawn-reaches-last-rank-without-promotion-piece",
+    "promotion_missing": {"trigger": "pawn-reaches-promotion-rank-without-promotion-member",
                           "error": "illegal_move"},
-    "promotion_forbidden": {"trigger": "promotion-piece-on-non-promotion-move-or-invalid-value",
+    "promotion_forbidden": {"trigger": "promotion-member-on-non-promotion-move-or-outside-enum",
                             "error": "illegal_move"},
     "leaves_king_attacked": {"trigger": "resulting-position-leaves-own-king-attacked",
                              "error": "illegal_move"},
@@ -117,10 +160,14 @@ VERSIONING = {
 
 ALLOWED_TOP = {"schema_version", "contract"}
 ALLOWED_CONTRACT = {"id", "move_model", "movement", "attack", "legality",
-                    "terminal_status", "linkage", "failure_classes",
-                    "failure_mapping", "errors", "links", "versioning"}
+                    "move_set_terminal_status", "linkage",
+                    "failure_classes", "failure_mapping", "errors", "links",
+                    "versioning"}
+ALLOWED_MOVE_MODEL = {"shape", "square_grammar", "promotion_expansion",
+                      "promotion_required", "promotion_forbidden", "rule"}
 ALLOWED_MOVEMENT = {"knight", "king", "rook", "bishop", "queen", "pawn",
                     "occupancy", "rule"}
+ALLOWED_VERSIONING = set(VERSIONING) | {"minor_additions_rule", "rule"}
 
 
 def _need(cond: bool, problem: str) -> None:
@@ -177,10 +224,24 @@ def _check_links(links: dict, root: Path) -> None:
     _need("pawn_move" in reset_when and "capture" in reset_when,
           "linked turn contract: legal moves include pawn moves and captures - "
           "both must reset the halfmove clock")
+    turn_states = tdoc["contract"]["termination"]["states"]
+    for state in MOVE_SET_TERMINAL["other_outcomes"]["states"]:
+        _need(state in turn_states,
+              f"linked turn contract: non-move-set outcome {state!r} missing "
+              "from termination.states - ownership transfer is unverifiable")
+    for yielded in ("checkmate", "stalemate"):
+        _need(yielded in turn_states,
+              f"linked turn contract: move-set outcome {yielded!r} missing "
+              "from termination.states - the turn machine must accept it")
     cdoc = yaml.safe_load((root / LINKS["castling_contract"]).read_text())
     _castling_lint(cdoc, root)
     _need(cdoc["contract"]["rights"]["irrevocable"] is True,
           "linked castling contract: rights must be irrevocable")
+    for path in cdoc["contract"]["move"]["per_side_paths"].values():
+        _need("king_transit" in path and "empty_required" in path,
+              "linked castling contract: every side path must declare "
+              "king_transit and empty_required - transit safety applies "
+              "this contract's attack relation")
     edoc = yaml.safe_load((root / LINKS["en_passant_contract"]).read_text())
     _ep_lint(edoc, root)
     _need("pinned_capture" in edoc["contract"]["failure_classes"],
@@ -200,9 +261,15 @@ def lint(doc: object, root: Path = ROOT) -> None:
     _need(c["id"] == "chess-legal-moves", "contract.id must be chess-legal-moves")
 
     mm = _get(c, "move_model", "contract")
-    _keys(mm, {"fields", "promotion_values", "promotion_required",
-               "promotion_forbidden", "rule"}, "contract.move_model")
-    _strict_eq(_no_rule(mm), MOVE_MODEL, "contract.move_model.fields")
+    _keys(mm, ALLOWED_MOVE_MODEL, "contract.move_model")
+    _strict_eq(_get(mm, "shape", "contract.move_model"),
+               MOVE_SHAPE, "contract.move_model.shape")
+    _strict_eq(_get(mm, "square_grammar", "contract.move_model"),
+               SQUARE_GRAMMAR, "contract.move_model.square_grammar")
+    _strict_eq(_get(mm, "promotion_expansion", "contract.move_model"),
+               PROMO_EXPANSION, "contract.move_model.promotion_expansion")
+    _strict_eq({k: mm[k] for k in MOVE_MODEL_EXTRA}, MOVE_MODEL_EXTRA,
+               "contract.move_model.promotion-fields")
     _text(_get(mm, "rule", "contract.move_model"), "contract.move_model.rule")
 
     mv = _get(c, "movement", "contract")
@@ -228,8 +295,7 @@ def lint(doc: object, root: Path = ROOT) -> None:
         _need(_get(node, "slides", f"contract.movement.{piece}") is True,
               f"contract.movement.{piece}.slides must be true")
     pawn = _get(mv, "pawn", "contract.movement")
-    _keys(pawn, {"forward_empty", "double", "capture", "never_backward"},
-          "contract.movement.pawn")
+    _keys(pawn, set(PAWN), "contract.movement.pawn")
     _strict_eq(pawn, PAWN, "contract.movement.pawn.fields")
     occ = _get(mv, "occupancy", "contract.movement")
     _keys(occ, set(OCCUPANCY), "contract.movement.occupancy")
@@ -237,8 +303,7 @@ def lint(doc: object, root: Path = ROOT) -> None:
     _text(_get(mv, "rule", "contract.movement"), "contract.movement.rule")
 
     atk = _get(c, "attack", "contract")
-    _keys(atk, {"definition", "attacker_king_safety", "king_attacks",
-                "pawn_attacks", "rule"}, "contract.attack")
+    _keys(atk, set(ATTACK) | {"rule"}, "contract.attack")
     _strict_eq(_no_rule(atk), ATTACK, "contract.attack.fields")
     _text(_get(atk, "rule", "contract.attack"), "contract.attack.rule")
 
@@ -247,12 +312,13 @@ def lint(doc: object, root: Path = ROOT) -> None:
     _strict_eq(_no_rule(leg), LEGALITY, "contract.legality.fields")
     _text(_get(leg, "rule", "contract.legality"), "contract.legality.rule")
 
-    ts = _get(c, "terminal_status", "contract")
-    _keys(ts, {"check", "checkmate", "stalemate", "rule"},
-          "contract.terminal_status")
-    _strict_eq(_no_rule(ts), TERMINAL, "contract.terminal_status.fields")
-    _text(_get(ts, "rule", "contract.terminal_status"),
-          "contract.terminal_status.rule")
+    mst = _get(c, "move_set_terminal_status", "contract")
+    _keys(mst, set(MOVE_SET_TERMINAL) | {"rule"},
+          "contract.move_set_terminal_status")
+    _strict_eq(_no_rule(mst), MOVE_SET_TERMINAL,
+               "contract.move_set_terminal_status.fields")
+    _text(_get(mst, "rule", "contract.move_set_terminal_status"),
+          "contract.move_set_terminal_status.rule")
 
     lk = _get(c, "linkage", "contract")
     _keys(lk, set(LINKAGE) | {"rule"}, "contract.linkage")
@@ -271,8 +337,11 @@ def lint(doc: object, root: Path = ROOT) -> None:
     _check_links(_get(c, "links", "contract"), root)
 
     ver = _get(c, "versioning", "contract")
-    _keys(ver, set(VERSIONING) | {"rule"}, "contract.versioning")
-    _strict_eq(_no_rule(ver), VERSIONING, "contract.versioning.fields")
+    _keys(ver, ALLOWED_VERSIONING, "contract.versioning")
+    mar = _get(ver, "minor_additions_rule", "contract.versioning")
+    _strict_eq(_no_rule(ver), {**VERSIONING, "minor_additions_rule": mar},
+               "contract.versioning.fields")
+    _text(mar, "contract.versioning.minor_additions_rule")
     _text(_get(ver, "rule", "contract.versioning"), "contract.versioning.rule")
 
 

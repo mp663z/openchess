@@ -6,30 +6,54 @@
 # repertoire replay, review and drill generation all share THESE
 # semantics. ALL normative semantics live in STRUCTURED fields the
 # lint compares exactly - prose is documentation, never the
-# enforcement surface. This contract pins the move model, the
+# enforcement surface. This contract pins the move object shape, the
 # piece-movement rules, the attack relation, the king-safety
-# legality filter, and the terminal statuses derived from the
-# legal move set. Special moves are NOT restated here: castling
+# legality filter, promotion expansion, and the move-set terminal
+# classification. Special moves are NOT restated here: castling
 # follows the chess-castling contract, the en-passant capture the
-# chess-en-passant contract, and turn advancement the chess-turn
-# contract; the linkage section pins exactly how they compose.
+# chess-en-passant contract, and turn advancement AND ALL NON-MOVE-SET
+# TERMINAL OUTCOMES the chess-turn contract; the linkage section pins
+# exactly how they compose.
 schema_version: 1
 
 contract:
   id: chess-legal-moves
   move_model:
-    fields: [from_square, to_square, promotion]
-    promotion_values: [q, r, b, n]
-    promotion_required: pawn-reaching-last-rank
+    shape:
+      required: [from_square, to_square]
+      optional: [promotion]
+      closed_keys: true
+      from_to_distinct: true
+      types:
+        from_square: {kind: string, grammar: square}
+        to_square: {kind: string, grammar: square}
+        promotion: {kind: string, enum: [q, r, b, n],
+          presence: required-exactly-when-promoting}
+    square_grammar:
+      files: [a, b, c, d, e, f, g, h]
+      ranks: ["1", "2", "3", "4", "5", "6", "7", "8"]
+      form: exactly-file-char-then-rank-char
+    promotion_expansion:
+      expands_to: 4
+      values: [q, r, b, n]
+      applies_to: [quiet, capture]
+      unpromoted_last_rank_move: none
+    promotion_required: pawn-reaching-promotion-rank
     promotion_forbidden: all-other-moves
     rule: >-
-      A move is exactly a from-square, a to-square, and an optional
-      promotion piece. Promotion is REQUIRED when a pawn reaches its
-      last rank and names one of the promotion_values (never king,
-      never pawn); it is FORBIDDEN on every other move. Move KIND
-      (capture, double push, en-passant, castle) is derived from the
-      position and the squares - it is never a flag on the move, and
-      two moves are equal exactly when all declared fields are equal.
+      A move is exactly the declared shape: required from_square and
+      to_square, optional promotion, NO other members (closed keys),
+      from_square != to_square, squares matching square_grammar
+      exactly. Promotion is REQUIRED when a pawn reaches its
+      promotion rank and names one of the enum values (never king,
+      never pawn); it is FORBIDDEN on every other move. Every
+      pseudo-legal pawn move reaching the promotion rank - quiet or
+      capture - expands to exactly four distinct moves, one per
+      promotion value; no unpromoted move to the promotion rank
+      exists. Move KIND (capture, double push, en-passant, castle)
+      is derived from the position and the squares - it is never a
+      flag on the move, and two moves are equal exactly when all
+      declared members are equal.
   movement:
     knight:
       deltas: [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1],
@@ -50,40 +74,58 @@ contract:
         [-1, 1], [-1, -1]]
       slides: true
     pawn:
+      forward:
+        white: {file_delta: 0, rank_delta: 1}
+        black: {file_delta: 0, rank_delta: -1}
       forward_empty: single-square-advance-requires-empty
       double: {requires: [on-start-rank, both-squares-empty],
         ranks: {white: "2", black: "7"}}
+      capture_deltas:
+        white: [[1, 1], [-1, 1]]
+        black: [[1, -1], [-1, -1]]
       capture: diagonal-one-square-requires-enemy-or-en-passant
+      promotion_ranks: {white: "8", black: "1"}
       never_backward: true
     occupancy:
       own_piece_square: unreachable
       enemy_piece_square: capture-only
       sliding_block: any-piece-ends-the-ray-before-it
     rule: >-
-      Pseudo-legal movement is exactly the per-piece rules above:
-      leapers (knight, king) reach their delta squares; sliders
-      (rook, bishop, queen) walk their directions until the board
-      edge or the first piece, which ends the ray - reachable when
-      enemy (a capture), unreachable when own; a pawn advances one
-      square forward only when empty, two squares only from its
-      start rank with both squares empty, and captures exactly one
-      square diagonally forward onto an enemy piece or per the
-      en-passant contract. A pawn never moves backward and never
-      captures straight ahead.
+      Pseudo-legal movement is exactly the per-piece rules above.
+      Deltas and directions are (file, rank) integer pairs. Leapers
+      (knight, king) reach their delta squares; sliders (rook,
+      bishop, queen) walk their directions until the board edge or
+      the first piece, which ends the ray - reachable when enemy (a
+      capture), unreachable when own. A pawn advances along its
+      side's forward vector only when the target is empty, two
+      squares only from its start rank with both squares empty, and
+      captures exactly along its side's capture deltas onto an enemy
+      piece or per the en-passant contract. A pawn never moves
+      backward and never captures straight ahead.
   attack:
     definition: pseudo-legal-capture-to-square
     attacker_king_safety: ignored
+    target_occupancy:
+      empty: attacked
+      enemy_occupied: attacked
+      own_occupied: attacked
     king_attacks: adjacent-squares
     pawn_attacks: diagonal-forward-squares
+    castling_transit: king-transit-squares-evaluated-with-this-relation
     rule: >-
       A square is attacked by a side exactly when that side has a
-      pseudo-legal capture landing on it. The ATTACKER's own king
-      safety is ignored: a pinned piece still attacks every square
-      it pseudo-legally covers, so the king never captures a pinned
-      protector's guard square. The enemy king attacks its adjacent
-      squares, so the two kings can never stand adjacent. Pawns
-      attack exactly their diagonal forward squares - occupancy of
-      those squares is irrelevant to the attack relation.
+      pseudo-legal capture landing on it. Target occupancy is
+      irrelevant for EVERY piece: empty squares (king transit and
+      destinations), enemy-occupied squares and own-occupied squares
+      are all attacked when pseudo-legally coverable - a piece
+      protects the square its own piece stands on. The ATTACKER's
+      own king safety is ignored: a pinned piece still attacks every
+      square it pseudo-legally covers, so the king never captures a
+      pinned protector's guard square. The enemy king attacks its
+      adjacent squares, so the two kings can never stand adjacent.
+      Pawns attack exactly their diagonal forward squares. The
+      castling contract's king-transit safety evaluation uses THIS
+      relation, exactly as structured here.
   legality:
     filter: resulting-position-leaves-own-king-unattacked
     in_check_rule: while-in-check-only-evasions-legal
@@ -97,44 +139,56 @@ contract:
       own precondition states the same rule). When the side to move
       is in check, exactly the moves satisfying the filter - the
       evasions - are legal; no other move exists.
-  terminal_status:
+  move_set_terminal_status:
+    yields: [check, checkmate, stalemate]
     check: side-to-move-king-attacked
     checkmate: {requires: [check, zero-legal-moves]}
     stalemate: {requires: [no-check, zero-legal-moves]}
+    scope: move-set-and-check-state-only
+    other_outcomes:
+      owner: chess-turn-contract
+      states: [resignation, timeout, draw_agreement, fifty_move_claim,
+        seventyfive_move_auto, fivefold_auto, threefold_claim,
+        insufficient_material, variant_specific]
     rule: >-
-      Terminal status derives ONLY from the legal move set and the
-      check state: checkmate is check with zero legal moves,
-      stalemate is no check with zero legal moves, and a game with
-      at least one legal move is never terminal. Draw offers,
-      fifty-move claims and repetition claims are NOT statuses of
-      this contract - they are claim events governed elsewhere; the
-      legal move set neither creates nor denies a claim.
+      This section is NARROWLY the move-set terminal classification:
+      its only yields are check (side-to-move king attacked),
+      checkmate (check with zero legal moves) and stalemate (no
+      check with zero legal moves), derived ONLY from the legal
+      move set and the check state; a game with at least one legal
+      move is never move-set-terminal. Every other terminal or
+      claim outcome - resignation, timeout, draw agreement,
+      fifty-move claim, seventy-five-move automatic, fivefold
+      automatic, threefold claim, insufficient material, variant
+      specifics - is owned by the chess-turn contract's termination
+      machine, never by this contract; the legal move set neither
+      creates nor denies any of them.
   linkage:
     castling: castling-contract-owns-rights-paths-preconditions
     en_passant: en-passant-contract-owns-target-capture-preconditions
-    turn: turn-contract-owns-clocks-and-advance
+    turn: turn-contract-owns-clocks-advance-and-non-move-set-termination
     variant: variant-contract-owns-identity-and-start
     rule: >-
       This contract composes the special-move contracts, never
       restates them: castling moves exist and are legal exactly per
       the chess-castling contract's rights, paths and preconditions
-      (including king-transit safety, which is this contract's
-      attack relation applied by that contract); the en-passant
-      capture exists and is legal exactly per the chess-en-passant
-      contract's target, mechanics and preconditions; every legal
-      move advances the turn machine exactly per the chess-turn
-      contract; position identity and the start position follow the
-      chess-variant contract.
+      (its king-transit safety applies this contract's attack
+      relation); the en-passant capture exists and is legal exactly
+      per the chess-en-passant contract's target, mechanics and
+      preconditions; every legal move advances the turn machine
+      exactly per the chess-turn contract, which also owns every
+      non-move-set terminal outcome; position identity and the
+      start position follow the chess-variant contract.
   failure_classes: [malformed_move, no_piece, not_players_piece,
     unreachable_target, promotion_missing, promotion_forbidden,
     leaves_king_attacked, wrong_variant]
   failure_mapping:
-    malformed_move: {trigger: move-not-the-declared-field-shape, error: malformed_request}
+    malformed_move: {trigger: move-fails-move_model-shape-schema, error: malformed_request}
     no_piece: {trigger: from-square-empty, error: illegal_move}
     not_players_piece: {trigger: from-square-holds-enemy-piece, error: illegal_move}
     unreachable_target: {trigger: to-square-not-pseudo-legal-for-the-piece, error: illegal_move}
-    promotion_missing: {trigger: pawn-reaches-last-rank-without-promotion-piece, error: illegal_move}
-    promotion_forbidden: {trigger: promotion-piece-on-non-promotion-move-or-invalid-value, error: illegal_move}
+    promotion_missing: {trigger: pawn-reaches-promotion-rank-without-promotion-member, error: illegal_move}
+    promotion_forbidden: {trigger: promotion-member-on-non-promotion-move-or-outside-enum, error: illegal_move}
     leaves_king_attacked: {trigger: resulting-position-leaves-own-king-attacked, error: illegal_move}
     wrong_variant: {trigger: move-references-state-outside-the-active-variant, error: malformed_request}
   errors:
@@ -155,6 +209,10 @@ contract:
     client_pin: MAJOR
     minor_policy: additive-only
     minor_additions: [new-optional-fields]
+    minor_additions_rule: >-
+      MINOR additions are new optional fields only; a new REQUIRED
+      field, a widened type or a relaxed closed-key rule is a MAJOR
+      bump, never a MINOR addition.
     downgrade_policy: any-earlier-minor-within-major-without-migration
     major_bump: new-base-path-required
     rule: >-

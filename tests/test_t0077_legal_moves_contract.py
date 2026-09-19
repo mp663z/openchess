@@ -49,15 +49,25 @@ def test_unknown_keys_rejected_at_every_level():
     _bad(lambda d: d.__setitem__("bogus", 1), "top")
     _bad(lambda d: d.__setitem__("bogus", 1))
     _bad(lambda d: d["move_model"].__setitem__("bogus", 1))
+    _bad(lambda d: d["move_model"]["shape"].__setitem__("bogus", 1))
+    _bad(lambda d: d["move_model"]["shape"]["types"].__setitem__("bogus", 1))
+    _bad(lambda d: d["move_model"]["square_grammar"].__setitem__("bogus", 1))
+    _bad(lambda d: d["move_model"]["promotion_expansion"].__setitem__("bogus", 1))
     _bad(lambda d: d["movement"].__setitem__("bogus", 1))
     _bad(lambda d: d["movement"]["knight"].__setitem__("bogus", 1))
     _bad(lambda d: d["movement"]["pawn"].__setitem__("bogus", 1))
+    _bad(lambda d: d["movement"]["pawn"]["forward"].__setitem__("bogus", 1))
+    _bad(lambda d: d["movement"]["pawn"]["forward"]["white"].__setitem__("bogus", 1))
     _bad(lambda d: d["movement"]["pawn"]["double"].__setitem__("bogus", 1))
+    _bad(lambda d: d["movement"]["pawn"]["capture_deltas"].__setitem__("bogus", 1))
+    _bad(lambda d: d["movement"]["pawn"]["promotion_ranks"].__setitem__("bogus", 1))
     _bad(lambda d: d["movement"]["occupancy"].__setitem__("bogus", 1))
     _bad(lambda d: d["attack"].__setitem__("bogus", 1))
+    _bad(lambda d: d["attack"]["target_occupancy"].__setitem__("bogus", 1))
     _bad(lambda d: d["legality"].__setitem__("bogus", 1))
-    _bad(lambda d: d["terminal_status"].__setitem__("bogus", 1))
-    _bad(lambda d: d["terminal_status"]["checkmate"].__setitem__("bogus", 1))
+    _bad(lambda d: d["move_set_terminal_status"].__setitem__("bogus", 1))
+    _bad(lambda d: d["move_set_terminal_status"]["checkmate"].__setitem__("bogus", 1))
+    _bad(lambda d: d["move_set_terminal_status"]["other_outcomes"].__setitem__("bogus", 1))
     _bad(lambda d: d["linkage"].__setitem__("bogus", 1))
     _bad(lambda d: d["errors"].__setitem__("bogus", 1))
     _bad(lambda d: d["versioning"].__setitem__("bogus", 1))
@@ -73,21 +83,62 @@ def test_contract_id_exact():
     _bad(lambda d: d.__setitem__("id", "chess-legalmove"))
 
 
-def test_move_model_exact():
-    _bad(lambda d: d["move_model"].__setitem__("fields", ["from_square", "to_square"]))
-    _bad(lambda d: d["move_model"].__setitem__(
-        "fields", ["to_square", "from_square", "promotion"]))  # reversal
-    _bad(lambda d: d["move_model"].__setitem__("promotion_values", ["q", "r", "b", "k"]))
-    _bad(lambda d: d["move_model"].__setitem__(
-        "promotion_values", ["n", "b", "r", "q"]))  # reversal
-    _bad(lambda d: d["move_model"].__setitem__("promotion_values", "qrbn"))  # string
+def test_move_shape_exact():
+    _bad(lambda d: d["move_model"]["shape"].__setitem__("required", ["from_square"]))
+    _bad(lambda d: d["move_model"]["shape"].__setitem__(
+        "required", ["to_square", "from_square"]))  # reversal
+    _bad(lambda d: d["move_model"]["shape"].__setitem__(
+        "required", ["from_square", "to_square", "promotion"]))  # promotion not required
+    _bad(lambda d: d["move_model"]["shape"].__setitem__("optional", []))
+    _bad(lambda d: d["move_model"]["shape"].__setitem__("closed_keys", False))  # reversal
+    _bad(lambda d: d["move_model"]["shape"].__setitem__("closed_keys", "true"))  # string
+    _bad(lambda d: d["move_model"]["shape"].__setitem__("closed_keys", 1))  # int
+    _bad(lambda d: d["move_model"]["shape"].__setitem__("from_to_distinct", False))  # reversal
+    _bad(lambda d: d["move_model"]["shape"].__setitem__("from_to_distinct", 0))  # int
+    _bad(lambda d: d["move_model"]["shape"]["types"]["from_square"].__setitem__("kind", "integer"))
+    _bad(lambda d: d["move_model"]["shape"]["types"]["to_square"].__delitem__("grammar"))
+    _bad(lambda d: d["move_model"]["shape"]["types"]["promotion"].__setitem__(
+        "enum", ["q", "r", "b", "k"]))  # king promotable
+    _bad(lambda d: d["move_model"]["shape"]["types"]["promotion"].__setitem__(
+        "enum", ["n", "b", "r", "q"]))  # reversal
+    _bad(lambda d: d["move_model"]["shape"]["types"]["promotion"].__setitem__(
+        "presence", "always-present-null"))  # the verifier's null-promotion hole
+    _bad(lambda d: d["move_model"]["shape"]["types"].__setitem__("capture", "bool"))  # extra flag
+
+
+def test_square_grammar_exact():
+    _bad(lambda d: d["move_model"]["square_grammar"].__setitem__("files", list("hgfedcba")))
+    _bad(lambda d: d["move_model"]["square_grammar"].__setitem__("files", list("abcdefg")))
+    _bad(lambda d: d["move_model"]["square_grammar"].__setitem__("files", "abcdefgh"))
+    _bad(lambda d: d["move_model"]["square_grammar"].__setitem__(
+        "ranks", ["1", "2", "3", "4", "5", "6", "7", "8", "9"]))  # off-board rank
+    _bad(lambda d: d["move_model"]["square_grammar"].__setitem__(
+        "ranks", [1, 2, 3, 4, 5, 6, 7, 8]))  # int not string
+    _bad(lambda d: d["move_model"]["square_grammar"].__setitem__(
+        "ranks", ["8", "7", "6", "5", "4", "3", "2", "1"]))  # reversal
+    _bad(lambda d: d["move_model"]["square_grammar"].__setitem__("form", "rank-then-file"))
+
+
+def test_promotion_expansion_exact():
+    _bad(lambda d: d["move_model"]["promotion_expansion"].__setitem__("expands_to", 3))
+    _bad(lambda d: d["move_model"]["promotion_expansion"].__setitem__("expands_to", "4"))
+    _bad(lambda d: d["move_model"]["promotion_expansion"].__setitem__(
+        "values", ["q", "r", "b", "n", "k"]))
+    _bad(lambda d: d["move_model"]["promotion_expansion"].__setitem__(
+        "values", ["n", "b", "r", "q"]))  # reversal
+    _bad(lambda d: d["move_model"]["promotion_expansion"].__setitem__(
+        "applies_to", ["quiet"]))  # capture expansion dropped
+    _bad(lambda d: d["move_model"]["promotion_expansion"].__setitem__(
+        "applies_to", ["capture", "quiet"]))  # reversal
+    _bad(lambda d: d["move_model"]["promotion_expansion"].__setitem__(
+        "unpromoted_last_rank_move", "allowed"))  # the verifier's unpromoted hole
     _bad(lambda d: d["move_model"].__setitem__("promotion_required", "optional"))
     _bad(lambda d: d["move_model"].__setitem__("promotion_forbidden", "captures-only"))
-    _bad(lambda d: d["move_model"].__delitem__("promotion_required"))
+    _bad(lambda d: d["move_model"].__delitem__("promotion_expansion"))
 
 
 def test_knight_deltas_exact_and_ordered():
-    _bad(lambda d: d["movement"]["knight"].__setitem__("deltas", [[1, 2]]))  # shrink
+    _bad(lambda d: d["movement"]["knight"].__setitem__("deltas", [[1, 2]]))
     _bad(lambda d: d["movement"]["knight"].__setitem__(
         "deltas", [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [2, -1], [2, 1],
                    [1, -2], [1, 2]]))  # full reversal
@@ -95,8 +146,8 @@ def test_knight_deltas_exact_and_ordered():
         "deltas", [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1],
                    [-1, -2], [-3, 0]]))  # one-defect contradiction
     _bad(lambda d: d["movement"]["knight"].__setitem__("jumps", False))
-    _bad(lambda d: d["movement"]["knight"].__setitem__("jumps", "true"))  # string not bool
-    _bad(lambda d: d["movement"]["knight"].__setitem__("jumps", 1))  # int not bool
+    _bad(lambda d: d["movement"]["knight"].__setitem__("jumps", "true"))
+    _bad(lambda d: d["movement"]["knight"].__setitem__("jumps", 1))
 
 
 def test_king_deltas_exact():
@@ -112,22 +163,43 @@ def test_slider_directions_exact_and_ordered():
     _bad(lambda d: d["movement"]["rook"].__setitem__("slides", False))
     _bad(lambda d: d["movement"]["bishop"].__setitem__("directions", ROOK_DIRS))
     _bad(lambda d: d["movement"]["bishop"].__setitem__("slides", "yes"))
-    _bad(lambda d: d["movement"]["queen"].__setitem__("directions", ROOK_DIRS))  # diagonals dropped
-    _bad(lambda d: d["movement"]["queen"].__setitem__("slides", 0))  # int not bool
+    _bad(lambda d: d["movement"]["queen"].__setitem__("directions", ROOK_DIRS))
+    _bad(lambda d: d["movement"]["queen"].__setitem__("slides", 0))
 
 
-def test_pawn_rules_exact():
-    _bad(lambda d: d["movement"]["pawn"].__setitem__("forward_empty", "any-square"))
-    _bad(lambda d: d["movement"]["pawn"]["double"].__setitem__(
-        "requires", ["on-start-rank"]))  # both-squares-empty dropped
-    _bad(lambda d: d["movement"]["pawn"]["double"].__setitem__(
-        "requires", ["both-squares-empty", "on-start-rank"]))  # reversal
+def test_pawn_geometry_exact():
+    # forward vectors per side (finding 2)
+    _bad(lambda d: d["movement"]["pawn"]["forward"]["white"].__setitem__("rank_delta", -1))
+    _bad(lambda d: d["movement"]["pawn"]["forward"]["black"].__setitem__("rank_delta", 1))
+    _bad(lambda d: d["movement"]["pawn"]["forward"]["white"].__setitem__("file_delta", 1))
+    _bad(lambda d: d["movement"]["pawn"]["forward"]["black"].__delitem__("rank_delta"))
+    _bad(lambda d: d["movement"]["pawn"]["forward"]["white"].__setitem__(
+        "rank_delta", 1.0))  # float not int
+    _bad(lambda d: d["movement"]["pawn"].__delitem__("forward"))
+    # capture deltas per side (finding 2)
+    _bad(lambda d: d["movement"]["pawn"]["capture_deltas"].__setitem__(
+        "white", [[-1, 1], [1, 1]]))  # reversal
+    _bad(lambda d: d["movement"]["pawn"]["capture_deltas"].__setitem__(
+        "white", [[1, -1], [-1, -1]]))  # backward captures
+    _bad(lambda d: d["movement"]["pawn"]["capture_deltas"].__setitem__(
+        "black", [[1, 1], [-1, 1]]))  # swapped with white
+    _bad(lambda d: d["movement"]["pawn"]["capture_deltas"].__delitem__("black"))
+    # start ranks and promotion ranks by side (finding 2)
     _bad(lambda d: d["movement"]["pawn"]["double"]["ranks"].__setitem__("white", "3"))
     _bad(lambda d: d["movement"]["pawn"]["double"]["ranks"].__setitem__("black", 7))  # int
-    _bad(lambda d: d["movement"]["pawn"]["double"]["ranks"].__setitem__("black", "2"))  # swap
+    _bad(lambda d: d["movement"]["pawn"]["promotion_ranks"].__setitem__("white", "7"))
+    _bad(lambda d: d["movement"]["pawn"]["promotion_ranks"].__setitem__("black", "2"))
+    _bad(lambda d: d["movement"]["pawn"]["promotion_ranks"].__setitem__("black", 1))  # int
+    _bad(lambda d: d["movement"]["pawn"].__delitem__("promotion_ranks"))
+    # remaining pawn rules
+    _bad(lambda d: d["movement"]["pawn"].__setitem__("forward_empty", "any-square"))
+    _bad(lambda d: d["movement"]["pawn"]["double"].__setitem__(
+        "requires", ["on-start-rank"]))
+    _bad(lambda d: d["movement"]["pawn"]["double"].__setitem__(
+        "requires", ["both-squares-empty", "on-start-rank"]))  # reversal
     _bad(lambda d: d["movement"]["pawn"].__setitem__("capture", "any-diagonal"))
-    _bad(lambda d: d["movement"]["pawn"].__setitem__("never_backward", False))  # reversal
-    _bad(lambda d: d["movement"]["pawn"].__setitem__("never_backward", 1))  # int not bool
+    _bad(lambda d: d["movement"]["pawn"].__setitem__("never_backward", False))
+    _bad(lambda d: d["movement"]["pawn"].__setitem__("never_backward", 1))
 
 
 def test_occupancy_exact():
@@ -140,9 +212,18 @@ def test_occupancy_exact():
 def test_attack_relation_exact():
     _bad(lambda d: d["attack"].__setitem__("definition", "legal-capture-to-square"))
     _bad(lambda d: d["attack"].__setitem__("attacker_king_safety", "respected"))  # reversal
+    _bad(lambda d: d["attack"].__delitem__("attacker_king_safety"))
+    # structured target occupancy for empty/enemy/own targets (finding 3)
+    _bad(lambda d: d["attack"]["target_occupancy"].__setitem__("empty", "not-attacked"))
+    _bad(lambda d: d["attack"]["target_occupancy"].__setitem__("enemy_occupied", "not-attacked"))
+    _bad(lambda d: d["attack"]["target_occupancy"].__setitem__("own_occupied", "not-attacked"))
+    _bad(lambda d: d["attack"]["target_occupancy"].__delitem__("own_occupied"))
+    _bad(lambda d: d["attack"].__delitem__("target_occupancy"))
     _bad(lambda d: d["attack"].__setitem__("king_attacks", "no-squares"))
     _bad(lambda d: d["attack"].__setitem__("pawn_attacks", "forward-square"))
-    _bad(lambda d: d["attack"].__delitem__("attacker_king_safety"))
+    # castling transit bound to THIS relation (finding 3)
+    _bad(lambda d: d["attack"].__setitem__("castling_transit", "castling-decides-its-own"))
+    _bad(lambda d: d["attack"].__delitem__("castling_transit"))
 
 
 def test_legality_filter_exact():
@@ -151,20 +232,38 @@ def test_legality_filter_exact():
     _bad(lambda d: d["legality"].__delitem__("filter"))
 
 
-def test_terminal_status_exact():
-    _bad(lambda d: d["terminal_status"].__setitem__("check", "any-king-attacked"))
-    _bad(lambda d: d["terminal_status"]["checkmate"].__setitem__(
-        "requires", ["check"]))  # zero-legal-moves dropped
-    _bad(lambda d: d["terminal_status"]["checkmate"].__setitem__(
+def test_move_set_terminal_status_exact():
+    # section renamed and scoped to move-set classification (finding 4)
+    _bad(lambda d: d.__setitem__("terminal_status", d.pop("move_set_terminal_status")))
+    _bad(lambda d: d["move_set_terminal_status"].__setitem__(
+        "yields", ["checkmate", "stalemate", "check"]))  # reversal
+    _bad(lambda d: d["move_set_terminal_status"].__setitem__("yields", ["checkmate", "stalemate"]))
+    _bad(lambda d: d["move_set_terminal_status"].__setitem__(
+        "yields", ["check", "checkmate", "stalemate", "resignation"]))  # scope creep
+    _bad(lambda d: d["move_set_terminal_status"].__setitem__("check", "any-king-attacked"))
+    _bad(lambda d: d["move_set_terminal_status"]["checkmate"].__setitem__(
+        "requires", ["check"]))
+    _bad(lambda d: d["move_set_terminal_status"]["checkmate"].__setitem__(
         "requires", ["zero-legal-moves", "check"]))  # reversal
-    _bad(lambda d: d["terminal_status"]["stalemate"].__setitem__(
+    _bad(lambda d: d["move_set_terminal_status"]["stalemate"].__setitem__(
         "requires", ["check", "zero-legal-moves"]))  # contradiction
-    _bad(lambda d: d["terminal_status"].__delitem__("stalemate"))
+    _bad(lambda d: d["move_set_terminal_status"].__setitem__("scope", "all-terminal-outcomes"))
+    _bad(lambda d: d["move_set_terminal_status"]["other_outcomes"].__setitem__(
+        "owner", "this-contract"))
+    _bad(lambda d: d["move_set_terminal_status"]["other_outcomes"].__setitem__(
+        "states", ["resignation", "timeout"]))  # shrink
+    _bad(lambda d: d["move_set_terminal_status"]["other_outcomes"].__setitem__(
+        "states", list(reversed(["resignation", "timeout", "draw_agreement",
+                                 "fifty_move_claim", "seventyfive_move_auto",
+                                 "fivefold_auto", "threefold_claim",
+                                 "insufficient_material", "variant_specific"]))))
+    _bad(lambda d: d["move_set_terminal_status"].__delitem__("other_outcomes"))
 
 
 def test_linkage_exact():
     _bad(lambda d: d["linkage"].__setitem__("castling", "restated-here"))
-    _bad(lambda d: d["linkage"].__setitem__("turn", "turn-ignored"))
+    _bad(lambda d: d["linkage"].__setitem__(
+        "turn", "turn-contract-owns-clocks-and-advance"))  # pre-rename scope
     _bad(lambda d: d["linkage"].__delitem__("en_passant"))
 
 
@@ -174,6 +273,10 @@ def test_failure_classes_and_mapping_exact():
     _bad(lambda d: d["failure_mapping"].__delitem__("leaves_king_attacked"))
     _bad(lambda d: d["failure_mapping"]["no_piece"].__setitem__("error", "malformed_request"))
     _bad(lambda d: d["failure_mapping"]["malformed_move"].__setitem__("error", "illegal_move"))
+    _bad(lambda d: d["failure_mapping"]["malformed_move"].__setitem__(
+        "trigger", "move-not-the-declared-field-shape"))  # label, not schema reference
+    _bad(lambda d: d["failure_mapping"]["promotion_missing"].__setitem__(
+        "trigger", "pawn-reaches-last-rank-without-promotion-piece"))  # stale label
     _bad(lambda d: d["failure_mapping"]["promotion_forbidden"].__setitem__("trigger", "anything"))
 
 
@@ -194,11 +297,13 @@ def test_versioning_exact():
     _bad(lambda d: d["versioning"].__setitem__("minor_additions", ["breaking-changes"]))
     _bad(lambda d: d["versioning"].__setitem__("downgrade_policy", "never"))
     _bad(lambda d: d["versioning"].__setitem__("major_bump", "silent"))
+    _bad(lambda d: d["versioning"].__delitem__("minor_additions_rule"))
+    _bad(lambda d: d["versioning"].__setitem__("minor_additions_rule", ""))
 
 
 def test_documentation_fields_nonempty():
     for section in ("move_model", "movement", "attack", "legality",
-                    "terminal_status", "linkage", "versioning"):
+                    "move_set_terminal_status", "linkage", "versioning"):
         _bad(lambda d, s=section: d[s].__setitem__("rule", ""))
         _bad(lambda d, s=section: d[s].__setitem__("rule", "   "))
         _bad(lambda d, s=section: d[s].__setitem__("rule", 3))
@@ -238,11 +343,39 @@ def test_linkage_mutations_rejected(tmp_path):
     with pytest.raises(ContractError):
         lint(copy.deepcopy(DOC), _write_linked_root(tmp_path / "b", d))
 
+    # turn loses ownership of a non-move-set outcome (finding 4)
+    bad_turn2 = copy.deepcopy(docs["turn"])
+    bad_turn2["contract"]["termination"]["states"] = [
+        s for s in bad_turn2["contract"]["termination"]["states"]
+        if s != "insufficient_material"
+    ]
+    d = dict(docs, turn=bad_turn2)
+    with pytest.raises(ContractError):
+        lint(copy.deepcopy(DOC), _write_linked_root(tmp_path / "b2", d))
+
+    # turn loses a move-set outcome it must accept (finding 4)
+    bad_turn3 = copy.deepcopy(docs["turn"])
+    bad_turn3["contract"]["termination"]["states"] = [
+        s for s in bad_turn3["contract"]["termination"]["states"] if s != "checkmate"
+    ]
+    d = dict(docs, turn=bad_turn3)
+    with pytest.raises(ContractError):
+        lint(copy.deepcopy(DOC), _write_linked_root(tmp_path / "b3", d))
+
     bad_castling = copy.deepcopy(docs["castling"])
     bad_castling["contract"]["rights"]["irrevocable"] = False
     d = dict(docs, castling=bad_castling)
     with pytest.raises(ContractError):
         lint(copy.deepcopy(DOC), _write_linked_root(tmp_path / "c", d))
+
+    # castling path without king_transit cannot apply the attack relation
+    bad_castling2 = copy.deepcopy(docs["castling"])
+    del bad_castling2["contract"]["move"]["per_side_paths"]["K"]["king_transit"]
+    d = dict(docs, castling=bad_castling2)
+    with pytest.raises((ContractError, KeyError)):
+        # castling's own lint may reject the shape first; either way the
+        # combination is refused, never silently accepted
+        lint(copy.deepcopy(DOC), _write_linked_root(tmp_path / "c2", d))
 
     bad_ep = copy.deepcopy(docs["en_passant"])
     bad_ep["contract"]["failure_classes"] = [
@@ -274,13 +407,17 @@ def test_missing_and_wrong_container_family():
     the advertised prefix - no raw KeyError/AttributeError escapes."""
     cases = [
         lambda d: d["contract"].__delitem__("move_model"),
+        lambda d: d["contract"]["move_model"].__delitem__("shape"),
+        lambda d: d["contract"]["move_model"].__delitem__("square_grammar"),
+        lambda d: d["contract"]["move_model"].__delitem__("promotion_expansion"),
         lambda d: d["contract"].__delitem__("movement"),
         lambda d: d["contract"]["movement"].__delitem__("knight"),
         lambda d: d["contract"]["movement"].__delitem__("pawn"),
         lambda d: d["contract"]["movement"]["pawn"].__delitem__("double"),
         lambda d: d["contract"].__delitem__("attack"),
+        lambda d: d["contract"]["attack"].__delitem__("target_occupancy"),
         lambda d: d["contract"].__delitem__("legality"),
-        lambda d: d["contract"].__delitem__("terminal_status"),
+        lambda d: d["contract"].__delitem__("move_set_terminal_status"),
         lambda d: d["contract"].__delitem__("linkage"),
         lambda d: d["contract"].__delitem__("errors"),
         lambda d: d["contract"].__delitem__("links"),
@@ -291,6 +428,7 @@ def test_missing_and_wrong_container_family():
         lambda d: d["contract"].__setitem__("movement", "e4"),
         lambda d: d["contract"]["movement"].__setitem__("knight", []),
         lambda d: d["contract"]["attack"].__setitem__("definition", None),
+        lambda d: d["contract"]["move_model"].__setitem__("shape", "a1"),
     ]
     for fn in cases:
         doc = copy.deepcopy(DOC)
