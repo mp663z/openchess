@@ -36,7 +36,20 @@ ADDITIVE = [c for c in ROLLBACK if c["kind"] == "additive-fields"]
 
 
 def _rt():
-    return importlib.import_module("tools.variant_runtime")
+    """Import the T0044 runtime. A genuine resolution absence (the import
+    system itself raising ModuleNotFoundError with .name set to the
+    missing module) is re-raised as a marked error so the redness
+    harness can distinguish it from a module that EXISTS but raises a
+    hand-crafted ModuleNotFoundError internally."""
+    try:
+        return importlib.import_module("tools.variant_runtime")
+    except ModuleNotFoundError as exc:
+        if exc.name == "tools.variant_runtime":
+            raise RuntimeError(
+                "RED-EXPECTED-ABSENT: import system could not resolve "
+                "tools.variant_runtime"
+            ) from exc
+        raise
 
 
 @pytest.mark.parametrize("case", HAPPY, ids=[c["name"] for c in HAPPY])

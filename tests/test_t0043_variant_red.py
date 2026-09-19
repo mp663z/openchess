@@ -9,6 +9,8 @@ replaces this harness with direct gate collection in the same change."""
 
 from __future__ import annotations
 
+import hashlib
+import importlib.util
 import json
 import subprocess
 import sys
@@ -30,6 +32,12 @@ RED = TOTAL - DEFERRED
 TOTAL_PIN = 25
 DEFERRED_PIN = 1
 RED_PIN = 24
+# Byte-level continuity pins: counts are diagnostic only - a same-count
+# fixture replacement or a same-shape red-suite rewrite must fail. Any
+# legitimate edit updates the digest in the same PR.
+FIXTURE_SHA256 = "395933e4d1fe06da57f97b92363212663b4c80bf472dc085b9a2d462014219f0"
+RED_SUITE_SHA256 = "b17793df8447afd632bbd7fdece08f0e928868d2fa43c980eaf3fe6086a5e47d"
+ABSENT_MARKER = "RED-EXPECTED-ABSENT"
 
 PYTEST_BASE = [sys.executable, "-m", "pytest", "-p", "no:cacheprovider"]
 
@@ -65,9 +73,16 @@ def test_red_suite_exists_and_stays_out_of_default_collection():
 
 
 def test_runtime_not_implemented_yet():
+    # import semantics, not one path: a package form
+    # (tools/variant_runtime/__init__.py) must trip the gate just as a
+    # module file does
     assert not RUNTIME.exists(), (
         "tools/variant_runtime.py exists: the T0043 red claim is stale - "
         "turn the red suite green and flip this harness in the T0044 PR"
+    )
+    assert importlib.util.find_spec("tools.variant_runtime") is None, (
+        "tools.variant_runtime is importable: the T0043 red claim is "
+        "stale - turn the red suite green and flip this harness in the T0044 PR"
     )
 
 
@@ -89,11 +104,26 @@ def test_red_suite_is_red_for_the_right_reason(tmp_path):
     assert len(skipped) == DEFERRED_PIN, f"skipped {len(skipped)} != pinned deferred {DEFERRED_PIN}"
     assert len(failed) == RED_PIN, f"red {len(failed)} != pinned {RED_PIN}"
     for name, blob in failed:
-        assert "ModuleNotFoundError" in blob and "tools.variant_runtime" in blob, (
-            f"{name}: red for the wrong reason: {blob[:200]}"
+        assert ABSENT_MARKER in blob, (
+            f"{name}: red for the wrong reason (the marked absence error is only "
+            f"produced when the import system itself cannot resolve the module, "
+            f"never by a module raising internally): {blob[:200]}"
         )
     for name in skipped:
         assert "identity-differs-variant" in name, f"unexpected skip: {name}"
+
+
+def test_continuity_digests_pin_fixture_and_red_suite_bytes():
+    fx = hashlib.sha256((ROOT / "tests" / "fixtures" / "variant" / "cases.json").read_bytes())
+    rs = hashlib.sha256(RED_SUITE.read_bytes())
+    assert fx.hexdigest() == FIXTURE_SHA256, (
+        "fixture bytes drifted from the T0042-reviewed digest - a legitimate "
+        "fixture change updates FIXTURE_SHA256 in the same PR"
+    )
+    assert rs.hexdigest() == RED_SUITE_SHA256, (
+        "red suite bytes drifted from the T0043-reviewed digest - a legitimate "
+        "red-suite change updates RED_SUITE_SHA256 in the same PR"
+    )
 
 
 def test_fixture_counts_internally_consistent():
