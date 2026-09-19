@@ -1,0 +1,94 @@
+# T0050: chess turn contract (implementation-neutral; the product
+# runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for the turn state machine everywhere in the product:
+# analysis position application, game import, repertoire replay, review
+# and drill generation all advance positions through the SAME turn
+# semantics. ALL normative semantics live in STRUCTURED fields the lint
+# compares exactly - prose is documentation, never the enforcement
+# surface. The v5 report (line 224) makes side_to_move part of position
+# identity while counters are metadata only; this contract fixes how
+# that state advances and when it may not.
+schema_version: 1
+
+contract:
+  id: chess-turn
+  state:
+    fields: [side_to_move, halfmove_clock, fullmove_number]
+    side_values: [w, b]
+    bounds:
+      halfmove_clock: {min: 0}
+      fullmove_number: {min: 1}
+    rule: >-
+      A turn state is exactly the three declared fields; side_to_move is
+      exactly one of side_values. No other state participates in the
+      turn machine.
+  transition:
+    applies_to: single-legal-move
+    on_move:
+      side_to_move: flip
+      fullmove_number: {op: increment, amount: 1, when: black}
+      halfmove_clock:
+        reset_when: [pawn_move, capture]
+        reset_to: 0
+        otherwise: {op: increment, amount: 1}
+    per_move: exactly-one
+    null_move: {policy: reject, failure: illegal_transition}
+    identity:
+      counters_participate: false
+      side_to_move_participates: true
+    rule: >-
+      Applying one legal move flips the side, advances counters per the
+      structured fields above, and never skips or doubles.
+  termination:
+    states: [checkmate, stalemate, resignation, timeout, draw_agreement,
+      fifty_move_claim, seventyfive_move_auto, fivefold_auto,
+      threefold_claim, insufficient_material, variant_specific]
+    closed_after: true
+    on_transition_after_termination: {policy: reject, failure: illegal_transition}
+    unknown_state: {policy: reject, failure: unknown_termination}
+    fifty_move:
+      claim: {threshold: 100, state: fifty_move_claim, automatic: false}
+      automatic: {threshold: 150, state: seventyfive_move_auto, automatic: true}
+    rule: >-
+      Once terminated the machine is closed; unknown termination states
+      fail closed per the structured mapping above.
+  invariants:
+    - side_to_move is exactly one declared side value
+    - halfmove_clock is an integer >= 0
+    - fullmove_number is an integer >= 1
+    - counters never participate in position identity
+    - side_to_move always participates in position identity
+    - a terminated state accepts no transition
+  failure_classes: [no_side_to_move, bad_counter, illegal_transition,
+    unknown_termination]
+  failure_mapping:
+    no_side_to_move: {trigger: side-missing-or-not-in-side_values, error: malformed_request}
+    bad_counter: {trigger: counter-out-of-bounds-or-non-integer, error: malformed_request}
+    illegal_transition: {trigger: transition-on-terminated-state-or-null-move, error: illegal_transition}
+    unknown_termination: {trigger: termination-state-not-in-declared-enum, error: unknown_termination}
+  errors:
+    closed_enum: [malformed_request, illegal_transition,
+      unknown_termination, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  versioning:
+    base_path: /turn/v1
+    rule: >-
+      Clients pin MAJOR. MINOR is additive-only: new optional fields,
+      new termination states appended to the enum. A consumer may
+      downgrade to any earlier MINOR within the same MAJOR without
+      migration, because conformance never asserts absence of extra
+      fields or states. MAJOR bumps require a new base path.
+  variant_link:
+    contract: chess-variant
+    path: data/contracts/variant.yaml
+    applies_to_variants: [standard]
+    rule: >-
+      Turn semantics apply to orthodox-castling variants; side_to_move
+      is the same field the chess-variant contract places in position
+      identity, and the two never diverge.
