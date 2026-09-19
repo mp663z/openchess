@@ -1286,10 +1286,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "a9c4f31edc2538cf8b3fa63c4b0042ff76726a05",
+   "evidence_manifest": "evidence/T0058.md"
   },
   {
    "id": "T0059",
@@ -1482,10 +1484,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "2435d3f628bf80a4b0a92a09c370a5709b60c863",
+   "evidence_manifest": "evidence/T0067.md"
   },
   {
    "id": "T0068",
@@ -97475,7 +97479,7 @@
    "dependencies": [
     "T4794"
    ],
-   "acceptance": "UI/API permits \u201cabsent from named corpus through cutoff\u201d, \u201cunderexplored\u201d, \u201cengine-sound at stated budget\u201d, \u201csimulation\u201d and \u201cunresolved\u201d; forbids guaranteed novelty/new theory/forced truth.",
+   "acceptance": "UI/API permits “absent from named corpus through cutoff”, “underexplored”, “engine-sound at stated budget”, “simulation” and “unresolved”; forbids guaranteed novelty/new theory/forced truth.",
    "verification": "auto",
    "resource": "counsel + titled reviewers",
    "checkpoint": "GM-LABEL",
@@ -105957,7 +105961,7 @@
    "dependencies": [
     "T5243"
    ],
-   "acceptance": "Private/deleted/unavailable/variant/rate-limited gaps show partial coverage and never report \u201call games imported.\u201d",
+   "acceptance": "Private/deleted/unavailable/variant/rate-limited gaps show partial coverage and never report “all games imported.”",
    "verification": "auto",
    "resource": "provider test accounts",
    "checkpoint": "ALPHA-IMPORT",
