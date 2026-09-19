@@ -27,6 +27,29 @@ VIOLATIONS = {
 }
 
 
+def _classify_diff(a: bytes, b: bytes) -> str:
+    try:
+        d = rh.pixel_diff(a, b)
+    except ValueError:
+        return "invalid"
+    if d == -1:
+        return "structural"
+    return "identical" if d == 0 else f"{d} differing"
+
+
+def _mutate_dims(ppm: bytes) -> bytes:
+    # Same pixel payload, different geometry (34x34 -> 17x68, count holds).
+    toks = ppm.decode().split()
+    toks[1], toks[2] = "17", "68"
+    return " ".join(toks).encode()
+
+
+def _mutate_maxval(ppm: bytes) -> bytes:
+    toks = ppm.decode().split()
+    toks[3] = "1"
+    return " ".join(toks).encode()
+
+
 def _flip_one_pixel(ppm: bytes) -> bytes:
     toks = ppm.decode().split("\n")
     header, rows = toks[:4], toks[4:]
@@ -50,9 +73,13 @@ def run(mode: str) -> None:
         return
     problems = []
     golden = (SCREENS / "good_card.ppm").read_bytes()
-    flipped = _flip_one_pixel(golden)
-    if rh.pixel_diff(flipped, golden) != 1:
+    if _classify_diff(_flip_one_pixel(golden), golden) != "1 differing":
         problems.append("single flipped pixel not caught exactly")
+    if _classify_diff(_mutate_dims(golden), golden) != "structural":
+        problems.append("dimension-only change not caught")
+    if _classify_diff(_mutate_maxval(golden), golden) not in (
+            "structural", "invalid"):
+        problems.append("maxval-only change not caught")
     for name, rule in VIOLATIONS.items():
         findings = rh.a11y_findings(rh.load_spec(A11Y / name))
         rules = {f.split(":")[0] for f in findings}

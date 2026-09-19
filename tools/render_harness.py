@@ -103,17 +103,37 @@ def render_ppm(spec: dict) -> bytes:
     return "".join(out).encode()
 
 
+def _parse_ppm(raw: bytes) -> tuple[int, int, int, list[tuple[int, ...]]]:
+    """Strict P3 parse: magic, width, height, maxval, exactly w*h*3
+    channels, every value in range. Anything else is invalid."""
+    toks = raw.decode().split()
+    if not toks or toks[0] != "P3":
+        raise ValueError("not a P3 raster")
+    if len(toks) < 4:
+        raise ValueError("truncated P3 header")
+    try:
+        w, h, maxval = int(toks[1]), int(toks[2]), int(toks[3])
+    except ValueError as e:
+        raise ValueError(f"bad P3 header numbers: {e}") from e
+    if w <= 0 or h <= 0 or not (0 < maxval <= 65535):
+        raise ValueError(f"implausible P3 header {w}x{h} maxval {maxval}")
+    nums = [int(t) for t in toks[4:]]
+    if len(nums) != w * h * 3:
+        raise ValueError(
+            f"P3 channel count {len(nums)} != {w}*{h}*3 = {w * h * 3}")
+    if any(v < 0 or v > maxval for v in nums):
+        raise ValueError("P3 channel value out of range")
+    px = [tuple(nums[i:i + 3]) for i in range(0, len(nums), 3)]
+    return w, h, maxval, px
+
+
 def pixel_diff(a: bytes, b: bytes) -> int:
-    """Number of differing RGB triples between two P3 rasters."""
-    def pixels(raw: bytes) -> list[tuple[int, ...]]:
-        toks = raw.decode().split()
-        if toks[:1] != ["P3"]:
-            raise ValueError("not a P3 raster")
-        nums = [int(t) for t in toks[4:]]
-        return [tuple(nums[i:i + 3]) for i in range(0, len(nums), 3)]
-    pa, pb = pixels(a), pixels(b)
-    if len(pa) != len(pb):
-        return max(len(pa), len(pb))
+    """Differing RGB triples between two P3 rasters; -1 when the geometry
+    or maxval headers differ (a structural change is never 'no diff')."""
+    wa, ha, ma, pa = _parse_ppm(a)
+    wb, hb, mb, pb = _parse_ppm(b)
+    if (wa, ha, ma) != (wb, hb, mb):
+        return -1
     return sum(1 for x, y in zip(pa, pb, strict=True) if x != y)
 
 

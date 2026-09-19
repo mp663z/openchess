@@ -55,8 +55,11 @@ def run(mode: str) -> None:
         problems.append("tampered spec rendered identical svg to golden")
     if rh.render_ppm(tampered) == ppm_g.read_bytes():
         problems.append("tampered spec rendered identical ppm to golden")
-    diff = rh.pixel_diff(rh.render_ppm(tampered), ppm_g.read_bytes())
-    if diff <= 0:
+    try:
+        diff = rh.pixel_diff(rh.render_ppm(tampered), ppm_g.read_bytes())
+    except ValueError:
+        diff = -1  # invalid/structural: a difference, never "no diff"
+    if diff == 0:
         problems.append("pixel_diff saw no difference in tampered render")
     if rh.render_svg(good) != svg_g.read_bytes():
         problems.append("control: good spec no longer matches its golden")
