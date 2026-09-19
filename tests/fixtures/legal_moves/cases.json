@@ -1,0 +1,950 @@
+{
+ "schema": 1,
+ "contract": "data/contracts/legal_moves.yaml",
+ "contract_schema_version": 1,
+ "notes": "T0078 legal-moves conformance fixture. States carry exactly two fields: occupied (partial square->piece-token map; unlisted squares empty; tokens are side w/b + piece p/n/b/r/q/k; EVERY state holds exactly one wk and one bk) and side_to_move (w|b). Moves follow the contract move_model shape: from_square, to_square, optional promotion, NO other members. All semantics derive from data/contracts/legal_moves.yaml, never from this file: move shape and promotion expansion, per-piece movement and occupancy, the attack relation (occupancy-irrelevant, attacker king safety ignored), the king-safety legality filter, and the move-set terminal classification. Case kinds: 'move' (the move is IN the legal set), 'not-move' (NOT in the legal set), 'attack' (square attacked by attacker side), 'move-set-for-square' (exact legal destination set for a from-square), 'expansion' (exact promotion expansion), 'terminal' (move-set terminal status). Every malformed case is discriminating: repairing ONLY its declared defect makes it valid under the validation order shape -> no_piece -> not_players_piece -> unreachable_target -> promotion rules -> leaves_king_attacked. Rollback cases assert the pre-state survives a rejected move bit-identically. Position application, en-passant, castling and all non-move-set terminal outcomes are owned by their own contracts and fixtures and are out of scope here; wrong_variant is unreachable within this fixture because variant identity is owned by the chess-variant contract and every state here is standard chess.",
+ "happy": [
+  {
+   "name": "knight-center",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "d4": "wn",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "d4",
+    "to_square": "f5"
+   }
+  },
+  {
+   "name": "rook-slide-capture",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a8": "br",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a1",
+    "to_square": "a8"
+   }
+  },
+  {
+   "name": "bishop-diagonal",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "c1": "wb",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "c1",
+    "to_square": "h6"
+   }
+  },
+  {
+   "name": "queen-slide",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "d1": "wq",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "d1",
+    "to_square": "d6"
+   }
+  },
+  {
+   "name": "king-step",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e1",
+    "to_square": "d2"
+   }
+  },
+  {
+   "name": "pawn-single",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e3"
+   }
+  },
+  {
+   "name": "pawn-double",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e4"
+   }
+  },
+  {
+   "name": "pawn-capture",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e4": "wp",
+     "d5": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e4",
+    "to_square": "d5"
+   }
+  },
+  {
+   "name": "promotion-quiet",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "a7": "wp",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a7",
+    "to_square": "a8",
+    "promotion": "r"
+   }
+  },
+  {
+   "name": "promotion-capture",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "a7": "wp",
+     "b8": "br",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a7",
+    "to_square": "b8",
+    "promotion": "q"
+   }
+  }
+ ],
+ "boundary": [
+  {
+   "name": "knight-corner-exact-set",
+   "kind": "move-set-for-square",
+   "state": {
+    "occupied": {
+     "a1": "wn",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "from_square": "a1",
+   "expect_to_squares": [
+    "b3",
+    "c2"
+   ]
+  },
+  {
+   "name": "promotion-expands-to-four",
+   "kind": "expansion",
+   "state": {
+    "occupied": {
+     "a7": "wp",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "from_square": "a7",
+   "to_square": "a8",
+   "expect_promotions": [
+    "q",
+    "r",
+    "b",
+    "n"
+   ]
+  },
+  {
+   "name": "own-block-quiet-before",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a3": "wp",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a1",
+    "to_square": "a2"
+   }
+  },
+  {
+   "name": "own-block-ray-stops",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a3": "wp",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a1",
+    "to_square": "a4"
+   }
+  },
+  {
+   "name": "own-block-square-unreachable",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a3": "wp",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a1",
+    "to_square": "a3"
+   }
+  },
+  {
+   "name": "own-king-ends-rank-ray",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a3": "wp",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a1",
+    "to_square": "h1"
+   }
+  },
+  {
+   "name": "enemy-ends-ray-capture",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a4": "bp",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a1",
+    "to_square": "a4"
+   }
+  },
+  {
+   "name": "enemy-ends-ray-beyond",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a4": "bp",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a1",
+    "to_square": "a5"
+   }
+  },
+  {
+   "name": "pawn-blocked-single",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e3": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e3"
+   }
+  },
+  {
+   "name": "pawn-blocked-double",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e3": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e4"
+   }
+  },
+  {
+   "name": "pawn-double-not-from-start",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e3": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e3",
+    "to_square": "e5"
+   }
+  },
+  {
+   "name": "pawn-single-off-start",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e3": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e3",
+    "to_square": "e4"
+   }
+  },
+  {
+   "name": "own-occupied-unreachable",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "d4": "wn",
+     "f5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "d4",
+    "to_square": "f5"
+   }
+  },
+  {
+   "name": "kings-never-adjacent-straight",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e4": "wk",
+     "e6": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "e6",
+    "to_square": "e5"
+   }
+  },
+  {
+   "name": "kings-never-adjacent-diagonal",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e4": "wk",
+     "e6": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "e6",
+    "to_square": "d5"
+   }
+  },
+  {
+   "name": "king-retreat-legal",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e4": "wk",
+     "e6": "bk"
+    },
+    "side_to_move": "b"
+   },
+   "move": {
+    "from_square": "e6",
+    "to_square": "f7"
+   }
+  },
+  {
+   "name": "pinned-rook-off-file-illegal",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "wr",
+     "e8": "br",
+     "a8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "d2"
+   }
+  },
+  {
+   "name": "pinned-rook-captures-checker",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "wr",
+     "e8": "br",
+     "a8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e8"
+   }
+  },
+  {
+   "name": "in-check-non-evasion-illegal",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e8": "br",
+     "a2": "wp",
+     "a8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a2",
+    "to_square": "a3"
+   }
+  },
+  {
+   "name": "in-check-king-evasion-legal",
+   "kind": "move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e8": "br",
+     "a2": "wp",
+     "a8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e1",
+    "to_square": "d2"
+   }
+  },
+  {
+   "name": "pinned-knight-no-evasion",
+   "kind": "not-move",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "wn",
+     "e8": "br",
+     "b1": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "d4"
+   }
+  },
+  {
+   "name": "own-occupied-square-attacked",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a3": "wr",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "a3",
+   "expect_attacked": true
+  },
+  {
+   "name": "ray-stops-before-beyond",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "a1": "wr",
+     "a3": "wp",
+     "h1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "a4",
+   "expect_attacked": false
+  },
+  {
+   "name": "pinned-piece-still-attacks",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "wn",
+     "e8": "br",
+     "b1": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "d4",
+   "expect_attacked": true
+  },
+  {
+   "name": "pawn-attacks-diagonal",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e4": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "d5",
+   "expect_attacked": true
+  },
+  {
+   "name": "pawn-never-attacks-forward",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e4": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "e5",
+   "expect_attacked": false
+  },
+  {
+   "name": "king-attacks-adjacent",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e4": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "d5",
+   "expect_attacked": true
+  },
+  {
+   "name": "king-never-attacks-distant",
+   "kind": "attack",
+   "state": {
+    "occupied": {
+     "e4": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "attacker": "w",
+   "square": "d6",
+   "expect_attacked": false
+  }
+ ],
+ "terminal": [
+  {
+   "name": "back-rank-checkmate",
+   "kind": "terminal",
+   "state": {
+    "occupied": {
+     "g8": "bk",
+     "f7": "bp",
+     "g7": "bp",
+     "h7": "bp",
+     "a8": "wr",
+     "a1": "wk"
+    },
+    "side_to_move": "b"
+   },
+   "expect_status": "checkmate"
+  },
+  {
+   "name": "classic-stalemate",
+   "kind": "terminal",
+   "state": {
+    "occupied": {
+     "a8": "bk",
+     "b6": "wk",
+     "c7": "wq"
+    },
+    "side_to_move": "b"
+   },
+   "expect_status": "stalemate"
+  },
+  {
+   "name": "check-with-escapes",
+   "kind": "terminal",
+   "state": {
+    "occupied": {
+     "e8": "bk",
+     "e1": "wr",
+     "a1": "wk"
+    },
+    "side_to_move": "b"
+   },
+   "expect_status": "check"
+  },
+  {
+   "name": "bare-kings-none",
+   "kind": "terminal",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "expect_status": "none"
+  }
+ ],
+ "malformed": [
+  {
+   "name": "missing-to-square",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2"
+   },
+   "defect": "move lacks required member to_square",
+   "expect_failure": "malformed_move"
+  },
+  {
+   "name": "extra-key",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e4",
+    "kind": "quiet"
+   },
+   "defect": "move carries a member outside the closed shape",
+   "expect_failure": "malformed_move"
+  },
+  {
+   "name": "from-equals-to",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e2"
+   },
+   "defect": "from_square equals to_square",
+   "expect_failure": "malformed_move"
+  },
+  {
+   "name": "square-wrong-case",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "E4"
+   },
+   "defect": "to_square violates square grammar (uppercase file)",
+   "expect_failure": "malformed_move"
+  },
+  {
+   "name": "square-rank-out-of-range",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e9"
+   },
+   "defect": "to_square violates square grammar (rank outside 1-8)",
+   "expect_failure": "malformed_move"
+  },
+  {
+   "name": "promotion-outside-enum",
+   "state": {
+    "occupied": {
+     "a7": "wp",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a7",
+    "to_square": "a8",
+    "promotion": "k"
+   },
+   "defect": "promotion member violates the shape enum",
+   "expect_failure": "malformed_move"
+  },
+  {
+   "name": "from-square-empty",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e3"
+   },
+   "defect": "no piece on from_square",
+   "expect_failure": "no_piece"
+  },
+  {
+   "name": "enemy-piece-on-from",
+   "state": {
+    "occupied": {
+     "d5": "bp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "d5",
+    "to_square": "d4"
+   },
+   "defect": "from_square holds an enemy piece",
+   "expect_failure": "not_players_piece"
+  },
+  {
+   "name": "target-not-reachable",
+   "state": {
+    "occupied": {
+     "d4": "wn",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "d4",
+    "to_square": "e5"
+   },
+   "defect": "to_square is not pseudo-legal for the piece",
+   "expect_failure": "unreachable_target"
+  },
+  {
+   "name": "promotion-missing",
+   "state": {
+    "occupied": {
+     "a7": "wp",
+     "e1": "wk",
+     "h8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "a7",
+    "to_square": "a8"
+   },
+   "defect": "pawn reaches the promotion rank without a promotion member",
+   "expect_failure": "promotion_missing"
+  },
+  {
+   "name": "promotion-on-non-promotion-move",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e4",
+    "promotion": "q"
+   },
+   "defect": "promotion member on a non-promotion move",
+   "expect_failure": "promotion_forbidden"
+  },
+  {
+   "name": "pinned-rook-leaves-king-attacked",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "wr",
+     "e8": "br",
+     "a8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "d2"
+   },
+   "defect": "the resulting position leaves the own king attacked",
+   "expect_failure": "leaves_king_attacked"
+  }
+ ],
+ "rollback": [
+  {
+   "name": "rollback-pinned-rook",
+   "state": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "wr",
+     "e8": "br",
+     "a8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "d2"
+   },
+   "defect": "the resulting position leaves the own king attacked",
+   "expect_failure": "leaves_king_attacked",
+   "expect_state_after": {
+    "occupied": {
+     "e1": "wk",
+     "e2": "wr",
+     "e8": "br",
+     "a8": "bk"
+    },
+    "side_to_move": "w"
+   }
+  },
+  {
+   "name": "rollback-malformed-move",
+   "state": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   },
+   "move": {
+    "from_square": "e2",
+    "to_square": "e9"
+   },
+   "defect": "to_square violates square grammar (rank outside 1-8)",
+   "expect_failure": "malformed_move",
+   "expect_state_after": {
+    "occupied": {
+     "e2": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   }
+  }
+ ]
+}
