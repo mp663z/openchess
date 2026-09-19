@@ -15,6 +15,8 @@ structural slip must fail both the lint and the model checks.
 from __future__ import annotations
 
 import copy
+import functools
+import re
 import shutil
 import subprocess
 import sys
@@ -44,43 +46,61 @@ def _lint():
     assert "OK" in proc.stdout
 
 
-# -- executable reference model, derived from the contract data -------
+# -- executable reference model, fully derived from the contract ----
+# Board geometry, the attack relation, castling home squares and the
+# en-passant advance geometry are all read from the structured
+# contract data (and its LINKED sibling contracts), never hardcoded:
+# a matching defect between this model and the contract cannot
+# self-certify because there is exactly one source.
 
-FILES = "abcdefgh"
-KNIGHT = [(1, 2), (2, 1), (2, -1), (1, -2),
-          (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
-KING = [(dx, dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)
-        if (dx, dy) != (0, 0)]
-ORTHOGONAL = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-DIAGONAL = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+SIBLING_DIR = ROOT / "data" / "contracts"
 
 
-def _attacks(board, square, by_white):
-    """True if `by_white`'s side attacks `square` on `board`
-    ({(file, rank): piece letter})."""
+@functools.cache
+def _sibling(name):
+    with open(SIBLING_DIR / name) as fh:
+        return yaml.safe_load(fh)["contract"]
+
+
+def _castling_homes():
+    return _sibling("castling.yaml")["rights"]["home_squares"]
+
+
+def _ep_set_on():
+    return _sibling("en_passant.yaml")["target"]["set_on"]
+
+
+def _attack(board_contract, square, board, by_white):
+    """Attack relation derived from contract.board.attack."""
+    a = board_contract["attack"]
+    files = board_contract["files"]
     f, r = square
-    pawn_dir = 1 if by_white else -1
-    for df in (-1, 1):
-        if board.get((f + df, r - pawn_dir)) == ("P" if by_white else "p"):
+    pawn_deltas = (a["white_pawn_capture_deltas"] if by_white
+                   else a["black_pawn_capture_deltas"])
+    pawn = "P" if by_white else "p"
+    for df, dr in pawn_deltas:
+        if board.get((f + df, r + dr)) == pawn:
             return True
-    for dx, dy in KNIGHT:
-        if board.get((f + dx, r + dy)) == ("N" if by_white else "n"):
+    for df, dr in a["knight_deltas"]:
+        if board.get((f + df, r + dr)) == ("N" if by_white else "n"):
             return True
-    for dx, dy in KING:
-        if board.get((f + dx, r + dy)) == ("K" if by_white else "k"):
+    for df, dr in a["king_deltas"]:
+        if board.get((f + df, r + dr)) == ("K" if by_white else "k"):
             return True
-    for directions, sliders in ((ORTHOGONAL, ("R", "Q")),
-                                (DIAGONAL, ("B", "Q"))):
-        want = tuple(c if by_white else c.lower() for c in sliders)
-        for dx, dy in directions:
-            nf, nr = f + dx, r + dy
-            while 0 <= nf < 8 and 1 <= nr <= 8:
+    sliders = ((a["rook_directions"], ("R", "Q")),
+               (a["bishop_directions"], ("B", "Q")))
+    max_rank = len(board_contract["ranks"])
+    for directions, kinds in sliders:
+        want = tuple(ch if by_white else ch.lower() for ch in kinds)
+        for df, dr in directions:
+            nf, nr = f + df, r + dr
+            while 0 <= nf < len(files) and 1 <= nr <= max_rank:
                 piece = board.get((nf, nr))
                 if piece:
                     if piece in want:
                         return True
                     break
-                nf, nr = nf + dx, nr + dy
+                nf, nr = nf + df, nr + dr
     return False
 
 
@@ -91,37 +111,37 @@ class FenError(Exception):
         self.code = code
 
 
+START_OFFICERS = {"q": 1, "r": 2, "b": 2, "n": 2}
+
+
 def parse_fen(contract, text):
     """Contract-derived parser: returns a position tuple or raises
     FenError carrying the contract's failure class and error code.
     All-or-nothing per contract.atomicity: no partial state."""
-    c = contract
-    mapping = c["failure_mapping"]
+    mapping = contract["failure_mapping"]
+    files = contract["board"]["files"]
+    ranks = contract["board"]["ranks"]
 
     def fail(cls):
         raise FenError(cls, mapping[cls]["error"])
 
     parts = text.split(" ")
-    if parts != c["fields"]["order"] and (
-        len(parts) != 6 or any(p == "" for p in parts)
-    ):
-        fail("malformed_fen")
-    if len(parts) != 6 or any(p == "" for p in parts):
+    if (len(parts) != len(contract["fields"]["order"])
+            or any(part == "" for part in parts)):
         fail("malformed_fen")
     placement, color, castling, ep, half, full = parts
 
     # placement grammar
-    g = c["placement"]
-    ranks = placement.split(g["rank_separator"])
-    if len(ranks) != g["rank_count"]:
+    g = contract["placement"]
+    rank_list = placement.split(g["rank_separator"])
+    if len(rank_list) != g["rank_count"]:
         fail("malformed_fen")
     letters = set(g["piece_letters"])
     digits = set(g["empty_run_digits"])
     board = {}
-    for ri, rank in enumerate(ranks):
-        rank_no = 8 - ri  # rank_order rank8-to-rank1
-        if not rank or sum(ch.isdigit() for ch in rank) == 0 and False:
-            pass
+    top_rank = len(ranks)  # rank_order rank8-to-rank1
+    for ri, rank in enumerate(rank_list):
+        rank_no = top_rank - ri
         if not rank:
             fail("malformed_fen")
         f = 0
@@ -144,21 +164,25 @@ def parse_fen(contract, text):
             fail("malformed_fen")
 
     # active color
-    if color not in c["active_color"]["values"]:
+    if color not in contract["active_color"]["values"]:
         fail("malformed_fen")
     white_to_move = color == "w"
 
-    # counters
-    for value, spec in ((half, c["counters"]["halfmove_clock"]),
-                        (full, c["counters"]["fullmove_number"])):
-        if spec["digits_only"] and not value.isdigit():
+    # counters: ASCII digits only, no leading zeros, declared bounds
+    for value, spec in ((half, contract["counters"]["halfmove_clock"]),
+                        (full, contract["counters"]["fullmove_number"])):
+        if spec["grammar"] == "ascii-digits-0-9-only" and not re.fullmatch(
+                r"[0-9]+", value):
+            fail("malformed_fen")
+        if (spec["leading_zeros"] == "forbidden"
+                and value != str(int(value))):
             fail("malformed_fen")
         if int(value) < spec["min"]:
             fail("malformed_fen")
     half_i, full_i = int(half), int(full)
 
     # castling grammar
-    cs = c["castling"]
+    cs = contract["castling"]
     if castling == cs["none_sentinel"]:
         rights = ""
     else:
@@ -171,18 +195,19 @@ def parse_fen(contract, text):
             fail("malformed_fen")
 
     # en passant grammar
-    es = c["en_passant"]
+    es = contract["en_passant"]
     if ep == es["none_sentinel"]:
         ep_square = None
     else:
-        if len(ep) != 2 or ep[0] not in FILES or ep[1] not in es["ranks"]:
+        if (len(ep) != 2 or ep[0] not in files
+                or ep[1] not in es["ranks"]):
             fail("malformed_fen")
         ep_square = ep
 
     # position rules
-    pr = c["position_rules"]
-    wk = [sq for sq, p in board.items() if p == "K"]
-    bk = [sq for sq, p in board.items() if p == "k"]
+    pr = contract["position_rules"]
+    wk = [sq for sq, pce in board.items() if pce == "K"]
+    bk = [sq for sq, pce in board.items() if pce == "k"]
     if (len(wk) != 1 and pr["white_kings"] == "exactly-1") or (
         len(bk) != 1 and pr["black_kings"] == "exactly-1"
     ):
@@ -192,48 +217,82 @@ def parse_fen(contract, text):
         if max(abs(wf - bf), abs(wr - br)) <= 1:
             fail("impossible_position")
     if pr["pawns_on_back_ranks"] == "forbidden":
-        for (_f, r), p in board.items():
-            if p in "Pp" and r in (1, 8):
+        back = (ranks[0], ranks[-1])
+        for (_f, r), pce in board.items():
+            if pce in "Pp" and str(r) in back:
+                fail("impossible_position")
+    # material feasibility: counts and promotion budget
+    for side_letter, pmax, tmax in (
+            ("white", pr["white_pawns_max"], pr["white_pieces_max"]),
+            ("black", pr["black_pawns_max"], pr["black_pieces_max"])):
+        mine = [pce for pce in board.values()
+                if (pce.isupper() == (side_letter == "white"))]
+        pawns = sum(1 for pce in mine if pce.lower() == "p")
+        if pawns > pmax or len(mine) > tmax:
+            fail("impossible_position")
+        if pr["promotion_budget"] == (
+                "excess-officers-over-start-set-covered-by-missing-"
+                "pawns"):
+            excess = 0
+            for kind, start in START_OFFICERS.items():
+                have = sum(1 for pce in mine if pce.lower() == kind)
+                excess += max(0, have - start)
+            if excess > pmax - pawns:
                 fail("impossible_position")
     if pr["non_mover_king_attacked"] == "forbidden":
         mover_white = white_to_move
         non_mover = bk[0] if mover_white else wk[0]
-        if _attacks(board, non_mover, by_white=mover_white):
+        if _attack(contract["board"], non_mover, board,
+                   by_white=mover_white):
             fail("impossible_position")
 
-    # castling consistency: right requires king + rook on start squares
-    start = {"K": ((4, 1), (7, 1), "K", "R"),
-             "Q": ((4, 1), (0, 1), "K", "R"),
-             "k": ((4, 8), (7, 8), "k", "r"),
-             "q": ((4, 8), (0, 8), "k", "r")}
+    # castling consistency: right requires king + rook on the home
+    # squares OF THE LINKED CASTLING CONTRACT
+    homes = _castling_homes()
     for right in rights:
-        (kf, kr), (rf, rr), kletter, rletter = start[right]
-        if board.get((kf, kr)) != kletter or board.get((rf, rr)) != rletter:
+        home = homes[right]
+        kf = files.index(home["king"][0])
+        rf = files.index(home["rook"][0])
+        king_letter = "K" if right.isupper() else "k"
+        rook_letter = "R" if right.isupper() else "r"
+        if (board.get((kf, int(home["king"][1]))) != king_letter
+                or board.get((rf, int(home["rook"][1]))) != rook_letter):
             fail("impossible_position")
 
-    # en passant consistency
+    # en passant consistency, geometry from the LINKED contract's
+    # set_on: target empty, origin empty, halfmove clock zero
     if ep_square is not None:
-        f, r = FILES.index(ep_square[0]), int(ep_square[1])
-        if r == 3:
-            if es["rank3_requires"] != "black-to-move" or white_to_move:
-                fail("impossible_position")
-            if board.get((f, 4)) != "P":
-                fail("impossible_position")
-        else:
-            if es["rank6_requires"] != "white-to-move" or not white_to_move:
-                fail("impossible_position")
-            if board.get((f, 5)) != "p":
-                fail("impossible_position")
+        set_on = _ep_set_on()
+        f, r = files.index(ep_square[0]), int(ep_square[1])
+        white_advanced = str(r) == set_on["white"]["target_rank"]
+        side = set_on["white" if white_advanced else "black"]
+        requires = (es["rank3_requires"] if white_advanced
+                    else es["rank6_requires"])
+        if ((requires == "black-to-move" and white_to_move)
+                or (requires == "white-to-move" and not white_to_move)):
+            fail("impossible_position")
+        pawn = "P" if white_advanced else "p"
+        if board.get((f, int(side["to_rank"]))) != pawn:
+            fail("impossible_position")
+        if es["target_square"] == "empty" and (f, r) in board:
+            fail("impossible_position")
+        if es["origin_square"] == "empty" and (
+                f, int(side["from_rank"])) in board:
+            fail("impossible_position")
+        if es["halfmove_clock"] == "must-be-zero" and half_i != 0:
+            fail("impossible_position")
 
     return (board, color, rights, ep_square, half_i, full_i)
 
 
-def emit_fen(position):
+def emit_fen(contract, position):
     board, color, rights, ep, half, full = position
-    ranks = []
-    for r in range(8, 0, -1):
+    files = contract["board"]["files"]
+    g = contract["placement"]
+    rank_list = []
+    for r in range(len(contract["board"]["ranks"]), 0, -1):
         row, empty = "", 0
-        for f in range(8):
+        for f in range(len(files)):
             piece = board.get((f, r))
             if piece:
                 if empty:
@@ -244,9 +303,11 @@ def emit_fen(position):
                 empty += 1
         if empty:
             row += str(empty)
-        ranks.append(row)
+        rank_list.append(row)
     return " ".join([
-        "/".join(ranks), color, rights or "-", ep or "-",
+        g["rank_separator"].join(rank_list), color,
+        rights or contract["castling"]["none_sentinel"],
+        ep or contract["en_passant"]["none_sentinel"],
         str(half), str(full),
     ])
 
@@ -261,12 +322,12 @@ def test_lint_clean():
 
 
 def test_happy_startpos_and_roundtrip():
-    doc = _doc()
-    pos = parse_fen(doc["contract"], STARTPOS)
+    doc = _doc()["contract"]
+    pos = parse_fen(doc, STARTPOS)
     assert pos[1] == "w" and pos[2] == "KQkq" and pos[3] is None
     assert pos[4] == 0 and pos[5] == 1
     assert len(pos[0]) == 32
-    assert emit_fen(pos) == STARTPOS  # canonical round-trip identity
+    assert emit_fen(doc, pos) == STARTPOS  # canonical round-trip identity
 
 
 def test_happy_midgame_with_ep_target():
@@ -274,21 +335,30 @@ def test_happy_midgame_with_ep_target():
     fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
     pos = parse_fen(_doc()["contract"], fen)
     assert pos[3] == "e3" and pos[1] == "b"
-    assert emit_fen(pos) == fen
+    assert emit_fen(_doc()["contract"], pos) == fen
 
 
 def test_happy_serialization_roundtrip_fixture_set():
     doc = _doc()
     fixtures = [
         STARTPOS,
-        "r3k2r/ppqppppp/2n2n2/2bpp3/2BPP3/2N2N2/PPQPPPPP/R3K2R w KQkq - 6 7",
+        "r2qk2r/ppp2ppp/2n2n2/2b1p3/2BPP3/2N2N2/PPP2PPP/R2QK2R w KQkq - 6 7",
         "8/8/8/8/8/8/8/K6k w - - 0 1",          # bare kings boundary
         "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2",     # real ep capture state
         "r3k3/8/8/8/8/8/8/4K2R b Kq - 12 20",
         "8/8/8/8/8/8/8/K6k b - - 99 240",        # high counters boundary
+        # 16 pieces per side boundary
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        # 8 pawns per side boundary (white castled, queens off)
+        "r4rk1/pppppppp/8/8/8/8/PPPPPPPP/R4RK1 w - - 0 9",
+        # promotion budget exact fit: 3 white queens, 6 pawns
+        # (2 excess queens, 2 missing pawns)
+        "4k3/8/8/8/8/8/PPP5/1QQQK3 w - - 0 1",
+        # black 3 queens 6 pawns exact fit
+        "qqq1k3/ppp5/8/8/8/8/8/4K3 b - - 0 1",
     ]
     for fen in fixtures:
-        assert emit_fen(parse_fen(doc["contract"], fen)) == fen
+        assert emit_fen(doc["contract"], parse_fen(doc["contract"], fen)) == fen
 
 
 @pytest.mark.parametrize("bad", [
@@ -300,6 +370,11 @@ def test_happy_serialization_roundtrip_fixture_set():
     "8/8/8/8/8/8/8/K6k x - - 0 1",                                # bad color
     "8/8/8/8/8/8/8/K6k w - - x 1",                                # bad halfmove
     "8/8/8/8/8/8/8/K6k w - - -1 1",                               # signed counter
+    "8/8/8/8/8/8/8/K6k w - - \u0664 1",                          # Arabic-Indic digit
+    "8/8/8/8/8/8/8/K6k w - - \uff14 1",                          # full-width digit
+    "8/8/8/8/8/8/8/K6k w - - 0 \u0661",                          # unicode fullmove
+    "8/8/8/8/8/8/8/K6k w - - 01 1",                               # leading zero halfmove
+    "8/8/8/8/8/8/8/K6k w - - 0 01",                               # leading zero fullmove
     "8/8/8/8/8/8/8/K6k w - - 0 0",                                # fullmove < min
     "8/8/8/8/8/8/8/K6k w - - 0 -1",                               # bad fullmove
     "9/8/8/8/8/8/8/K6k w - - 0 1",                                # rank sum 9
@@ -343,6 +418,25 @@ def test_malformed_fens_rejected_as_malformed_request(bad):
     # ^ ep rank 6 requires white to move
     "4k3/8/8/8/8/8/8/4K3 w - d6 0 2",
     # ^ ep rank 6 requires the advancing black pawn on rank 5
+    # ep target square OCCUPIED (the pawn passed over it, must be empty)
+    "4k3/8/8/8/4P3/4N3/8/4K3 b - e3 0 1",
+    "4k3/4N3/8/4p3/8/8/8/4K3 w - e6 0 1",
+    # ep origin square OCCUPIED (the pawn left it, must be empty)
+    "4k3/8/8/8/4P3/8/4P3/4K3 b - e3 0 1",
+    "4k3/4p3/8/4p3/8/8/8/4K3 w - e6 0 1",
+    # ep with a NONZERO halfmove clock (the advance was a pawn move,
+    # which resets the clock per the turn contract)
+    "4k3/8/8/8/4P3/8/8/4K3 b - e3 7 1",
+    "4k3/8/8/4p3/8/8/8/4K3 w - e6 3 1",
+    # material impossibility: 9 pawns, 17 pieces
+    "4k3/8/8/8/8/8/PPPPPPPP/4K2P w - - 0 1",
+    "4k3/8/8/8/8/7N/PPPPPPPP/RNBQKBNR w - - 0 1",
+    "4k3/pppppppp/8/8/8/8/8/p6K w - - 0 1",
+    # promotion budget exceeded: 3 white queens with all 8 pawns
+    # present (2 excess queens, 0 missing pawns)
+    "4k3/8/8/8/8/8/PPPPPPPP/1QQQK3 w - - 0 1",
+    # 3 black queens with 7 pawns (2 excess, 1 missing)
+    "qqq1k3/pp1ppppp/8/8/8/8/8/4K3 b - - 0 1",
 ])
 def test_impossible_positions_rejected_as_illegal_position(bad):
     doc = _doc()
@@ -350,6 +444,20 @@ def test_impossible_positions_rejected_as_illegal_position(bad):
         parse_fen(doc["contract"], bad)
     assert exc.value.failure_class == "impossible_position"
     assert exc.value.code == "illegal_position"
+
+
+def test_canonical_input_roundtrips_byte_for_byte():
+    doc = _doc()["contract"]
+    fixtures = [
+        STARTPOS,
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2",
+        "r3k3/8/8/8/8/8/8/4K2R b Kq - 12 20",
+        "8/8/8/8/8/8/8/K6k b - - 99 240",
+        "4k3/8/8/8/8/8/PPP5/1QQQK3 w - - 0 1",
+    ]
+    for fen in fixtures:
+        assert emit_fen(doc, parse_fen(doc, fen)) == fen, fen
 
 
 def test_rejected_parse_yields_no_partial_state():
@@ -432,6 +540,40 @@ def _mutants():
         "best-effort")
     add("atomicity dropped", ["contract", "atomicity", "parse"],
         "partial-state-allowed")
+    add("ep target_square drift", ["contract", "en_passant",
+                                   "target_square"], "occupied-ok")
+    add("ep origin_square dropped",
+        ["contract", "en_passant", "origin_square"], "any")
+    add("ep halfmove rule dropped", ["contract", "en_passant",
+                                     "halfmove_clock"], "any")
+    add("ep set_on source drift", ["contract", "en_passant", "set_on"],
+        "hardcoded-here")
+    add("pawn bound drift", ["contract", "position_rules",
+                             "white_pawns_max"], 9)
+    add("piece bound drift", ["contract", "position_rules",
+                              "black_pieces_max"], 17)
+    add("promotion budget dropped", ["contract", "position_rules",
+                                     "promotion_budget"], "none")
+    add("counter grammar drift", ["contract", "counters",
+                                  "halfmove_clock", "grammar"],
+        "any-unicode-digits")
+    add("leading zeros allowed", ["contract", "counters",
+                                  "fullmove_number", "leading_zeros"],
+        "allowed")
+    add("board files drift", ["contract", "board", "files"],
+        ["a", "b", "c", "d", "e", "f", "g"])
+    add("knight delta drift", ["contract", "board", "attack",
+                               "knight_deltas"],
+        [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1],
+         [-2, 1]])
+    add("pawn attack delta drift", ["contract", "board", "attack",
+                                    "white_pawn_capture_deltas"],
+        [[1, 2], [-1, 2]])
+    add("castling home source drift", ["contract", "castling",
+                                       "home_squares"],
+        "hardcoded-here")
+    add("emit_of_parse dropped", ["contract", "serialization",
+                                  "emit_of_parse"], "best-effort")
     add("mapping contradiction", ["contract", "failure_mapping",
         "malformed_fen", "error"], "illegal_position")
     add("undeclared error code", ["contract", "failure_mapping",
@@ -472,7 +614,7 @@ def test_mutations_fail_lint():
 
 
 def test_mutants_never_silent_subset():
-    assert len(_mutants()) >= 24
+    assert len(_mutants()) >= 38
 
 
 # -- linkage: sibling contracts drift -> FEN lint fails ----------------
@@ -528,6 +670,51 @@ def test_linkage_castling_values_drift_fails(tmp_path):
         path = contracts / "castling.yaml"
         doc = yaml.safe_load(path.read_text())
         doc["contract"]["rights"]["values"] = ["K", "Q"]
+        path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+    with pytest.raises(ContractError):
+        _lint_with_root(tmp_path, mutate)
+
+
+def test_linkage_castling_home_square_drift_fails(tmp_path):
+    def mutate(contracts):
+        path = contracts / "castling.yaml"
+        doc = yaml.safe_load(path.read_text())
+        doc["contract"]["rights"]["home_squares"]["K"]["rook"] = "g1"
+        path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+    with pytest.raises(ContractError):
+        _lint_with_root(tmp_path, mutate)
+
+
+def test_linkage_ep_set_on_target_rank_drift_fails(tmp_path):
+    def mutate(contracts):
+        path = contracts / "en_passant.yaml"
+        doc = yaml.safe_load(path.read_text())
+        doc["contract"]["target"]["set_on"]["white"]["target_rank"] = "4"
+        path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+    with pytest.raises(ContractError):
+        _lint_with_root(tmp_path, mutate)
+
+
+def test_linkage_ep_set_on_from_rank_drift_fails(tmp_path):
+    def mutate(contracts):
+        path = contracts / "en_passant.yaml"
+        doc = yaml.safe_load(path.read_text())
+        doc["contract"]["target"]["set_on"]["black"]["from_rank"] = "6"
+        path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+    with pytest.raises(ContractError):
+        _lint_with_root(tmp_path, mutate)
+
+
+def test_linkage_turn_reset_drift_fails(tmp_path):
+    def mutate(contracts):
+        path = contracts / "turn.yaml"
+        doc = yaml.safe_load(path.read_text())
+        doc["contract"]["transition"]["on_move"]["halfmove_clock"][
+            "reset_when"] = ["capture"]
         path.write_text(yaml.safe_dump(doc, sort_keys=False))
 
     with pytest.raises(ContractError):

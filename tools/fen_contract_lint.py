@@ -41,6 +41,26 @@ CASTLING = ROOT / "data" / "contracts" / "castling.yaml"
 
 FIELD_ORDER = ["placement", "active_color", "castling", "en_passant",
                "halfmove_clock", "fullmove_number"]
+BOARD_FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
+BOARD_RANKS = ["1", "2", "3", "4", "5", "6", "7", "8"]
+KNIGHT_DELTAS = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2],
+                 [-2, -1], [-2, 1], [-1, 2]]
+KING_DELTAS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1],
+               [0, -1], [1, -1]]
+ROOK_DIRECTIONS = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+BISHOP_DIRECTIONS = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+WHITE_PAWN_DELTAS = [[1, 1], [-1, 1]]
+BLACK_PAWN_DELTAS = [[1, -1], [-1, -1]]
+CASTLING_HOME_SQUARES = {"K": {"king": "e1", "rook": "h1"},
+                         "Q": {"king": "e1", "rook": "a1"},
+                         "k": {"king": "e8", "rook": "h8"},
+                         "q": {"king": "e8", "rook": "a8"}}
+EP_SET_ON = {"event": "pawn-two-square-advance",
+             "target_file": "advancing-pawn-file",
+             "white": {"from_rank": "2", "to_rank": "4",
+                       "target_rank": "3"},
+             "black": {"from_rank": "7", "to_rank": "5",
+                       "target_rank": "6"}}
 PIECE_LETTERS = ["p", "n", "b", "r", "q", "k",
                  "P", "N", "B", "R", "Q", "K"]
 EMPTY_RUN_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8"]
@@ -75,11 +95,17 @@ LINKS = {
 
 ALLOWED_TOP = {"schema_version", "contract"}
 ALLOWED_CONTRACT = {
-    "id", "fields", "placement", "position_rules", "active_color",
-    "castling", "en_passant", "counters", "serialization",
-    "atomicity", "failure_classes", "failure_mapping", "errors",
-    "links", "versioning",
+    "id", "board", "fields", "placement", "position_rules",
+    "active_color", "castling", "en_passant", "counters",
+    "serialization", "atomicity", "failure_classes", "failure_mapping",
+    "errors", "links", "versioning",
 }
+ALLOWED_BOARD = {"files", "ranks", "file_index", "rank_index",
+                 "attack", "rule"}
+ALLOWED_ATTACK = {"knight_deltas", "king_deltas", "rook_directions",
+                  "bishop_directions", "queen_directions",
+                  "white_pawn_capture_deltas",
+                  "black_pawn_capture_deltas", "rule"}
 ALLOWED_FIELDS = {"order", "exactly_six", "separator", "empty_field",
                   "rule"}
 ALLOWED_PLACEMENT = {"rank_count", "rank_separator", "rank_order",
@@ -87,15 +113,19 @@ ALLOWED_PLACEMENT = {"rank_count", "rank_separator", "rank_order",
                      "zero_digit", "adjacent_digits", "rank_sum", "rule"}
 ALLOWED_POSITION = {"white_kings", "black_kings", "kings_adjacent",
                     "pawns_on_back_ranks", "non_mover_king_attacked",
-                    "rule"}
+                    "white_pawns_max", "black_pawns_max",
+                    "white_pieces_max", "black_pieces_max",
+                    "promotion_budget", "rule"}
 ALLOWED_COLOR = {"values", "rule"}
 ALLOWED_CASTLING = {"none_sentinel", "letters", "order", "duplicates",
-                    "consistency", "rule"}
+                    "consistency", "home_squares", "rule"}
 ALLOWED_EP = {"none_sentinel", "storage", "ranks", "rank3_requires",
-              "rank6_requires", "pawn_presence", "link", "rule"}
+              "rank6_requires", "pawn_presence", "target_square",
+              "origin_square", "halfmove_clock", "set_on",
+              "halfmove_reset_source", "link", "rule"}
 ALLOWED_COUNTERS = {"halfmove_clock", "fullmove_number", "link", "rule"}
-ALLOWED_COUNTER = {"type", "digits_only", "min"}
-ALLOWED_SERIALIZATION = {"canonical", "roundtrip", "rule"}
+ALLOWED_COUNTER = {"type", "grammar", "leading_zeros", "min"}
+ALLOWED_SERIALIZATION = {"canonical", "roundtrip", "emit_of_parse", "rule"}
 ALLOWED_ATOMICITY = {"parse", "rule"}
 ALLOWED_ERRORS = {"closed_enum", "shape"}
 ALLOWED_LINKS = {"turn", "en_passant", "castling"}
@@ -176,6 +206,26 @@ def _check_links(contract: dict, root: Path) -> None:
     _exact(cgrammar.get("ordering"), "KQkq", "castling ordering")
     _exact(cgrammar.get("duplicates"), "forbidden",
            "castling duplicates")
+    _exact(_mapping(rights.get("home_squares"),
+                    "castling rights home_squares"),
+           CASTLING_HOME_SQUARES, "castling home_squares")
+
+    ep_doc = _load(root / LINKS["en_passant"], "en-passant link")
+    set_on = _mapping(_mapping(ep_doc.get("target"),
+                               "en_passant.target").get("set_on"),
+                      "en_passant set_on")
+    _exact({k: v for k, v in set_on.items() if k != "rule"},
+           EP_SET_ON, "en_passant set_on")
+
+    turn_doc = _load(root / LINKS["turn"], "turn link")
+    on_move = _mapping(_mapping(turn_doc.get("transition"),
+                                "turn.transition").get("on_move"),
+                       "turn on_move")
+    hc = _mapping(on_move.get("halfmove_clock"),
+                  "turn on_move halfmove_clock")
+    _need("pawn_move" in (hc.get("reset_when") or []),
+          "turn halfmove reset_when must include pawn_move")
+    _exact(hc.get("reset_to"), 0, "turn halfmove reset_to")
 
 
 def lint(doc: dict, root: Path | None = None) -> None:
@@ -186,6 +236,33 @@ def lint(doc: dict, root: Path | None = None) -> None:
     contract = _mapping(doc.get("contract"), "contract")
     _keys(contract, ALLOWED_CONTRACT, "contract")
     _exact(contract.get("id"), "chess-fen", "contract.id")
+
+    board = _mapping(contract.get("board"), "contract.board")
+    _keys(board, ALLOWED_BOARD, "contract.board")
+    _exact(board.get("files"), BOARD_FILES, "board.files")
+    _exact(board.get("ranks"), BOARD_RANKS, "board.ranks")
+    _exact(board.get("file_index"), "file-a-is-index-0",
+           "board.file_index")
+    _exact(board.get("rank_index"), "rank1-is-index-1",
+           "board.rank_index")
+    attack = _mapping(board.get("attack"), "contract.board.attack")
+    _keys(attack, ALLOWED_ATTACK, "contract.board.attack")
+    _exact(attack.get("knight_deltas"), KNIGHT_DELTAS,
+           "attack.knight_deltas")
+    _exact(attack.get("king_deltas"), KING_DELTAS, "attack.king_deltas")
+    _exact(attack.get("rook_directions"), ROOK_DIRECTIONS,
+           "attack.rook_directions")
+    _exact(attack.get("bishop_directions"), BISHOP_DIRECTIONS,
+           "attack.bishop_directions")
+    _exact(attack.get("queen_directions"),
+           "rook-directions-union-bishop-directions",
+           "attack.queen_directions")
+    _exact(attack.get("white_pawn_capture_deltas"), WHITE_PAWN_DELTAS,
+           "attack.white_pawn_capture_deltas")
+    _exact(attack.get("black_pawn_capture_deltas"), BLACK_PAWN_DELTAS,
+           "attack.black_pawn_capture_deltas")
+    _text(attack.get("rule"), "attack.rule")
+    _text(board.get("rule"), "board.rule")
 
     fields = _mapping(contract.get("fields"), "contract.fields")
     _keys(fields, ALLOWED_FIELDS, "contract.fields")
@@ -224,6 +301,13 @@ def lint(doc: dict, root: Path | None = None) -> None:
     for ban in ("kings_adjacent", "pawns_on_back_ranks",
                 "non_mover_king_attacked"):
         _exact(pos.get(ban), "forbidden", f"position_rules.{ban}")
+    for bound in ("white_pawns_max", "black_pawns_max"):
+        _exact(pos.get(bound), 8, f"position_rules.{bound}")
+    for bound in ("white_pieces_max", "black_pieces_max"):
+        _exact(pos.get(bound), 16, f"position_rules.{bound}")
+    _exact(pos.get("promotion_budget"),
+           "excess-officers-over-start-set-covered-by-missing-pawns",
+           "position_rules.promotion_budget")
     _text(pos.get("rule"), "position_rules.rule")
 
     color = _mapping(contract.get("active_color"),
@@ -243,6 +327,9 @@ def lint(doc: dict, root: Path | None = None) -> None:
     _exact(castling.get("consistency"),
            "right-requires-king-and-rook-on-start-squares",
            "castling.consistency")
+    _exact(castling.get("home_squares"),
+           "from-linked-castling-contract-home_squares",
+           "castling.home_squares")
     _text(castling.get("rule"), "castling.rule")
 
     ep = _mapping(contract.get("en_passant"), "contract.en_passant")
@@ -258,6 +345,15 @@ def lint(doc: dict, root: Path | None = None) -> None:
     _exact(ep.get("pawn_presence"),
            "advancing-pawn-on-destination-square",
            "en_passant.pawn_presence")
+    _exact(ep.get("target_square"), "empty", "en_passant.target_square")
+    _exact(ep.get("origin_square"), "empty", "en_passant.origin_square")
+    _exact(ep.get("halfmove_clock"), "must-be-zero",
+           "en_passant.halfmove_clock")
+    _exact(ep.get("set_on"), "from-linked-en-passant-contract-set_on",
+           "en_passant.set_on")
+    _exact(ep.get("halfmove_reset_source"),
+           "turn-contract-counter-reset-on-pawn-move",
+           "en_passant.halfmove_reset_source")
     _exact(ep.get("link"), LINKS["en_passant"], "en_passant.link")
     _text(ep.get("rule"), "en_passant.rule")
 
@@ -265,11 +361,13 @@ def lint(doc: dict, root: Path | None = None) -> None:
     _keys(counters, ALLOWED_COUNTERS, "contract.counters")
     _exact(_mapping(counters.get("halfmove_clock"),
                     "counters.halfmove_clock"),
-           {"type": "integer", "digits_only": True, "min": 0},
+           {"type": "integer", "grammar": "ascii-digits-0-9-only",
+            "leading_zeros": "forbidden", "min": 0},
            "counters.halfmove_clock")
     _exact(_mapping(counters.get("fullmove_number"),
                     "counters.fullmove_number"),
-           {"type": "integer", "digits_only": True, "min": 1},
+           {"type": "integer", "grammar": "ascii-digits-0-9-only",
+            "leading_zeros": "forbidden", "min": 1},
            "counters.fullmove_number")
     _exact(counters.get("link"), LINKS["turn"], "counters.link")
     _text(counters.get("rule"), "counters.rule")
@@ -280,6 +378,8 @@ def lint(doc: dict, root: Path | None = None) -> None:
     _exact(ser.get("canonical"), True, "serialization.canonical")
     _exact(ser.get("roundtrip"), "parse-of-emit-is-identity",
            "serialization.roundtrip")
+    _exact(ser.get("emit_of_parse"), "exact-input-string-reproduced",
+           "serialization.emit_of_parse")
     _text(ser.get("rule"), "serialization.rule")
 
     atomic = _mapping(contract.get("atomicity"), "contract.atomicity")
