@@ -20,6 +20,7 @@ TEXT_SUFFIXES = (".py", ".md", ".yaml", ".yml", ".toml", ".json", ".txt")
 ALLOWLIST = {
     "pyproject.toml": re.compile(r'^\s*name\s*=\s*"openchess"'),  # distribution slug
     "tools/cla_check.py": re.compile(r"DEFAULT_REPO = "),  # factual repo address constant
+    "evidence/T0019.md": re.compile(r'"name":"openchess-control-plane"'),  # quoted gh api metadata
     "docs/plan/development-plan-v9.md": None,   # verbatim source document of record
     "docs/plan/product-report-v5.md": None,     # verbatim source document of record
 }
