@@ -1,0 +1,11 @@
+schema_version: 2
+sources:
+- id: somesource
+  url: https://example.com/data
+  license: CC0-1.0
+  transformation_permission: true
+  decision: allow
+  statement: You may download, modify and redistribute this data.
+  statement_source_url: https://example.com/terms
+  evidence_path: evidence/trailingdate.txt
+  evidence_sha256: 22ae3ac72974977124eb265ecdc9c3b3b135099fc164537a2651832beaa009df

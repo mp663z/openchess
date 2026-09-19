@@ -1,0 +1,4 @@
+fetched_from: https://api.github.com/repos/asdfjkl/cbh2pgn
+fetched_at: 2026-09-18
+---
+GitHub API repos/asdfjkl/cbh2pgn license field reads MIT (fetched 2026-09-18).

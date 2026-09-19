@@ -1,0 +1,4 @@
+fetched_from: https://lichess.org/broadcast
+fetched_at: 2026-09-18
+---
+No license terms for broadcast PGN exports located on lichess.org/broadcast or linked pages (checked 2026-09-18).

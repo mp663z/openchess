@@ -1,0 +1,4 @@
+fetched_from: https://theweekinchess.com/twic
+fetched_at: 2026-09-18
+---
+TWIC page offers free weekly PGN/CBV downloads for personal offline reading; no license granting transformation or redistribution was located on theweekinchess.com (checked 2026-09-18).

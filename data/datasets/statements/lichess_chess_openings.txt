@@ -1,0 +1,4 @@
+fetched_from: https://api.github.com/repos/lichess-org/chess-openings
+fetched_at: 2026-09-18
+---
+GitHub API repos/lichess-org/chess-openings license field reads CC0-1.0 (fetched 2026-09-18).

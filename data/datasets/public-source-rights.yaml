@@ -12,7 +12,8 @@ sources:
   statement_source_url: https://database.lichess.org/
   transformation_permission: true
   decision: allow
-  statement_sha256: 903b20ce09a5914ea8f2e6319eb2fceb0754088a36d9e2a27885672cf0884020
+  evidence_path: data/datasets/statements/lichess_standard_games.txt
+  evidence_sha256: f80e104642e653aef0ef45757f02d4a2313a0a9482fcc3c607376dd4e91241b8
 - id: lichess_puzzles
   url: https://database.lichess.org/#puzzles
   license: CC0-1.0
@@ -22,7 +23,8 @@ sources:
   statement_source_url: https://database.lichess.org/
   transformation_permission: true
   decision: allow
-  statement_sha256: 903b20ce09a5914ea8f2e6319eb2fceb0754088a36d9e2a27885672cf0884020
+  evidence_path: data/datasets/statements/lichess_puzzles.txt
+  evidence_sha256: f80e104642e653aef0ef45757f02d4a2313a0a9482fcc3c607376dd4e91241b8
 - id: lichess_evals
   url: https://database.lichess.org/#evals
   license: CC0-1.0
@@ -32,7 +34,8 @@ sources:
   statement_source_url: https://database.lichess.org/
   transformation_permission: true
   decision: allow
-  statement_sha256: 903b20ce09a5914ea8f2e6319eb2fceb0754088a36d9e2a27885672cf0884020
+  evidence_path: data/datasets/statements/lichess_evals.txt
+  evidence_sha256: f80e104642e653aef0ef45757f02d4a2313a0a9482fcc3c607376dd4e91241b8
 - id: lichess_chess_openings
   url: https://github.com/lichess-org/chess-openings
   license: CC0-1.0
@@ -40,7 +43,8 @@ sources:
   statement_source_url: https://api.github.com/repos/lichess-org/chess-openings
   transformation_permission: true
   decision: allow
-  statement_sha256: e7cde46e2a109c13bb5af73eddecd2f9d18aa2be155a4226d37abb5c5cbab933
+  evidence_path: data/datasets/statements/lichess_chess_openings.txt
+  evidence_sha256: 7de8c6af7b2e38202ea529e03278886ae612b1c5c2d1884b9d34c580cfc01e05
 - id: lichess_elite_database
   url: https://database.nikonoel.fr/
   license: CC0-derived-unstated
@@ -52,7 +56,8 @@ sources:
   decision: fail_closed
   note: 'downgraded from allow_with_flag on verifier review 2026-09-18: derivative provenance insufficient;
     revisit with operator statement'
-  statement_sha256: 092c14fa4c06784a8d5d658b365aaa5cc38ab8f424a770f0c18c0a1aca20474e
+  evidence_path: data/datasets/statements/lichess_elite_database.txt
+  evidence_sha256: 913b6cdfd6007f95236b44715671757f1822fa310cdd211a1b7f1be211008d7e
 - id: twic
   url: https://theweekinchess.com/twic
   license: proprietary (Mark Crowther); no redistribution grant located
@@ -63,7 +68,8 @@ sources:
   decision: fail_closed
   note: 'permitted use: local processing of the user''s own downloads only; never redistribution or a
     curated feed'
-  statement_sha256: 1c56e8f5d1188293acd3583756162bfc0abd33a617bf84d5a8890947f4aeaba4
+  evidence_path: data/datasets/statements/twic.txt
+  evidence_sha256: 3217393a38295ef20071c707b5384821638bd48dec42d6cbac569dcc138a378b
 - id: lichess_broadcasts
   url: https://lichess.org/broadcast
   license: unknown
@@ -72,7 +78,8 @@ sources:
   statement_source_url: https://lichess.org/broadcast
   transformation_permission: false
   decision: fail_closed
-  statement_sha256: 879a2e7eda361ef8fb8a1e8d5106f8dfff3b6d83ad5123690b3cca1ed83bd986
+  evidence_path: data/datasets/statements/lichess_broadcasts.txt
+  evidence_sha256: 6a3cad0874f7dd0ebf2291129ac5bf896dfc78a6bd6437dc4b8b71fd77963a34
 - id: lichess_public_studies
   url: https://lichess.org/study
   license: unknown (user-created content; no CC0 grant located)
@@ -81,7 +88,8 @@ sources:
   statement_source_url: https://lichess.org/study
   transformation_permission: false
   decision: fail_closed
-  statement_sha256: e40e6d230ced81c62609f85b9060d86994f8f29d97b092fd2fed9bbc0772b7cb
+  evidence_path: data/datasets/statements/lichess_public_studies.txt
+  evidence_sha256: 1f23a6fbba4a7897def12d28449704d9fa9bb31e0449326cd0788d100d43b3dc
 - id: morphy_cbh_fixtures
   url: https://github.com/Yarin78/morphy
   license: none declared (all rights reserved)
@@ -90,7 +98,8 @@ sources:
   transformation_permission: false
   decision: fail_closed
   note: source readable as format documentation; code and fixtures unusable without author grant
-  statement_sha256: f565c895978fe1214a71b7a3f800f47056b0cf88fecd7861e46932788c5c00bf
+  evidence_path: data/datasets/statements/morphy_cbh_fixtures.txt
+  evidence_sha256: 7e436438992a39c8023e55bdd06f833a0dd89c76931099ee3606f157e164122e
 - id: cbh2pgn
   url: https://github.com/asdfjkl/cbh2pgn
   license: MIT
@@ -99,7 +108,8 @@ sources:
   transformation_permission: true
   decision: allow
   note: reference implementation for S1 read-only CBH import
-  statement_sha256: 3a648df8c325003ae67b95e95ffa7bdaafeea3b3cd9eaa25acf0e35ce353f23e
+  evidence_path: data/datasets/statements/cbh2pgn.txt
+  evidence_sha256: d9d14c309da8a82baf14bd2bc4c11c7316f0ad44fb444c560a3c476c0598442b
 - id: user_own_cbh_files
   url: null
   license: user-purchased ChessBase databases, imported locally at the user's request
@@ -108,4 +118,5 @@ sources:
   statement_source_url: docs/research/cbh-import-feasibility.md
   transformation_permission: true
   decision: allow
-  statement_sha256: 6bbe9400a7ee86b2f4234594da20db48d8de3c72d52276b9240304e1ef4414a3
+  evidence_path: data/datasets/statements/user_own_cbh_files.txt
+  evidence_sha256: d54656fdd6b8e6bac92be337ff7c28e91cf436bce3293ed50d20a7d899497628
