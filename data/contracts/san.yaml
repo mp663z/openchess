@@ -62,6 +62,7 @@ contract:
     minimal: true
     never_for_pawns: file-prefix-is-always-present-on-pawn-capture
     never_for_king_moves_ambiguity: disambiguation-applies-to-king-too
+    noncanonical_disambiguation: rejected-as-malformed_san
     rule: >-
       Disambiguation appears exactly when two or more legal moves of
       the same piece type reach the same destination square, and is
@@ -81,6 +82,9 @@ contract:
   castling_link:
     ownership: castling-contract-owns-rights-and-legality
     denotation: king-two-squares-toward-rook-with-rook-hop
+    state_rights_field: castling_rights
+    rights_irrevocable: per-castling-contract-never-infer-from-occupancy
+    application: atomic-king-move-plus-rook-hop
     link: data/contracts/castling.yaml
     rule: >-
       O-O and O-O-O denote the castling move of the side to move.

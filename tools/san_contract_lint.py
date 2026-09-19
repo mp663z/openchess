@@ -95,9 +95,11 @@ ALLOWED_GRAMMAR = {"pawn_quiet", "pawn_capture", "piece_quiet",
                    "suffix_position", "rule"}
 ALLOWED_DISAMBIG = {"applies_when", "preference_order", "minimal",
                     "never_for_pawns", "never_for_king_moves_ambiguity",
-                    "rule"}
+                    "noncanonical_disambiguation", "rule"}
 ALLOWED_SUFFIX = {"values", "semantics", "rule"}
-ALLOWED_CASTLING_LINK = {"ownership", "denotation", "link", "rule"}
+ALLOWED_CASTLING_LINK = {"ownership", "denotation",
+                         "state_rights_field", "rights_irrevocable",
+                         "application", "link", "rule"}
 ALLOWED_RESOLUTION = {"malformed_san", "ambiguous_san",
                       "no_legal_match", "rule"}
 ALLOWED_ERRORS = {"closed_enum", "shape"}
@@ -174,6 +176,13 @@ def _check_links(root: Path) -> None:
     rights = _mapping(castling.get("rights"), "castling.rights")
     _exact(rights.get("values"), ["K", "Q", "k", "q"],
            "castling rights values")
+    _exact(_mapping(rights.get("home_squares"),
+                    "castling rights home_squares"),
+           {"K": {"king": "e1", "rook": "h1"},
+            "Q": {"king": "e1", "rook": "a1"},
+            "k": {"king": "e8", "rook": "h8"},
+            "q": {"king": "e8", "rook": "a8"}},
+           "castling home_squares")
 
 
 def lint(doc: dict, root: Path | None = None) -> None:
@@ -256,6 +265,9 @@ def lint(doc: dict, root: Path | None = None) -> None:
     _exact(disamb.get("never_for_king_moves_ambiguity"),
            "disambiguation-applies-to-king-too",
            "disambiguation.never_for_king_moves_ambiguity")
+    _exact(disamb.get("noncanonical_disambiguation"),
+           "rejected-as-malformed_san",
+           "disambiguation.noncanonical_disambiguation")
     _text(disamb.get("rule"), "disambiguation.rule")
 
     suffix = _mapping(contract.get("suffix"), "contract.suffix")
@@ -275,6 +287,13 @@ def lint(doc: dict, root: Path | None = None) -> None:
     _exact(clink.get("denotation"),
            "king-two-squares-toward-rook-with-rook-hop",
            "castling_link.denotation")
+    _exact(clink.get("state_rights_field"), "castling_rights",
+           "castling_link.state_rights_field")
+    _exact(clink.get("rights_irrevocable"),
+           "per-castling-contract-never-infer-from-occupancy",
+           "castling_link.rights_irrevocable")
+    _exact(clink.get("application"),
+           "atomic-king-move-plus-rook-hop", "castling_link.application")
     _exact(clink.get("link"), LINKS["castling_contract"],
            "castling_link.link")
     _text(clink.get("rule"), "castling_link.rule")
