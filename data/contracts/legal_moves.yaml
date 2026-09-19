@@ -207,16 +207,24 @@ contract:
   versioning:
     base_path: /legal-moves/v1
     client_pin: MAJOR
-    minor_policy: additive-only
-    minor_additions: [new-optional-fields]
-    minor_additions_rule: >-
-      MINOR additions are new optional fields only; a new REQUIRED
-      field, a widened type or a relaxed closed-key rule is a MAJOR
-      bump, never a MINOR addition.
+    minor_means: documentation-clarification-only
+    minor_additions: []
+    extensible_locations: []
+    closed_locations: [move_model.shape, move_model.square_grammar,
+      move_model.promotion_expansion, movement, attack, legality,
+      move_set_terminal_status, linkage, failure_classes,
+      failure_mapping, errors, links, versioning]
+    new_move_member: major-bump-required
     downgrade_policy: any-earlier-minor-within-major-without-migration
+    downgrade_rationale: minor-versions-share-identical-schema
     major_bump: new-base-path-required
     rule: >-
-      Clients pin MAJOR. MINOR is additive-only: new optional fields.
-      A consumer may downgrade to any earlier MINOR within the same
-      MAJOR without migration, because conformance never asserts
-      absence of extra fields. MAJOR bumps require a new base path.
+      Clients pin MAJOR. The move object is CLOSED (move_model.shape
+      closed_keys), so no schema location may gain fields within a
+      MAJOR version: minor_additions and extensible_locations are
+      empty, every structured section is a closed location, and any
+      new move member is a MAJOR bump. MINOR means documentation
+      clarification only, which is why a consumer may downgrade to
+      any earlier MINOR without migration: all MINOR versions share
+      an identical schema, so closed validation never meets a member
+      it did not expect. MAJOR bumps require a new base path.

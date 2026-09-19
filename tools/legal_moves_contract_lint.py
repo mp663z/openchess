@@ -152,9 +152,17 @@ LINKS = {"variant_contract": "data/contracts/variant.yaml",
 VERSIONING = {
     "base_path": "/legal-moves/v1",
     "client_pin": "MAJOR",
-    "minor_policy": "additive-only",
-    "minor_additions": ["new-optional-fields"],
+    "minor_means": "documentation-clarification-only",
+    "minor_additions": [],
+    "extensible_locations": [],
+    "closed_locations": ["move_model.shape", "move_model.square_grammar",
+                         "move_model.promotion_expansion", "movement",
+                         "attack", "legality", "move_set_terminal_status",
+                         "linkage", "failure_classes", "failure_mapping",
+                         "errors", "links", "versioning"],
+    "new_move_member": "major-bump-required",
     "downgrade_policy": "any-earlier-minor-within-major-without-migration",
+    "downgrade_rationale": "minor-versions-share-identical-schema",
     "major_bump": "new-base-path-required",
 }
 
@@ -167,7 +175,7 @@ ALLOWED_MOVE_MODEL = {"shape", "square_grammar", "promotion_expansion",
                       "promotion_required", "promotion_forbidden", "rule"}
 ALLOWED_MOVEMENT = {"knight", "king", "rook", "bishop", "queen", "pawn",
                     "occupancy", "rule"}
-ALLOWED_VERSIONING = set(VERSIONING) | {"minor_additions_rule", "rule"}
+ALLOWED_VERSIONING = set(VERSIONING) | {"rule"}
 
 
 def _need(cond: bool, problem: str) -> None:
@@ -338,10 +346,7 @@ def lint(doc: object, root: Path = ROOT) -> None:
 
     ver = _get(c, "versioning", "contract")
     _keys(ver, ALLOWED_VERSIONING, "contract.versioning")
-    mar = _get(ver, "minor_additions_rule", "contract.versioning")
-    _strict_eq(_no_rule(ver), {**VERSIONING, "minor_additions_rule": mar},
-               "contract.versioning.fields")
-    _text(mar, "contract.versioning.minor_additions_rule")
+    _strict_eq(_no_rule(ver), VERSIONING, "contract.versioning.fields")
     _text(_get(ver, "rule", "contract.versioning"), "contract.versioning.rule")
 
 

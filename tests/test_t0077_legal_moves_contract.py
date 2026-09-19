@@ -291,14 +291,38 @@ def test_error_enum_and_shape_exact():
 
 
 def test_versioning_exact():
+    """Versioning is reconciled with the CLOSED move object: MINOR carries
+    zero schema additions, every structured section is a closed location,
+    and any new move member is a MAJOR bump. The false 'conformance never
+    rejects extras' rationale is gone; every claim is structured and
+    exactly compared."""
     _bad(lambda d: d["versioning"].__setitem__("base_path", "/legal-moves/v2"))
     _bad(lambda d: d["versioning"].__setitem__("client_pin", "MINOR"))
-    _bad(lambda d: d["versioning"].__setitem__("minor_policy", "anything-goes"))
-    _bad(lambda d: d["versioning"].__setitem__("minor_additions", ["breaking-changes"]))
+    _bad(lambda d: d["versioning"].__setitem__(
+        "minor_means", "additive-optional-fields"))  # contradiction
+    _bad(lambda d: d["versioning"].__setitem__("minor_means", ""))
+    # allowing move fields in MINOR must fail (verifier mutation)
+    _bad(lambda d: d["versioning"].__setitem__("minor_additions", ["new-optional-fields"]))
+    _bad(lambda d: d["versioning"].__setitem__("minor_additions", ["move_model.shape.promotion"]))
+    _bad(lambda d: d["versioning"].__setitem__("extensible_locations", ["move_model.shape"]))
+    _bad(lambda d: d["versioning"].__setitem__("extensible_locations", ["movement.pawn"]))
+    # closed_locations must cover the whole structured surface
+    _bad(lambda d: d["versioning"].__setitem__(
+        "closed_locations", [loc for loc in d["versioning"]["closed_locations"]
+                             if loc != "move_model.shape"]))
+    _bad(lambda d: d["versioning"].__setitem__(
+        "closed_locations", list(reversed(d["versioning"]["closed_locations"]))))
+    _bad(lambda d: d["versioning"].__setitem__("closed_locations", []))
+    _bad(lambda d: d["versioning"].__setitem__("new_move_member", "minor-allowed"))
     _bad(lambda d: d["versioning"].__setitem__("downgrade_policy", "never"))
+    # contradictory compatibility claim (the verifier's false rationale)
+    _bad(lambda d: d["versioning"].__setitem__(
+        "downgrade_rationale", "conformance-never-asserts-absence-of-extra-fields"))
+    _bad(lambda d: d["versioning"].__setitem__("downgrade_rationale", "required-fields-are-minor"))
     _bad(lambda d: d["versioning"].__setitem__("major_bump", "silent"))
-    _bad(lambda d: d["versioning"].__delitem__("minor_additions_rule"))
-    _bad(lambda d: d["versioning"].__setitem__("minor_additions_rule", ""))
+    for key in ("minor_means", "minor_additions", "extensible_locations",
+                "closed_locations", "new_move_member", "downgrade_rationale"):
+        _bad(lambda d, k=key: d["versioning"].__delitem__(k))
 
 
 def test_documentation_fields_nonempty():
