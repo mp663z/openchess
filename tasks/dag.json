@@ -1368,10 +1368,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "cc6548544c12cac1e97c7124a884041eb9d3f051",
+   "evidence_manifest": "evidence/T0062.md"
   },
   {
    "id": "T0063",
