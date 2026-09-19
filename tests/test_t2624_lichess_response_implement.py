@@ -112,6 +112,31 @@ def test_validate_game_adjacent_wrong(mutation):
         r.validate_game(g)
 
 
+INT64_MIN, INT64_MAX = -(2 ** 63), 2 ** 63 - 1
+
+
+@pytest.mark.parametrize("field_name", ["createdAt", "lastMoveAt"])
+@pytest.mark.parametrize("value,ok", [
+    (INT64_MIN, True), (INT64_MAX, True),          # exact bounds accepted
+    (INT64_MIN - 1, False), (INT64_MAX + 1, False),  # one past rejected
+    (True, False), ("1758000000000", False), (1.5, False),
+])
+def test_int64_bounds(field_name, value, ok):
+    g = _game(**{field_name: value})
+    if ok:
+        assert r.validate_game(g)["id"] == "abc123XY"
+    else:
+        with pytest.raises(r.ContractViolation):
+            r.validate_game(g)
+
+
+def test_ordinary_integer_unbounded():
+    """Plain contract integers (daysPerTurn, clock members) stay
+    intentionally unbounded - only integer-int64 is bounded."""
+    g = _game(daysPerTurn=2 ** 70)
+    assert r.validate_game(g)["daysPerTurn"] == 2 ** 70
+
+
 def test_parse_stream_fail_closed_per_record():
     lines = [
         json.dumps(_game(id="g1")),

@@ -145,8 +145,11 @@ def _type_ok(value: Any, declared: str) -> bool:
         return type(value) is str
     if declared == "boolean":
         return type(value) is bool
-    if declared in ("integer", "integer-int64"):
+    if declared == "integer":
         return type(value) is int and type(value) is not bool
+    if declared == "integer-int64":
+        return (type(value) is int and type(value) is not bool
+                and -(2 ** 63) <= value <= 2 ** 63 - 1)
     if declared == "object" or declared == "object-white-black":
         return type(value) is dict
     if declared == "array":
