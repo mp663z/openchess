@@ -8,16 +8,66 @@ authority:
 options_compared: [A-desktop-authority, B-server-authority-lww, C-p2p-crdt]
 decision: A-desktop-authority
 axes: [offline-desktop, offline-web-state, reconnect-conflicts, failure-modes]
+links:
+  adr0004: docs/adr/ADR-0004-asymmetric-architecture.md
+  adr0005: docs/adr/ADR-0005-platform-ownership.md
 offline_states: [ONLINE, OFFLINE-CACHED, OFFLINE-QUEUED]
+events: [connectivity-lost, connectivity-restored, sync-confirmed, write-attempted, approval-attempted, queue-persistence-unavailable]
 state_semantics:
   ONLINE: {writes: enabled, source: live-sync}
-  OFFLINE-CACHED: {writes: disabled, refusal: named-state, reads: [review-queue, training, plans]}
-  OFFLINE-QUEUED: {writes: intent-entries, visibility: pending-until-sync}
+  OFFLINE-CACHED: {writes: disabled, refusal: named-state, reads: cached}
+  OFFLINE-QUEUED: {writes: intent-entries, visibility: pending-until-sync, reads: cached}
+capabilities:
+  ONLINE:
+    readable: [queue, diff, approval, quiet-week, drills]
+    writable: [approval, drills]
+    queueable: []
+  OFFLINE-CACHED:
+    readable: [queue, diff, approval, quiet-week, drills]
+    writable: []
+    queueable: []
+  OFFLINE-QUEUED:
+    readable: [queue, diff, approval, quiet-week, drills]
+    writable: []
+    queueable: [approval]
+transitions:
+  ONLINE:
+    connectivity-lost: {to: OFFLINE-CACHED, action: freeze-cache}
+    connectivity-restored: {to: ONLINE, action: no-op}
+    sync-confirmed: {to: ONLINE, action: no-op}
+    write-attempted: {to: ONLINE, action: apply}
+    approval-attempted: {to: ONLINE, action: apply}
+    queue-persistence-unavailable: {to: ONLINE, action: no-op}
+  OFFLINE-CACHED:
+    connectivity-lost: {to: OFFLINE-CACHED, action: no-op}
+    connectivity-restored: {to: ONLINE, action: resume-live-sync}
+    sync-confirmed: {to: OFFLINE-CACHED, action: no-op}
+    write-attempted: {to: OFFLINE-CACHED, action: refuse-named-state}
+    approval-attempted: {guard: queue-persistence-available, then: {to: OFFLINE-QUEUED, action: record-intent}, else: {to: OFFLINE-CACHED, action: refuse-named-state}}
+    queue-persistence-unavailable: {to: OFFLINE-CACHED, action: no-op}
+  OFFLINE-QUEUED:
+    connectivity-lost: {to: OFFLINE-QUEUED, action: no-op}
+    connectivity-restored: {to: OFFLINE-QUEUED, action: begin-sync}
+    sync-confirmed: {guard: all-intents-applied-and-conflicts-surfaced, then: {to: ONLINE, action: resume-live-sync}, else: {to: OFFLINE-QUEUED, action: remain-pending}}
+    write-attempted: {to: OFFLINE-QUEUED, action: refuse-named-state}
+    approval-attempted: {guard: queue-persistence-available, then: {to: OFFLINE-QUEUED, action: record-intent}, else: {to: OFFLINE-QUEUED, action: refuse-named-state}}
+    queue-persistence-unavailable: {to: OFFLINE-QUEUED, action: refuse-new-intents}
 write_log:
   type: append-only
   addressing: content-addressed
-  merge: by-log-order
-  same_revision_collision: named-conflict-in-review-queue
+  entry:
+    id: content-hash-of-entry-payload
+    writer: writer-device-id
+    writer_sequence: per-writer-monotonic-integer
+    base_revision: content-hash-of-writers-last-synced-entry-or-genesis
+    payload: the-write
+  merge:
+    ordering: topological-by-base-revision-then-writer-id-writer-sequence-lexicographic
+    ordering_never: [wall-clock, arrival-order]
+    concurrency: neither-entry-is-an-ancestor-of-the-other-via-base-revision
+    same_revision: shared-base-revision-and-same-object-touched
+    conflict_rule: named-review-queue-item-with-both-diffs-before-any-winner-materialized
+    ambiguous_concurrent_writes: unresolved-until-logged-user-resolution
   resolution: user-resolves
   silent_resolution: forbidden
 drivers: [zero-knowledge-server-cannot-arbitrate, no-silent-writes, local-runnable-auth-free]
@@ -29,7 +79,9 @@ invariants:
   - merge-outcomes-visible-logged-reversible
   - conflicts-user-resolved-never-silent
   - server-stores-ciphertext-only
+  - merge-ordering-deterministic-never-wall-clock
 ---
+
 
 # ADR-0003: Offline authority (T2795)
 
@@ -59,16 +111,30 @@ reaching a server.
   diagnosis, plan, drills, training, review) runs with no network; the
   server is only ever a relay.
 - Offline web state: explicit - the surface is exactly one of ONLINE
-  (live against sync), OFFLINE-CACHED (decrypted local cache; review
-  queue, training and plans readable; writes disabled and visibly so),
-  or OFFLINE-QUEUED (approvals recorded locally as intent entries,
-  visibly pending, applied on reconnect). No fourth state exists and no
-  state is implicit.
+  (live against sync), OFFLINE-CACHED (decrypted local cache; queue,
+  diffs, approvals, training and drills readable; writes disabled and
+  visibly so), or OFFLINE-QUEUED (approvals recorded locally as intent
+  entries, visibly pending, applied on reconnect; the cache stays
+  readable). No fourth state exists and no state is implicit. The
+  transition table in the front matter is normative: keyed by explicit
+  events, every state/event pair names a destination and action or an
+  exact named refusal. An approval attempted in OFFLINE-CACHED moves
+  the surface to OFFLINE-QUEUED when intent persistence is available,
+  and is refused with the state named when it is not.
 - Reconnect conflicts: explicit - both sides append to the same
-  content-addressed write log; a reconnect merges histories by log
-  order, and any two writes touching the same object revision surface
-  as a named conflict in the review queue (with both diffs) instead of
-  a silent resolution. The user resolves; the product never picks.
+  content-addressed write log; each entry carries a content-hash id, a
+  writer device id, a per-writer sequence and a base-revision link. A
+  reconnect merges histories in deterministic topological order by
+  base revision, ties broken by (writer id, writer sequence) - never
+  wall-clock, never arrival order. Two entries are concurrent when
+  neither is an ancestor of the other; concurrent writes touching the
+  same object revision surface as a named conflict in the review
+  queue (with both diffs) BEFORE any winner is materialized, and
+  ambiguous concurrent writes stay unresolved until a logged user
+  resolution entry. The user resolves; the product never picks.
+  OFFLINE-QUEUED holds until every intent is applied and conflicts
+  are surfaced; only then does sync-confirmed return the surface to
+  ONLINE.
 - Failure modes: a lost phone loses only its queued intents, which the
   surface shows as pending until sync confirms; a stale desktop never
   overwrites newer surface approvals because the log is append-only.
