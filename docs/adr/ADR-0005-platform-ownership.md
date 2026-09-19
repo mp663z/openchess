@@ -114,9 +114,14 @@ the user actually carries.
 ## Decision
 
 The capability matrix in this document's YAML front matter is
-normative; this prose mirrors it. The ownership table below is
-generated from that matrix; ownership statements live only there and
-in the front matter.
+normative. Ownership and security statements live only in the front
+matter and the generated policy block below. The block is produced
+mechanically from the front matter and the contract battery compares
+it byte-for-byte; explanatory prose outside the block is pinned
+byte-for-byte as approved text and carries no ownership or security
+policy of its own.
+
+<!-- BEGIN GENERATED POLICY: battery-generated; never edited by hand -->
 
 | capability | compute | presentation | authoritative_state | consumes | realizes |
 | --- | --- | --- | --- | --- | --- |
@@ -133,40 +138,35 @@ in the front matter.
 | drills | web | web | desktop | model-inference | training |
 | transfer | split | web | desktop | - | sync-encrypt, sync-decrypt; phases: sync-encrypt desktop sends ciphertext, relay server stores ciphertext-only decrypts never, sync-decrypt web decrypts local-only |
 
-### Desktop capabilities
+Policy statements:
+- Compute and presentation: desktop implements and runs pgn, index, stockfish, models, delta, export; web implements and runs queue, diff, approval, quiet-week, drills.
+- Transfer is split by phase: sync-encrypt is implemented on desktop and sends ciphertext; the relay (server) stores ciphertext-only and decrypts never; sync-decrypt is implemented on web and decrypts local-only.
+- Authoritative state owner is desktop for every capability.
+- Web capabilities consume desktop-produced artifacts: queue consumes delta, index; diff consumes delta; approval consumes delta; quiet-week consumes model-inference, delta; drills consumes model-inference.
+- diff is a sub-capability of queue; quiet-week is a sub-capability of training.
+- The relay stores only ciphertext and never decrypts; no capability is owned, implemented or executed by the server.
+- Hosted BYOM is an optional invocation exception, never capability ownership and never a default.
+<!-- END GENERATED POLICY -->
 
-- **pgn** - PGN import, parse and storage (realizes ADR-0004 import).
-- **index** - the local game/position index (realizes index).
-- **stockfish** - engine analysis (realizes stockfish).
-- **models** - local model weights and inference (realizes
-  model-inference). Hosted BYOM is an optional invocation exception
-  under ADR-0004's declared policy - never capability ownership and
-  never a default.
-- **delta** - the delta engine (realizes delta).
-- **export** - Anki/Chessable export generation (realizes export).
+### Capability notes
 
-### Web capabilities
+Desktop capabilities:
 
-- **queue** - the review queue (realizes queue; runs offline-capable
-  in the PWA over artifacts produced by delta and index).
-- **diff** - the review diff presentation (sub-capability of queue;
-  consumes delta output).
-- **approval** - the approval gate (realizes approval; consumes delta
-  output).
-- **quiet-week** - the quiet-week screen (sub-capability of training;
-  consumes model-inference and delta output).
-- **drills** - training drills (realizes training; consumes
-  model-inference output).
-- **transfer** - movement between surfaces over the encrypted relay,
-  split by phase: sync-encrypt implemented on desktop, a relay that
-  stores ciphertext only and never decrypts, sync-decrypt local-only
-  on web (realizes sync-encrypt and sync-decrypt).
+- **pgn** - PGN import, parse and storage.
+- **index** - the local game/position index.
+- **stockfish** - engine analysis.
+- **models** - local model weights and inference.
+- **delta** - the delta engine.
+- **export** - Anki/Chessable export generation.
 
-### Relay handling
+Web capabilities:
 
-The relay stores ciphertext blobs and account entitlements (ADR-0004
-data flow) and never decrypts anything. No capability is implemented
-or executed by the server.
+- **queue** - the review queue.
+- **diff** - the review diff presentation.
+- **approval** - the approval gate.
+- **quiet-week** - the quiet-week screen.
+- **drills** - training drills.
+- **transfer** - movement between surfaces over the encrypted relay.
 
 ## Alternatives considered
 
@@ -183,19 +183,7 @@ or executed by the server.
 
 ## Consequences
 
-- Every capability has exactly one presentation owner; nothing is
-  co-presented.
-- Compute and presentation ownership match ADR-0004 operation
-  ownership exactly: desktop implements and runs import, index,
-  stockfish, model-inference, delta and export; the web/PWA
-  implements and runs queue, approval and training, offline-capable
-  over its synced decrypted cache; transfer is split by phase.
-- Web capabilities consume desktop-produced artifacts (named in
-  consumes) and never re-own that production.
-- Authoritative state is desktop for every capability.
-- The relay stores only ciphertext and never decrypts; no capability
-  is owned, implemented or executed by the server.
-- Hosted BYOM is an optional invocation exception, never capability
-  ownership and never a default.
-- New capabilities must join this matrix with a crosswalk in a future
-  ADR revision before implementation tasks may claim them.
+The normative consequences of this decision are exactly the policy
+statements in the generated block above. Operationally: new
+capabilities must join this matrix with a crosswalk in a future ADR
+revision before implementation tasks may claim them.
