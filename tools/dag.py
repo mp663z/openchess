@@ -69,35 +69,75 @@ def index(board: dict) -> dict[str, dict]:
 
 
 def verify(board: dict) -> list[str]:
-    """Structural integrity checks. Returns a list of problems (empty = ok)."""
+    """Structural integrity checks. Returns a list of problems (empty = ok).
+
+    Fail CLOSED, never crash: malformed shapes (null/non-list dependencies,
+    null/empty/nonstring ids or fields) are reported as problems.
+    """
     problems: list[str] = []
-    tasks = board["tasks"]
-    by_id = index(board)
+    tasks = board.get("tasks")
+    if not isinstance(tasks, list):
+        return ["board: tasks must be a list"]
     for t in tasks:
+        if not isinstance(t, dict):
+            problems.append(f"task entry is not a mapping: {t!r}")
+            continue
+        tid = t.get("id")
+        if not isinstance(tid, str) or not tid.strip():
+            problems.append(f"task id must be a non-empty string, got {tid!r}")
+    ids = [t.get("id") for t in tasks if isinstance(t, dict)]
+    seen: set[str] = set()
+    for i in ids:
+        if isinstance(i, str):
+            if i in seen:
+                problems.append(f"duplicate task id {i}")
+            seen.add(i)
+    known = set(seen)
+    for t in tasks:
+        if not isinstance(t, dict):
+            continue
+        tid = t.get("id", "?")
         missing = REQUIRED_FIELDS - set(t)
         if missing:
-            problems.append(f"{t.get('id', '?')}: missing fields {sorted(missing)}")
+            problems.append(f"{tid}: missing fields {sorted(missing)}")
         for field in ("title", "acceptance", "verification"):
-            if field in t and not str(t[field]).strip():
-                problems.append(f"{t['id']}: empty {field}")
+            if field in t:
+                v = t[field]
+                if not isinstance(v, str):
+                    problems.append(f"{tid}: {field} must be a string, got {type(v).__name__}")
+                elif not v.strip():
+                    problems.append(f"{tid}: empty {field}")
         if t.get("status") not in VALID_STATUS:
-            problems.append(f"{t['id']}: invalid status {t.get('status')!r}")
-        for dep in t.get("dependencies", []):
-            if dep not in by_id:
-                problems.append(f"{t['id']}: unknown dependency {dep}")
+            problems.append(f"{tid}: invalid status {t.get('status')!r}")
+        deps = t.get("dependencies", [])
+        if not isinstance(deps, list):
+            problems.append(f"{tid}: dependencies must be a list, got {type(deps).__name__}")
+        else:
+            for dep in deps:
+                if not isinstance(dep, str):
+                    problems.append(f"{tid}: dependency must be a string, got {dep!r}")
+                elif dep not in known:
+                    problems.append(f"{tid}: unknown dependency {dep}")
         if t.get("status") == "done":
             sha = t.get("done_sha") or ""
-            if not SHA_RE.fullmatch(sha):
-                problems.append(f"{t['id']}: done_sha is not a full 40-hex SHA")
-            want = f"evidence/{t['id']}.md"
+            if not SHA_RE.fullmatch(str(sha)):
+                problems.append(f"{tid}: done_sha is not a full 40-hex SHA")
+            want = f"evidence/{tid}.md"
             if t.get("evidence_manifest") != want:
                 problems.append(
-                    f"{t['id']}: evidence_manifest must be exactly {want}"
+                    f"{tid}: evidence_manifest must be exactly {want}"
                 )
-    # cycle detection (Kahn)
-    indeg = {t["id"]: 0 for t in tasks}
-    for t in tasks:
-        for dep in t.get("dependencies", []):
+    # cycle detection (Kahn) over well-formed entries only
+    clean = [
+        t for t in tasks
+        if isinstance(t, dict)
+        and isinstance(t.get("id"), str) and t["id"].strip()
+        and isinstance(t.get("dependencies", []), list)
+        and all(isinstance(d, str) for d in t.get("dependencies", []))
+    ]
+    indeg = {t["id"]: 0 for t in clean}
+    for t in clean:
+        for dep in t["dependencies"]:
             if dep in indeg:
                 indeg[t["id"]] += 1
     queue = [i for i, d in indeg.items() if d == 0]
@@ -105,12 +145,12 @@ def verify(board: dict) -> list[str]:
     while queue:
         node = queue.pop()
         seen += 1
-        for t in tasks:
-            if node in t.get("dependencies", []):
+        for t in clean:
+            if node in t["dependencies"]:
                 indeg[t["id"]] -= 1
                 if indeg[t["id"]] == 0:
                     queue.append(t["id"])
-    if seen != len(tasks):
+    if seen != len(clean):
         problems.append("dependency cycle detected")
     return problems
 

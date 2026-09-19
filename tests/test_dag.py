@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.dag import DagError, claimable, cmd_complete, load, save_atomic, verify
+from tools.dag import DagError, claimable, cmd_complete, index, load, save_atomic, verify
 
 REAL_BOARD_PATH = Path(__file__).resolve().parent.parent / "tasks" / "dag.json"
 
@@ -111,8 +111,50 @@ def test_real_board_is_valid():
 def test_duplicate_ids_rejected(tmp_path):
     board = json.loads((REAL_BOARD_PATH).read_text())
     board["tasks"].append(dict(board["tasks"][0]))
+    problems = verify(board)
+    assert any("duplicate task id" in p for p in problems)
+    # claimable/index still raise fail-closed on duplicates
     with pytest.raises(DagError, match="duplicate task ids"):
-        verify(board)
+        index(board)
+
+
+def _minimal_task(**over):
+    t = {
+        "id": "T1", "title": "t", "acceptance": "a", "verification": "v",
+        "status": "todo", "dependencies": [], "milestone": "m", "phase": "p",
+        "roadmap_layer": "r", "spine_outcome": "s", "track": "x", "week": 1,
+    }
+    t.update(over)
+    return t
+
+
+def test_null_dependencies_reported_not_crash():
+    problems = verify({"tasks": [_minimal_task(dependencies=None)]})
+    assert any("dependencies must be a list" in p for p in problems)
+
+
+def test_nonstring_dependency_rejected():
+    problems = verify({"tasks": [_minimal_task(dependencies=[123])]})
+    assert any("dependency must be a string" in p for p in problems)
+
+
+def test_null_id_rejected():
+    problems = verify({"tasks": [_minimal_task(id=None)]})
+    assert any("non-empty string" in p for p in problems)
+
+
+def test_empty_id_rejected():
+    problems = verify({"tasks": [_minimal_task(id="")]})
+    assert any("non-empty string" in p for p in problems)
+
+
+def test_nonstring_title_rejected():
+    problems = verify({"tasks": [_minimal_task(title=123)]})
+    assert any("title must be a string" in p for p in problems)
+
+
+def test_tasks_not_a_list_rejected():
+    assert verify({"tasks": None}) == ["board: tasks must be a list"]
 
 
 def test_empty_acceptance_rejected(tmp_path):
