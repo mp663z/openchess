@@ -328,6 +328,19 @@ MUTATIONS_V6 = {
 
 MUTATIONS.update(MUTATIONS_V6)
 
+MUTATIONS_V7 = {
+    # verifier probes on 6691a2a - nested error-shape levels
+    "mixed_key_errors_shape": lambda d: d["contract"]["errors"]["shape"].__setitem__(5, "x"),
+    "mixed_key_errors_shape_error": lambda d: d["contract"]["errors"]["shape"]["error"].__setitem__(
+        5, "x"
+    ),
+    "mixed_key_errors_shape_fields": lambda d: d["contract"]["errors"]["shape"]["error"][
+        "fields"
+    ].__setitem__(5, "x"),
+}
+
+MUTATIONS.update(MUTATIONS_V7)
+
 
 def _doc_with_start(fen, castling="orthodox"):
     doc = copy.deepcopy(DOC)
@@ -402,7 +415,9 @@ def test_cli_malformed_matrix(tmp_path, capsys, fen):
     assert "Traceback" not in out.err
 
 
-@pytest.mark.parametrize("level", ["top", "contract", "entry"])
+@pytest.mark.parametrize(
+    "level", ["top", "contract", "entry", "shape", "shape_error", "shape_fields"]
+)
 def test_cli_mixed_type_keys(tmp_path, capsys, level):
     from tools.variant_contract_lint import main
 
@@ -411,13 +426,21 @@ def test_cli_mixed_type_keys(tmp_path, capsys, level):
         doc[5] = "x"
     elif level == "contract":
         doc["contract"][5] = "x"
-    else:
+    elif level == "entry":
         doc["contract"]["variants"]["entries"][0][5] = "x"
+    elif level == "shape":
+        doc["contract"]["errors"]["shape"][5] = "x"
+    elif level == "shape_error":
+        doc["contract"]["errors"]["shape"]["error"][5] = "x"
+    else:
+        doc["contract"]["errors"]["shape"]["error"]["fields"][5] = "x"
     path = tmp_path / "contract.yaml"
     path.write_text(yaml.safe_dump(doc))
     assert main(["prog", str(path)]) == 1
     out = capsys.readouterr()
     assert out.out.startswith("FAIL variant contract lint:")
+    assert "non-string key" in out.out  # classified, never "internal error"
+    assert "internal error" not in out.out
     assert "Traceback" not in out.err
 
 

@@ -314,10 +314,7 @@ def _check_fen(fen: object, where: str, castling_kind: str) -> None:
 
 def _check_shape(node: object, expected: dict, where: str) -> None:
     node = _mapping(node, where)
-    _need(
-        set(node) == set(expected),
-        f"{where}: exact keys {sorted(expected)} required, got {sorted(node)}",
-    )
+    _keys(node, set(expected), where)  # same non-string/exact-key gate
     for key, sub in expected.items():
         if isinstance(sub, dict) and sub and all(isinstance(v, dict) for v in sub.values()):
             _check_shape(node[key], sub, f"{where}.{key}")
