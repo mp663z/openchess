@@ -104,15 +104,25 @@ def run_benchmarks(bench_dir: Path) -> list[str]:
                 t0 = time.perf_counter()
                 results.append(mod.run())
                 samples.append((time.perf_counter() - t0) * 1000.0)
+            if verify is not None:
+                # Verification lives INSIDE the crash boundary: a crashing
+                # verifier is a crash failure, never an escaping exception.
+                wrong = []
+                for r in results:
+                    v = verify(r)
+                    if v is None:
+                        continue
+                    if not (isinstance(v, str) and v.strip()):
+                        wrong.append(
+                            "verify must return None or a nonempty string")
+                    else:
+                        wrong.append(v)
         except Exception as e:  # a crash is a failure, never a skip
             failures.append(f"{key}: crash ({type(e).__name__}: {e})")
             continue
-        if verify is not None:
-            wrong = [verify(r) for r in results]
-            wrong = [w for w in wrong if w is not None]
-            if wrong:
-                failures.append(f"{key}: wrong result ({wrong[0]})")
-                continue
+        if verify is not None and wrong:
+            failures.append(f"{key}: wrong result ({wrong[0]})")
+            continue
         median = sorted(samples)[len(samples) // 2]
         if median > threshold:
             failures.append(f"{key}: slow ({median:.0f}ms > {threshold:.0f}ms)")

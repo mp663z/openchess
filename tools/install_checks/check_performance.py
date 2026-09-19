@@ -26,6 +26,8 @@ EXPECTED = {
     "stateful": "wrong result",
     "nan": "malformed",
     "dup": "duplicate",
+    "verify-crash": "crash",
+    "verify-badreturn": "wrong result",
 }
 
 
