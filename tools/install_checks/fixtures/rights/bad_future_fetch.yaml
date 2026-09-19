@@ -1,0 +1,11 @@
+schema_version: 2
+sources:
+- id: somesource
+  url: https://example.com/data
+  license: CC0-1.0
+  transformation_permission: true
+  decision: allow
+  statement: You may download, modify and redistribute this data.
+  statement_source_url: https://example.com/terms
+  evidence_path: evidence/future.txt
+  evidence_sha256: 7d64d68390b7c880008c71b7af113d69630b1403391be8a4354fb87b490e1d5b

@@ -35,39 +35,75 @@ REQUIRED_SUBJECTS = {
 }
 
 
+def _release_jobs(wf: dict) -> list[tuple[str, dict]]:
+    """Jobs containing an EXECUTABLE gh release create step (a run line that
+    starts with the command token - echo/comment mentions do not count)."""
+    out = []
+    for name, job in (wf.get("jobs") or {}).items():
+        for s in job.get("steps") or []:
+            lines = str(s.get("run", "")).splitlines()
+            if any(line.strip().startswith("gh release create") for line in lines):
+                out.append((name, job))
+                break
+    return out
+
+
 def _workflow_problems(wf: dict) -> list[str]:
     problems: list[str] = []
-    perms = wf.get("permissions") or {}
-    for perm in ("id-token", "attestations"):
-        if perms.get(perm) != "write":
-            problems.append(f"release.yml: permissions.{perm} != write")
-    steps = [
-        s
-        for job in (wf.get("jobs") or {}).values()
-        for s in (job.get("steps") or [])
-    ]
-    attest = [
-        s for s in steps
-        if str(s.get("uses", "")).startswith("actions/attest")
-    ]
-    if not attest:
-        problems.append("release.yml: no actions/attest-* step (job name is not signing)")
-    else:
-        subjects = set()
-        for s in attest:
-            subjects |= set(str((s.get("with") or {}).get("subject-path", "")).split())
-        missing = REQUIRED_SUBJECTS - subjects
-        if missing:
-            problems.append(f"release.yml: attestation subjects missing {sorted(missing)}")
-    release_runs = [
-        str(s.get("run", "")) for s in steps
-        if "gh release create" in str(s.get("run", ""))
-    ]
-    if not release_runs:
-        problems.append("release.yml: no gh release create step")
-    for artifact in REQUIRED_SUBJECTS:
-        if not any(artifact in r for r in release_runs):
-            problems.append(f"release.yml: {artifact} not attached to the release")
+    jobs = _release_jobs(wf)
+    if not jobs:
+        return ["release.yml: no job with an executable gh release create step"]
+    for name, job in jobs:
+        cond = str(job.get("if", "")).strip().lower()
+        if cond in ("false", "!true", "0"):
+            problems.append(f"release.yml: release job {name} is disabled (if: {cond})")
+        # effective permissions: job overrides workflow
+        perms = job.get("permissions") or wf.get("permissions") or {}
+        for perm in ("id-token", "attestations"):
+            if perms.get(perm) != "write":
+                problems.append(
+                    f"release.yml: job {name} permissions.{perm} != write"
+                )
+        steps = job.get("steps") or []
+
+        def idx(pred, steps=steps):
+            for i, s in enumerate(steps):
+                if pred(s):
+                    return i
+            return None
+
+        gen = idx(lambda s: "component_inventory" in str(s.get("run", "")))
+        chk = idx(lambda s: "sha256sum" in str(s.get("run", ""))
+                  and "checksums.sha256" in str(s.get("run", "")))
+        att = idx(lambda s: str(s.get("uses", "")).startswith("actions/attest"))
+        rel = idx(lambda s, steps=steps: any(
+            line.strip().startswith("gh release create")
+            for line in str(s.get("run", "")).splitlines()))
+        for label, i in (("SBOM generation", gen), ("checksums", chk),
+                         ("attestation", att), ("release", rel)):
+            if i is None:
+                problems.append(f"release.yml: job {name} lacks a {label} step")
+        if None not in (gen, chk, att, rel) and not (gen < chk < att < rel):
+            problems.append(
+                f"release.yml: job {name} step order must be "
+                "generate -> checksums -> attestation -> release"
+            )
+        if att is not None:
+            subjects = set(
+                str((steps[att].get("with") or {}).get("subject-path", "")).split()
+            )
+            missing = REQUIRED_SUBJECTS - subjects
+            if missing:
+                problems.append(
+                    f"release.yml: attestation subjects missing {sorted(missing)}"
+                )
+        if rel is not None:
+            run_text = str(steps[rel].get("run", ""))
+            for artifact in REQUIRED_SUBJECTS:
+                if artifact not in run_text:
+                    problems.append(
+                        f"release.yml: {artifact} not attached to the release"
+                    )
     return problems
 
 
@@ -132,11 +168,40 @@ def run(mode: str) -> None:
                     s["run"] = 'gh release create "$GITHUB_REF_NAME" --generate-notes'
         return w
 
+    def _disable_job(w):
+        for job in w["jobs"].values():
+            job["if"] = "false"
+        return w
+
+    def _echo_release(w):
+        for job in w["jobs"].values():
+            for s in job["steps"]:
+                if "gh release create" in str(s.get("run", "")):
+                    s["run"] = (
+                        'echo "gh release create $GITHUB_REF_NAME'
+                        " --generate-notes docs/component-inventory.json"
+                        ' data/release-lock.json checksums.sha256"'
+                    )
+        return w
+
+    def _split_attest(w):
+        moved = []
+        for job in w["jobs"].values():
+            moved += [s for s in job["steps"]
+                      if str(s.get("uses", "")).startswith("actions/attest")]
+            job["steps"] = [s for s in job["steps"]
+                            if not str(s.get("uses", "")).startswith("actions/attest")]
+        w["jobs"]["other"] = {"runs-on": "ubuntu-latest", "steps": moved}
+        return w
+
     for name, mutate in {
         "attestation step removed": _strip_attest,
         "SBOM dropped from attestation subjects": _drop_subject,
         "OIDC permissions downgraded": _downgrade_perms,
         "checksums detached from release": _detach_checksums,
+        "release job disabled (if: false)": _disable_job,
+        "release command echoed, not executed": _echo_release,
+        "attestation split into an unrelated job": _split_attest,
     }.items():
         problems = _workflow_problems(mutate(json.loads(json.dumps(wf))))
         if not problems:

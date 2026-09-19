@@ -215,12 +215,14 @@ def check_pr(event_path: str, base_ref: str) -> str:
     author = str(pr["user"]["login"]).strip().lower()
     changed_lines = int(pr.get("additions", 0)) + int(pr.get("deletions", 0))
     files = changed_files(base_ref)
+    # The base registry is validated for EVERY PR, de minimis included: a
+    # malformed registry fails closed everywhere, never silently skipped.
+    registry = load_base_registry(base_ref)
     if is_de_minimis(changed_lines, files):
         return (
             f"de minimis ({changed_lines} lines, {len(files)} files): "
             f"{author} needs no registry entry; DCO sign-off verified at review"
         )
-    registry = load_base_registry(base_ref)
     entry = registry.get(author)
     if entry is None:
         raise ClaError(

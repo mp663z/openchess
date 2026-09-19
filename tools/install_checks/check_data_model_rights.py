@@ -32,6 +32,9 @@ VIOLATIONS = {
     "bad_url_scheme.yaml": "url is not an https URL",
     "bad_self_authored.yaml": "statement not contained in evidence file",
     "bad_local_missing.yaml": "local path missing",
+    "bad_fetched_at.yaml": "fetched_at is not an ISO date",
+    "bad_future_fetch.yaml": "fetched_at in the future",
+    "bad_path_escape.yaml": "evidence_path escapes its base",
 }
 
 

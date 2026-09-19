@@ -4,6 +4,8 @@ The rules live in tools/rights_audit.py (single source of truth, wrapped by
 install check T0033); these tests pin the tool against the real manifest.
 """
 
+from pathlib import Path
+
 import yaml
 
 from tools import rights_audit
@@ -78,3 +80,45 @@ def test_verifier_attack_fabricated_grant_is_rejected():
     assert any("url is not an https URL" in p for p in problems)
     assert any("outside the policy set" in p for p in problems)
     assert any("statement_source_url is not https" in p for p in problems)
+
+
+def test_fabricated_snapshot_residual_is_human_gated():
+    """HONEST SCOPE: a self-authored grant COPIED INTO its own fabricated
+    snapshot with consistent hash/provenance passes the mechanical gate -
+    the gate proves bytes and consistency, not that a remote page ever said
+    anything. The barrier for that class is human review: snapshot files
+    live under data/, a CLA-protected prefix where every change is
+    non-de-minimis. Pin both halves so neither silently changes."""
+    import hashlib
+    import tempfile
+
+    stmt = "SELF GRANT"
+    blob = b"fetched_from: https://evil.example/a\nfetched_at: 2026-09-19\n---\nSELF GRANT\n"
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        (base / "data/datasets/statements").mkdir(parents=True)
+        ev = base / "data/datasets/statements/evil.txt"
+        ev.write_bytes(blob)
+        doc = {"sources": [{
+            "id": "evil",
+            "url": "https://evil.example/a",
+            "license": "MIT",
+            "transformation_permission": True,
+            "decision": "allow",
+            "statement": stmt,
+            "statement_source_url": "https://evil.example/a",
+            "evidence_path": "data/datasets/statements/evil.txt",
+            "evidence_sha256": hashlib.sha256(blob).hexdigest(),
+        }]}
+        # mechanical gate: consistent fabrication passes (documented residual)
+        assert rights_audit.validate_sources(doc, base) == []
+    # human gate: snapshots are under the CLA-protected data/ prefix
+    from tools import cla_check
+
+    assert not cla_check.is_de_minimis(
+        1, [("M", "data/datasets/statements/evil.txt")]
+    )
+    assert any(
+        "data/datasets/statements/evil.txt".startswith(prefix)
+        for prefix in cla_check.PROTECTED_PREFIXES
+    )

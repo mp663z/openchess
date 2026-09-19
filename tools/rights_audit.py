@@ -15,8 +15,15 @@ field presence, every claim is checked against something independent:
   source's statement lives in data/datasets/statements/<id>.txt with
   fetched_from/fetched_at provenance; evidence_sha256 recomputes over the
   snapshot file bytes and the manifest statement must appear verbatim in
-  the snapshot. A self-authored "grant" must fabricate a tracked evidence
-  file whose hash and provenance header survive review.
+  the snapshot.
+- fetched_at must be a real ISO date, not in the future; fetched_from must
+  equal statement_source_url; evidence paths must stay inside the repo
+  (no absolute paths, no .. escapes) and under data/datasets/statements/.
+SCOPE (honest): snapshots are human-reviewed captured evidence. The gate
+proves bytes, provenance shape and internal consistency; it cannot prove a
+REMOTE page ever said anything - that assurance comes from snapshot diffs
+landing under the CLA-protected data/ prefix (non-de-minimis review), and
+from re-fetch verification at acquisition time.
 - Unknown decision values, missing terms, hash drift and unknown licenses
   are violations: unproven terms exclude the source, never assume it.
 """
@@ -26,6 +33,7 @@ from __future__ import annotations
 import hashlib
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -66,6 +74,19 @@ def _sha256_bytes(b: bytes) -> str:
 
 def _is_https_url(value: str) -> bool:
     return bool(_HTTPS_RE.match(value.strip()))
+
+
+
+def _contained(base: Path, rel: str) -> bool:
+    """rel must resolve inside base - no absolute paths, no .. escapes."""
+    p = Path(rel)
+    if p.is_absolute():
+        return False
+    try:
+        (base / p).resolve().relative_to(base.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
@@ -136,6 +157,10 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
                 local = base / src_url
                 if "://" in src_url or src_url.startswith(("javascript:", "data:", "file:")):
                     problems.append(f"{sid}: statement_source_url is not https: {src_url!r}")
+                elif not _contained(base, src_url):
+                    problems.append(
+                        f"{sid}: statement_source_url escapes its base: {src_url!r}"
+                    )
                 elif not local.is_file():
                     problems.append(
                         f"{sid}: statement_source_url local path missing: {src_url}"
@@ -151,6 +176,10 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
         if statement is not None:
             if not ev_path or not ev_hash:
                 problems.append(f"{sid}: statement without evidence_path/evidence_sha256")
+            elif not _contained(base, ev_path):
+                problems.append(
+                    f"{sid}: evidence_path escapes its base (absolute/..): {ev_path!r}"
+                )
             else:
                 f = base / ev_path
                 if not f.is_file():
@@ -171,6 +200,22 @@ def validate_sources(doc: dict, base: Path = ROOT) -> list[str]:
                         problems.append(
                             f"{sid}: evidence fetched_from != statement_source_url"
                         )
+                    header_at = re.search(r"^fetched_at: (.+)$", text, re.M)
+                    if not header_at:
+                        problems.append(f"{sid}: evidence file lacks fetched_at")
+                    else:
+                        try:
+                            fetched = date.fromisoformat(header_at.group(1).strip()[:10])
+                            if fetched > date.today():
+                                problems.append(
+                                    f"{sid}: evidence fetched_at in the future: "
+                                    f"{header_at.group(1).strip()!r}"
+                                )
+                        except ValueError:
+                            problems.append(
+                                f"{sid}: evidence fetched_at is not an ISO date: "
+                                f"{header_at.group(1).strip()!r}"
+                            )
         elif ev_path or ev_hash:
             problems.append(f"{sid}: evidence fields without a statement")
     return problems
@@ -187,6 +232,14 @@ def validate(doc: dict, base: Path = ROOT) -> list[str]:
     missing = REQUIRED_SOURCES - ids
     if missing:
         problems.append(f"missing required sources: {sorted(missing)}")
+    for s in (doc.get("sources") or []):
+        if isinstance(s, dict) and s.get("statement") is not None:
+            ev = s.get("evidence_path") or ""
+            if not ev.startswith("data/datasets/statements/"):
+                problems.append(
+                    f"{s.get('id')}: evidence must live under "
+                    f"data/datasets/statements/ (got {ev!r})"
+                )
     return problems
 
 

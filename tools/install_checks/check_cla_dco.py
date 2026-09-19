@@ -127,6 +127,9 @@ VIOLATIONS = {
     "protected file under budget": dict(
         author="bob", additions=1, deletions=0, files=[("M", "LICENSE")],
         registry_raw=REG_EMPTY, api={}),
+    "de minimis with malformed base registry": dict(
+        author="bob", additions=2, deletions=1, files=[("M", "docs/faq.md")],
+        registry_raw=REG_BAD, api={}),
 }
 
 
