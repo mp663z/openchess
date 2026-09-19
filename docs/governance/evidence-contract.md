@@ -81,3 +81,17 @@ The mode is pinned, not self-authorizing:
 First grants: T2357 (Week-1 product-code gate) per owner wamid
 ...MzI5NjgyNUIzREQA (2026-09-19), hooks T2228/T2288/T2356. See
 evidence/substitutions/README.md.
+
+### Registry governance (required process)
+
+Changing `data/judgment-grants.yaml` and `GRANTS_SHA256` in one PR is
+how a NEW grant is authorized, so the registry content can never be
+self-authorizing: every new or changed grant entry must be verified
+against the trusted owner channel by the main agent BEFORE the pin is
+meaningful, and the PR evidence must record that verification (wamid,
+owner-channel timestamp, scope). A GRANTS_SHA256 change without a
+recorded trusted-channel verification is a review blocker. Process as
+actually run for the first grant (T2357): main verified
+wamid...MzI5NjgyNUIzREQA in the phone sink (owner, 2026-09-19
+12:28:45 IST) and confirmed the registry entry matched the steering
+scope; only then was the pin treated as authoritative.

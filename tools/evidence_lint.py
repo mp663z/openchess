@@ -162,11 +162,24 @@ def _check_substitution(
             errors.append(
                 f"{rel}: substitution record {record} does not carry the pinned grant wamid"
             )
+        field_values: dict[str, str] = {}
         for field in REQUIRED_RECORD_FIELDS:
             m = re.search(rf"^- {re.escape(field)}\s*(\S.*)$", body, re.M)
             if not m:
                 errors.append(
                     f"{rel}: substitution record {record} lacks a nonempty {field!r} field"
+                )
+            else:
+                field_values[field] = m.group(1)
+        hook_field = field_values.get("Re-verify hook:")
+        if hook_field is not None:
+            hm = re.match(r"^(T\d{4}(?:, T\d{4})*)\b", hook_field)
+            parsed_hooks = hm.group(1).split(", ") if hm else None
+            if parsed_hooks != grant["hooks"]:
+                errors.append(
+                    f"{rel}: substitution record {record} re-verify hook "
+                    f"field {parsed_hooks!r} != pinned grant hooks "
+                    f"{grant['hooks']!r} (exact ordered ids required)"
                 )
     for hook in hooks:
         if hook == task:
@@ -176,12 +189,19 @@ def _check_substitution(
         if hook_task is None:
             errors.append(f"{rel}: re-verify hook {hook} is not a dag task")
             continue
-        if hook_task.get("status") == "done":
+        if hook_task.get("status") != "todo":
             errors.append(
-                f"{rel}: re-verify hook {hook} is already done - the "
-                "substitution is superseded, not re-verifiable"
+                f"{rel}: re-verify hook {hook} status "
+                f"{hook_task.get('status')!r} - must stay todo (an active "
+                "or done hook means the gate is being worked or was "
+                "completed: the substitution is superseded, not "
+                "re-verifiable)"
             )
-        if f"reverify:{task}" not in (hook_task.get("tags") or []):
+        tags = hook_task.get("tags")
+        if tags is not None and (type(tags) is not list or any(type(t) is not str for t in tags)):
+            errors.append(f"{rel}: re-verify hook {hook} tags malformed (list of strings required)")
+            continue
+        if f"reverify:{task}" not in (tags or []):
             errors.append(
                 f"{rel}: re-verify hook {hook} is not linked back (missing reverify:{task} tag)"
             )
@@ -194,9 +214,66 @@ def _check_substitution(
     return errors
 
 
+GRANT_FIELDS = ("wamid", "date", "record", "hooks")
+
+
+def _parse_grants(text: str) -> tuple[dict[str, dict], list[str]]:
+    """Shape-validate the grant registry, failing closed on any
+    structural deviation. The pinned digest authorizes the bytes; this
+    schema check is what makes the bytes meaningful."""
+    try:
+        doc = yaml.safe_load(text)
+    except Exception:
+        return {}, ["data/judgment-grants.yaml: unparseable YAML"]
+    if type(doc) is not dict or set(doc) != {"grants"}:
+        return {}, [
+            "data/judgment-grants.yaml: top-level mapping with exactly one key 'grants' required"
+        ]
+    mapping = doc["grants"]
+    if type(mapping) is not dict:
+        return {}, ["data/judgment-grants.yaml: 'grants' must be a mapping"]
+    errors: list[str] = []
+    for key, value in mapping.items():
+        if type(key) is not str or not GRANT_KEY_RE.match(key):
+            errors.append(f"grant key {key!r} is not TNNNN")
+            continue
+        if type(value) is not dict:
+            errors.append(f"grant {key}: mapping required")
+            continue
+        unknown = set(value) - set(GRANT_FIELDS)
+        if unknown:
+            errors.append(f"grant {key}: unknown fields {sorted(unknown)}")
+        missing = [f for f in GRANT_FIELDS if f not in value]
+        if missing:
+            errors.append(f"grant {key}: missing fields {missing}")
+            continue
+        wamid = value.get("wamid")
+        if type(wamid) is not str or not WAMID_RE.match(wamid):
+            errors.append(f"grant {key}: wamid malformed")
+        date = value.get("date")
+        if type(date) is not str or not DATE_RE.match(date):
+            errors.append(f"grant {key}: date must be YYYY-MM-DD")
+        record = value.get("record")
+        m = GRANT_RECORD_RE.match(record) if type(record) is str else None
+        if m is None or m.group(1) != key:
+            errors.append(f"grant {key}: record must be evidence/substitutions/{key}.md")
+        hooks = value.get("hooks")
+        if (
+            type(hooks) is not list
+            or not hooks
+            or any(type(h) is not str or not GRANT_KEY_RE.match(h) for h in hooks)
+            or len(set(hooks)) != len(hooks)
+        ):
+            errors.append(f"grant {key}: hooks must be unique TNNNN ids")
+    return mapping, errors
+
+
 def load_grants(path: Path) -> tuple[dict[str, dict], list[str]]:
     """Load the pinned judgment-grant registry, failing closed on any
-    tampering (same trust model as the grandfather allowlist)."""
+    tampering (same trust model as the grandfather allowlist). The
+    digest check authorizes the bytes; the schema check then decides
+    what they mean - a re-pinned malformed registry still fails
+    closed."""
     raw = path.read_bytes()
     if hashlib.sha256(raw).hexdigest() != GRANTS_SHA256:
         return {}, [
@@ -204,34 +281,7 @@ def load_grants(path: Path) -> tuple[dict[str, dict], list[str]]:
             "in tools/evidence_lint.py - grant registry tampered; "
             "substitutions refused (fail closed)"
         ]
-    errors: list[str] = []
-    mapping = (yaml.safe_load(raw.decode()) or {}).get("grants", {})
-    for key, value in mapping.items():
-        if not GRANT_KEY_RE.match(key):
-            errors.append(f"grant key {key!r} is not TNNNN")
-            continue
-        if not isinstance(value, dict):
-            errors.append(f"grant {key}: mapping required")
-            continue
-        wamid = value.get("wamid")
-        if not isinstance(wamid, str) or not WAMID_RE.match(wamid):
-            errors.append(f"grant {key}: wamid malformed")
-        date = value.get("date")
-        if not isinstance(date, str) or not DATE_RE.match(date):
-            errors.append(f"grant {key}: date must be YYYY-MM-DD")
-        record = value.get("record")
-        m = GRANT_RECORD_RE.match(record) if isinstance(record, str) else None
-        if m is None or m.group(1) != key:
-            errors.append(f"grant {key}: record must be evidence/substitutions/{key}.md")
-        hooks = value.get("hooks")
-        if (
-            not isinstance(hooks, list)
-            or not hooks
-            or any(not isinstance(h, str) or not GRANT_KEY_RE.match(h) for h in hooks)
-            or len(set(hooks)) != len(hooks)
-        ):
-            errors.append(f"grant {key}: hooks must be unique TNNNN ids")
-    return mapping, errors
+    return _parse_grants(raw.decode())
 
 
 def lint_file(

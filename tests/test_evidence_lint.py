@@ -60,7 +60,7 @@ RECORD = f"""# Substitution: T9996 (example gate)
 - Why no human pass happened: no human available; owner delegated.
 - Owner wamid: {WAMID} (2026-09-19).
 - Provisional substitute decision: GO.
-- Re-verify hook: re-run T9996 as a human gate once evidence exists.
+- Re-verify hook: T9001, T9002 - re-run T9996 as a human gate once evidence exists.
 """
 
 GRANTS = {
@@ -468,10 +468,19 @@ def test_substitution_hook_rules(tmp_path, monkeypatch):
     text = subst_evidence(hooks="T4321")
     problems = subst_lint(tmp_path, monkeypatch, text, grants=grants)
     assert any("T4321 is not a dag task" in p for p in problems)
-    # done hook supersedes the substitution
-    tasks = {**TASKS, "T9001": {**TASKS["T9001"], "status": "done", "done_sha": SHA}}
+    # done hook supersedes the substitution; active states are not
+    # re-verifiable either - hooks must stay exactly todo
+    for status in ("done", "pending", "in_progress"):
+        tasks = {**TASKS, "T9001": {**TASKS["T9001"], "status": status, "done_sha": SHA}}
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+        assert any("must stay todo" in p for p in problems), status
+    # malformed tag typing fails closed (a string is not a list)
+    tasks = {**TASKS, "T9001": {**TASKS["T9001"], "tags": "reverify:T9996"}}
     problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
-    assert any("superseded" in p for p in problems)
+    assert any("tags malformed" in p for p in problems)
+    tasks = {**TASKS, "T9001": {**TASKS["T9001"], "tags": ["reverify:T9996", 5]}}
+    problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+    assert any("tags malformed" in p for p in problems)
     # hook without the reverify link-back tag
     tasks = {**TASKS, "T9001": {**TASKS["T9001"], "tags": []}}
     problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
@@ -505,3 +514,60 @@ def test_substitution_malformed_verdict_fails(tmp_path, monkeypatch):
     text = subst_evidence().replace("; provisional decision:", "; decision:")
     problems = subst_lint(tmp_path, monkeypatch, text)
     assert any("PASS at" in p or "human pass required" in p.lower() for p in problems)
+
+
+def test_substitution_record_hooks_must_match_grant(tmp_path, monkeypatch):
+    for bad in (
+        "Re-verify hook: T9001, T4321 - prose",
+        "Re-verify hook: T9002, T9001 - prose",
+        "Re-verify hook: see above",
+    ):
+        text = RECORD.replace(
+            "Re-verify hook: T9001, T9002 -", bad[:-6] if bad.endswith("prose") else bad
+        )
+        text = RECORD.replace(
+            "- Re-verify hook: T9001, T9002 - re-run T9996 as a human gate once evidence exists.",
+            f"- {bad}",
+        )
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=text)
+        assert any("!= pinned grant hooks" in p for p in problems), bad
+
+
+def test_grant_registry_schema_fails_closed():
+    # unparseable YAML
+    mapping, errors = el._parse_grants("grants: [unclosed")
+    assert mapping == {} and errors
+    # top-level not a mapping
+    mapping, errors = el._parse_grants("- just-a-list\n")
+    assert mapping == {} and any("top-level" in e for e in errors)
+    # unknown top-level key
+    mapping, errors = el._parse_grants("grants: {}\nextra: 1\n")
+    assert any("top-level" in e for e in errors)
+    # grants not a mapping
+    mapping, errors = el._parse_grants("grants: []\n")
+    assert mapping == {} and any("must be a mapping" in e for e in errors)
+    good = (
+        "grants:\n  T9996:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-09-19"\n'
+        '    record: "evidence/substitutions/T9996.md"\n'
+        "    hooks: [T9001, T9002]\n"
+    )
+    mapping, errors = el._parse_grants(good)
+    assert errors == [] and set(mapping) == {"T9996"}
+    # unknown grant field rejected
+    mapping, errors = el._parse_grants(
+        good + "  T9997:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-09-19"\n'
+        '    record: "evidence/substitutions/T9997.md"\n'
+        "    hooks: [T9001]\n"
+        "    sneaky: true\n"
+    )
+    assert any("unknown fields" in e for e in errors)
+    # missing grant field rejected
+    mapping, errors = el._parse_grants(f'grants:\n  T9996:\n    wamid: "{WAMID}"\n')
+    assert any("missing fields" in e for e in errors)
+    # non-string grant key rejected
+    mapping, errors = el._parse_grants("grants:\n  5:\n    wamid: x\n")
+    assert any("not TNNNN" in e for e in errors)
