@@ -207,6 +207,9 @@ def test_occupancy_exact():
     _bad(lambda d: d["movement"]["occupancy"].__setitem__("enemy_piece_square", "blocked"))
     _bad(lambda d: d["movement"]["occupancy"].__setitem__("sliding_block", "jump-over"))
     _bad(lambda d: d["movement"]["occupancy"].__delitem__("sliding_block"))
+    # opponent-king-capture prohibition (T0080 v2 finding)
+    _bad(lambda d: d["movement"]["occupancy"].__setitem__("enemy_king_square", "capture-only"))
+    _bad(lambda d: d["movement"]["occupancy"].__delitem__("enemy_king_square"))
 
 
 def test_attack_relation_exact():
@@ -230,6 +233,8 @@ def test_legality_filter_exact():
     _bad(lambda d: d["legality"].__setitem__("filter", "pseudo-legal-is-legal"))
     _bad(lambda d: d["legality"].__setitem__("in_check_rule", "any-move-legal"))
     _bad(lambda d: d["legality"].__delitem__("filter"))
+    _bad(lambda d: d["legality"].__setitem__("opponent_king_capture", "allowed"))
+    _bad(lambda d: d["legality"].__delitem__("opponent_king_capture"))
 
 
 def test_move_set_terminal_status_exact():

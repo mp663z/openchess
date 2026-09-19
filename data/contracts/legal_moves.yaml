@@ -89,6 +89,7 @@ contract:
     occupancy:
       own_piece_square: unreachable
       enemy_piece_square: capture-only
+      enemy_king_square: never-a-capture-target-check-and-checkmate-terminate-first
       sliding_block: any-piece-ends-the-ray-before-it
     rule: >-
       Pseudo-legal movement is exactly the per-piece rules above.
@@ -101,7 +102,9 @@ contract:
       squares only from its start rank with both squares empty, and
       captures exactly along its side's capture deltas onto an enemy
       piece or per the en-passant contract. A pawn never moves
-      backward and never captures straight ahead.
+      backward and never captures straight ahead. The opposing king's
+      square is never a capture target for ANY piece (see
+      enemy_king_square and legality.opponent_king_capture).
   attack:
     definition: pseudo-legal-capture-to-square
     attacker_king_safety: ignored
@@ -129,10 +132,15 @@ contract:
   legality:
     filter: resulting-position-leaves-own-king-unattacked
     in_check_rule: while-in-check-only-evasions-legal
+    opponent_king_capture: forbidden-king-squares-attackable-but-never-legal-destinations
     rule: >-
       A pseudo-legal move is LEGAL exactly when the position
       resulting from playing it leaves the mover's own king not
-      attacked (per the attack relation). This single filter covers
+      attacked (per the attack relation). The opposing king's square
+      is ATTACKABLE (the attack relation is occupancy-irrelevant) but
+      is NEVER a legal destination: check and checkmate terminate the
+      game before any king can be captured, so no move - by any piece,
+      including the king - may land on the opposing king's square. This single filter covers
       absolute pins, moving the king onto or through attacked
       squares, capturing the checking piece, blocking a check, and
       the en-passant double-removal pin (the en-passant contract's

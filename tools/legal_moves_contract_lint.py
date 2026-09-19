@@ -79,6 +79,7 @@ PAWN = {
 OCCUPANCY = {
     "own_piece_square": "unreachable",
     "enemy_piece_square": "capture-only",
+    "enemy_king_square": "never-a-capture-target-check-and-checkmate-terminate-first",
     "sliding_block": "any-piece-ends-the-ray-before-it",
 }
 ATTACK = {
@@ -93,6 +94,7 @@ ATTACK = {
 LEGALITY = {
     "filter": "resulting-position-leaves-own-king-unattacked",
     "in_check_rule": "while-in-check-only-evasions-legal",
+    "opponent_king_capture": "forbidden-king-squares-attackable-but-never-legal-destinations",
 }
 MOVE_SET_TERMINAL = {
     "yields": ["check", "checkmate", "stalemate"],
@@ -316,7 +318,8 @@ def lint(doc: object, root: Path = ROOT) -> None:
     _text(_get(atk, "rule", "contract.attack"), "contract.attack.rule")
 
     leg = _get(c, "legality", "contract")
-    _keys(leg, {"filter", "in_check_rule", "rule"}, "contract.legality")
+    _keys(leg, {"filter", "in_check_rule", "opponent_king_capture", "rule"},
+        "contract.legality")
     _strict_eq(_no_rule(leg), LEGALITY, "contract.legality.fields")
     _text(_get(leg, "rule", "contract.legality"), "contract.legality.rule")
 
