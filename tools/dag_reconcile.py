@@ -38,8 +38,14 @@ def main_history(root: Path = ROOT) -> set[str]:
            if not k.startswith("GIT_")}
     out = subprocess.run(
         ["git", "rev-list", "origin/main"], cwd=root, env=env,
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True,
     )
+    if out.returncode != 0:
+        raise RuntimeError(
+            "origin/main unavailable - the history anchor needs a full "
+            "checkout (fetch-depth: 0); shallow CI checkouts break it: "
+            + out.stderr.strip()[-200:]
+        )
     return set(out.stdout.split())
 
 
