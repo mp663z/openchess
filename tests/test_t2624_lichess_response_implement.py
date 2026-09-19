@@ -91,6 +91,14 @@ def test_validate_game_expected_projection():
     lambda g: g.__setitem__("status", "resigned"),  # status enum
     lambda g: g["players"].pop("black"),            # players side missing
     lambda g: g.__setitem__("players", []),         # players not object
+    lambda g: g["players"].__setitem__("white", {}),  # neither shape
+    lambda g: g["players"]["white"].pop("rating"),  # partial user shape
+    lambda g: g["players"]["white"]
+              .__setitem__("aiLevel", 3),           # both shapes (oneOf)
+    lambda g: g.__setitem__("opening", {}),         # required members absent
+    lambda g: g.__setitem__("opening", {"eco": "C50", "name": "x"}),
+    lambda g: g.__setitem__("clock", {}),
+    lambda g: g.__setitem__("clock", {"initial": 300, "increment": 2}),
     lambda g: g.__setitem__("moves", ["e4"]),       # optional mistyped
     lambda g: g.__setitem__("daysPerTurn", "x"),
     lambda g: g.__setitem__("winner", "draw"),      # winner enum
@@ -119,13 +127,39 @@ def test_parse_stream_fail_closed_per_record():
     assert all(e.error.retryable is False for e in res.record_errors)
 
 
+ENVELOPE = '{"error": "not found"}'
+
+
 def test_map_http_error_expected():
-    e404 = r.map_http_error(404)
+    e404 = r.map_http_error(404, ENVELOPE)
     assert e404.code == "source_unavailable" and e404.retryable is False
-    e429 = r.map_http_error(429)
+    e429 = r.map_http_error(429, ENVELOPE)
     assert e429.code == "rate_limited" and e429.retryable is True
     assert r.RETRY_AFTER_429_SECONDS >= 60
-    e503 = r.map_http_error(503)
+    e503 = r.map_http_error(503, ENVELOPE)
     assert e503.code == "source_unavailable" and e503.retryable is True
     with pytest.raises(r.ContractViolation):  # unmapped status
-        r.map_http_error(418)
+        r.map_http_error(418, ENVELOPE)
+
+
+BAD_BODIES = [
+    "",                              # empty
+    "not json",                      # malformed JSON
+    '["error"]',                     # wrong container
+    '{"message": "x"}',              # missing error member
+    '{"error": 7}',                  # non-string error
+    '{"error": true}',               # bool error
+    '{"error": "x", "extra": 1}',    # extra member
+    '{}',                            # empty object
+]
+
+
+@pytest.mark.parametrize("status", [404, 429, 503])
+@pytest.mark.parametrize("body", BAD_BODIES)
+def test_map_http_error_malformed_envelope(status, body):
+    """Every status family validates the body against the pinned
+    envelope shape; a malformed envelope is a malformed_response,
+    never silently mapped to the status class."""
+    e = r.map_http_error(status, body)
+    assert e.code == "malformed_request"
+    assert e.retryable is False

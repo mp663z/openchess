@@ -170,6 +170,9 @@ def _optional_type_ok(value: Any, spec: Any) -> bool:
     if otype == "object":
         if type(value) is not dict:
             return False
+        for req_key in spec.get("required", []):
+            if req_key not in value:
+                return False
         ftypes = spec.get("field_types", {})
         for fname, ftype in ftypes.items():
             if fname in value and not _type_ok(value[fname], ftype):
@@ -204,9 +207,21 @@ def validate_game(obj: Any) -> dict[str, Any]:
     if obj["status"] not in STATUS_VALUES:
         raise ContractViolation(f"status {obj['status']!r} not in enum")
     players = obj["players"]
-    for side in ("white", "black"):
-        if side not in players or type(players[side]) is not dict:
+    pshape = _GAME["players_shape"]
+    user_req = list(pshape["user_required"])
+    ai_req = list(pshape["ai_required"])
+    for side in pshape["required"]:
+        p = players.get(side)
+        if type(p) is not dict:
             raise ContractViolation(f"players.{side} missing or not an object")
+        is_user = all(k in p for k in user_req)
+        is_ai = all(k in p for k in ai_req)
+        if is_user and is_ai:
+            raise ContractViolation(
+                f"players.{side} matches both user and ai shapes (oneOf)")
+        if not is_user and not is_ai:
+            raise ContractViolation(
+                f"players.{side} matches neither user nor ai shape")
     stored: dict[str, Any] = {f: obj[f] for f in REQUIRED_FIELDS}
     for fname, spec in OPTIONAL_FIELD_TYPES.items():
         if fname not in obj:
@@ -244,15 +259,35 @@ def parse_stream(lines: Iterator[str] | list[str]) -> StreamResult:
     return result
 
 
+def _envelope_ok(body: str) -> bool:
+    """The error body must parse as JSON and match the pinned envelope
+    shape exactly (error: string, no extra or missing members)."""
+    try:
+        obj = json.loads(body)
+    except (json.JSONDecodeError, TypeError):
+        return False
+    shape = _ENVELOPE["shape"]
+    if type(obj) is not dict or set(obj) != set(shape):
+        return False
+    return all(_type_ok(obj[fname], ftype) for fname, ftype in shape.items())
+
+
 def map_http_error(status: int, body: str = "") -> ImportError_:
     """Map an HTTP failure per the contract error envelope. 404 is
     endpoint-level (never a per-game failure); 429 always backs off at
-    least 60 seconds; 5xx is source_unavailable."""
+    least 60 seconds; 5xx is source_unavailable. The body must match the
+    pinned envelope shape; a malformed envelope is a malformed_response,
+    never silently mapped."""
     statuses = _ENVELOPE["statuses"]
     key = str(status) if str(status) in statuses else (
         "5xx" if 500 <= status <= 599 else None)
     if key is None:
         raise ContractViolation(f"unmapped HTTP status {status}")
+    if not _envelope_ok(body):
+        return ImportError_(
+            code=FAILURE_MAPPING["malformed_response"]["error"],
+            message=f"http {status}: error envelope malformed",
+            retryable=False)
     cls = statuses[key]["class"]
     if key == "429":
         retry = statuses[key]["retry"]
