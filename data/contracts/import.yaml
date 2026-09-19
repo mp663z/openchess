@@ -43,21 +43,7 @@ contract:
       - id: cbh-licensed
         kind: user-file
         rights_class: licensed-own
-    rights_classes:
-      user-own: >-
-        The importing user's own files or own games, imported locally
-        for that user and never redistributed by the project.
-      cc0: >-
-        Explicitly CC0-dedicated data (Lichess game exports); snapshot
-        pins and retrieval records per docs/rights-policy.md datasets.
-      user-own-only: >-
-        Public provider endpoints whose data the project may import
-        ONLY for the account's own games; third-party games from these
-        endpoints are never stored beyond the verifying session and
-        never redistributed.
-      licensed-own: >-
-        The importing user's own licensed copy (for example CBH/Mega),
-        read locally for that user only; no content redistribution.
+    rights_classes: [cc0, licensed-own, user-own, user-own-only]
   record:
     fields: [game_id, source_id, provenance, content_sha256, variant,
       tags, movetext, imported_at]
@@ -210,7 +196,7 @@ contract:
           retryable: {type: boolean, required: true}
   links:
     variant_contract: data/contracts/variant.yaml
-    rights_policy: docs/rights-policy.md
+    rights_policy: data/contracts/rights_policy.yaml
   versioning:
     base_path: /import/v1
     client_pin: MAJOR

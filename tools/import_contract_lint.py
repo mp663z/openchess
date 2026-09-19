@@ -172,7 +172,30 @@ ERROR_SHAPE = {
     }
 }
 LINKS = {"variant_contract": "data/contracts/variant.yaml",
-         "rights_policy": "docs/rights-policy.md"}
+         "rights_policy": "data/contracts/rights_policy.yaml"}
+
+RIGHTS_CLASSES = {
+    "user-own": {"ownership": "importing-user-own-data",
+                 "persistence": "stored-for-importing-user",
+                 "third_party_storage": "never", "redistribution": "never",
+                 "provenance_required": True},
+    "cc0": {"ownership": "public-dedication-cc0",
+            "persistence": "stored-snapshot-pinned",
+            "third_party_storage": "permitted-under-cc0",
+            "redistribution": "permitted-under-cc0",
+            "provenance_required": True},
+    "user-own-only": {"ownership": "importing-user-own-games-only",
+                      "persistence": "verifying-session-only-for-third-party",
+                      "third_party_storage": "never", "redistribution": "never",
+                      "provenance_required": True},
+    "licensed-own": {"ownership": "importing-user-licensed-copy",
+                     "persistence": "local-for-importing-user",
+                     "third_party_storage": "never", "redistribution": "never",
+                     "provenance_required": True},
+}
+RIGHTS_POLICY = {"fail_closed": True,
+                 "unknown_class": {"effect": "reject-import",
+                                   "error": "unknown_rights"}}
 VERSIONING = {
     "base_path": "/import/v1",
     "client_pin": "MAJOR",
@@ -244,11 +267,8 @@ def _check_sources(sources: dict) -> None:
     ids = [e["id"] for e in entries]
     _need(len(ids) == len(set(ids)), "contract.sources.entries: duplicate id")
     rc = _get(sources, "rights_classes", "contract.sources")
-    _need(type(rc) is dict, "contract.sources.rights_classes: mapping required")
-    _need(sorted(rc) == sorted(RIGHTS_CLASSES),
-          f"contract.sources.rights_classes: keys {sorted(rc)} != {sorted(RIGHTS_CLASSES)}")
-    for name, doc in rc.items():
-        _text(doc, f"contract.sources.rights_classes.{name}")
+    _need(type(rc) is list, "contract.sources.rights_classes: list required")
+    _strict_eq(rc, sorted(RIGHTS_CLASSES), "contract.sources.rights_classes")
     for e in entries:
         _need(e["rights_class"] in RIGHTS_CLASSES,
               f"source {e['id']}: undeclared rights class {e['rights_class']}")
@@ -288,9 +308,25 @@ def _check_links(links: dict, root: Path) -> None:
     canonical = vdoc["contract"]["identity"]["canonical_fields"]
     _need("board" in canonical and "side_to_move" in canonical,
           "linked variant contract: position identity fields missing")
-    policy = (root / LINKS["rights_policy"]).read_text()
-    _need("Fail closed" in policy,
-          "linked rights policy: fail-closed rule not found")
+    policy_doc = yaml.safe_load(
+        (root / LINKS["rights_policy"]).read_text())
+    _need(type(policy_doc) is dict, "linked rights policy: malformed")
+    _keys(policy_doc, {"schema_version", "rights_policy"},
+          "rights_policy.document")
+    sv = _get(policy_doc, "schema_version", "rights_policy.document")
+    _need(type(sv) is int and sv == 1,
+          "rights_policy.document: schema_version must be integer 1")
+    policy = _get(policy_doc, "rights_policy", "rights_policy")
+    _keys(policy, {"id", "fail_closed", "classes", "unknown_class",
+                   "rule"}, "rights_policy")
+    _need(policy.get("id") == "import-rights-policy-v1",
+          "rights_policy: id")
+    _strict_eq({"fail_closed": policy.get("fail_closed"),
+                "unknown_class": policy.get("unknown_class")},
+               RIGHTS_POLICY, "rights_policy.semantics")
+    _strict_eq(_get(policy, "classes", "rights_policy"), RIGHTS_CLASSES,
+               "rights_policy.classes")
+    _text(_get(policy, "rule", "rights_policy"), "rights_policy.rule")
 
 
 def lint(doc: object, root: Path = ROOT) -> None:

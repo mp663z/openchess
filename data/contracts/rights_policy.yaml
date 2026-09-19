@@ -1,0 +1,36 @@
+schema_version: 1
+rights_policy:
+  id: import-rights-policy-v1
+  fail_closed: true
+  classes:
+    user-own:
+      ownership: importing-user-own-data
+      persistence: stored-for-importing-user
+      third_party_storage: never
+      redistribution: never
+      provenance_required: true
+    cc0:
+      ownership: public-dedication-cc0
+      persistence: stored-snapshot-pinned
+      third_party_storage: permitted-under-cc0
+      redistribution: permitted-under-cc0
+      provenance_required: true
+    user-own-only:
+      ownership: importing-user-own-games-only
+      persistence: verifying-session-only-for-third-party
+      third_party_storage: never
+      redistribution: never
+      provenance_required: true
+    licensed-own:
+      ownership: importing-user-licensed-copy
+      persistence: local-for-importing-user
+      third_party_storage: never
+      redistribution: never
+      provenance_required: true
+  unknown_class: {effect: reject-import, error: unknown_rights}
+  rule: >-
+    Every import carries one of these rights classes; the structured
+    fields are the operative permissions and restrictions. Any source
+    whose rights class cannot be verified is rejected fail-closed.
+    This document is the normative rights contract; narrative policy
+    text elsewhere is documentation only.

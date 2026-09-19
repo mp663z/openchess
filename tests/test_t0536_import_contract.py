@@ -75,8 +75,8 @@ def test_sources_registry_exact():
     _bad(lambda d: d["sources"]["entries"].append(
         {"id": "random-website", "kind": "public-api", "rights_class": "cc0"}))  # new source
     _bad(lambda d: d["sources"]["entries"][0].__setitem__("id", "pgn"))
-    _bad(lambda d: d["sources"]["rights_classes"].__delitem__("cc0"))
-    _bad(lambda d: d["sources"]["rights_classes"].__setitem__("public-domain", "x"))
+    _bad(lambda d: d["sources"]["rights_classes"].remove("cc0"))
+    _bad(lambda d: d["sources"]["rights_classes"].append("public-domain"))
 
 
 def test_record_shape_exact():
@@ -191,20 +191,23 @@ def test_versioning_exact():
 
 def test_documentation_fields_nonempty():
     _bad(lambda d: d["sources"].__setitem__("registry_rule", ""))
-    _bad(lambda d: d["sources"]["rights_classes"].__setitem__("cc0", "  "))
     _bad(lambda d: d["record"].__setitem__("identity_rule", 7))
     _bad(lambda d: d["idempotency"].__setitem__("rule", ""))
     _bad(lambda d: d["atomicity"].__setitem__("rule", ""))
     _bad(lambda d: d["scenarios"].__setitem__("registry_rule", ""))
 
 
-def _write_linked_root(tmp_path: Path, variant_doc: dict) -> Path:
+def _write_linked_root(tmp_path: Path, variant_doc: dict,
+                       policy_doc: object = None) -> Path:
     root = tmp_path / "repo"
     (root / "data" / "contracts").mkdir(parents=True)
-    (root / "docs").mkdir(parents=True)
-    (root / "data" / "contracts" / "variant.yaml").write_text(yaml.safe_dump(variant_doc))
-    (root / "docs" / "rights-policy.md").write_text(
-        (ROOT / "docs" / "rights-policy.md").read_text())
+    (root / "data" / "contracts" / "variant.yaml").write_text(
+        yaml.safe_dump(variant_doc, sort_keys=False))
+    if policy_doc is None:
+        policy_doc = yaml.safe_load(
+            (ROOT / "data" / "contracts" / "rights_policy.yaml").read_text())
+    (root / "data" / "contracts" / "rights_policy.yaml").write_text(
+        yaml.safe_dump(policy_doc))
     return root
 
 
@@ -222,8 +225,8 @@ def test_linkage_mutations_rejected(tmp_path):
     with pytest.raises(ContractError):
         lint(copy.deepcopy(DOC), root)
 
-    root = _write_linked_root(tmp_path / "c", variant)
-    (root / "docs" / "rights-policy.md").write_text("no policy here")
+    root = _write_linked_root(tmp_path / "c", variant,
+                              {"rights_policy": "no structure here"})
     with pytest.raises(ContractError):
         lint(copy.deepcopy(DOC), root)
 
@@ -280,3 +283,83 @@ def test_cli_boundary_clean_and_failing():
         assert "Traceback" not in fail.stderr
     finally:
         bad_path.unlink(missing_ok=True)
+
+
+def test_rights_semantics_structured_in_linked_policy(tmp_path):
+    """The operative rights meaning lives in the linked structured
+    policy and is exactly compared (v2): value changes, missing keys,
+    fail-closed reversal, and phrase-mimicking fakes all fail."""
+    variant = yaml.safe_load((ROOT / "data" / "contracts" / "variant.yaml").read_text())
+    real_policy = yaml.safe_load(
+        (ROOT / "data" / "contracts" / "rights_policy.yaml").read_text())
+
+    def lint_with(policy_obj, label):
+        root = _write_linked_root(tmp_path / label, variant, policy_obj)
+        return root
+
+    lint(copy.deepcopy(DOC), lint_with(copy.deepcopy(real_policy), "ok"))
+
+    def policy_bad(fn, label):
+        pol = copy.deepcopy(real_policy)
+        fn(pol["rights_policy"])
+        with pytest.raises(ContractError):
+            lint(copy.deepcopy(DOC), lint_with(pol, label))
+
+    # laundering reversal: third-party storage permitted
+    policy_bad(lambda p: p["classes"]["user-own-only"]
+               .__setitem__("third_party_storage", "permitted"), "a")
+    # redistribution opened on a user-own class
+    policy_bad(lambda p: p["classes"]["user-own"]
+               .__setitem__("redistribution", "permitted"), "b")
+    # provenance dropped
+    policy_bad(lambda p: p["classes"]["cc0"]
+               .__setitem__("provenance_required", False), "c")
+    # fail-closed reversed
+    policy_bad(lambda p: p.__setitem__("fail_closed", False), "d")
+    # unknown-class effect rerouted
+    policy_bad(lambda p: p["unknown_class"].__setitem__("error", "internal"), "e")
+    # a whole class removed
+    policy_bad(lambda p: p["classes"].__delitem__("user-own-only"), "f")
+    # unknown key smuggled into a class
+    policy_bad(lambda p: p["classes"]["cc0"].__setitem__("exceptions", "any"), "g")
+    # prose mimic: a fake doc carrying the old phrase but no structure
+    with pytest.raises(ContractError):
+        lint(copy.deepcopy(DOC), lint_with(
+            {"rights_policy": "Fail closed. Chess.com public data is CC0."}, "h"))
+
+
+def test_rights_policy_closed_document(tmp_path):
+    """Override-laundering family (v3): the linked policy is a closed
+    contract at document, policy, class, and unknown_class levels."""
+    variant = yaml.safe_load((ROOT / "data" / "contracts" / "variant.yaml").read_text())
+    real_policy = yaml.safe_load(
+        (ROOT / "data" / "contracts" / "rights_policy.yaml").read_text())
+
+    def doc_bad(fn, label):
+        pol = copy.deepcopy(real_policy)
+        fn(pol)
+        root = _write_linked_root(tmp_path / label, variant, pol)
+        with pytest.raises(ContractError):
+            lint(copy.deepcopy(DOC), root)
+
+    # unknown key at document level
+    doc_bad(lambda p: p.__setitem__("override", {"fail_closed": False}), "a")
+    # unknown key at policy level (verifier probe)
+    doc_bad(lambda p: p["rights_policy"].__setitem__(
+        "exceptions", {"chesscom-public": "redistribute-all"}), "b")
+    doc_bad(lambda p: p["rights_policy"].__setitem__("fallback", "allow"), "c")
+    # schema_version type: boolean true is not integer 1
+    doc_bad(lambda p: p.__setitem__("schema_version", True), "d")
+    doc_bad(lambda p: p.__setitem__("schema_version", "1"), "e")
+    doc_bad(lambda p: p.__delitem__("schema_version"), "f")
+    # rule required, nonempty
+    doc_bad(lambda p: p["rights_policy"].__delitem__("rule"), "g")
+    doc_bad(lambda p: p["rights_policy"].__setitem__("rule", ""), "h")
+    # unknown key inside unknown_class
+    doc_bad(lambda p: p["rights_policy"]["unknown_class"]
+            .__setitem__("except", "verified-sources"), "i")
+    # unknown key inside a class
+    doc_bad(lambda p: p["rights_policy"]["classes"]["cc0"]
+            .__setitem__("exceptions", "any"), "j")
+    # missing fail_closed
+    doc_bad(lambda p: p["rights_policy"].__delitem__("fail_closed"), "k")
