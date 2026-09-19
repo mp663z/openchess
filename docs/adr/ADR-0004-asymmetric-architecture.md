@@ -1,6 +1,7 @@
 ---
 adr: ADR-0004
 status: proposed
+owner_meaning: implementation-and-execution-ownership
 operations:
   import: desktop
   index: desktop
@@ -154,6 +155,8 @@ privacy and cost together.
 
 ## Consequences
 
+- Operation ownership in this ADR means implementation-and-execution
+  ownership: the owning platform implements and runs the operation.
 - Heavy compute runs only on desktop: import, index, stockfish,
   model-inference and delta are desktop-owned; web and server run
   none of them.

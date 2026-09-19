@@ -271,6 +271,7 @@ def _check(adr: str) -> None:
     fm, body, secs = _parse(adr)
     assert fm["adr"] == "ADR-0004"
     assert fm["status"] == "proposed"
+    assert fm["owner_meaning"] == "implementation-and-execution-ownership"
     # exact structured pins
     assert fm["operations"] == OPERATIONS
     assert set(fm["offline_required"]) == OFFLINE_REQUIRED
