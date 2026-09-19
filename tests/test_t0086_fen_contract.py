@@ -70,16 +70,23 @@ def _ep_set_on():
     return _sibling("en_passant.yaml")["target"]["set_on"]
 
 
-def _attack(board_contract, square, board, by_white):
-    """Attack relation derived from contract.board.attack."""
+def _attack(board_contract, square, board, by_white, _pawn_deltas=None):
+    """Attack relation derived from contract.board.attack.
+
+    A pawn attacks along its OWN capture deltas, so the attacker of
+    `square` stands at the INVERSE origin (f - df, r - dr) of each
+    declared attacker delta - the only asymmetric relation here (knight
+    and king deltas are sign-symmetric and the slider walk starts at
+    the target, so both directions of the relation coincide)."""
     a = board_contract["attack"]
     files = board_contract["files"]
     f, r = square
-    pawn_deltas = (a["white_pawn_capture_deltas"] if by_white
-                   else a["black_pawn_capture_deltas"])
+    pawn_deltas = (_pawn_deltas if _pawn_deltas is not None else
+                   (a["white_pawn_capture_deltas"] if by_white
+                    else a["black_pawn_capture_deltas"]))
     pawn = "P" if by_white else "p"
     for df, dr in pawn_deltas:
-        if board.get((f + df, r + dr)) == pawn:
+        if board.get((f - df, r - dr)) == pawn:
             return True
     for df, dr in a["knight_deltas"]:
         if board.get((f + df, r + dr)) == ("N" if by_white else "n"):
@@ -437,6 +444,15 @@ def test_malformed_fens_rejected_as_malformed_request(bad):
     "4k3/8/8/8/8/8/PPPPPPPP/1QQQK3 w - - 0 1",
     # 3 black queens with 7 pawns (2 excess, 1 missing)
     "qqq1k3/pp1ppppp/8/8/8/8/8/4K3 b - - 0 1",
+    # non-mover king attacked by a pawn (exact adjacent geometry):
+    # white pawn d4 attacks e5; black pawn d4 attacks e3
+    "8/8/8/4k3/3P4/8/8/4K3 w - - 0 1",
+    "4k3/8/8/8/3p4/4K3/8/8 b - - 0 1",
+    # edge files: a/h-file pawns attack their one diagonal square
+    "8/8/8/1k6/P7/8/8/4K3 w - - 0 1",      # white a4 -> b5
+    "8/8/8/6k1/7P/8/8/4K3 w - - 0 1",      # white h4 -> g5
+    "4k3/8/8/p7/1K6/8/8/8 b - - 0 1",      # black a5 -> b4
+    "4k3/8/8/7p/6K1/8/8/8 b - - 0 1",      # black h5 -> g4
 ])
 def test_impossible_positions_rejected_as_illegal_position(bad):
     doc = _doc()
@@ -444,6 +460,85 @@ def test_impossible_positions_rejected_as_illegal_position(bad):
         parse_fen(doc["contract"], bad)
     assert exc.value.failure_class == "impossible_position"
     assert exc.value.code == "illegal_position"
+
+
+# Pawn-attack direction witnesses: (fen, attacking side is white,
+# expected attack verdict on the non-moving king). The geometrically
+# REVERSED placements are non-attacks that a direction-inverted
+# evaluator flags; the rest are real attacks it misses.
+PAWN_DIRECTION_WITNESSES = [
+    ("8/8/8/4k3/3P4/8/8/4K3 w - - 0 1", True, True),
+    ("4k3/8/8/8/3p4/4K3/8/8 b - - 0 1", False, True),
+    ("8/8/3P4/4k3/8/8/8/4K3 w - - 0 1", True, False),
+    ("4k3/8/8/8/8/4K3/3p4/8 b - - 0 1", False, False),
+    ("8/8/8/1k6/P7/8/8/4K3 w - - 0 1", True, True),
+    ("8/8/8/6k1/7P/8/8/4K3 w - - 0 1", True, True),
+    ("4k3/8/8/p7/1K6/8/8/8 b - - 0 1", False, True),
+    ("4k3/8/8/7p/6K1/8/8/8 b - - 0 1", False, True),
+]
+
+# Geometrically reversed non-attacks and file-wrap guards: all valid
+# positions that MUST parse and roundtrip.
+PAWN_NON_ATTACK_ACCEPTED = [
+    "8/8/3P4/4k3/8/8/8/4K3 w - - 0 1",   # pawn d6, king e5
+    "4k3/8/8/8/8/4K3/3p4/8 b - - 0 1",   # pawn d2, king e3
+    "8/8/8/k7/7P/8/8/4K3 w - - 0 1",     # h4 does not wrap to a5
+    "4k3/8/8/p7/7K/8/8/8 b - - 0 1",     # a5 does not wrap to h4
+]
+
+
+def _placement_board(contract, fen):
+    """Board {(file, rank): letter} from the placement field, geometry
+    derived from the contract's declared files and ranks."""
+    files = contract["board"]["files"]
+    ranks = contract["board"]["ranks"]
+    board = {}
+    for ri, row in enumerate(fen.split()[0].split("/")):
+        f = 0
+        for ch in row:
+            if ch in "12345678":
+                f += int(ch)
+            else:
+                board[(f, len(ranks) - ri)] = ch
+                f += 1
+        assert f == len(files)
+    return board
+
+
+def test_pawn_attack_direction_witnesses():
+    doc = _doc()
+    c = doc["contract"]
+    for fen, by_white, expect in PAWN_DIRECTION_WITNESSES:
+        board = _placement_board(c, fen)
+        king = "k" if by_white else "K"
+        sq = next(s for s, pce in board.items() if pce == king)
+        assert _attack(c["board"], sq, board, by_white) is expect, fen
+
+
+def test_pawn_non_attacks_parse_and_roundtrip():
+    doc = _doc()
+    for fen in PAWN_NON_ATTACK_ACCEPTED:
+        assert emit_fen(doc["contract"], parse_fen(doc["contract"], fen)) \
+            == fen, fen
+
+
+def test_pawn_delta_sign_mutation_inverts_witnesses():
+    """Replay: flipping the rank sign of the declared attacker pawn
+    deltas must INVERT every direction witness verdict - proving the
+    witnesses catch a direction-inverted evaluator (a real defect),
+    rather than the delta list being linted against a constant only."""
+    doc = _doc()
+    c = doc["contract"]
+    a = c["board"]["attack"]
+    for fen, by_white, expect in PAWN_DIRECTION_WITNESSES:
+        board = _placement_board(c, fen)
+        king = "k" if by_white else "K"
+        sq = next(s for s, pce in board.items() if pce == king)
+        declared = (a["white_pawn_capture_deltas"] if by_white
+                    else a["black_pawn_capture_deltas"])
+        flipped = [[df, -dr] for df, dr in declared]
+        assert _attack(c["board"], sq, board, by_white,
+                       _pawn_deltas=flipped) is (not expect), fen
 
 
 def test_canonical_input_roundtrips_byte_for_byte():
