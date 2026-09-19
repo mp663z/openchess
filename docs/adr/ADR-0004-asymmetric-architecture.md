@@ -1,16 +1,70 @@
 ---
 adr: ADR-0004
 status: proposed
-roles:
-  desktop_core: authoritative-compute-and-data-engine
-  web_pwa: review-and-training-habit-surface
-  server: zero-knowledge-ciphertext-relay
-  export: interoperability-feature
+operations:
+  import: desktop
+  index: desktop
+  stockfish: desktop
+  model-inference: desktop
+  delta: desktop
+  queue: web
+  approval: web
+  training: web
+  sync-encrypt: desktop
+  sync-decrypt: web
+  export: desktop
+offline_required:
+  - import
+  - index
+  - stockfish
+  - model-inference
+  - delta
+  - queue
+  - approval
+  - training
+  - export
+data_flow:
+  desktop:
+    content: store-process
+    keys: store
+    ciphertext: store
+    account-metadata: store
+  web:
+    content: process-local-only
+    keys: store-local-only
+    ciphertext: receive-decrypt
+    account-metadata: store
+  server:
+    content: never
+    keys: never
+    ciphertext: store-relay-only
+    account-metadata: store-entitlements
+phone_training:
+  surface: web-pwa
+  export_required: false
+external_providers:
+  hosted-byom:
+    allowed: true
+    opt_in: true
+    default: off
+    payload: inference-request-only
+    never_receives: [account-keys, full-corpus, sync-keys]
+    relay_plaintext: false
+    local_completeness: true
+    critical_path: false
+    suspends_reference_claims: false
+  local-large-llm:
+    allowed: true
+    opt_in: true
+    default: off
+    payload: none-local-only
+    suspends_reference_claims: true
 invariants:
-  - desktop-runs-full-loop-offline
-  - web-carries-no-heavy-compute
-  - server-stores-no-plaintext
-  - export-is-a-feature-not-the-phone-story
+  - heavy-compute-only-on-desktop
+  - full-loop-offline-on-desktop
+  - server-never-content-or-keys
+  - export-never-required-for-phone-training
+  - hosted-byom-opt-in-only
 ---
 
 # ADR-0004: Asymmetric architecture (T2792)
@@ -22,16 +76,22 @@ Date: 2026-09-20
 
 The v5 architecture (product report v5, section 14) reconciles the
 privacy posture, the per-user cost model and the reference-machine
-budgets into one shape: an asymmetric split. The desktop core does
-every byte of heavy compute - local models, Stockfish, the indexer,
-the delta engine - private by default and free for the business to
-serve; a thin responsive web/PWA habit surface owns the loop (review
-queue, approval gate, quiet-week screen, training); end-to-end
-encrypted sync joins them with the server storing opaque blobs only.
-Training is owned in-house; Anki/Chessable export remains as
-interoperability, a feature rather than the phone story. The owner's
-standing rulings reinforce this: local-runnable product, auth-free
-imports, UI neutral and swappable.
+budgets into one shape: an asymmetric split. The desktop core carries
+the small local models, Stockfish and the indexer; the web/mobile
+surface carries no heavy compute; the server carries only encrypted
+blobs plus account entitlements. Per-user compute cost to the
+business is zero because engines and models run on hardware the user
+already owns. The owner's standing rulings reinforce this:
+local-runnable product, auth-free imports, UI neutral and swappable,
+BYOK provider-neutral.
+
+v5 section 14 also keeps an OPTIONAL heavy generative tier, resolved
+from v4: hosted BYOM (the user's own provider key, off the critical
+path) or an explicit local large-model opt-in whose activation
+suspends the reference-machine p95 claims. This ADR declares both in
+structured data instead of smoothing them over: neither is a default,
+neither is required, and the relay/server never receives plaintext
+content or keys under either.
 
 ## Options compared on the required axes
 
@@ -41,8 +101,9 @@ imports, UI neutral and swappable.
   data engine; the document of record lives on the user's machine.
 - Cost: per-user compute cost to the business is zero; engines and
   models run on hardware the user owns.
-- Privacy: the server is a zero-knowledge ciphertext relay; content
-  never leaves devices in plaintext.
+- Privacy: the server is a zero-knowledge ciphertext relay holding
+  only blobs and account entitlements; content never leaves devices
+  in plaintext except a declared opt-in provider request (below).
 - Habit: the review/training loop lives on the thin responsive
   web/PWA surface the user actually carries (ADR-0002).
 - Interoperability: export to Anki/Chessable ships as a feature, not
@@ -76,17 +137,22 @@ zero-knowledge privacy commitment, and a single authoritative store.
 All three favor Option A; B multiplies authority and cost, C breaks
 privacy and cost together.
 
-**Proposed: Option A - asymmetric split: the local-first desktop core is the authoritative compute and data engine, the thin responsive web/PWA owns the review and training habit, export is interoperability.** The roles and invariants in this document's YAML front matter are normative; this prose mirrors them.
+**Proposed: Option A - asymmetric split: the local-first desktop core is the authoritative compute and data engine, the thin responsive web/PWA owns the review and training habit, export is interoperability.** The operations matrix, offline_required set, data_flow matrix, phone_training declaration and external_providers exceptions in this document's YAML front matter are normative; this prose mirrors them.
 
 ## Consequences
 
-- The desktop runs the full loop offline; no core-loop operation may
-  require the network (owner's local-runnable ruling).
-- The web/PWA surface carries no heavy compute: queue, diffs,
-  approval, quiet-week, drills and transfer only (ownership matrix in
-  ADR-0005).
-- The server stores and relays ciphertext only; the control plane is
-  content-blind by construction.
-- Anki/Chessable export is an interoperability feature with its own
-  roadmap tasks; it is never the phone story.
-- Offline authority and reconnect semantics follow ADR-0003.
+- Heavy compute runs only on desktop: import, index, stockfish,
+  model-inference and delta are desktop-owned; web and server run
+  none of them.
+- The full loop runs offline on desktop: import, index, stockfish,
+  model-inference, delta, queue, approval, training and export
+  complete with no network; only sync transport needs one.
+- The server never receives or stores plaintext content or keys; it
+  stores ciphertext blobs and account entitlements only.
+- Phone training goes through the web/PWA surface over encrypted
+  sync; export is never required for it.
+- Hosted BYOM inference is opt-in, default off, payload limited to
+  the bounded inference request, never on the critical path, with
+  detection, scoring, evidence, diagnosis, planning and training
+  fully functional without it; the local large-LLM opt-in suspends
+  the reference-machine p95 claims and says so in settings.
