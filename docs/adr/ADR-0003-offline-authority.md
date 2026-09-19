@@ -1,3 +1,36 @@
+---
+adr: ADR-0003
+status: proposed
+scope: offline-authority-and-reconnect-semantics
+authority:
+  document_of_record: desktop-core
+  surface: explicit-offline-state-machine
+options_compared: [A-desktop-authority, B-server-authority-lww, C-p2p-crdt]
+decision: A-desktop-authority
+axes: [offline-desktop, offline-web-state, reconnect-conflicts, failure-modes]
+offline_states: [ONLINE, OFFLINE-CACHED, OFFLINE-QUEUED]
+state_semantics:
+  ONLINE: {writes: enabled, source: live-sync}
+  OFFLINE-CACHED: {writes: disabled, refusal: named-state, reads: [review-queue, training, plans]}
+  OFFLINE-QUEUED: {writes: intent-entries, visibility: pending-until-sync}
+write_log:
+  type: append-only
+  addressing: content-addressed
+  merge: by-log-order
+  same_revision_collision: named-conflict-in-review-queue
+  resolution: user-resolves
+  silent_resolution: forbidden
+drivers: [zero-knowledge-server-cannot-arbitrate, no-silent-writes, local-runnable-auth-free]
+invariants:
+  - desktop-core-is-sole-authority
+  - core-loop-never-requires-network
+  - exactly-three-offline-states
+  - writes-disabled-visibly-in-offline-cached
+  - merge-outcomes-visible-logged-reversible
+  - conflicts-user-resolved-never-silent
+  - server-stores-ciphertext-only
+---
+
 # ADR-0003: Offline authority (T2795)
 
 Status: proposed
@@ -20,7 +53,7 @@ reaching a server.
 
 ## Options compared on the required axes
 
-### Option A: Desktop core is the sole authority; the surface holds an explicit offline state machine
+### Option A: Desktop core sole authority, surface explicit offline state machine
 
 - Offline desktop: complete - the full local loop (import, index,
   diagnosis, plan, drills, training, review) runs with no network; the
@@ -65,13 +98,18 @@ reaching a server.
 
 ## Decision drivers and proposed choice
 
+The YAML front matter of this document is normative; the prose
+below is pinned explanatory text that the contract battery compares
+byte-for-byte.
+
 The deciding axes are the zero-knowledge server (it cannot arbitrate),
 the no-silent-writes invariant (merges must be visible), and the
 owner's local-runnable ruling (the core loop must never need the
 network). All three favor Option A; B arbitrates blindly and C merges
 silently.
 
-**Proposed: Option A - the desktop core is the sole authority for the document of record. The web/mobile surface carries an explicit
+**Proposed: Option A** - the desktop core is the sole authority for
+the document of record. The web/mobile surface carries an explicit
 three-state offline machine (ONLINE, OFFLINE-CACHED, OFFLINE-QUEUED);
 reconnect merges an append-only write log and surfaces same-revision
 collisions as named, user-resolved conflicts - never silent
