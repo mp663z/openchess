@@ -49,9 +49,11 @@ web_offline_capable:
 external_providers:
   hosted-byom:
     allowed: true
+    mode: hosted
     opt_in: true
     default: off
-    payload: inference-request-only
+    allowed_send_fields: [fen, moves, task, max-tokens]
+    mandatory_send_fields: [fen, task]
     never_receives: [account-keys, full-corpus, sync-keys]
     relay_plaintext: false
     local_completeness: true
@@ -59,6 +61,7 @@ external_providers:
     suspends_reference_claims: false
   local-large-llm:
     allowed: true
+    mode: local
     opt_in: true
     default: off
     payload: none-local-only
@@ -158,8 +161,12 @@ privacy and cost together.
   stores ciphertext blobs and account entitlements only.
 - Phone training goes through the web/PWA surface over encrypted
   sync; export is never required for it.
-- Hosted BYOM inference is opt-in, default off, payload limited to
-  the bounded inference request, never on the critical path, with
-  detection, scoring, evidence, diagnosis, planning and training
-  fully functional without it; the local large-LLM opt-in suspends
-  the reference-machine p95 claims and says so in settings.
+- Hosted BYOM inference is opt-in, default off, never on the
+  critical path, with detection, scoring, evidence, diagnosis,
+  planning and training fully functional without it. A hosted BYOM
+  request may carry exactly the declared send fields - fen, moves,
+  task, max-tokens - always including fen and task, and nothing else;
+  account keys, the full corpus and sync keys never leave. The local
+  large-LLM opt-in is a local-mode provider: it sends no outbound
+  payload at all, and its activation suspends the reference-machine
+  p95 claims, which the settings screen says.

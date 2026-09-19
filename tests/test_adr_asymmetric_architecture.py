@@ -39,14 +39,15 @@ DATA_FLOW = {
 }
 PHONE_TRAINING = {"surface": "web-pwa", "export_required": False}
 HOSTED_BYOM = {
-    "allowed": True, "opt_in": True, "default": False,
-    "payload": "inference-request-only",
+    "allowed": True, "mode": "hosted", "opt_in": True, "default": False,
+    "allowed_send_fields": ["fen", "moves", "task", "max-tokens"],
+    "mandatory_send_fields": ["fen", "task"],
     "never_receives": ["account-keys", "full-corpus", "sync-keys"],
     "relay_plaintext": False, "local_completeness": True,
     "critical_path": False, "suspends_reference_claims": False,
 }
 LOCAL_LLM = {
-    "allowed": True, "opt_in": True, "default": False,
+    "allowed": True, "mode": "local", "opt_in": True, "default": False,
     "payload": "none-local-only", "suspends_reference_claims": True,
 }
 INVARIANTS = [
@@ -64,13 +65,15 @@ DENIED = [
     "may run Stockfish",
     "primary phone story",
 ]
-INVOCATION_FACTS = ["opt_in", "payload_class", "sends", "persistence",
+INVOCATION_FACTS = ["opt_in", "sends", "persistence",
                     "relay_plaintext", "critical_path"]
 GOOD_INVOCATION = {
     "provider": "hosted-byom", "opt_in": True,
-    "payload_class": "inference-request-only",
-    "sends": ["inference-payload"], "persistence": "none",
+    "sends": ["fen", "moves", "task"], "persistence": "none",
     "relay_plaintext": False, "critical_path": False,
+}
+GOOD_LOCAL_INVOCATION = {
+    "provider": "local-large-llm", "opt_in": True, "sends": [],
 }
 
 
@@ -111,13 +114,19 @@ def evaluate(policy: dict, scenario: dict) -> list[str]:
             violations.append(f"server granted {cls}")
     if scenario.get("phone_training_requires_export"):
         violations.append("export required for phone training")
-    # hosted inference: validate structured invocation facts, fail closed
+    # hosted inference: validate structured invocation facts against a
+    # POSITIVE allowlist; the payload class is derived from the validated
+    # fields, never from a caller-supplied label. Fail closed.
     providers = policy.get("external_providers", {})
     for inv in scenario.get("hosted_inference", []):
         name = inv.get("provider")
         prov = providers.get(name)
         if prov is None or not prov.get("allowed"):
             violations.append(f"undeclared hosted-compute path {name}")
+            continue
+        if prov.get("mode") != "hosted":
+            violations.append(
+                f"provider {name} mode {prov.get('mode')} is not hosted")
             continue
         missing = [f for f in INVOCATION_FACTS if f not in inv]
         if missing:
@@ -126,10 +135,17 @@ def evaluate(policy: dict, scenario: dict) -> list[str]:
             continue
         if inv["opt_in"] is not True:
             violations.append(f"provider {name} used without opt-in")
-        if inv["payload_class"] != "inference-request-only":
+        sends = inv["sends"] if isinstance(inv["sends"], list) else []
+        allowed = set(prov.get("allowed_send_fields", []))
+        mandatory = set(prov.get("mandatory_send_fields", []))
+        for field in sorted(set(sends) - allowed):
             violations.append(
-                f"provider {name} payload class {inv['payload_class']}")
-        leaked = set(prov.get("never_receives", [])) & set(inv["sends"])
+                f"provider {name} sends undeclared field {field}")
+        for field in sorted(mandatory - set(sends)):
+            violations.append(
+                f"provider {name} missing mandatory field {field}")
+        # defense in depth: forbidden classes still named explicitly
+        leaked = set(prov.get("never_receives", [])) & set(sends)
         for item in sorted(leaked):
             violations.append(f"provider {name} receives {item}")
         if inv["persistence"] != "none":
@@ -140,6 +156,22 @@ def evaluate(policy: dict, scenario: dict) -> list[str]:
             violations.append(f"provider {name} relays plaintext")
         if inv["critical_path"] is not False:
             violations.append(f"provider {name} on the critical path")
+    # local inference: local-mode providers send no outbound payload
+    for inv in scenario.get("local_inference", []):
+        name = inv.get("provider")
+        prov = providers.get(name)
+        if prov is None or not prov.get("allowed"):
+            violations.append(f"undeclared local-compute path {name}")
+            continue
+        if prov.get("mode") != "local":
+            violations.append(
+                f"provider {name} mode {prov.get('mode')} is not local")
+            continue
+        if inv.get("opt_in") is not True:
+            violations.append(f"local provider {name} used without opt-in")
+        if inv.get("sends"):
+            violations.append(
+                f"local provider {name} has outbound payload")
     return violations
 
 
@@ -202,6 +234,10 @@ def _check(adr: str) -> None:
     assert "export is never required" in cons
     assert "opt-in, default off" in cons
     assert "suspends" in cons and "p95" in cons
+    flat = " ".join(cons.split())
+    assert "fen, moves, task, max-tokens" in flat
+    assert "nothing else" in flat
+    assert "no outbound payload" in flat
     # the web-owned habit operations are offline-capable, not desktop-owned
     assert "offline-capable in the PWA" in cons
     assert "desktop-owned operations" in cons
@@ -268,9 +304,19 @@ def test_evaluator_rejects_export_required_phone_training():
 
 def test_evaluator_hosted_byom_invocation_facts():
     base = {"owners": dict(OPERATIONS)}
-    for send in ("full-corpus", "sync-keys", "account-keys"):
+    # subset-projection laundering: forbidden or unknown fields fail
+    # even alongside allowed ones
+    for field in ("full-corpus", "sync-keys", "account-keys",
+                  "passwords", "all-games", "games", "api-key"):
         _violating({**base, "hosted_inference": [
-            {**GOOD_INVOCATION, "sends": ["inference-payload", send]}]})
+            {**GOOD_INVOCATION,
+             "sends": GOOD_INVOCATION["sends"] + [field]}]})
+    # mandatory fields must all be present
+    for field in HOSTED_BYOM["mandatory_send_fields"]:
+        _violating({**base, "hosted_inference": [
+            {**GOOD_INVOCATION,
+             "sends": [f for f in GOOD_INVOCATION["sends"]
+                       if f != field]}]})
     _violating({**base, "hosted_inference": [
         {**GOOD_INVOCATION, "persistence": "store-plaintext"}]})
     _violating({**base, "hosted_inference": [
@@ -281,14 +327,35 @@ def test_evaluator_hosted_byom_invocation_facts():
         {**GOOD_INVOCATION, "critical_path": True}]})
     _violating({**base, "hosted_inference": [
         {**GOOD_INVOCATION, "relay_plaintext": True}]})
-    _violating({**base, "hosted_inference": [
-        {**GOOD_INVOCATION, "payload_class": "full-game-history"}]})
     for fact in INVOCATION_FACTS:
         inv = {k: v for k, v in GOOD_INVOCATION.items() if k != fact}
         _violating({**base, "hosted_inference": [inv]})
     _violating({**base, "hosted_inference": [{"provider": "acme-cloud",
                                               **{f: None for f in
                                                  INVOCATION_FACTS}}]})
+
+
+def test_evaluator_provider_execution_mode():
+    base = {"owners": dict(OPERATIONS)}
+    # the exact replay: a local-only provider invoked as hosted fails
+    _violating({**base, "hosted_inference": [
+        {**GOOD_INVOCATION, "provider": "local-large-llm"}]})
+    # a hosted provider invoked as local fails
+    _violating({**base, "local_inference": [
+        {"provider": "hosted-byom", "opt_in": True, "sends": []}]})
+    # a local provider with any outbound payload fails
+    _violating({**base, "local_inference": [
+        {"provider": "local-large-llm", "opt_in": True,
+         "sends": ["fen"]}]})
+    # a local provider without opt-in fails
+    _violating({**base, "local_inference": [
+        {"provider": "local-large-llm", "opt_in": False, "sends": []}]})
+    # a properly modeled local invocation passes and its provider
+    # suspends the reference-machine claims
+    assert evaluate(_policy(), {**base, "local_inference": [
+        GOOD_LOCAL_INVOCATION]}) == []
+    assert _policy()["external_providers"]["local-large-llm"][
+        "suspends_reference_claims"] is True
 
 
 def test_mutation_prose_contradictions_fail_simultaneously():
