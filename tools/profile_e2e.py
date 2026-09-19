@@ -17,8 +17,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 DROP_PREFIXES = ("GIT_", "GH_", "GITHUB_")
+# Only true process essentials survive. Dependency-affecting state
+# (PYTHONPATH, VIRTUAL_ENV) and user identity (USER/LOGNAME/SHELL) are
+# user-machine state: dropped, and asserted absent by leaked_vars.
 KEEP = ("PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG", "LC_ALL",
-        "PYTHONPATH", "VIRTUAL_ENV", "HOME", "USER", "LOGNAME", "SHELL")
+        "HOME")
+FORBIDDEN_RETAINED = ("PYTHONPATH", "VIRTUAL_ENV", "USER", "LOGNAME",
+                      "SHELL", "CI")
 
 
 def scrub_env(base: dict[str, str], home: Path) -> dict[str, str]:
@@ -31,7 +36,6 @@ def scrub_env(base: dict[str, str], home: Path) -> dict[str, str]:
     env["HOME"] = str(home)
     env["GIT_CONFIG_NOSYSTEM"] = "1"
     env["GIT_CONFIG_GLOBAL"] = os.devnull
-    env.pop("CI", None)
     return env
 
 
@@ -43,6 +47,9 @@ SCRUB_SET_PATHS = {"GIT_CONFIG_GLOBAL"}
 def leaked_vars(env: dict[str, str], real_home: str) -> list[str]:
     leaks = []
     for key in env:
+        if key in FORBIDDEN_RETAINED:
+            leaks.append(key)
+            continue
         if not any(key.startswith(p) for p in DROP_PREFIXES):
             continue
         if key in SCRUB_SET and env[key] == SCRUB_SET[key]:

@@ -42,6 +42,18 @@ def _fault_env(fault: str | None, tmp: Path) -> dict[str, str]:
     return env
 
 
+def classify_rc(returncode: int, stderr: str) -> Outcome:
+    if returncode == 0:
+        return Outcome("pass", "")
+    if returncode == 1 and stderr.strip():
+        return Outcome("reject", stderr.strip()[-200:])
+    if returncode == 1:
+        return Outcome("crash", "exit 1 with empty stderr (undiagnosable)")
+    if returncode < 0:
+        return Outcome("crash", f"terminated by signal {-returncode}")
+    return Outcome("crash", f"exit {returncode}")
+
+
 def run_under(cmd: list[str], fault: str | None = None,
               timeout: float = 10.0) -> Outcome:
     with tempfile.TemporaryDirectory(prefix="fault-") as tmp_s:
@@ -52,27 +64,30 @@ def run_under(cmd: list[str], fault: str | None = None,
                 cmd, cwd=ROOT, env=env, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, text=True)
             time.sleep(0.3)
+            if proc.poll() is not None:
+                # Already exited before the signal: classify the ACTUAL
+                # outcome - a fast pass is a pass, never a fake crash.
+                _, err = proc.communicate()
+                return classify_rc(proc.returncode, err or "")
             proc.send_signal(signal.SIGTERM)
             try:
-                proc.communicate(timeout=timeout)
+                _, err = proc.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.communicate()
                 return Outcome("crash", "ignored SIGTERM, killed at timeout")
-            return Outcome("crash", f"terminated by signal {-proc.returncode}")
+            if proc.returncode != -signal.SIGTERM:
+                # Signal delivered but the process exited on its own
+                # terms: classify what actually happened.
+                return classify_rc(proc.returncode, err or "")
+            return Outcome("crash", "terminated by SIGTERM")
         try:
             r = subprocess.run(
                 cmd, cwd=ROOT, env=env, capture_output=True, text=True,
                 timeout=timeout)
         except subprocess.TimeoutExpired:
             return Outcome("crash", f"timeout after {timeout}s (killed)")
-        if r.returncode == 0:
-            return Outcome("pass", "")
-        if r.returncode == 1 and r.stderr.strip():
-            return Outcome("reject", r.stderr.strip()[-200:])
-        if r.returncode == 1:
-            return Outcome("crash", "exit 1 with empty stderr (undiagnosable)")
-        return Outcome("crash", f"exit {r.returncode}")
+        return classify_rc(r.returncode, r.stderr)
 
 
 def expect(outcome: Outcome, wanted: str) -> str | None:

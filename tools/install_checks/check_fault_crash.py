@@ -41,6 +41,14 @@ def run(mode: str) -> None:
             _cmd("-c", "import time; time.sleep(30)"), "kill", timeout=5)
         if out.kind != "crash":
             problems.append("kill: SIGTERM not classified as crash")
+        out = fi.run_under(
+            _cmd(str(FIXTURES / "immediate_pass.py")), "kill", timeout=5)
+        if out.kind != "pass":
+            problems.append(f"kill: immediate pass classified {out.kind}")
+        out = fi.run_under(
+            _cmd(str(FIXTURES / "immediate_reject.py")), "kill", timeout=5)
+        if out.kind != "reject":
+            problems.append(f"kill: immediate reject classified {out.kind}")
         if problems:
             raise CheckError("; ".join(problems))
         return
