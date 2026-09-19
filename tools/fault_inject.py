@@ -10,6 +10,7 @@ A harness that cannot tell these apart turns real crashes into green CI.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import signal
 import subprocess
@@ -68,10 +69,8 @@ def _signal_group(proc: subprocess.Popen, sig: int) -> None:
     try:
         os.killpg(proc.pid, sig)
     except (ProcessLookupError, PermissionError):
-        try:
+        with contextlib.suppress(ProcessLookupError):
             proc.send_signal(sig)
-        except ProcessLookupError:
-            pass
 
 
 def run_under(cmd: list[str], fault: str | None = None,

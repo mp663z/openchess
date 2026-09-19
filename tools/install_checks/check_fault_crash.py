@@ -12,6 +12,7 @@ misclassification means the harness cannot tell green from broken.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import tempfile
@@ -93,10 +94,8 @@ def run(mode: str) -> None:
         # signaling, the probe above MUST fail - otherwise it proves
         # nothing about the group kill.
         def _direct_only(proc, sig):
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 proc.send_signal(sig)
-            except ProcessLookupError:
-                pass
 
         original = fi._signal_group
         fi._signal_group = _direct_only
