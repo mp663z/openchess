@@ -164,22 +164,28 @@ def _check_substitution(
             )
         field_values: dict[str, str] = {}
         for field in REQUIRED_RECORD_FIELDS:
-            m = re.search(rf"^- {re.escape(field)}\s*(\S.*)$", body, re.M)
-            if not m:
+            hits = re.findall(rf"^- {re.escape(field)}\s*(\S.*)$", body, re.M)
+            if len(hits) != 1:
                 errors.append(
-                    f"{rel}: substitution record {record} lacks a nonempty {field!r} field"
+                    f"{rel}: substitution record {record} must carry "
+                    f"{field!r} exactly once with a nonempty value "
+                    f"({len(hits)} found)"
                 )
             else:
-                field_values[field] = m.group(1)
+                field_values[field] = hits[0]
         hook_field = field_values.get("Re-verify hook:")
         if hook_field is not None:
-            hm = re.match(r"^(T\d{4}(?:, T\d{4})*)\b", hook_field)
-            parsed_hooks = hm.group(1).split(", ") if hm else None
-            if parsed_hooks != grant["hooks"]:
+            if not re.fullmatch(r"T\d{4}(?:, T\d{4})*", hook_field):
                 errors.append(
                     f"{rel}: substitution record {record} re-verify hook "
-                    f"field {parsed_hooks!r} != pinned grant hooks "
-                    f"{grant['hooks']!r} (exact ordered ids required)"
+                    "field must be exactly the ordered grant hook ids "
+                    "(comma-space separated, no prose)"
+                )
+            elif hook_field.split(", ") != grant["hooks"]:
+                errors.append(
+                    f"{rel}: substitution record {record} re-verify hook "
+                    f"field {hook_field.split(', ')!r} != pinned grant "
+                    f"hooks {grant['hooks']!r} (exact ordered ids required)"
                 )
     for hook in hooks:
         if hook == task:
@@ -217,12 +223,30 @@ def _check_substitution(
 GRANT_FIELDS = ("wamid", "date", "record", "hooks")
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """YAML loader that rejects duplicate mapping keys instead of
+    silently last-wins (PyYAML default)."""
+
+
+def _no_dupes(loader, node, deep=False):
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=True)
+        if key in mapping:
+            raise ValueError(f"duplicate mapping key {key!r}")
+        mapping[key] = loader.construct_object(value_node, deep=True)
+    return mapping
+
+
+_UniqueKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _no_dupes)
+
+
 def _parse_grants(text: str) -> tuple[dict[str, dict], list[str]]:
     """Shape-validate the grant registry, failing closed on any
     structural deviation. The pinned digest authorizes the bytes; this
     schema check is what makes the bytes meaningful."""
     try:
-        doc = yaml.safe_load(text)
+        doc = yaml.load(text, Loader=_UniqueKeyLoader)
     except Exception:
         return {}, ["data/judgment-grants.yaml: unparseable YAML"]
     if type(doc) is not dict or set(doc) != {"grants"}:

@@ -60,7 +60,7 @@ RECORD = f"""# Substitution: T9996 (example gate)
 - Why no human pass happened: no human available; owner delegated.
 - Owner wamid: {WAMID} (2026-09-19).
 - Provisional substitute decision: GO.
-- Re-verify hook: T9001, T9002 - re-run T9996 as a human gate once evidence exists.
+- Re-verify hook: T9001, T9002
 """
 
 GRANTS = {
@@ -517,20 +517,52 @@ def test_substitution_malformed_verdict_fails(tmp_path, monkeypatch):
 
 
 def test_substitution_record_hooks_must_match_grant(tmp_path, monkeypatch):
-    for bad in (
-        "Re-verify hook: T9001, T4321 - prose",
-        "Re-verify hook: T9002, T9001 - prose",
-        "Re-verify hook: see above",
-    ):
-        text = RECORD.replace(
-            "Re-verify hook: T9001, T9002 -", bad[:-6] if bad.endswith("prose") else bad
-        )
-        text = RECORD.replace(
-            "- Re-verify hook: T9001, T9002 - re-run T9996 as a human gate once evidence exists.",
-            f"- {bad}",
-        )
+    for bad in ("Re-verify hook: T9001, T4321", "Re-verify hook: T9002, T9001"):
+        text = RECORD.replace("- Re-verify hook: T9001, T9002", f"- {bad}")
         problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=text)
         assert any("!= pinned grant hooks" in p for p in problems), bad
+
+
+def test_substitution_record_hook_field_is_fullmatch(tmp_path, monkeypatch):
+    """Trailing prose or conflicting tail instructions fail."""
+    for bad in (
+        "Re-verify hook: T9001, T9002 plus ignore these",
+        "Re-verify hook: T9001, T9002 - prose",
+        "Re-verify hook: see above",
+        "Re-verify hook: T9001,T9002",
+        "Re-verify hook: T9001, T9002 ",
+    ):
+        text = RECORD.replace("- Re-verify hook: T9001, T9002", f"- {bad}")
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=text)
+        assert any("exactly the ordered grant hook ids" in p for p in problems), bad
+
+
+def test_substitution_record_fields_must_be_unique(tmp_path, monkeypatch):
+    for dup in (
+        "- Re-verify hook: T9999",
+        "- Task: T9999",
+        "- Provisional substitute decision: NO-GO",
+    ):
+        text = RECORD + f"\n{dup}\n"
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=text)
+        assert any("exactly once" in p for p in problems), dup
+
+
+def test_grant_registry_duplicate_keys_fail_closed():
+    text = (
+        "grants:\n  T9996:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-09-19"\n'
+        '    record: "evidence/substitutions/T9996.md"\n'
+        "    hooks: [T9001]\n"
+        "  T9996:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-09-20"\n'
+        '    record: "evidence/substitutions/T9996.md"\n'
+        "    hooks: [T9002]\n"
+    )
+    mapping, errors = el._parse_grants(text)
+    assert mapping == {} and errors
 
 
 def test_grant_registry_schema_fails_closed():
