@@ -104,26 +104,36 @@ WRITE_LOG = {
     "type": "append-only",
     "addressing": "content-addressed",
     "entry": {
-        "id": "content-hash-of-entry-payload",
+        "id": "content-hash-of-canonical-entry-envelope",
+        "envelope_fields": [
+            "domain-separator", "contract-version", "writer",
+            "writer_sequence", "parents", "object", "object_revision",
+            "operation", "payload"],
         "writer": "writer-device-id",
-        "writer_sequence": "per-writer-monotonic-integer",
-        "base_revision":
-            "content-hash-of-writers-last-synced-entry-or-genesis",
+        "writer_sequence": "per-writer-strictly-monotonic-unique-integer",
+        "duplicate_writer_sequence": "reject",
+        "parents": "parent-entry-ids-list-updated-on-every-append",
+        "merge_entry_parents": "multiple-parents-join-histories",
+        "object": "object-identity",
+        "object_revision": "object-revision-written",
+        "operation": "the-operation",
         "payload": "the-write",
     },
     "merge": {
-        "ordering": "topological-by-base-revision-then-writer-id-"
+        "ordering": "topological-by-parent-links-then-writer-id-"
                     "writer-sequence-lexicographic",
         "ordering_never": ["wall-clock", "arrival-order"],
         "concurrency": "neither-entry-is-an-ancestor-of-the-other-"
-                       "via-base-revision",
-        "same_revision": "shared-base-revision-and-same-object-touched",
+                       "via-parent-links",
+        "same_object": "concurrent-entries-writing-the-same-object",
         "conflict_rule": "named-review-queue-item-with-both-diffs-"
                          "before-any-winner-materialized",
         "ambiguous_concurrent_writes":
             "unresolved-until-logged-user-resolution",
     },
+    "dedup": "replay-of-existing-entry-id-is-idempotent-no-op",
     "resolution": "user-resolves",
+    "resolution_entry": "merge-resolution-entry-with-multiple-parents",
     "silent_resolution": "forbidden",
 }
 ACTIONS = {"freeze-cache", "no-op", "apply", "resume-live-sync",
@@ -183,19 +193,28 @@ reaching a server.
   the surface to OFFLINE-QUEUED when intent persistence is available,
   and is refused with the state named when it is not.
 - Reconnect conflicts: explicit - both sides append to the same
-  content-addressed write log; each entry carries a content-hash id, a
-  writer device id, a per-writer sequence and a base-revision link. A
-  reconnect merges histories in deterministic topological order by
-  base revision, ties broken by (writer id, writer sequence) - never
-  wall-clock, never arrival order. Two entries are concurrent when
-  neither is an ancestor of the other; concurrent writes touching the
-  same object revision surface as a named conflict in the review
-  queue (with both diffs) BEFORE any winner is materialized, and
-  ambiguous concurrent writes stay unresolved until a logged user
-  resolution entry. The user resolves; the product never picks.
-  OFFLINE-QUEUED holds until every intent is applied and conflicts
-  are surfaced; only then does sync-confirmed return the surface to
-  ONLINE.
+  content-addressed write log. An entry's id is the content hash of
+  its canonical complete envelope: domain separator, contract
+  version, writer device id, per-writer strictly monotonic and
+  unique sequence (a duplicate (writer, sequence) pair is rejected),
+  parent entry ids, object identity and revision, operation and
+  payload - so identical payloads from two writers, or repeated by
+  one writer at different sequences, are distinct entries. Parent
+  links name the writer's head at append time and move on every
+  append, so a writer's second offline entry descends from its
+  first; a merge-resolution entry lists multiple parents and joins
+  histories. Replaying an existing entry id is an idempotent no-op.
+  A reconnect merges histories in deterministic topological order
+  over parent links, ties broken by (writer id, writer sequence) -
+  never wall-clock, never arrival order. Two entries are concurrent
+  when neither is an ancestor of the other over parent links;
+  concurrent writes to the same object surface as a named conflict
+  in the review queue (with both diffs) BEFORE any winner is
+  materialized, and ambiguous concurrent writes stay unresolved
+  until a logged user resolution entry. The user resolves; the
+  product never picks. OFFLINE-QUEUED holds until every intent is
+  applied and conflicts are surfaced; only then does sync-confirmed
+  return the surface to ONLINE.
 - Failure modes: a lost phone loses only its queued intents, which the
   surface shows as pending until sync confirms; a stale desktop never
   overwrites newer surface approvals because the log is append-only.
@@ -372,6 +391,211 @@ def _bad(mutated: str, mutated4: str | None = None,
     raise AssertionError("mutation passed - the check has a hole")
 
 
+
+def _model(log_spec):
+    """Executable reference model of the fm write-log semantics. The
+    model is DERIVED from the front matter: envelope fields name the
+    id hash inputs, parents carry ancestry, duplicate policy and
+    dedup come from the declared fields. A spec mutation that breaks
+    a semantic guarantee fails the witness tests below."""
+    import hashlib
+    import json as _json
+
+    entry_spec = log_spec["entry"]
+    fields = entry_spec["envelope_fields"]
+    assert entry_spec["id"] == "content-hash-of-canonical-entry-envelope"
+    for required in ("domain-separator", "contract-version", "writer",
+                     "writer_sequence", "parents", "object", "payload"):
+        assert required in fields, required
+    assert entry_spec["writer_sequence"] == (
+        "per-writer-strictly-monotonic-unique-integer")
+    assert entry_spec["duplicate_writer_sequence"] == "reject"
+    assert entry_spec["parents"] == (
+        "parent-entry-ids-list-updated-on-every-append")
+    assert log_spec["dedup"] == (
+        "replay-of-existing-entry-id-is-idempotent-no-op")
+    assert log_spec["merge"]["concurrency"].endswith("via-parent-links")
+    assert log_spec["merge"]["conflict_rule"].endswith(
+        "before-any-winner-materialized")
+    assert log_spec["merge"]["ambiguous_concurrent_writes"] == (
+        "unresolved-until-logged-user-resolution")
+    assert log_spec["resolution_entry"] == (
+        "merge-resolution-entry-with-multiple-parents")
+
+    class Log:
+        def __init__(self):
+            self.entries = {}
+            self.last_seq = {}
+            self.conflicts = []
+            self.winners = {}
+
+        def make(self, writer, seq, parents, obj, rev, op, payload):
+            e = {"domain-separator": "write-log-v1",
+                 "contract-version": 1, "writer": writer,
+                 "writer_sequence": seq, "parents": list(parents),
+                 "object": obj, "object_revision": rev,
+                 "operation": op, "payload": payload}
+            blob = _json.dumps({k: e[k] for k in fields},
+                               sort_keys=True).encode()
+            e["id"] = hashlib.sha256(blob).hexdigest()
+            return e
+
+        def ancestors(self, entry):
+            seen = set()
+            stack = list(entry["parents"])
+            while stack:
+                pid = stack.pop()
+                if pid not in seen:
+                    seen.add(pid)
+                    if pid in self.entries:
+                        stack.extend(self.entries[pid]["parents"])
+            seen.discard(entry["id"])
+            return seen
+
+        def concurrent(self, a, b):
+            return (a["id"] not in self.ancestors(b)
+                    and b["id"] not in self.ancestors(a))
+
+        def append(self, e):
+            if e["id"] in self.entries:
+                return False  # idempotent replay of a known entry
+            last = self.last_seq.get(e["writer"])
+            if last is not None and e["writer_sequence"] <= last:
+                raise ValueError("duplicate (writer, sequence)")
+            self.last_seq[e["writer"]] = e["writer_sequence"]
+            conflict = False
+            for other in self.entries.values():
+                if (other["object"] == e["object"]
+                        and len(e["parents"]) == 1
+                        and len(other["parents"]) == 1
+                        and self.concurrent(e, other)):
+                    conflict = True
+                    self.conflicts.append(
+                        {"object": e["object"],
+                         "entries": sorted([e["id"], other["id"]])})
+            if conflict:
+                self.winners.pop(e["object"], None)
+            elif len(e["parents"]) <= 1:
+                self.winners[e["object"]] = e["id"]
+            self.entries[e["id"]] = e
+            return True
+
+        def resolve(self, writer, seq, conflicting_ids, obj, rev,
+                    payload):
+            r = self.make(writer, seq, sorted(conflicting_ids), obj,
+                          rev, "user-resolution", payload)
+            assert len(r["parents"]) > 1, "resolution joins histories"
+            self.append(r)
+            self.winners[obj] = r["id"]
+            return r
+
+    return Log()
+
+
+def test_witness_sequential_offline_writes_are_ancestors():
+    fm, _ = _parse(ADR)
+    log = _model(fm["write_log"])
+    head = log.make("A", 6, [], "repertoire", 6, "sync", "H")
+    log.append(head)
+    p = log.make("A", 7, [head["id"]], "repertoire", 7, "add", "P")
+    log.append(p)
+    q = log.make("A", 8, [p["id"]], "repertoire", 8, "add", "Q")
+    log.append(q)
+    assert q["parents"] == [p["id"]], "second write descends from first"
+    assert p["id"] in log.ancestors(q)
+    assert not log.concurrent(p, q), (
+        "sequential same-writer writes must never be concurrent")
+    assert log.conflicts == []
+    assert log.winners["repertoire"] == q["id"]
+
+
+def test_witness_identical_payloads_distinct_ids():
+    fm, _ = _parse(ADR)
+    log = _model(fm["write_log"])
+    head = log.make("A", 1, [], "repertoire", 1, "sync", "H")
+    log.append(head)
+    a = log.make("A", 2, [head["id"]], "repertoire", 2, "add", "P")
+    b = log.make("B", 2, [head["id"]], "repertoire", 2, "add", "P")
+    assert a["id"] != b["id"], (
+        "identical payload from two writers must be distinct entries")
+    a2 = log.make("A", 3, [a["id"]], "repertoire", 3, "add", "P")
+    assert a2["id"] != a["id"], (
+        "repeated payload at a new sequence must be a distinct entry")
+
+
+def test_witness_replay_is_idempotent_dedup():
+    fm, _ = _parse(ADR)
+    log = _model(fm["write_log"])
+    head = log.make("A", 1, [], "repertoire", 1, "sync", "H")
+    assert log.append(head) is True
+    assert log.append(head) is False, "replayed entry id must dedup"
+    assert len(log.entries) == 1
+    assert log.winners["repertoire"] == head["id"]
+
+
+def test_witness_genuine_fork_conflicts_before_any_winner():
+    fm, _ = _parse(ADR)
+    log = _model(fm["write_log"])
+    head = log.make("A", 1, [], "repertoire", 1, "sync", "H")
+    log.append(head)
+    a = log.make("A", 2, [head["id"]], "repertoire", 2, "edit", "A-edit")
+    log.append(a)
+    assert log.winners["repertoire"] == a["id"]
+    b = log.make("B", 1, [head["id"]], "repertoire", 2, "edit", "B-edit")
+    log.append(b)
+    assert log.concurrent(a, b)
+    assert log.conflicts == [
+        {"object": "repertoire",
+         "entries": sorted([a["id"], b["id"]])}], (
+        "fork on the same object must surface a named conflict")
+    assert "repertoire" not in log.winners, (
+        "no winner materializes before user resolution")
+    r = log.resolve("A", 3, [a["id"], b["id"]], "repertoire", 3,
+                    "merged-choice")
+    assert log.winners["repertoire"] == r["id"]
+    assert {a["id"], b["id"]} <= log.ancestors(r)
+
+
+def test_model_mutations_fail():
+    fm, _ = _parse(ADR)
+    import copy as _copy
+
+    def broken(mutate):
+        spec = _copy.deepcopy(fm["write_log"])
+        mutate(spec)
+        try:
+            log = _model(spec)
+        except (AssertionError, KeyError):
+            return True  # rejected at build
+        # a model that BUILT from a broken spec must fail a witness
+        try:
+            head = log.make("A", 1, [], "o", 1, "sync", "H")
+            log.append(head)
+            a = log.make("A", 2, [head["id"]], "o", 2, "add", "P")
+            b = log.make("B", 2, [head["id"]], "o", 2, "add", "P")
+            assert a["id"] != b["id"]
+            q = log.make("A", 3, [a["id"]], "o", 3, "add", "Q")
+            log.append(a)
+            log.append(q)
+            assert a["id"] in log.ancestors(q)
+            assert log.append(head) is False
+        except (AssertionError, KeyError, ValueError):
+            return True
+        return False
+
+    assert broken(lambda s: s["entry"]["envelope_fields"].remove(
+        "writer")), "envelope without writer must break id uniqueness"
+    assert broken(lambda s: s["entry"]["envelope_fields"].remove(
+        "writer_sequence")), "envelope without sequence must break"
+    assert broken(lambda s: s["entry"].__setitem__(
+        "id", "content-hash-of-entry-payload"))
+    assert broken(lambda s: s["entry"].__setitem__(
+        "parents", "last-synced-entry-only"))
+    assert broken(lambda s: s.__setitem__(
+        "dedup", "replay-appends-duplicate"))
+    assert broken(lambda s: s["merge"].__setitem__(
+        "concurrency", "neither-entry-is-an-ancestor-via-base-revision"))
+
 def test_real_adr_passes():
     _check(ADR)
 
@@ -453,7 +677,7 @@ def test_write_log_mutations_fail():
                      "silent_resolution: allowed"))
     _bad(ADR.replace("resolution: user-resolves",
                      "resolution: automatic"))
-    _bad(ADR.replace("ordering: topological-by-base-revision-then-"
+    _bad(ADR.replace("ordering: topological-by-parent-links-then-"
                      "writer-id-writer-sequence-lexicographic",
                      "ordering: wall-clock"))
     _bad(ADR.replace("ordering_never: [wall-clock, arrival-order]",
@@ -464,9 +688,23 @@ def test_write_log_mutations_fail():
     _bad(ADR.replace("ambiguous_concurrent_writes: unresolved-until-"
                      "logged-user-resolution",
                      "ambiguous_concurrent_writes: auto-resolved"))
-    _bad(ADR.replace("base_revision: content-hash-of-writers-last-"
-                     "synced-entry-or-genesis",
-                     "base_revision: latest-entry-on-either-side"))
+    _bad(ADR.replace("id: content-hash-of-canonical-entry-envelope",
+                     "id: content-hash-of-entry-payload"))
+    _bad(ADR.replace("writer_sequence: per-writer-strictly-monotonic-"
+                     "unique-integer",
+                     "writer_sequence: per-writer-monotonic-integer"))
+    _bad(ADR.replace("duplicate_writer_sequence: reject",
+                     "duplicate_writer_sequence: last-wins"))
+    _bad(ADR.replace("parents: parent-entry-ids-list-updated-on-every-"
+                     "append",
+                     "parents: last-synced-entry-only"))
+    _bad(ADR.replace("via-parent-links", "via-base-revision"))
+    _bad(ADR.replace("dedup: replay-of-existing-entry-id-is-idempotent-"
+                     "no-op",
+                     "dedup: replay-appends-duplicate"))
+    _bad(ADR.replace("resolution_entry: merge-resolution-entry-with-"
+                     "multiple-parents",
+                     "resolution_entry: single-parent-entry"))
     _bad(ADR.replace("type: append-only", "type: mutable"))
 
 

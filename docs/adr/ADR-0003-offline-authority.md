@@ -56,19 +56,27 @@ write_log:
   type: append-only
   addressing: content-addressed
   entry:
-    id: content-hash-of-entry-payload
+    id: content-hash-of-canonical-entry-envelope
+    envelope_fields: [domain-separator, contract-version, writer, writer_sequence, parents, object, object_revision, operation, payload]
     writer: writer-device-id
-    writer_sequence: per-writer-monotonic-integer
-    base_revision: content-hash-of-writers-last-synced-entry-or-genesis
+    writer_sequence: per-writer-strictly-monotonic-unique-integer
+    duplicate_writer_sequence: reject
+    parents: parent-entry-ids-list-updated-on-every-append
+    merge_entry_parents: multiple-parents-join-histories
+    object: object-identity
+    object_revision: object-revision-written
+    operation: the-operation
     payload: the-write
   merge:
-    ordering: topological-by-base-revision-then-writer-id-writer-sequence-lexicographic
+    ordering: topological-by-parent-links-then-writer-id-writer-sequence-lexicographic
     ordering_never: [wall-clock, arrival-order]
-    concurrency: neither-entry-is-an-ancestor-of-the-other-via-base-revision
-    same_revision: shared-base-revision-and-same-object-touched
+    concurrency: neither-entry-is-an-ancestor-of-the-other-via-parent-links
+    same_object: concurrent-entries-writing-the-same-object
     conflict_rule: named-review-queue-item-with-both-diffs-before-any-winner-materialized
     ambiguous_concurrent_writes: unresolved-until-logged-user-resolution
+  dedup: replay-of-existing-entry-id-is-idempotent-no-op
   resolution: user-resolves
+  resolution_entry: merge-resolution-entry-with-multiple-parents
   silent_resolution: forbidden
 drivers: [zero-knowledge-server-cannot-arbitrate, no-silent-writes, local-runnable-auth-free]
 invariants:
@@ -122,19 +130,28 @@ reaching a server.
   the surface to OFFLINE-QUEUED when intent persistence is available,
   and is refused with the state named when it is not.
 - Reconnect conflicts: explicit - both sides append to the same
-  content-addressed write log; each entry carries a content-hash id, a
-  writer device id, a per-writer sequence and a base-revision link. A
-  reconnect merges histories in deterministic topological order by
-  base revision, ties broken by (writer id, writer sequence) - never
-  wall-clock, never arrival order. Two entries are concurrent when
-  neither is an ancestor of the other; concurrent writes touching the
-  same object revision surface as a named conflict in the review
-  queue (with both diffs) BEFORE any winner is materialized, and
-  ambiguous concurrent writes stay unresolved until a logged user
-  resolution entry. The user resolves; the product never picks.
-  OFFLINE-QUEUED holds until every intent is applied and conflicts
-  are surfaced; only then does sync-confirmed return the surface to
-  ONLINE.
+  content-addressed write log. An entry's id is the content hash of
+  its canonical complete envelope: domain separator, contract
+  version, writer device id, per-writer strictly monotonic and
+  unique sequence (a duplicate (writer, sequence) pair is rejected),
+  parent entry ids, object identity and revision, operation and
+  payload - so identical payloads from two writers, or repeated by
+  one writer at different sequences, are distinct entries. Parent
+  links name the writer's head at append time and move on every
+  append, so a writer's second offline entry descends from its
+  first; a merge-resolution entry lists multiple parents and joins
+  histories. Replaying an existing entry id is an idempotent no-op.
+  A reconnect merges histories in deterministic topological order
+  over parent links, ties broken by (writer id, writer sequence) -
+  never wall-clock, never arrival order. Two entries are concurrent
+  when neither is an ancestor of the other over parent links;
+  concurrent writes to the same object surface as a named conflict
+  in the review queue (with both diffs) BEFORE any winner is
+  materialized, and ambiguous concurrent writes stay unresolved
+  until a logged user resolution entry. The user resolves; the
+  product never picks. OFFLINE-QUEUED holds until every intent is
+  applied and conflicts are surfaced; only then does sync-confirmed
+  return the surface to ONLINE.
 - Failure modes: a lost phone loses only its queued intents, which the
   surface shows as pending until sync confirms; a stale desktop never
   overwrites newer surface approvals because the log is append-only.
