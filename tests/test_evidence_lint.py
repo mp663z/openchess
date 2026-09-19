@@ -16,11 +16,87 @@ SHA = "a" * 40
 OTHER = "b" * 40
 
 TASKS = {
-    "T9999": {"id": "T9999", "status": "done", "verification": "independent review",
-              "done_sha": SHA},
+    "T9999": {
+        "id": "T9999",
+        "status": "done",
+        "verification": "independent review",
+        "done_sha": SHA,
+    },
     "T9998": {"id": "T9998", "status": "in_progress", "verification": "auto"},
     "T9997": {"id": "T9997", "status": "done", "verification": "auto", "done_sha": SHA},
+    "T9996": {
+        "id": "T9996",
+        "status": "done",
+        "verification": "human checkpoint",
+        "checkpoint": "C-X",
+        "done_sha": SHA,
+    },
+    "T9995": {
+        "id": "T9995",
+        "status": "done",
+        "verification": "independent verifier",
+        "done_sha": SHA,
+    },
+    "T9001": {
+        "id": "T9001",
+        "status": "todo",
+        "verification": "human checkpoint",
+        "tags": ["deferred:marketing-wedge", "reverify:T9996"],
+    },
+    "T9002": {
+        "id": "T9002",
+        "status": "todo",
+        "verification": "independent verifier",
+        "tags": ["reverify:T9996"],
+    },
 }
+
+WAMID = "wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0E2NDE0QzQ5MzI5NjgyNUIzREQA"
+
+RECORD = f"""# Substitution: T9996 (example gate)
+
+- Task: T9996 - example human gate.
+- What the human would have done: decide.
+- Why no human pass happened: no human available; owner delegated.
+- Owner wamid: {WAMID} (2026-09-19).
+- Provisional substitute decision: GO.
+- Re-verify hook: T9001, T9002
+"""
+
+GRANTS = {
+    "T9996": {
+        "wamid": WAMID,
+        "date": "2026-09-19",
+        "record": "evidence/substitutions/T9996.md",
+        "hooks": ["T9001", "T9002"],
+    }
+}
+
+
+def subst_evidence(wamid=WAMID, record="evidence/substitutions/T9996.md", hooks="T9001, T9002"):
+    verification = (
+        "human checkpoint - judgment-substituted per owner "
+        f"{wamid} (2026-09-19); provisional decision: {record}; "
+        f"re-verify hooks: {hooks}"
+    )
+    return f"""# T9996 Example gate - evidence
+
+Status: done
+Verification: {verification}
+Commands: `python tools/dag.py verify`. Environment: python 3.12.
+Recorded merge SHA on main: {SHA}
+"""
+
+
+def with_record(
+    tmp_path, monkeypatch, record_text=RECORD, record_rel="evidence/substitutions/T9996.md"
+):
+    monkeypatch.setattr(el, "ROOT", tmp_path)
+    rp = tmp_path / record_rel
+    rp.parent.mkdir(parents=True, exist_ok=True)
+    rp.write_text(record_text)
+    return rp
+
 
 FULL = f"""# T9999 Example - evidence
 
@@ -87,8 +163,9 @@ def test_done_without_board_done_fails(tmp_path):
 
 
 def test_done_with_wrong_sha_fails(tmp_path):
-    text = FULL.replace(f"Recorded merge SHA on main: {SHA}",
-                        f"Recorded merge SHA on main: {OTHER}")
+    text = FULL.replace(
+        f"Recorded merge SHA on main: {SHA}", f"Recorded merge SHA on main: {OTHER}"
+    )
     errors = el.lint_file(write(tmp_path, "T9999.md", text), TASKS, {})
     assert any("!= board done_sha" in e for e in errors)
 
@@ -106,8 +183,10 @@ def test_verification_banana_fails(tmp_path):
 
 
 def test_independent_done_needs_pass_at_matching_sha(tmp_path):
-    text = FULL.replace(f"Verification: independent review - PASS at {SHA}",
-                        "Verification: independent review - routed for review")
+    text = FULL.replace(
+        f"Verification: independent review - PASS at {SHA}",
+        "Verification: independent review - routed for review",
+    )
     errors = el.lint_file(write(tmp_path, "T9999.md", text), TASKS, {})
     assert any("PASS at" in e for e in errors)
     text2 = FULL.replace(f"PASS at {SHA}", f"PASS at {OTHER}")
@@ -223,25 +302,339 @@ def test_marker_with_trailing_whitespace_only_still_grandfathers(tmp_path):
 
 
 def test_unknown_task_missing_from_dag_fails(tmp_path):
-    text = ("# T9996 ghost\n\nStatus: in-progress\n"
-            "Verification: banana - nothing\n"
-            "Commands: `true`. Environment: python 3.12.\n")
-    errors = el.lint_file(write(tmp_path, "T9996.md", text), TASKS, {})
+    text = (
+        "# T0000 ghost\n\nStatus: in-progress\n"
+        "Verification: banana - nothing\n"
+        "Commands: `true`. Environment: python 3.12.\n"
+    )
+    errors = el.lint_file(write(tmp_path, "T0000.md", text), TASKS, {})
     assert any("missing from tasks/dag.json" in e for e in errors)
 
 
 def test_empty_and_lone_backticks_fail(tmp_path):
-    for bad in ("Commands: ``. Environment: python 3.12.",
-                "Commands: `. Environment: python 3.12.",
-                "Commands: `   `. Environment: python 3.12."):
+    for bad in (
+        "Commands: ``. Environment: python 3.12.",
+        "Commands: `. Environment: python 3.12.",
+        "Commands: `   `. Environment: python 3.12.",
+    ):
         text = f"# T9998 wip\n\nStatus: in-progress\nVerification: auto - building\n{bad}\n"
         errors = el.lint_file(write(tmp_path, "T9998.md", text), TASKS, {})
         assert any("nonempty backticked command" in e for e in errors), bad
 
 
 def test_empty_environment_value_fails(tmp_path):
-    text = ("# T9998 wip\n\nStatus: in-progress\nVerification: auto - building\n"
-            "Commands: `make test`. Environment:\n")
+    text = (
+        "# T9998 wip\n\nStatus: in-progress\nVerification: auto - building\n"
+        "Commands: `make test`. Environment:\n"
+    )
     errors = el.lint_file(write(tmp_path, "T9998.md", text), TASKS, {})
     assert any("nonempty environment" in e for e in errors)
 
+
+def subst_lint(
+    tmp_path,
+    monkeypatch,
+    text,
+    tasks=TASKS,
+    grants=GRANTS,
+    record_text=RECORD,
+    record_rel="evidence/substitutions/T9996.md",
+    name="T9996.md",
+):
+    if record_text is not None:
+        with_record(tmp_path, monkeypatch, record_text=record_text, record_rel=record_rel)
+    else:
+        monkeypatch.setattr(el, "ROOT", tmp_path)
+    return el.lint_file(write(tmp_path, name, text), tasks, {}, grants)
+
+
+def test_judgment_substitution_passes(tmp_path, monkeypatch):
+    assert subst_lint(tmp_path, monkeypatch, subst_evidence()) == []
+
+
+def test_substitution_requires_pinned_grant(tmp_path, monkeypatch):
+    problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), grants={})
+    assert any("no pinned judgment grant" in p for p in problems)
+
+
+def test_substitution_mode_matrix_rejected(tmp_path, monkeypatch):
+    """Only exactly 'human checkpoint' is substitutable."""
+    for mode in (
+        "auto + human",
+        "human/external",
+        "human/legal audit",
+        "independent verifier",
+        "human",
+    ):
+        tasks = {**TASKS, "T9996": {**TASKS["T9996"], "verification": mode}}
+        text = subst_evidence().replace("Verification: human checkpoint", f"Verification: {mode}")
+        problems = subst_lint(tmp_path, monkeypatch, text, tasks=tasks)
+        assert any("not substitutable" in p for p in problems), mode
+
+
+def test_substitution_verdict_grants_nothing_on_auto_mode(tmp_path, monkeypatch):
+    """A substitution verdict on an auto-mode task is inert: no human
+    gate exists to substitute, so the task stands on auto evidence."""
+    tasks = {**TASKS, "T9996": {**TASKS["T9996"], "verification": "auto"}}
+    text = subst_evidence().replace("Verification: human checkpoint", "Verification: auto")
+    problems = subst_lint(tmp_path, monkeypatch, text, tasks=tasks)
+    assert not any("substitut" in p for p in problems)
+
+
+def test_substitution_requires_nonempty_checkpoint(tmp_path, monkeypatch):
+    for empty in ("", None):
+        tasks = {**TASKS, "T9996": {**TASKS["T9996"], "checkpoint": empty}}
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+        assert any("nonempty board checkpoint" in p for p in problems), empty
+
+
+def test_substitution_verdict_must_match_grant(tmp_path, monkeypatch):
+    cases = [
+        ({"wamid": "wamid.OTHER"}, subst_evidence(), "verdict wamid != pinned grant wamid"),
+        ({"date": "2026-09-20"}, subst_evidence(), "verdict date != pinned grant date"),
+        (
+            {"record": "evidence/substitutions/T9997.md"},
+            subst_evidence(),
+            "verdict record != pinned grant record",
+        ),
+        ({"hooks": ["T9002", "T9001"]}, subst_evidence(), "verdict hooks != pinned grant hooks"),
+    ]
+    for patch, text, needle in cases:
+        grants = {"T9996": {**GRANTS["T9996"], **patch}}
+        problems = subst_lint(tmp_path, monkeypatch, text, grants=grants)
+        assert any(needle in p for p in problems), needle
+
+
+def test_substitution_tampered_verdict_fails(tmp_path, monkeypatch):
+    text = subst_evidence(
+        wamid="wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0I4RkZBRkZBQUFBQUFBQUFBQUFBQUFBQUFBQUUA"
+    )
+    problems = subst_lint(tmp_path, monkeypatch, text)
+    assert any("wamid" in p for p in problems)
+
+
+def test_substitution_missing_record_fails(tmp_path, monkeypatch):
+    problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=None)
+    assert any("missing" in p for p in problems)
+
+
+def test_substitution_record_for_other_task_fails(tmp_path, monkeypatch):
+    problems = subst_lint(
+        tmp_path,
+        monkeypatch,
+        subst_evidence(record="evidence/substitutions/T9997.md"),
+        record_rel="evidence/substitutions/T9997.md",
+    )
+    assert any("not T9996" in p for p in problems)
+
+
+def test_substitution_record_title_must_name_task(tmp_path, monkeypatch):
+    problems = subst_lint(
+        tmp_path,
+        monkeypatch,
+        subst_evidence(),
+        record_text=RECORD.replace("# Substitution: T9996", "# Substitution: T9997"),
+    )
+    assert any("title must name" in p for p in problems)
+
+
+def test_substitution_record_must_carry_grant_wamid(tmp_path, monkeypatch):
+    problems = subst_lint(
+        tmp_path, monkeypatch, subst_evidence(), record_text=RECORD.replace(WAMID, "wamid.OTHER")
+    )
+    assert any("does not carry" in p for p in problems)
+
+
+def test_substitution_record_required_fields(tmp_path, monkeypatch):
+    for field in (
+        "What the human would have done:",
+        "Why no human pass happened:",
+        "Provisional substitute decision:",
+        "Re-verify hook:",
+    ):
+        text = RECORD.replace(f"- {field}", f"- Omitted{field[-1]}")
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=text)
+        assert any(field.strip(":") in p for p in problems), field
+
+
+def test_substitution_hook_rules(tmp_path, monkeypatch):
+    # hook cannot be the task itself
+    grants = {"T9996": {**GRANTS["T9996"], "hooks": ["T9996"]}}
+    text = subst_evidence(hooks="T9996")
+    problems = subst_lint(tmp_path, monkeypatch, text, grants=grants)
+    assert any("cannot be T9996 itself" in p for p in problems)
+    # unknown hook task
+    grants = {"T9996": {**GRANTS["T9996"], "hooks": ["T4321"]}}
+    text = subst_evidence(hooks="T4321")
+    problems = subst_lint(tmp_path, monkeypatch, text, grants=grants)
+    assert any("T4321 is not a dag task" in p for p in problems)
+    # done hook supersedes the substitution; active states are not
+    # re-verifiable either - hooks must stay exactly todo
+    for status in ("done", "pending", "in_progress"):
+        tasks = {**TASKS, "T9001": {**TASKS["T9001"], "status": status, "done_sha": SHA}}
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+        assert any("must stay todo" in p for p in problems), status
+    # malformed tag typing fails closed (a string is not a list)
+    tasks = {**TASKS, "T9001": {**TASKS["T9001"], "tags": "reverify:T9996"}}
+    problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+    assert any("tags malformed" in p for p in problems)
+    tasks = {**TASKS, "T9001": {**TASKS["T9001"], "tags": ["reverify:T9996", 5]}}
+    problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+    assert any("tags malformed" in p for p in problems)
+    # hook without the reverify link-back tag
+    tasks = {**TASKS, "T9001": {**TASKS["T9001"], "tags": []}}
+    problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+    assert any("missing reverify:T9996 tag" in p for p in problems)
+    # hook mode must be in the pinned accepted set - exact governance
+    # vocabulary, no substrings
+    for mode in (
+        "auto",
+        "inhuman automated",
+        "not human",
+        "independently automatic",
+        "humanity audit",
+        "Human checkpoint",
+        "human-checkpoint",
+        "human  checkpoint",
+        "HUMAN CHECKPOINT",
+        "auto + HUMAN",
+    ):
+        tasks = {**TASKS, "T9001": {**TASKS["T9001"], "verification": mode}}
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+        assert any("pinned accepted hook-mode set" in p for p in problems), mode
+    for mode in (
+        "human checkpoint",
+        "independent verifier",
+        "human/independent",
+        "auto + human",
+        "independent benchmark",
+    ):
+        tasks = {**TASKS, "T9001": {**TASKS["T9001"], "verification": mode}}
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), tasks=tasks)
+        assert not any("hook" in p for p in problems), mode
+
+
+def test_grant_registry_tampering_fails_closed(tmp_path):
+    p = tmp_path / "judgment-grants.yaml"
+    p.write_text("grants: {}\n")
+    mapping, errors = el.load_grants(p)
+    assert mapping == {}
+    assert any("tampered" in e for e in errors)
+
+
+def test_substitution_never_for_independent_verifier(tmp_path, monkeypatch):
+    tasks = {**TASKS, "T9995": {**TASKS["T9995"], "checkpoint": "C-IV"}}
+    text = (
+        subst_evidence()
+        .replace("Verification: human checkpoint", "Verification: independent verifier")
+        .replace("# T9996 Example gate", "# T9995 Example gate")
+    )
+    problems = subst_lint(tmp_path, monkeypatch, text, tasks=tasks, name="T9995.md")
+    assert any("not substitutable" in p for p in problems)
+
+
+def test_substitution_malformed_verdict_fails(tmp_path, monkeypatch):
+    text = subst_evidence().replace("; provisional decision:", "; decision:")
+    problems = subst_lint(tmp_path, monkeypatch, text)
+    assert any("PASS at" in p or "human pass required" in p.lower() for p in problems)
+
+
+def test_substitution_record_hooks_must_match_grant(tmp_path, monkeypatch):
+    for bad in ("Re-verify hook: T9001, T4321", "Re-verify hook: T9002, T9001"):
+        text = RECORD.replace("- Re-verify hook: T9001, T9002", f"- {bad}")
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=text)
+        assert any("!= pinned grant hooks" in p for p in problems), bad
+
+
+def test_substitution_record_hook_field_is_fullmatch(tmp_path, monkeypatch):
+    """Trailing prose or conflicting tail instructions fail."""
+    for bad in (
+        "Re-verify hook: T9001, T9002 plus ignore these",
+        "Re-verify hook: T9001, T9002 - prose",
+        "Re-verify hook: see above",
+        "Re-verify hook: T9001,T9002",
+        "Re-verify hook: T9001, T9002 ",
+    ):
+        text = RECORD.replace("- Re-verify hook: T9001, T9002", f"- {bad}")
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=text)
+        assert any("exactly the ordered grant hook ids" in p for p in problems), bad
+
+
+def test_substitution_record_fields_must_be_unique(tmp_path, monkeypatch):
+    for dup in (
+        "- Re-verify hook: T9999",
+        "- Task: T9999",
+        "- Provisional substitute decision: NO-GO",
+    ):
+        text = RECORD + f"\n{dup}\n"
+        problems = subst_lint(tmp_path, monkeypatch, subst_evidence(), record_text=text)
+        assert any("exactly once" in p for p in problems), dup
+
+
+def test_grant_registry_duplicate_keys_fail_closed():
+    text = (
+        "grants:\n  T9996:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-09-19"\n'
+        '    record: "evidence/substitutions/T9996.md"\n'
+        "    hooks: [T9001]\n"
+        "  T9996:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-09-20"\n'
+        '    record: "evidence/substitutions/T9996.md"\n'
+        "    hooks: [T9002]\n"
+    )
+    mapping, errors = el._parse_grants(text)
+    assert mapping == {} and errors
+
+
+def test_grant_registry_schema_fails_closed():
+    # unparseable YAML
+    mapping, errors = el._parse_grants("grants: [unclosed")
+    assert mapping == {} and errors
+    # top-level not a mapping
+    mapping, errors = el._parse_grants("- just-a-list\n")
+    assert mapping == {} and any("top-level" in e for e in errors)
+    # unknown top-level key
+    mapping, errors = el._parse_grants("grants: {}\nextra: 1\n")
+    assert any("top-level" in e for e in errors)
+    # grants not a mapping
+    mapping, errors = el._parse_grants("grants: []\n")
+    assert mapping == {} and any("must be a mapping" in e for e in errors)
+    good = (
+        "grants:\n  T9996:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-09-19"\n'
+        '    record: "evidence/substitutions/T9996.md"\n'
+        "    hooks: [T9001, T9002]\n"
+    )
+    mapping, errors = el._parse_grants(good)
+    assert errors == [] and set(mapping) == {"T9996"}
+    # unknown grant field rejected
+    mapping, errors = el._parse_grants(
+        good + "  T9997:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-09-19"\n'
+        '    record: "evidence/substitutions/T9997.md"\n'
+        "    hooks: [T9001]\n"
+        "    sneaky: true\n"
+    )
+    assert any("unknown fields" in e for e in errors)
+    # missing grant field rejected
+    mapping, errors = el._parse_grants(f'grants:\n  T9996:\n    wamid: "{WAMID}"\n')
+    assert any("missing fields" in e for e in errors)
+    # non-string grant key rejected
+    mapping, errors = el._parse_grants("grants:\n  5:\n    wamid: x\n")
+    assert any("not TNNNN" in e for e in errors)
+
+
+def test_grant_registry_impossible_date_fails_closed():
+    good = (
+        "grants:\n  T9996:\n"
+        f'    wamid: "{WAMID}"\n'
+        '    date: "2026-99-99"\n'
+        '    record: "evidence/substitutions/T9996.md"\n'
+        "    hooks: [T9001]\n"
+    )
+    mapping, errors = el._parse_grants(good)
+    assert any("not a real calendar date" in e for e in errors)
