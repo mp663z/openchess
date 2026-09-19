@@ -35,7 +35,22 @@ def check_ids() -> dict[str, str]:
     return ids
 
 
-def run_all(only: set[str] | None = None) -> list[str]:
+# Checks that themselves invoke the runner (clean verifier, post-merge
+# canary) must be excluded from any NESTED runner invocation: without the
+# exclusion, runner -> check -> runner -> check would recurse without bound.
+INNER_EXCLUDE = ("T0038", "T0039")
+
+
+def nested_cmd() -> list[str]:
+    """Runner invocation for use INSIDE another gate. The exclusion travels
+    as a flag so the nested runner discovers its OWN check set (committed
+    content may differ from the in-tree one) minus the recursive checks."""
+    return ["-m", "tools.install_checks.runner",
+            "--exclude", ",".join(INNER_EXCLUDE)]
+
+
+def run_all(only: set[str] | None = None,
+            exclude: set[str] | None = None) -> list[str]:
     failures: list[str] = []
     known = check_ids()
     if only:
@@ -46,6 +61,8 @@ def run_all(only: set[str] | None = None) -> list[str]:
         mod = importlib.import_module(f"tools.install_checks.{name}")
         check_id = mod.CHECK_ID
         if only and check_id not in only:
+            continue
+        if exclude and check_id in exclude:
             continue
         for mode, expect_ok in (("good", True), ("violation", False)):
             try:
@@ -63,8 +80,13 @@ def run_all(only: set[str] | None = None) -> list[str]:
 
 
 def main() -> int:
-    only = set(sys.argv[1:]) or None
-    failures = run_all(only)
+    args = sys.argv[1:]
+    exclude: set[str] = set()
+    if args[:1] == ["--exclude"]:
+        exclude = {x for x in args[1].split(",") if x}
+        args = args[2:]
+    only = set(args) or None
+    failures = run_all(only, exclude)
     for f in failures:
         print(f"FAIL {f}")
     if failures:
