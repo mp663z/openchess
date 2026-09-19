@@ -8,6 +8,7 @@ cycle re-reads bytes but never duplicates rows.
 
 from __future__ import annotations
 
+import codecs
 import hashlib
 import sqlite3
 from collections.abc import Iterator
@@ -52,13 +53,18 @@ def iter_pgn_games(path: str | Path, chunk_size: int = CHUNK_SIZE) -> Iterator[t
     path = Path(path)
     buf = ""
     seq = 0
+    # incremental decoder: a multi-byte UTF-8 character straddling a
+    # chunk boundary must be reassembled, not mangled into U+FFFD;
+    # genuinely invalid bytes still decode as U+FFFD (replace semantics)
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
     for chunk in _raw_chunks(path, chunk_size):
-        buf += chunk.decode("utf-8", errors="replace")
+        buf += decoder.decode(chunk)
         while (idx := buf.find("\n\n[", 1)) != -1:
             game, buf = buf[:idx], buf[idx + 2 :]
             if game.strip():
                 yield seq, game.strip("\n")
                 seq += 1
+    buf += decoder.decode(b"", final=True)
     if buf.strip():
         yield seq, buf.strip("\n")
 
