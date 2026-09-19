@@ -1198,10 +1198,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "5b7d499abcc76112e4d6a459e0fc5b120eb97d02",
+   "evidence_manifest": "evidence/T0054.md"
   },
   {
    "id": "T0055",
