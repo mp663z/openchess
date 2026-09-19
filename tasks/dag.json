@@ -90056,7 +90056,7 @@
    "track": "public-product",
    "title": "Lichess account discovery/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Lichess account discovery: One-connect selects authenticated account and avoids wrong-account import. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
@@ -90456,7 +90456,7 @@
    "track": "public-product",
    "title": "Lichess historical pull/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Lichess historical pull: Paginated/archive game pull records source IDs/times and imports all accessible games. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
@@ -90656,7 +90656,7 @@
    "track": "public-product",
    "title": "Lichess incremental cursor/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Lichess incremental cursor: Scheduled/background pull obtains only new/changed accessible games. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
@@ -90856,7 +90856,7 @@
    "track": "public-product",
    "title": "Lichess variant/filter policy/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Lichess variant/filter policy: Standard/rated/casual/variant inclusion is explicit for diagnosis and user-configurable. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
@@ -91256,7 +91256,7 @@
    "track": "public-product",
    "title": "Chess.com account binding/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Chess.com account binding: Verified username/account selection prevents importing a namesake. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
@@ -91456,7 +91456,7 @@
    "track": "public-product",
    "title": "Chess.com archive discovery/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Chess.com archive discovery: Official archive endpoints/months are traversed deterministically. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
@@ -91656,7 +91656,7 @@
    "track": "public-product",
    "title": "Chess.com historical pull/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Chess.com historical pull: All accessible games normalize with source IDs/ratings/time controls. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
@@ -91856,7 +91856,7 @@
    "track": "public-product",
    "title": "Chess.com incremental poll/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Chess.com incremental poll: Cadence, cache, rate limit and no-change behavior follow provider policy. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
@@ -92056,7 +92056,7 @@
    "track": "public-product",
    "title": "Chess.com private/unavailable handling/contract",
    "dependencies": [
-    "T2798"
+    "T2357"
    ],
    "acceptance": "Chess.com private/unavailable handling: Unavailable games/accounts produce honest partial coverage, not success. Provider terms, identity, scope, cursor, rate, privacy, error and deletion are versioned.",
    "verification": "auto",
