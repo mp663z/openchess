@@ -1,0 +1,212 @@
+# T0536: import capability contract (implementation-neutral; the product
+# runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for what importing a game record MEANS everywhere in
+# the product: PGN drops, folders, watched sources, and public-provider
+# pulls all produce the SAME stored record with the SAME provenance,
+# the SAME idempotency, and the SAME failure semantics. ALL normative
+# semantics live in STRUCTURED fields the lint compares exactly - prose
+# is documentation, never the enforcement surface. Every scenario the
+# DAG names (the T0537-T0680 chains) maps here to visible output,
+# persisted state, telemetry and errors - per the task acceptance.
+# Rights follow docs/rights-policy.md: fail closed, always.
+schema_version: 1
+
+contract:
+  id: import-capability
+  sources:
+    registry_rule: >-
+      Every imported record carries a source id from this registry.
+      Unknown source ids fail closed (unknown_rights); they are never
+      coerced to a known class. Adding a source is MINOR additive only
+      with a recorded rights class; a source without verified rights
+      is refused at intake, never stored.
+    entries:
+      - id: pgn-file
+        kind: user-file
+        rights_class: user-own
+      - id: pgn-multi
+        kind: user-file
+        rights_class: user-own
+      - id: pgn-folder
+        kind: user-file
+        rights_class: user-own
+      - id: pgn-watch
+        kind: user-file
+        rights_class: user-own
+      - id: lichess-public
+        kind: public-api
+        rights_class: cc0
+      - id: chesscom-public
+        kind: public-api
+        rights_class: user-own-only
+      - id: cbh-licensed
+        kind: user-file
+        rights_class: licensed-own
+    rights_classes: [cc0, licensed-own, user-own, user-own-only]
+  record:
+    fields: [game_id, source_id, provenance, content_sha256, variant,
+      tags, movetext, imported_at]
+    provenance_fields: [source_id, rights_class, retrieved_at,
+      retrieval_detail]
+    identity_rule: >-
+      A stored game is exactly the declared fields; game_id is the
+      dedup identity and never participates in position identity
+      (positions follow the chess-variant contract). content_sha256
+      covers the canonical record bytes so duplicate, updated and
+      roundtrip detection are byte-exact, never heuristic.
+  idempotency:
+    dedup_key: game_id
+    duplicate: {policy: no-op-visible, outcome: already-imported}
+    updated: {policy: replace-recorded, outcome: updated, precondition: same-game_id-different-content_sha256}
+    rule: >-
+      Re-importing the same game_id with the same content hash is a
+      visible no-op; with a different hash it is a recorded replace.
+      No import ever creates two records for one game_id.
+  atomicity:
+    commit_boundary: per-game
+    partial_game: never-visible
+    cancel: committed-stay-in-flight-discarded
+    crash: restart-resumes-idempotently
+    rule: >-
+      The game is the atomic unit: a cancelled or crashed import leaves
+      every committed game intact and every in-flight game absent.
+      Restart redoes the source idempotently through the dedup rule.
+  scenarios:
+    registry_rule: >-
+      Every scenario id below has exactly one DAG chain; the chain's
+      tests prove the mapped visible output, persisted state, telemetry
+      and errors on the shipped path. An unmapped scenario is a
+      contract violation; so is a mapped scenario with an empty field.
+    entries:
+      - id: import-pgn
+        chain_task: T0537
+        sources: [pgn-file]
+        visible_output: import-summary
+        persisted_state: [game-records, provenance, index-entries]
+        telemetry: [import.started, import.game_stored, import.completed]
+        error_codes: [malformed_request]
+      - id: import-multi-pgn
+        chain_task: T0548
+        sources: [pgn-multi]
+        visible_output: import-summary
+        persisted_state: [game-records, provenance, index-entries]
+        telemetry: [import.started, import.game_stored, import.completed]
+        error_codes: [malformed_request]
+      - id: import-utf8
+        chain_task: T0559
+        sources: [pgn-file, pgn-multi]
+        visible_output: import-summary
+        persisted_state: [game-records, provenance, index-entries]
+        telemetry: [import.started, import.game_stored, import.completed]
+        error_codes: [malformed_request]
+      - id: import-bad-tags
+        chain_task: T0570
+        sources: [pgn-file, pgn-multi]
+        visible_output: refusal-with-location
+        persisted_state: [rejection-record]
+        telemetry: [import.started, import.game_rejected, import.completed]
+        error_codes: [malformed_request]
+      - id: import-truncated
+        chain_task: T0581
+        sources: [pgn-file, pgn-multi]
+        visible_output: refusal-with-location
+        persisted_state: [rejection-record]
+        telemetry: [import.started, import.game_rejected, import.completed]
+        error_codes: [malformed_request]
+      - id: import-illegal
+        chain_task: T0592
+        sources: [pgn-file, pgn-multi]
+        visible_output: refusal-with-position
+        persisted_state: [rejection-record]
+        telemetry: [import.started, import.game_rejected, import.completed]
+        error_codes: [illegal_move]
+      - id: import-duplicate
+        chain_task: T0603
+        sources: [pgn-file, pgn-multi, pgn-folder]
+        visible_output: already-imported
+        persisted_state: [unchanged-store]
+        telemetry: [import.started, import.game_duplicate, import.completed]
+        error_codes: []
+      - id: import-updated
+        chain_task: T0614
+        sources: [pgn-file, pgn-multi, pgn-folder]
+        visible_output: updated-summary
+        persisted_state: [replaced-record, provenance, index-entries]
+        telemetry: [import.started, import.game_updated, import.completed]
+        error_codes: []
+      - id: import-10k
+        chain_task: T0625
+        sources: [pgn-file, pgn-multi, pgn-folder]
+        visible_output: progress-and-summary
+        persisted_state: [game-records, provenance, index-entries]
+        telemetry: [import.started, import.progress, import.game_stored, import.completed]
+        error_codes: [malformed_request]
+      - id: import-folder
+        chain_task: T0636
+        sources: [pgn-folder]
+        visible_output: per-file-and-total-summary
+        persisted_state: [game-records, provenance, index-entries, rejection-records]
+        telemetry: [import.started, import.file_completed, import.game_stored, import.game_rejected, import.completed]
+        error_codes: [malformed_request]
+      - id: import-cancel
+        chain_task: T0647
+        sources: [pgn-file, pgn-multi, pgn-folder]
+        visible_output: cancelled-summary
+        persisted_state: [committed-games-only]
+        telemetry: [import.started, import.cancelled]
+        error_codes: []
+      - id: import-crash
+        chain_task: T0658
+        sources: [pgn-file, pgn-multi, pgn-folder]
+        visible_output: recovered-summary
+        persisted_state: [committed-games-only]
+        telemetry: [import.started, import.interrupted, import.resumed, import.completed]
+        error_codes: []
+      - id: import-unknown-rights
+        chain_task: T0669
+        sources: []
+        visible_output: refusal-with-reason
+        persisted_state: [rejection-record]
+        telemetry: [import.refused]
+        error_codes: [unknown_rights]
+      - id: import-roundtrip
+        chain_task: T0680
+        sources: [pgn-file]
+        visible_output: roundtrip-proof
+        persisted_state: [unchanged-store]
+        telemetry: [export.completed, import.completed]
+        error_codes: []
+  failure_classes: [unknown_source, unknown_rights, malformed_input,
+    illegal_movetext, partial_visibility]
+  failure_mapping:
+    unknown_source: {trigger: source-id-not-in-registry, error: unknown_rights}
+    unknown_rights: {trigger: source-rights-class-not-verified, error: unknown_rights}
+    malformed_input: {trigger: bytes-not-well-formed-for-source-kind, error: malformed_request}
+    illegal_movetext: {trigger: movetext-violates-game-rules, error: illegal_move}
+    partial_visibility: {trigger: any-partial-game-record-observable, error: internal}
+  errors:
+    closed_enum: [malformed_request, illegal_move, unknown_rights,
+      internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  links:
+    variant_contract: data/contracts/variant.yaml
+    rights_policy: data/contracts/rights_policy.yaml
+  versioning:
+    base_path: /import/v1
+    client_pin: MAJOR
+    minor_policy: additive-only
+    minor_additions: [new-sources, new-optional-fields, new-scenarios]
+    downgrade_policy: any-earlier-minor-within-major-without-migration
+    major_bump: new-base-path-required
+    rule: >-
+      Clients pin MAJOR. MINOR is additive-only: new sources, new
+      optional fields, new scenarios appended to the registry. A
+      consumer may downgrade to any earlier MINOR within the same
+      MAJOR without migration, because conformance never asserts
+      absence of extra entries. MAJOR bumps require a new base path.
