@@ -1,0 +1,83 @@
+# T0041: chess variant + position-identity contract (implementation-
+# neutral; the product runtime target is the Rust core per ADR-0001).
+#
+# This contract is the source of truth for what "the same position"
+# means everywhere in the product: analysis dedup, repertoire memory,
+# delta scoring, sync. The v5 report (line 224) fixes the model:
+# position identity = canonical state (variant, board, side to move,
+# castling rights, en-passant); move-order path is preserved separately
+# and NEVER collapsed into identity; repertoire context is a third,
+# independent axis. A single collision-prone hash as identity is a
+# contract violation.
+schema_version: 1
+
+contract:
+  id: chess-variant
+  versioning:
+    base_path: /variant/v1
+    rule: >-
+      Clients pin MAJOR. MINOR is additive-only: new variants, new
+      optional fields, new error codes appended to the enum. A consumer
+      may downgrade to any earlier MINOR within the same MAJOR without
+      migration, because conformance never asserts absence of extra
+      variants or fields. MAJOR bumps require a new base path.
+  identity:
+    canonical_fields: [variant, board, side_to_move, castling_rights,
+      en_passant]
+    rule: >-
+      Position identity is the exact tuple of the canonical_fields, in
+      declared order, compared field-by-field - never a single hash.
+      Two records refer to the same position only when ALL canonical
+      fields match exactly. The move-order path (how the position was
+      reached) is preserved alongside identity and never participates
+      in equality. Repertoire context is a separate axis and never
+      participates in equality.
+    hash_rule: >-
+      Any storage hash (for indexing or dedup buckets) is a lookup
+      accelerator only: collisions MUST fall back to full canonical
+      field comparison, and a hash mismatch MUST NOT be required for
+      inequality decisions without field comparison.
+  variants:
+    registry_rule: >-
+      Every position record carries a variant id from this registry.
+      Unknown variant ids fail closed (malformed_request); they are
+      never coerced to standard. Adding a variant is MINOR additive;
+      removing or renaming one is a MAJOR bump.
+    entries:
+      - id: standard
+        name: Standard chess
+        start_fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        castling: orthodox
+        status: stable
+  fen:
+    grammar: fen-1.0-fields
+    rule: >-
+      FEN handling is exact: parse accepts only the six-field grammar
+      (board, side, castling, en-passant, halfmove, fullmove) with the
+      variant's start FEN as the canonical default; serialize produces
+      the same six fields in canonical form; parse(serialize(p)) == p
+      for every well-formed position (round-trip). Malformed input is
+      rejected with a specific failure class, never partially applied.
+    failure_classes: [wrong_field_count, bad_board, bad_side,
+      bad_castling, bad_en_passant, bad_counters, illegal_position]
+    illegal_position_rule: >-
+      A grammatically valid FEN whose position is unreachable or
+      nonsensical (both kings in check, missing king, pawn on the back
+      rank, castling rights inconsistent with pieces) is rejected with
+      illegal_position, not silently normalized.
+  errors:
+    closed_enum: [malformed_request, unknown_variant, illegal_position,
+      internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  privacy:
+    chess_content: allowed-here
+    rule: >-
+      Position data is the user's own chess content; the T0005 license
+      boundary governs where game records may originate (licensed/CC0/
+      user-owned only), and this contract adds no rights to position
+      data beyond those sources.
