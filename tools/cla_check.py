@@ -180,13 +180,27 @@ def verify_acceptance(handle: str, entry: dict, repo: str | None = None) -> None
 
 def changed_files(base_ref: str) -> list[tuple[str, str]]:
     """(status, path) pairs for the PR diff; statuses A/M/D/R100 etc."""
+    # Full-history fetches ONLY: a --depth=1 fetch re-shallows a full clone
+    # (writes .git/shallow with the base tip as boundary), after which the
+    # three-dot diff below fails with "no merge base" (exit 128) - CI run
+    # 35414644614. If the checkout is already shallow, unshallow first for
+    # the same reason.
+    shallow = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=ROOT, check=True, capture_output=True, text=True, timeout=60,
+    ).stdout.strip()
+    if shallow == "true":
+        subprocess.run(
+            ["git", "fetch", "--unshallow", "origin"],
+            cwd=ROOT, check=True, capture_output=True, timeout=300,
+        )
     subprocess.run(
-        ["git", "fetch", "origin", base_ref, "--depth=1"],
-        cwd=ROOT, check=True, capture_output=True,
+        ["git", "fetch", "origin", base_ref],
+        cwd=ROOT, check=True, capture_output=True, timeout=300,
     )
     out = subprocess.run(
         ["git", "diff", "--name-status", f"origin/{base_ref}...HEAD"],
-        cwd=ROOT, check=True, capture_output=True, text=True,
+        cwd=ROOT, check=True, capture_output=True, text=True, timeout=120,
     ).stdout
     pairs = []
     for line in out.splitlines():

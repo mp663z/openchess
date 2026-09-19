@@ -185,3 +185,59 @@ def test_acceptance_must_be_standalone_line():
     assert not cla_check._has_acceptance(f'"{s}"')
     assert not cla_check._has_acceptance("")
     assert not cla_check._has_acceptance(None)
+
+
+def _git(args, cwd, env=None):
+    import os
+    import subprocess
+    if env is None:
+        # Never inherit GIT_* from a hook/CI context: GIT_DIR would override
+        # cwd and operate on the surrounding real repository.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    return subprocess.run(["git", *args], cwd=cwd, check=True,
+                          capture_output=True, text=True,
+                          env=env, timeout=60).stdout
+
+
+def test_changed_files_never_reshallows_a_full_clone(tmp_path, monkeypatch):
+    """Regression for CI run 35414644614: `git fetch --depth=1` inside
+    changed_files re-shallowed the full CI checkout and the three-dot diff
+    then failed with 'no merge base' (exit 128)."""
+    import os
+    origin = tmp_path / "origin.git"
+    _git(["init", "--bare", "-q", str(origin)], cwd=tmp_path)
+    seed = tmp_path / "seed"
+    _git(["init", "-q", str(seed)], cwd=tmp_path)
+    _git(["-C", str(seed), "config", "user.email", "t@example.com"], cwd=tmp_path)
+    _git(["-C", str(seed), "config", "user.name", "t"], cwd=tmp_path)
+    (seed / "base.txt").write_text("base\n")
+    _git(["-C", str(seed), "add", "-A"], cwd=tmp_path)
+    _git(["-C", str(seed), "commit", "-q", "-m", "base"], cwd=tmp_path)
+    _git(["-C", str(seed), "branch", "-M", "main"], cwd=tmp_path)
+    _git(["-C", str(seed), "push", "-q", str(origin), "main"], cwd=tmp_path)
+    _git(["-C", str(origin), "symbolic-ref", "HEAD", "refs/heads/main"],
+         cwd=tmp_path)
+    work = tmp_path / "work"
+    _git(["clone", "-q", str(origin), str(work)], cwd=tmp_path)
+    _git(["-C", str(work), "config", "user.email", "t@example.com"], cwd=tmp_path)
+    _git(["-C", str(work), "config", "user.name", "t"], cwd=tmp_path)
+    # PR head: a merge commit whose second parent carries the change,
+    # mirroring refs/pull/N/merge in CI.
+    _git(["-C", str(work), "checkout", "-q", "-b", "pr"], cwd=tmp_path)
+    (work / "pr.txt").write_text("pr\n")
+    _git(["-C", str(work), "add", "-A"], cwd=tmp_path)
+    _git(["-C", str(work), "commit", "-q", "-m", "pr change"], cwd=tmp_path)
+    _git(["-C", str(work), "checkout", "-q", "main"], cwd=tmp_path)
+    _git(["-C", str(work), "merge", "-q", "--no-ff", "-m", "merge", "pr"],
+         cwd=tmp_path)
+    assert not (work / ".git" / "shallow").exists(), "fixture must start full"
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(cla_check, "ROOT", work)
+    for var in list(os.environ):
+        if var.startswith("GIT_"):
+            monkeypatch.delenv(var, raising=False)
+    files = cla_check.changed_files("main")
+    assert ("A", "pr.txt") in files
+    assert not (work / ".git" / "shallow").exists(), (
+        "changed_files must not re-shallow a full clone"
+    )
