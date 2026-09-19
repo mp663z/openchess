@@ -20,7 +20,48 @@ TASKS = {
               "done_sha": SHA},
     "T9998": {"id": "T9998", "status": "in_progress", "verification": "auto"},
     "T9997": {"id": "T9997", "status": "done", "verification": "auto", "done_sha": SHA},
+    "T9996": {"id": "T9996", "status": "done", "verification": "human checkpoint",
+              "done_sha": SHA},
+    "T9995": {"id": "T9995", "status": "done",
+              "verification": "independent verifier", "done_sha": SHA},
+    "T9001": {"id": "T9001", "status": "todo", "verification": "auto"},
+    "T9002": {"id": "T9002", "status": "todo", "verification": "auto"},
 }
+
+WAMID = "wamid.HBgMOTE4MTIxNzk4Mjg1FQIAEhgUM0E2NDE0QzQ5MzI5NjgyNUIzREQA"
+
+RECORD = f"""# Substitution: T9996 (example gate)
+
+- Task: T9996 - example human gate.
+- What the human would have done: decide.
+- Owner wamid: {WAMID} (2026-09-19).
+- Provisional substitute decision: GO.
+- Re-verify hook: re-run T9996 as a human gate once evidence exists.
+"""
+
+
+def subst_evidence(wamid=WAMID, record="evidence/substitutions/T9996.md",
+                   hooks="T9001, T9002"):
+    verification = (
+        "human checkpoint - judgment-substituted per owner "
+        f"{wamid} (2026-09-19); provisional decision: {record}; "
+        f"re-verify hooks: {hooks}")
+    return f"""# T9996 Example gate - evidence
+
+Status: done
+Verification: {verification}
+Commands: `python tools/dag.py verify`. Environment: python 3.12.
+Recorded merge SHA on main: {SHA}
+"""
+
+
+def with_record(tmp_path, monkeypatch, record_text=RECORD,
+                record_rel="evidence/substitutions/T9996.md"):
+    monkeypatch.setattr(el, "ROOT", tmp_path)
+    rp = tmp_path / record_rel
+    rp.parent.mkdir(parents=True, exist_ok=True)
+    rp.write_text(record_text)
+    return rp
 
 FULL = f"""# T9999 Example - evidence
 
@@ -223,10 +264,10 @@ def test_marker_with_trailing_whitespace_only_still_grandfathers(tmp_path):
 
 
 def test_unknown_task_missing_from_dag_fails(tmp_path):
-    text = ("# T9996 ghost\n\nStatus: in-progress\n"
+    text = ("# T0000 ghost\n\nStatus: in-progress\n"
             "Verification: banana - nothing\n"
             "Commands: `true`. Environment: python 3.12.\n")
-    errors = el.lint_file(write(tmp_path, "T9996.md", text), TASKS, {})
+    errors = el.lint_file(write(tmp_path, "T0000.md", text), TASKS, {})
     assert any("missing from tasks/dag.json" in e for e in errors)
 
 
@@ -245,3 +286,68 @@ def test_empty_environment_value_fails(tmp_path):
     errors = el.lint_file(write(tmp_path, "T9998.md", text), TASKS, {})
     assert any("nonempty environment" in e for e in errors)
 
+
+
+def test_judgment_substitution_passes(tmp_path, monkeypatch):
+    with_record(tmp_path, monkeypatch)
+    assert el.lint_file(write(tmp_path, "T9996.md", subst_evidence()),
+                        TASKS, {}) == []
+
+
+def test_substitution_missing_record_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr(el, "ROOT", tmp_path)
+    problems = el.lint_file(write(tmp_path, "T9996.md", subst_evidence()),
+                            TASKS, {})
+    assert any("missing" in p for p in problems)
+
+
+def test_substitution_record_for_other_task_fails(tmp_path, monkeypatch):
+    with_record(tmp_path, monkeypatch,
+                record_rel="evidence/substitutions/T9997.md")
+    problems = el.lint_file(
+        write(tmp_path, "T9996.md",
+              subst_evidence(record="evidence/substitutions/T9997.md")),
+        TASKS, {})
+    assert any("not T9996" in p for p in problems)
+
+
+def test_substitution_record_without_wamid_fails(tmp_path, monkeypatch):
+    with_record(tmp_path, monkeypatch,
+                record_text=RECORD.replace(WAMID, "wamid.OTHER"))
+    problems = el.lint_file(write(tmp_path, "T9996.md", subst_evidence()),
+                            TASKS, {})
+    assert any("wamid" in p for p in problems)
+
+
+def test_substitution_record_without_hook_section_fails(tmp_path, monkeypatch):
+    with_record(tmp_path, monkeypatch,
+                record_text=RECORD.replace("Re-verify hook", "Followup"))
+    problems = el.lint_file(write(tmp_path, "T9996.md", subst_evidence()),
+                            TASKS, {})
+    assert any("Re-verify hook" in p for p in problems)
+
+
+def test_substitution_unknown_hook_task_fails(tmp_path, monkeypatch):
+    with_record(tmp_path, monkeypatch)
+    problems = el.lint_file(
+        write(tmp_path, "T9996.md", subst_evidence(hooks="T9001, T4321")),
+        TASKS, {})
+    assert any("T4321" in p for p in problems)
+
+
+def test_substitution_never_for_independent_verifier(tmp_path, monkeypatch):
+    with_record(tmp_path, monkeypatch)
+    text = subst_evidence().replace(
+        "Verification: human checkpoint",
+        "Verification: independent verifier").replace(
+        "# T9996 Example gate", "# T9995 Example gate")
+    problems = el.lint_file(write(tmp_path, "T9995.md", text), TASKS, {})
+    assert any("PASS at" in p for p in problems)
+
+
+def test_substitution_malformed_verdict_fails(tmp_path, monkeypatch):
+    with_record(tmp_path, monkeypatch)
+    text = subst_evidence().replace(
+        "; provisional decision:", "; decision:")
+    problems = el.lint_file(write(tmp_path, "T9996.md", text), TASKS, {})
+    assert problems

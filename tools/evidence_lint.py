@@ -54,6 +54,18 @@ TASK_RE = re.compile(r"^T\d{4}$")
 MARKER_RE = re.compile(r"pre-contract: true( - [^\n]*)?\s*\Z")
 INDEPENDENT = ("independent", "human")
 
+# Judgment-substituted human checkpoints (owner-delegated, 2026-09-19):
+# a HUMAN gate (never an independent-verifier task) may complete when the
+# owner has delegated the decision, recorded as a provisional substitute
+# with re-verify hooks. The substitution is only as strong as its record:
+# the record file must exist, name the task, carry the owner wamid, and
+# name at least one real re-verify hook task.
+SUBST_RE = re.compile(
+    r"\Ajudgment-substituted per owner (wamid\.[A-Za-z0-9+/=]+) "
+    r"\((\d{4}-\d{2}-\d{2})\); provisional decision: "
+    r"(evidence/substitutions/(T\d{4})\.md); "
+    r"re-verify hooks: (T\d{4}(?:, T\d{4})*)\Z")
+
 
 def _tasks(dag_path: Path) -> dict[str, dict]:
     data = json.loads(dag_path.read_text())
@@ -135,13 +147,50 @@ def lint_file(
                 )
             if status == "done" and any(k in mode for k in INDEPENDENT):
                 m = re.search(r"\bPASS at ([0-9a-f]{40})\b", detail)
-                if not m:
+                subst = SUBST_RE.match(detail.strip())
+                if m:
+                    if board_sha and m.group(1) != board_sha:
+                        errors.append(
+                            f"{rel}: verifier PASS SHA {m.group(1)[:12]} != board done_sha"
+                        )
+                elif subst and "human" in mode and "independent" not in mode:
+                    wamid, _date, record, record_task, hooks = subst.groups()
+                    if record_task != task:
+                        errors.append(
+                            f"{rel}: substitution record {record} is for "
+                            f"{record_task}, not {task}")
+                    record_path = ROOT / record
+                    if not record_path.is_file():
+                        errors.append(
+                            f"{rel}: substitution record {record} missing")
+                    else:
+                        body = record_path.read_text()
+                        if task not in body.splitlines()[0]:
+                            errors.append(
+                                f"{rel}: substitution record {record} title "
+                                f"must name {task}")
+                        if wamid not in body:
+                            errors.append(
+                                f"{rel}: substitution record {record} does "
+                                "not carry the owner wamid it cites")
+                        if "Re-verify hook" not in body:
+                            errors.append(
+                                f"{rel}: substitution record {record} lacks "
+                                "a Re-verify hook section")
+                    for hook in hooks.split(", "):
+                        if hook not in tasks:
+                            errors.append(
+                                f"{rel}: re-verify hook {hook} is not a "
+                                "dag task")
+                elif "human" in mode and "independent" not in mode:
+                    errors.append(
+                        f"{rel}: human mode requires a `PASS at <sha>` "
+                        "verdict or a judgment-substituted verdict naming "
+                        "owner wamid, substitution record and re-verify "
+                        "hooks")
+                else:
                     errors.append(
                         f"{rel}: independent/human mode requires a `PASS at <sha>` verdict"
-                    )
-                elif board_sha and m.group(1) != board_sha:
-                    errors.append(
-                        f"{rel}: verifier PASS SHA {m.group(1)[:12]} != board done_sha"
                     )
 
     commands = _field(text, "Commands")
