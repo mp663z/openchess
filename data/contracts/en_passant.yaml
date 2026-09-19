@@ -1,0 +1,135 @@
+# T0068: chess en-passant contract (implementation-neutral; the product
+# runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for the en-passant target and the en-passant capture
+# everywhere in the product: position application, game import,
+# repertoire replay, review and drill generation all share THESE
+# semantics. ALL normative semantics live in STRUCTURED fields the lint
+# compares exactly - prose is documentation, never the enforcement
+# surface. The v5 report treats the en-passant target as position
+# state; this contract fixes when the target exists, how the capture
+# works, and when the target participates in position identity.
+schema_version: 1
+
+contract:
+  id: chess-en-passant
+  target:
+    grammar:
+      none_sentinel: "-"
+      files: [a, b, c, d, e, f, g, h]
+      ranks: ["3", "6"]
+      empty: forbidden
+      rule: >-
+        A target field is exactly the none sentinel or one square:
+        a declared file plus a declared rank. Rank 3 is the target
+        after a WHITE two-square advance; rank 6 after a BLACK one.
+        No other rank is a target.
+    set_on:
+      event: pawn-two-square-advance
+      target_file: advancing-pawn-file
+      white: {from_rank: "2", to_rank: "4", target_rank: "3"}
+      black: {from_rank: "7", to_rank: "5", target_rank: "6"}
+      rule: >-
+        The target is set EXACTLY when a pawn advances two squares
+        from its start rank, and names the square the pawn passed
+        over: same file, the skipped rank. No other event sets it.
+    lifetime:
+      duration: exactly-one-ply
+      available_to: opponent-of-the-advancing-side
+      cleared_by: any-move
+      rule: >-
+        The target exists for exactly the opponent's immediately
+        following move. Every move - the en-passant capture or any
+        other - clears it. A target never survives its ply and is
+        never carried across a turn.
+    storage_vs_identity:
+      storage: recorded-on-every-two-square-advance
+      identity_value: target-when-legal-capture-else-none
+      rule: >-
+        The stored target field records the square after EVERY
+        two-square advance, whether or not a capture is possible.
+        Position identity is separate (contract.identity): the
+        canonical en_passant identity VALUE is the target square
+        only when at least one legal en-passant capture exists
+        against it, and the none sentinel otherwise - a target no
+        pawn can legally take never distinguishes two positions.
+    rule: >-
+      The en-passant target is exactly the grammar above, set only by
+      the set_on event, living only for the lifetime above, with the
+      storage-vs-identity split above. There is no other target state.
+  capture:
+    mover:
+      piece: pawn-of-side-to-move
+      white: {mover_rank: "5", captured_rank: "5", target_rank: "6"}
+      black: {mover_rank: "4", captured_rank: "4", target_rank: "3"}
+      file_relation: adjacent-to-target-file
+    mechanics:
+      destination: the-target-square
+      captured_square: {file: target-file, rank: captured-rank}
+      rule: >-
+        The capturing pawn moves diagonally ONE square onto the
+        target square; the captured pawn is removed from the square
+        it occupies - the target's file on the captured rank, NEVER
+        the destination square. This is the only capture whose
+        captured piece does not stand on the destination.
+    preconditions:
+      - target set on the immediately preceding move
+      - capturing pawn on its mover rank in a file adjacent to the target file
+      - an enemy pawn on the captured square
+      - the resulting position leaves the mover's own king unattacked
+    rule: >-
+      ALL preconditions hold or the capture is illegal. Because the
+      capture removes TWO pawns from the same rank, legality is
+      evaluated on the RESULTING position: a horizontally pinning
+      line opened by the double removal makes the capture illegal
+      even when the king was not in check before it.
+  turn_linkage:
+    transitions: exactly-one
+    halfmove_clock: reset  # en-passant is a pawn move and a capture
+    fullmove_number: increment-when-black
+    rule: >-
+      An en-passant capture advances the turn machine exactly once
+      per the chess-turn contract: it is always a halfmove-clock
+      reset (both a pawn move and a capture) and increments the
+      fullmove number exactly when black captures.
+  identity:
+    canonical_field: en_passant
+    participates: always
+    value_rule: target-when-at-least-one-legal-capture-else-none-sentinel
+    rule: >-
+      The en_passant canonical identity field ALWAYS participates
+      in position identity per the chess-variant contract's
+      canonical_fields; what varies is its VALUE, per the
+      storage_vs_identity section above. Repetition states in the
+      chess-turn contract consume this identity tuple unchanged.
+  failure_classes: [target_malformed, target_inconsistent,
+    capture_precondition, pinned_capture]
+  failure_mapping:
+    target_malformed: {trigger: target-field-not-canonical, error: malformed_request}
+    target_inconsistent: {trigger: target-set-but-no-enemy-pawn-on-captured-square, error: illegal_position}
+    capture_precondition: {trigger: no-adjacent-pawn-or-target-stale, error: illegal_move}
+    pinned_capture: {trigger: resulting-position-leaves-own-king-attacked, error: illegal_move}
+  errors:
+    closed_enum: [malformed_request, illegal_position, illegal_move,
+      internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  links:
+    variant_contract: data/contracts/variant.yaml
+    turn_contract: data/contracts/turn.yaml
+  versioning:
+    base_path: /en-passant/v1
+    client_pin: MAJOR
+    minor_policy: additive-only
+    minor_additions: [new-optional-fields]
+    downgrade_policy: any-earlier-minor-within-major-without-migration
+    major_bump: new-base-path-required
+    rule: >-
+      Clients pin MAJOR. MINOR is additive-only: new optional fields.
+      A consumer may downgrade to any earlier MINOR within the same
+      MAJOR without migration, because conformance never asserts
+      absence of extra fields. MAJOR bumps require a new base path.
