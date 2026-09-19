@@ -119,13 +119,32 @@ def _assert_failure_stage(fen: str, name: str, expect: str) -> None:
         assert not hit, f"{name}: {msg!r} also matches {other} markers {hit}"
 
 
-def _assert_fails_closed(vid: str, known: set[str]) -> None:
+def _observed_fail_closed_code(vid: str, known: set[str]) -> str:
+    """Run the registry gate and return the observed structured error
+    code (the prefix before the first colon)."""
     try:
         check_variant_id(vid, known)
     except ContractError as exc:
-        assert str(exc).startswith("malformed_request"), str(exc)
-        return
+        msg = str(exc)
+        assert ":" in msg, f"unstructured error, no code prefix: {msg!r}"
+        return msg.split(":", 1)[0]
     raise AssertionError(f"variant id {vid!r} accepted")
+
+
+def _assert_rollback_codes(case: dict, observed: str) -> None:
+    """The observed code, both fixture fields, and the contract-pinned
+    code must ALL agree. The registry_rule pins malformed_request for
+    unknown variant ids (request validation before variant resolution);
+    unknown_variant is in the closed enum but is NOT this path's code."""
+    assert case["expect_failure"] == case["expect_error_code"], (
+        f"fixture fields disagree: {case['expect_failure']} != {case['expect_error_code']}"
+    )
+    assert observed == case["expect_failure"], (
+        f"observed code {observed!r} != declared expect_failure {case['expect_failure']!r}"
+    )
+    assert observed == "malformed_request", (
+        f"registry_rule pins malformed_request for unknown variant ids, observed {observed!r}"
+    )
 
 
 def _assert_additive_tolerance(base_identity: dict, extra_fields: dict) -> None:
@@ -166,7 +185,7 @@ def test_fixture_shape():
             assert type(case["note"]) is str
         if "deferred" in case:
             assert "pair" not in case, f"{case['name']}: deferred cases carry no executable pair"
-            assert set(case["deferred"]) == {"reason", "reverify"}
+            assert set(case["deferred"]) == {"reason", "reverify", "hook"}
             assert all(type(v) is str and v.strip() for v in case["deferred"].values())
         else:
             pair = case["pair"]
@@ -279,6 +298,13 @@ def test_deferred_cases_are_explicit_non_executable_markers():
             f"{case['name']}: registry has {len(REGISTRY)} variants - "
             "the deferred marker must become an executable pair now"
         )
+        node: object = CONTRACT_DOC
+        for segment in case["deferred"]["hook"].split("."):
+            assert type(node) is dict and segment in node, (
+                f"{case['name']}: deferred hook {case['deferred']['hook']!r} "
+                f"does not resolve in the contract (failed at {segment!r})"
+            )
+            node = node[segment]
 
 
 def test_every_failure_class_has_a_malformed_case():
@@ -308,9 +334,9 @@ def test_rollback_unknown_variant_fails_closed_executable():
     # the FEN payload is fully legal, so the failure is attributable to
     # the variant id alone
     _check_fen(case["input"]["fen"], case["name"], "orthodox")
-    _assert_fails_closed(vid, REGISTRY)
-    assert case["expect_failure"] == "malformed_request"
-    assert case["expect_error_code"] in ERROR_ENUM
+    observed = _observed_fail_closed_code(vid, REGISTRY)
+    assert observed in ERROR_ENUM, f"observed code {observed!r} outside the closed enum"
+    _assert_rollback_codes(case, observed)
     # every declared variant passes the same gate
     for known in REGISTRY:
         check_variant_id(known, REGISTRY)
@@ -320,7 +346,22 @@ def test_rollback_unknown_variant_gate_is_discriminating_under_mutation():
     """If the unknown id were declared, the fail-closed assertion must fail."""
     for known in REGISTRY:
         with pytest.raises(AssertionError):
-            _assert_fails_closed(known, REGISTRY)
+            _observed_fail_closed_code(known, REGISTRY)
+
+
+def test_rollback_error_code_fields_are_load_bearing_under_mutation():
+    """expect_failure / expect_error_code are asserted, not ornamental:
+    every wrong-but-declared sibling code, in either field, must fail."""
+    case = next(c for c in ROLLBACK if c["kind"] == "unknown-variant")
+    observed = _observed_fail_closed_code(case["input"]["variant"], REGISTRY)
+    _assert_rollback_codes(case, observed)
+    for wrong in ERROR_ENUM - {"malformed_request"}:
+        for field in ("expect_failure", "expect_error_code"):
+            mutated = dict(case, **{field: wrong})
+            with pytest.raises(AssertionError):
+                _assert_rollback_codes(mutated, observed)
+    with pytest.raises(AssertionError):
+        _assert_rollback_codes(dict(case, expect_error_code="garbage_code"), observed)
 
 
 def test_rollback_additive_fields_tolerated_executable():
