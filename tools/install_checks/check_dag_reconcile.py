@@ -6,10 +6,14 @@ same SHA, every done_sha reachable from main, no done claims either way
 without the other. Pre-contract grandfathered evidence (allowlist + pinned
 bytes + closing marker) is exempt from the done-format, never from the
 history anchor.
-Violation mode: five synthetic mismatches against a fixture evidence dir
+Violation mode: twelve synthetic mismatches against a fixture evidence dir
 and fake history - board done/evidence not done, SHA mismatch, orphan SHA
 (fabricated provenance), evidence done/board not done, evidence for an
-absent task - each must be rejected for its own reason.
+absent task, grandfathered-with-orphan-SHA, missing evidence file, missing
+done_sha, integer done_sha, duplicate ids, wrong evidence_manifest pointer,
+malformed status - each must be rejected for its own reason. Global board
+structure is rejected by the real tools.dag.verify; the evidence_manifest
+pointer is enforced by reconcile itself.
 """
 
 from __future__ import annotations
@@ -109,7 +113,23 @@ CASES = {
         {"schema_version": SV, "tasks": [_task("T0001"), _task("T0001")]},
         {"T0001": _evidence("T0001")},
         {SHA_A},
-        "duplicate board task id",
+        "duplicate task id",
+        set(),
+    ),
+    "wrong evidence_manifest pointer": (
+        {"schema_version": SV, "tasks": [
+            {**_task("T0001"), "evidence_manifest": "evidence/T9999.md"}]},
+        {"T0001": _evidence("T0001")},
+        {SHA_A},
+        "board evidence_manifest must be exactly",
+        set(),
+    ),
+    "malformed board status": (
+        {"schema_version": SV, "tasks": [
+            {**_task("T0001"), "status": []}]},
+        {"T0001": _evidence("T0001")},
+        {SHA_A},
+        "invalid status",
         set(),
     ),
     "evidence for absent task": (

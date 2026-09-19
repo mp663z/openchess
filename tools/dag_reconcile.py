@@ -10,6 +10,10 @@ Reconcile checks BOTH directions and the provenance anchor:
   - evidence-done => board done with the same SHA
   - board-not-done => evidence must not claim done
   - a recorded SHA absent from git history is fabricated provenance
+Global board structure (schema, duplicates, malformed entries, cycles,
+invalid status, done-requirements) is rejected by delegating to
+tools.dag.verify; the board->evidence_manifest pointer is additionally
+enforced HERE, for every board-done task, grandfathered or not.
 """
 
 from __future__ import annotations
@@ -48,6 +52,7 @@ sys.path.insert(0, str(ROOT))  # sibling-tool import when run as a script
 
 ALLOWLIST = ROOT / "data" / "evidence-pre-contract.yaml"
 # single source for the marker shape: the evidence contract linter
+from tools import dag as dag_tool  # noqa: E402
 from tools.evidence_lint import MARKER_RE  # noqa: E402
 
 
@@ -81,14 +86,14 @@ def reconcile(board: dict, evidence_dir: Path, history: set[str],
 
     if grandfathered is None:
         grandfathered = _grandfathered(evidence_dir)
+    # global board structure: the real dag.verify owns this class
+    problems.extend(dag_tool.verify(board))
     board_by_id = {}
     for t in tasks:
         if not isinstance(t, dict) or not isinstance(t.get("id"), str):
-            problems.append(f"board task entry is malformed: {str(t)[:40]!r}")
-            continue
+            continue  # already reported by dag_tool.verify
         if t["id"] in board_by_id:
-            problems.append(f"duplicate board task id {t['id']}")
-            continue
+            continue  # duplicate: already reported by dag_tool.verify
         board_by_id[t["id"]] = t
 
     evidence_done: dict[str, str] = {}  # task id -> recorded sha
@@ -111,6 +116,14 @@ def reconcile(board: dict, evidence_dir: Path, history: set[str],
         status = t.get("status")
         sha = t.get("done_sha")
         if status == "done":
+            # cross-source pointer: enforced HERE, grandfathered or not
+            want_manifest = f"evidence/{tid}.md"
+            manifest = t.get("evidence_manifest")
+            if manifest != want_manifest:
+                problems.append(
+                    f"{tid}: board evidence_manifest must be exactly "
+                    f"{want_manifest}, got {manifest!r}"
+                )
             # evidence-format comparison (grandfathering exempts ONLY this)
             if tid not in grandfathered:
                 if tid in evidence_other:
