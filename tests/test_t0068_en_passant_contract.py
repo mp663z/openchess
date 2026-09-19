@@ -299,3 +299,12 @@ def test_cli_boundary_clean_and_failing():
         assert "Traceback" not in fail.stderr
     finally:
         bad_path.unlink(missing_ok=True)
+
+
+def test_set_on_target_file_structured():
+    """The same-file relation is structured, not prose (v3): the
+    target's file is the advancing pawn's file, exactly pinned."""
+    _bad(lambda d: d["target"]["set_on"].__setitem__("target_file", "adjacent-file"))
+    _bad(lambda d: d["target"]["set_on"].__setitem__("target_file", "any-file"))
+    _bad(lambda d: d["target"]["set_on"].__delitem__("target_file"))
+    _bad(lambda d: d["target"]["set_on"].__setitem__("target_file", 1))

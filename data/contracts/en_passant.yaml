@@ -26,6 +26,7 @@ contract:
         No other rank is a target.
     set_on:
       event: pawn-two-square-advance
+      target_file: advancing-pawn-file
       white: {from_rank: "2", to_rank: "4", target_rank: "3"}
       black: {from_rank: "7", to_rank: "5", target_rank: "6"}
       rule: >-

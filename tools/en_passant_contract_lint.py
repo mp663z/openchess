@@ -48,6 +48,7 @@ GRAMMAR = {
 }
 SET_ON = {
     "event": "pawn-two-square-advance",
+    "target_file": "advancing-pawn-file",
     "white": {"from_rank": "2", "to_rank": "4", "target_rank": "3"},
     "black": {"from_rank": "7", "to_rank": "5", "target_rank": "6"},
 }
@@ -206,7 +207,7 @@ def lint(doc: object, root: Path = ROOT) -> None:
     _text(_get(grammar, "rule", "contract.target.grammar"),
           "contract.target.grammar.rule")
     set_on = _get(target, "set_on", "contract.target")
-    _keys(set_on, {"event", "white", "black", "rule"}, "contract.target.set_on")
+    _keys(set_on, {"event", "target_file", "white", "black", "rule"}, "contract.target.set_on")
     for side in ("white", "black"):
         _keys(_get(set_on, side, "contract.target.set_on"), ALLOWED_RANK_TRIPLE,
               f"contract.target.set_on.{side}")
