@@ -328,15 +328,17 @@ def test_malformed_stage_assertion_is_discriminating_under_mutation():
 
 
 def test_rollback_unknown_variant_fails_closed_executable():
-    case = next(c for c in ROLLBACK if c["kind"] == "unknown-variant")
-    vid = case["input"]["variant"]
-    assert vid not in REGISTRY, f"{vid!r} is declared: the fail-closed case is vacuous"
-    # the FEN payload is fully legal, so the failure is attributable to
-    # the variant id alone
-    _check_fen(case["input"]["fen"], case["name"], "orthodox")
-    observed = _observed_fail_closed_code(vid, REGISTRY)
-    assert observed in ERROR_ENUM, f"observed code {observed!r} outside the closed enum"
-    _assert_rollback_codes(case, observed)
+    cases = [c for c in ROLLBACK if c["kind"] == "unknown-variant"]
+    assert cases, "no unknown-variant rollback case"
+    for case in cases:
+        vid = case["input"]["variant"]
+        assert vid not in REGISTRY, f"{case['name']}: {vid!r} is declared - vacuous"
+        # the FEN payload is fully legal, so the failure is attributable
+        # to the variant id alone
+        _check_fen(case["input"]["fen"], case["name"], "orthodox")
+        observed = _observed_fail_closed_code(vid, REGISTRY)
+        assert observed in ERROR_ENUM, f"{case['name']}: {observed!r} outside the closed enum"
+        _assert_rollback_codes(case, observed)
     # every declared variant passes the same gate
     for known in REGISTRY:
         check_variant_id(known, REGISTRY)
@@ -352,31 +354,33 @@ def test_rollback_unknown_variant_gate_is_discriminating_under_mutation():
 def test_rollback_error_code_fields_are_load_bearing_under_mutation():
     """expect_failure / expect_error_code are asserted, not ornamental:
     every wrong-but-declared sibling code, in either field, must fail."""
-    case = next(c for c in ROLLBACK if c["kind"] == "unknown-variant")
-    observed = _observed_fail_closed_code(case["input"]["variant"], REGISTRY)
-    _assert_rollback_codes(case, observed)
-    for wrong in ERROR_ENUM - {"malformed_request"}:
-        for field in ("expect_failure", "expect_error_code"):
-            mutated = dict(case, **{field: wrong})
-            with pytest.raises(AssertionError):
-                _assert_rollback_codes(mutated, observed)
-    with pytest.raises(AssertionError):
-        _assert_rollback_codes(dict(case, expect_error_code="garbage_code"), observed)
+    for case in [c for c in ROLLBACK if c["kind"] == "unknown-variant"]:
+        observed = _observed_fail_closed_code(case["input"]["variant"], REGISTRY)
+        _assert_rollback_codes(case, observed)
+        for wrong in ERROR_ENUM - {"malformed_request"}:
+            for field in ("expect_failure", "expect_error_code"):
+                mutated = dict(case, **{field: wrong})
+                with pytest.raises(AssertionError):
+                    _assert_rollback_codes(mutated, observed)
+        with pytest.raises(AssertionError):
+            _assert_rollback_codes(dict(case, expect_error_code="garbage_code"), observed)
 
 
 def test_rollback_additive_fields_tolerated_executable():
-    case = next(c for c in ROLLBACK if c["kind"] == "additive-fields")
-    base = next((h for h in HAPPY if h["name"] == case["base_case"]), None)
-    assert base is not None, f"base_case {case['base_case']!r} not found in happy"
-    _assert_additive_tolerance(base["expect_identity"], case["extra_fields"])
+    cases = [c for c in ROLLBACK if c["kind"] == "additive-fields"]
+    assert cases, "no additive-fields rollback case"
+    for case in cases:
+        base = next((h for h in HAPPY if h["name"] == case["base_case"]), None)
+        assert base is not None, f"{case['name']}: base_case {case['base_case']!r} not in happy"
+        _assert_additive_tolerance(base["expect_identity"], case["extra_fields"])
 
 
 def test_rollback_additive_tolerance_is_discriminating_under_mutation():
     """Canonical-field collision or value clobbering must be caught."""
-    case = next(c for c in ROLLBACK if c["kind"] == "additive-fields")
-    base = next(h for h in HAPPY if h["name"] == case["base_case"])
-    for field in CANONICAL_FIELDS:
+    for case in [c for c in ROLLBACK if c["kind"] == "additive-fields"]:
+        base = next(h for h in HAPPY if h["name"] == case["base_case"])
+        for field in CANONICAL_FIELDS:
+            with pytest.raises(AssertionError):
+                _assert_additive_tolerance(base["expect_identity"], {field: "clobbered"})
         with pytest.raises(AssertionError):
-            _assert_additive_tolerance(base["expect_identity"], {field: "clobbered"})
-    with pytest.raises(AssertionError):
-        _assert_additive_tolerance(base["expect_identity"], {})
+            _assert_additive_tolerance(base["expect_identity"], {})
