@@ -145,13 +145,25 @@ def lint(doc: object) -> None:
           "transport.auth.scheme: bearer required")
     _need(auth.get("header") == "Authorization",
           "transport.auth.header: Authorization required")
-    _text(auth.get("rule"), "transport.auth.rule")
+    _need(auth.get("format") == "Authorization: Bearer <opaque-token>",
+          "transport.auth.format: exact bearer format required")
+    auth_rule = _text(auth.get("rule"), "transport.auth.rule")
+    for marker in ("REQUIRED", "401", "auth_invalid", "auth_expired"):
+        _need(marker in auth_rule,
+              f"transport.auth.rule: must state {marker}")
+    _need(len(auth_rule) >= 120,
+          "transport.auth.rule: too thin to be a rule")
     public_ops = auth.get("public_operations")
     issued_by = auth.get("issued_by")
     _need(type(public_ops) is list and public_ops,
           "transport.auth.public_operations: nonempty list")
     _need(type(issued_by) is list and issued_by,
           "transport.auth.issued_by: nonempty list")
+    for label, entries in (("public_operations", public_ops),
+                           ("issued_by", issued_by)):
+        _need(len(set(entries)) == len(entries),
+              f"transport.auth.{label}: duplicate entries rejected, "
+              "not normalized")
 
     idem = _text(transport.get("idempotency"), "transport.idempotency")
     _need("Idempotency-Key" in idem and "idempotency_conflict" in idem,
@@ -183,14 +195,17 @@ def lint(doc: object) -> None:
     _need(privacy.get("logs") == "no-secrets",
           "privacy.logs: must be 'no-secrets'")
     cost = _mapping(contract.get("cost"), "contract.cost")
-    _text(cost.get("reservation_required"), "cost.reservation_required")
+    _need(cost.get("reservation_required") is True,
+          "cost.reservation_required: must be exactly true")
     _need(cost.get("caps_enforced") == "server-side",
           "cost.caps_enforced: must be server-side")
     recovery = _mapping(contract.get("recovery"), "contract.recovery")
-    _text(recovery.get("entitlements_cache"),
-          "recovery.entitlements_cache")
-    _text(recovery.get("reservation_expiry"),
-          "recovery.reservation_expiry")
+    _need(recovery.get("entitlements_cache_ttl_field")
+          == "cache_ttl_seconds",
+          "recovery.entitlements_cache_ttl_field: must name "
+          "cache_ttl_seconds")
+    _need(recovery.get("reservation_expiry_field") == "expires_at",
+          "recovery.reservation_expiry_field: must name expires_at")
 
     areas = _mapping(top.get("areas"), "areas")
     got = set(areas.keys())
@@ -200,6 +215,7 @@ def lint(doc: object) -> None:
 
     op_index: dict[str, dict] = {}
     flagged_public: set[str] = set()
+    seen_routes: dict[tuple[str, str], str] = {}
     for area_name, area in sorted(areas.items()):
         ops = _mapping(_mapping(area, f"areas.{area_name}").get("ops"),
                        f"areas.{area_name}.ops")
@@ -212,6 +228,11 @@ def lint(doc: object) -> None:
                   f"{where}.method: one of {sorted(METHODS)}")
             path = _text(op.get("path"), f"{where}.path")
             _need(path.startswith("/"), f"{where}.path: absolute path")
+            route = (op["method"], path)
+            _need(route not in seen_routes,
+                  f"{where}: duplicate route {route} already used by "
+                  f"{seen_routes.get(route)}")
+            seen_routes[route] = where
             mutating = op.get("mutating")
             _need(type(mutating) is bool,
                   f"{where}.mutating: boolean required")
@@ -246,6 +267,14 @@ def lint(doc: object) -> None:
     read_only = transport.get("read_only_operations")
     _need(type(read_only) is list, "transport.read_only_operations: "
                                   "list required")
+    _need(len(set(read_only)) == len(read_only),
+          "transport.read_only_operations: duplicate entries rejected")
+    read_only_rule = _text(transport.get("read_only_rule"),
+                           "transport.read_only_rule")
+    _need("mutating: false" in read_only_rule
+          and "idempotency" in read_only_rule,
+          "transport.read_only_rule: must state the mutating:false "
+          "allowlist and the idempotency-bypass reason")
     read_only_set = set()
     for ref in read_only:
         ref = _text(ref, "transport.read_only_operations[]")
@@ -290,7 +319,7 @@ def main(argv: list[str]) -> int:
     except ContractError as exc:
         print(f"FAIL contract lint: {exc}")
         return 1
-    print("OK contract lint: replaceable control-plane contract v2 clean")
+    print("OK contract lint: replaceable control-plane contract v3 clean")
     return 0
 
 

@@ -1,4 +1,4 @@
-"""T0473 v2: normative contract lint - the verifier's adversarial
+"""T0473 v3: normative contract lint - the verifier's adversarial
 mutations plus the structural sweep, each rejected for its own reason."""
 
 from __future__ import annotations
@@ -91,6 +91,28 @@ MUTATIONS = {
     "idempotency_conflict_not_in_enum": lambda d: d["contract"]
         ["transport"]["errors"]["closed_enum"].remove(
         "idempotency_conflict"),
+    # v3 sweep:
+    "duplicate_route": lambda d: d["areas"]["identity"]["ops"]
+        ["login"].__setitem__("path", d["areas"]["identity"]["ops"]
+                              ["register"]["path"]),
+    "duplicate_public_operations": lambda d: d["contract"]
+        ["transport"]["auth"]["public_operations"].append(
+        "identity.login"),
+    "duplicate_read_only_operations": lambda d: d["contract"]
+        ["transport"]["read_only_operations"].append(
+        "entitlements.get"),
+    "auth_format_loose": lambda d: d["contract"]["transport"]["auth"]
+        .__setitem__("format", "Bearer <token>"),
+    "auth_rule_thin": lambda d: d["contract"]["transport"]["auth"]
+        .__setitem__("rule", "Tokens required."),
+    "cost_reservation_free_text": lambda d: d["contract"]["cost"]
+        .__setitem__("reservation_required", "yes, required"),
+    "read_only_rule_thin": lambda d: d["contract"]["transport"]
+        .__setitem__("read_only_rule", "Some operations are reads."),
+    "recovery_ttl_field_wrong": lambda d: d["contract"]["recovery"]
+        .__setitem__("entitlements_cache_ttl_field", "ttl"),
+    "recovery_expiry_field_wrong": lambda d: d["contract"]["recovery"]
+        .__setitem__("reservation_expiry_field", "expires"),
 }
 
 

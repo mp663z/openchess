@@ -26,10 +26,11 @@ contract:
       issued_by: [identity.register, identity.login]
       public_operations: [identity.register, identity.login]
       rule: >-
-        Every operation not listed in public_operations REQUIRES a valid
-        bearer token. Unknown or expired tokens answer 401 with
-        auth_invalid or auth_expired respectively. No cookies, no query
-        tokens, no exceptions.
+        A valid bearer token is REQUIRED for every operation not
+        listed in public_operations; operations that REQUIRE it answer
+        401 when the token is missing, unknown or expired: unknown
+        tokens answer auth_invalid, expired tokens answer auth_expired.
+        No cookies, no query tokens, no exceptions.
 
     read_only_operations: [billing.get_subscription,
       entitlements.get, provider_routing.route]
@@ -79,16 +80,18 @@ contract:
       line or error message.
     logs: no-secrets
   cost:
-    reservation_required: Billable operations require a quota
+    reservation_required: true
+    reservation_required_note: Billable operations require a quota
       reservation first; consumers receive cost_cap_exceeded, never a
       surprise bill.
     caps_enforced: server-side
   recovery:
-    entitlements_cache: entitlements.get responses carry
-      cache_ttl_seconds; consumers may serve cached entitlements that
-      long when unreachable, then degrade to free tier.
-    reservation_expiry: quota.reserve reservations carry expires_at;
-      consumers MUST treat expired reservations as released.
+    entitlements_cache_ttl_field: cache_ttl_seconds
+    reservation_expiry_field: expires_at
+    recovery_note: entitlements.get responses carry the TTL field;
+      consumers may serve cached entitlements that long when
+      unreachable, then degrade to free tier. Reservations carry the
+      expiry field; consumers MUST treat expired ones as released.
 areas:
   identity:
     ops:
@@ -107,6 +110,7 @@ areas:
             account_id: {type: string, required: true, example: acct-1}
             token: {type: string, required: true, example: tok-1}
             token_expires_at: {type: integer, required: true, example: 1893456000}
+            display_name: {type: string, required: false}
         errors: [malformed_request, conflict, rate_limited,
                  idempotency_conflict, internal]
       login:

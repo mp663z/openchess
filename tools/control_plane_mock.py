@@ -1,4 +1,4 @@
-"""T0474: reference control-plane fixture, contract schema v2.
+"""T0474: reference control-plane fixture, contract schema v3.
 
 In-memory implementation of data/contracts/control-plane.yaml. Request
 validation is GENERATED from the contract's structured schemas (required
@@ -38,6 +38,20 @@ def load_ops() -> dict[tuple[str, str], dict]:
 
 OPS = load_ops()
 
+_ITEM_OK = {
+    "string": lambda v: type(v) is str,
+    "integer": lambda v: type(v) is int,
+    "number": lambda v: type(v) in (int, float) and type(v) is not bool,
+    "boolean": lambda v: type(v) is bool,
+}
+
+
+def _bearer_token(headers: dict) -> str | None:
+    auth = headers.get("Authorization", "")
+    if type(auth) is str and auth.startswith("Bearer "):
+        return auth[len("Bearer "):]
+    return None
+
 
 def _fingerprint(body: dict) -> str:
     return json.dumps(body, sort_keys=True, separators=(",", ":"))
@@ -66,6 +80,12 @@ def _validate(fields: dict, body: dict, where: str) -> str | None:
                             f"{where}.{name}")
             if sub:
                 return sub
+        if ftype == "array":
+            item_type = spec.get("items")
+            if type(item_type) is str:
+                for item in value:
+                    if not _ITEM_OK.get(item_type, lambda v: True)(item):
+                        return f"{where}.{name}: wrong item type"
     return None
 
 
@@ -85,14 +105,26 @@ class MockControlPlane:
         return status, {"error": {"code": code, "message": message,
                                   "retryable": retryable}}
 
-    def _bearer(self, headers: dict) -> dict | None:
-        auth = headers.get("Authorization", "")
-        if type(auth) is not str or not auth.startswith("Bearer "):
-            return None
-        record = self.tokens.get(auth[len("Bearer "):])
-        if record is None or time.time() > record["expires_at"]:
-            return None
-        return record
+    def _bearer(self, headers: dict) -> tuple[str, dict | None]:
+        """Four-way token check: missing/unknown -> auth_invalid,
+        expired -> auth_expired, ok -> the token record. Expired tokens
+        stay recorded so the two failure modes stay distinct."""
+        token = _bearer_token(headers)
+        if token is None:
+            return "missing", None
+        record = self.tokens.get(token)
+        if record is None:
+            return "unknown", None
+        if time.time() > record["expires_at"]:
+            return "expired", record
+        return "ok", record
+
+    def _test_expire_token(self, token: str) -> None:
+        """Conformance seam: force a token into the expired state so the
+        harness can certify the auth_expired branch."""
+        record = self.tokens.get(token)
+        if record is not None:
+            record["expires_at"] = 0.0
 
     def handle(self, method: str, path: str, headers: dict,
                body: dict) -> tuple[int, dict]:
@@ -102,10 +134,11 @@ class MockControlPlane:
                              retryable=False, status=404)
         account = None
         if op["auth"] == "required":
-            account = self._bearer(headers)
-            if account is None:
-                return self._err("auth_invalid",
-                                 "missing or expired bearer token",
+            reason, account = self._bearer(headers)
+            if reason != "ok":
+                code = ("auth_expired" if reason == "expired"
+                        else "auth_invalid")
+                return self._err(code, f"bearer token {reason}",
                                  retryable=False, status=401)
         if op["mutating"]:
             key = headers.get("Idempotency-Key", "")
@@ -124,19 +157,20 @@ class MockControlPlane:
                         "same Idempotency-Key with a different body",
                         retryable=False, status=409)
                 return prior[1]
-            result = self._logic(op["name"], body)
+            result = self._logic(op["name"], body, account, headers)
             self.idempotency[scope] = (fingerprint, result)
             return result
-        return self._logic(op["name"], body)
+        return self._logic(op["name"], body, account, headers)
 
-    def _logic(self, name: str, body: dict) -> tuple[int, dict]:
+    def _logic(self, name: str, body: dict, account: dict | None = None,
+               headers: dict | None = None) -> tuple[int, dict]:
         op = next(o for o in OPS.values() if o["name"] == name)
         problem = _validate(op["request"], body, name)
         if problem:
             return self._err("malformed_request", problem,
                              retryable=False, status=400)
         handler = getattr(self, "_op_" + name.replace(".", "_"))
-        return handler(body)
+        return handler(body, account, headers)
 
     # -- identity ------------------------------------------------------
     def _mint(self, account_id: str) -> dict:
@@ -146,7 +180,7 @@ class MockControlPlane:
         return {"token": token,
                 "token_expires_at": int(time.time()) + 3600}
 
-    def _op_identity_register(self, body: dict) -> tuple[int, dict]:
+    def _op_identity_register(self, body: dict, account=None, headers=None) -> tuple[int, dict]:
         if "@" not in body["email"]:
             return self._err("malformed_request", "invalid email",
                              retryable=False, status=400)
@@ -160,7 +194,7 @@ class MockControlPlane:
         payload = {"account_id": account_id, **self._mint(account_id)}
         return 200, payload
 
-    def _op_identity_login(self, body: dict) -> tuple[int, dict]:
+    def _op_identity_login(self, body: dict, account=None, headers=None) -> tuple[int, dict]:
         account = self.accounts.get(body["email"])
         if account is None or account["password"] != body[
                 "password_hash_client"]:
@@ -169,28 +203,44 @@ class MockControlPlane:
         return 200, {"account_id": account["account_id"],
                      **self._mint(account["account_id"])}
 
-    def _op_identity_refresh(self, body: dict) -> tuple[int, dict]:
-        return 200, self._mint("acct-refresh")
+    def _op_identity_refresh(self, body: dict, account=None,
+                             headers=None) -> tuple[int, dict]:
+        # refresh mints for the AUTHENTICATED account, never a constant
+        return 200, self._mint(account["account_id"])
 
-    def _op_identity_logout(self, body: dict) -> tuple[int, dict]:
+    def _op_identity_logout(self, body: dict, account=None,
+                            headers=None) -> tuple[int, dict]:
+        # logout revokes the bearer token that made the call
+        token = _bearer_token(headers or {})
+        if token is not None:
+            self.tokens.pop(token, None)
         return 200, {}
 
-    def _op_identity_delete_account(self, body: dict) -> tuple[int, dict]:
+    def _op_identity_delete_account(self, body: dict, account=None,
+                                    headers=None) -> tuple[int, dict]:
         if body["confirm"] != "DELETE":
             return self._err("malformed_request",
                              "confirm must be exactly DELETE",
                              retryable=False, status=400)
+        # delete removes the account AND every token bound to it
+        account_id = account["account_id"] if account else None
+        for email, rec in list(self.accounts.items()):
+            if rec["account_id"] == account_id:
+                del self.accounts[email]
+        for tok, rec in list(self.tokens.items()):
+            if rec["account_id"] == account_id:
+                del self.tokens[tok]
         return 200, {}
 
     # -- entitlements ---------------------------------------------------
-    def _op_entitlements_get(self, body: dict) -> tuple[int, dict]:
+    def _op_entitlements_get(self, body: dict, account=None, headers=None) -> tuple[int, dict]:
         return 200, {"tier": "free", "features": ["local-analysis"],
                      "cache_ttl_seconds": 300,
                      "cost_caps": {"per_request_usd": 0.10,
                                    "per_day_usd": 2.00}}
 
     # -- quota -----------------------------------------------------------
-    def _op_quota_reserve(self, body: dict) -> tuple[int, dict]:
+    def _op_quota_reserve(self, body: dict, account=None, headers=None) -> tuple[int, dict]:
         if body["estimated_units"] <= 0 or body["hold_seconds"] <= 0:
             return self._err("malformed_request",
                              "units and hold must be positive",
@@ -207,7 +257,7 @@ class MockControlPlane:
                      "granted_units": body["estimated_units"],
                      "expires_at": expires}
 
-    def _op_quota_commit(self, body: dict) -> tuple[int, dict]:
+    def _op_quota_commit(self, body: dict, account=None, headers=None) -> tuple[int, dict]:
         if body["actual_units"] < 0:
             return self._err("malformed_request",
                              "actual_units may not be negative",
@@ -225,7 +275,7 @@ class MockControlPlane:
                                 - body["actual_units"])
         return 200, {"remaining_units": self.quota_units}
 
-    def _op_quota_release(self, body: dict) -> tuple[int, dict]:
+    def _op_quota_release(self, body: dict, account=None, headers=None) -> tuple[int, dict]:
         reservation = self.reservations.pop(body["reservation_id"], None)
         if reservation is None:
             return self._err("not_found", "unknown reservation",
@@ -234,7 +284,8 @@ class MockControlPlane:
         return 200, {}
 
     # -- billing ---------------------------------------------------------
-    def _op_billing_create_checkout(self, body: dict) -> tuple[int, dict]:
+    def _op_billing_create_checkout(self, body: dict, account=None,
+                             headers=None) -> tuple[int, dict]:
         for field in ("success_url", "cancel_url"):
             if not body[field].startswith("https://"):
                 return self._err("malformed_request",
@@ -244,15 +295,16 @@ class MockControlPlane:
                      + secrets.token_hex(8),
                      "expires_at": int(time.time()) + 1800}
 
-    def _op_billing_get_subscription(self, body: dict) -> tuple[int, dict]:
+    def _op_billing_get_subscription(self, body: dict, account=None,
+                             headers=None) -> tuple[int, dict]:
         if self.subscription is None:
             return self._err("not_found", "no subscription",
                              retryable=False, status=404)
         return 200, self.subscription
 
     # -- provider routing -------------------------------------------------
-    def _op_provider_routing_register_key(self, body: dict
-                                          ) -> tuple[int, dict]:
+    def _op_provider_routing_register_key(self, body: dict, account=None,
+                             headers=None) -> tuple[int, dict]:
         if len(body["key_material"]) < 8:
             return self._err("provider_key_invalid", "key too short",
                              retryable=False, status=400)
@@ -260,14 +312,15 @@ class MockControlPlane:
         self.keys[key_ref] = {"provider_kind": body["provider_kind"]}
         return 200, {"key_ref": key_ref}
 
-    def _op_provider_routing_revoke_key(self, body: dict
-                                        ) -> tuple[int, dict]:
+    def _op_provider_routing_revoke_key(self, body: dict, account=None,
+                             headers=None) -> tuple[int, dict]:
         if self.keys.pop(body["key_ref"], None) is None:
             return self._err("not_found", "unknown key_ref",
                              retryable=False, status=404)
         return 200, {}
 
-    def _op_provider_routing_route(self, body: dict) -> tuple[int, dict]:
+    def _op_provider_routing_route(self, body: dict, account=None,
+                             headers=None) -> tuple[int, dict]:
         if self.keys:
             key_ref = sorted(self.keys)[0]
             return 200, {"provider_kind": self.keys[key_ref]

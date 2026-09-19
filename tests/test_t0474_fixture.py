@@ -1,4 +1,4 @@
-"""T0474 v2: reference fixture conforms; idempotent replay identical;
+"""T0474 v3: reference fixture conforms; idempotent replay identical;
 same key + different body conflicts; additive MINOR fields tolerated;
 bearer auth real; required fields enforced."""
 
@@ -66,9 +66,69 @@ def test_required_fields_enforced():
 
 def test_additive_minor_fields_tolerated():
     class NewerMinor(MockControlPlane):
-        def _op_entitlements_get(self, body):
-            status, payload = super()._op_entitlements_get(body)
+        def _op_entitlements_get(self, body, account=None,
+                                 headers=None):
+            status, payload = super()._op_entitlements_get(
+                body, account, headers)
             payload["future_field_v1_1"] = {"new": True}
             return status, payload
 
     assert run(NewerMinor()) == []
+
+
+def test_expired_token_distinguished_from_unknown():
+    mock = MockControlPlane()
+    auth = _registered(mock)
+    token = auth["Authorization"][len("Bearer "):]
+    mock._test_expire_token(token)
+    status, payload = mock.handle("GET", "/entitlements", auth, {})
+    assert status == 401
+    assert payload["error"]["code"] == "auth_expired"
+
+
+def test_logout_revokes_the_calling_token():
+    mock = MockControlPlane()
+    auth = _registered(mock)
+    headers = {"Authorization": auth["Authorization"],
+               "Idempotency-Key": "lo1"}
+    status, _ = mock.handle("POST", "/identity/logout", headers, {})
+    assert status == 200
+    status, payload = mock.handle("GET", "/entitlements", auth, {})
+    assert status == 401
+    assert payload["error"]["code"] == "auth_invalid"
+
+
+def test_delete_account_removes_account_and_tokens():
+    mock = MockControlPlane()
+    auth = _registered(mock)
+    headers = {"Authorization": auth["Authorization"],
+               "Idempotency-Key": "del1"}
+    status, _ = mock.handle("POST", "/identity/delete-account", headers,
+                            {"confirm": "DELETE"})
+    assert status == 200
+    status, payload = mock.handle(
+        "POST", "/identity/login", {"Idempotency-Key": "li2"},
+        {"email": "t@example.test", "password_hash_client": "h0"})
+    assert status == 401
+    status, payload = mock.handle("GET", "/entitlements", auth, {})
+    assert status == 401
+    assert payload["error"]["code"] == "auth_invalid"
+
+
+def test_refresh_mints_for_the_authenticated_account():
+    mock = MockControlPlane()
+    auth = _registered(mock)
+    headers = {"Authorization": auth["Authorization"],
+               "Idempotency-Key": "rf1"}
+    status, payload = mock.handle("POST", "/identity/refresh",
+                                  headers, {})
+    assert status == 200
+    headers2 = {"Authorization": f"Bearer {payload['token']}",
+                "Idempotency-Key": "del2"}
+    status, _ = mock.handle("POST", "/identity/delete-account",
+                            headers2, {"confirm": "DELETE"})
+    assert status == 200
+    status, payload = mock.handle(
+        "POST", "/identity/login", {"Idempotency-Key": "li3"},
+        {"email": "t@example.test", "password_hash_client": "h0"})
+    assert status == 401

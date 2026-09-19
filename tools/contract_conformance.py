@@ -1,4 +1,4 @@
-"""T0475: conformance harness, contract schema v2.
+"""T0475: conformance harness, contract schema v3.
 
 Certifies an implementation against data/contracts/control-plane.yaml.
 Coverage is GENERATED from the contract itself - for every declared
@@ -37,6 +37,15 @@ HAPPY_OVERRIDES = {
 SKIP_GENERATED_HAPPY = {"quota.commit", "quota.release",
                         "provider_routing.revoke_key"}
 SECRET_FIELD_NAMES = {"key_material"}
+
+# Ops whose happy path consumes the caller: logout revokes the token
+# that made the call, delete_account removes the account. Their happy
+# cases run against a throwaway account so the primary one survives.
+THROWAWAY_OPS = {"identity.logout", "identity.delete_account"}
+# Their idempotency replay is unreachable BY DESIGN: after a successful
+# logout/delete the token is gone, so a same-key retry fails auth before
+# any idempotency lookup can happen. The generated pair cannot run.
+IDEM_UNREACHABLE = {"identity.logout", "identity.delete_account"}
 
 
 def _build_example(fields: dict) -> dict:
@@ -88,30 +97,43 @@ def _scan_forbidden(payload: object, path: str) -> str | None:
     return None
 
 
+_TYPE_OK = {
+    "string": lambda v: type(v) is str,
+    "integer": lambda v: type(v) is int,
+    "number": lambda v: type(v) in (int, float) and type(v) is not bool,
+    "boolean": lambda v: type(v) is bool,
+    "object": lambda v: type(v) is dict,
+    "array": lambda v: type(v) is list,
+}
+
+
 def _check_types(payload: object, fields: dict, where: str) -> str | None:
     if type(payload) is not dict:
         return f"{where}: payload not an object"
     for name, spec in fields.items():
-        if not spec["required"]:
-            continue
         if name not in payload:
-            return f"{where}.{name}: required response field missing"
+            if spec["required"]:
+                return (f"{where}.{name}: required response field "
+                        "missing")
+            continue
+        # optional fields are type-checked whenever present
         value = payload[name]
         ftype = spec["type"]
-        ok = {"string": type(value) is str,
-              "integer": type(value) is int,
-              "number": type(value) in (int, float)
-              and type(value) is not bool,
-              "boolean": type(value) is bool,
-              "object": type(value) is dict,
-              "array": type(value) is list}.get(ftype, False)
-        if not ok:
+        if not _TYPE_OK.get(ftype, lambda v: False)(value):
             return f"{where}.{name}: wrong type"
         if ftype == "object":
             hit = _check_types(value, spec.get("fields", {}),
                                f"{where}.{name}")
             if hit:
                 return hit
+        if ftype == "array":
+            item_type = spec.get("items")
+            if type(item_type) is str:
+                for i, item in enumerate(value):
+                    if not _TYPE_OK.get(item_type,
+                                        lambda v: True)(item):
+                        return (f"{where}.{name}[{i}]: wrong item "
+                                "type")
     return None
 
 
@@ -136,6 +158,7 @@ class Harness:
 
     def call(self, label: str, name: str, body: dict, *,
              auth: bool = True, idem: str | None = None,
+             token: str | None = None,
              method: str | None = None, path: str | None = None,
              expect_status: int | None = None,
              expect_error: str | None = None,
@@ -145,16 +168,38 @@ class Harness:
         if op:
             method, path = op["method"], op["path"]
         headers = {}
-        if auth and "TOK" in self.state:
+        if token is not None:
+            headers["Authorization"] = f"Bearer {token}"
+        elif auth and "TOK" in self.state:
             headers["Authorization"] = f"Bearer {self.state['TOK']}"
         if idem is not None:
             headers["Idempotency-Key"] = idem
         try:
-            status, payload = self.impl.handle(method, path, headers,
-                                               body)
-        except Exception as exc:
+            result = self.impl.handle(method, path, headers, body)
+        except BaseException as exc:
+            # SystemExit(0), KeyboardInterrupt: never a pass, never an
+            # abort - a raised implementation is a failed implementation.
             self.problems.append(f"{label}: implementation raised "
-                                 f"{exc!r}")
+                                 f"{type(exc).__name__}")
+            return None
+        # Fail closed on malformed returns; validate types BEFORE any
+        # membership test or comparison so a hostile return can never
+        # crash the harness itself.
+        if type(result) is not tuple or len(result) != 2:
+            self.problems.append(f"{label}: malformed return type "
+                                 f"{type(result).__name__} (need exact "
+                                 "(status, payload) 2-tuple)")
+            return None
+        status, payload = result
+        if type(status) is not int or not (100 <= status <= 599):
+            self.problems.append(f"{label}: malformed status type "
+                                 f"{type(status).__name__} (need exact "
+                                 "int in 100..599)")
+            return None
+        if type(payload) is not dict:
+            self.problems.append(f"{label}: payload type "
+                                 f"{type(payload).__name__} is not an "
+                                 "object")
             return None
         leak = _scan_forbidden(payload, f"{label}")
         if leak:
@@ -168,14 +213,17 @@ class Harness:
                                  "expected 2xx")
             return status, payload
         if status >= 400:
-            if type(payload) is not dict or type(
-                    payload.get("error")) is not dict:
+            if type(payload.get("error")) is not dict:
                 self.problems.append(f"{label}: error payload lacks "
                                      "error object")
                 return status, payload
             err = payload["error"]
             code = err.get("code")
-            if code not in self.enum:
+            if type(code) is not str:
+                self.problems.append(f"{label}: error code type "
+                                     f"{type(code).__name__} is not a "
+                                     "string")
+            elif code not in self.enum:
                 self.problems.append(f"{label}: error code {code!r} "
                                      "outside closed enum")
             if type(err.get("message")) is not str or type(
@@ -193,7 +241,7 @@ class Harness:
                     self.problems.append(hit)
             if store:
                 for key, store_as in store.items():
-                    if type(payload) is dict and key in payload:
+                    if key in payload:
                         self.state[store_as] = str(payload[key])
         return status, payload
 
@@ -207,6 +255,68 @@ class Harness:
         self.call("setup login", "identity.login",
                   {"email": email, "password_hash_client": "h0"},
                   idem="setup-login", expect_2xx=True)
+
+    def phase_lifecycle(self) -> None:
+        """Real identity lifecycle: expired tokens answer auth_expired,
+        logout revokes, delete removes, refresh binds to the caller."""
+        email = f"life-{secrets.token_hex(4)}@example.test"
+        self.call("lifecycle register", "identity.register",
+                  {"email": email, "password_hash_client": "h0"},
+                  idem=f"life-reg-{secrets.token_hex(4)}",
+                  expect_status=200, store={"token": "LTOK"})
+        # refresh must mint for the AUTHENTICATED account: the refreshed
+        # token must be able to delete THIS account.
+        self.call("lifecycle refresh", "identity.refresh", {},
+                  token=self.state.get("LTOK"), idem="life-refresh",
+                  expect_status=200, store={"token": "RTOK"})
+        self.covered_happy.add("identity.refresh")
+        self.call("lifecycle delete via refreshed token",
+                  "identity.delete_account", {"confirm": "DELETE"},
+                  token=self.state.get("RTOK"), idem="life-delete",
+                  expect_status=200)
+        self.covered_happy.add("identity.delete_account")
+        self.call("deleted token rejected", "entitlements.get", {},
+                  token=self.state.get("RTOK"), expect_status=401,
+                  expect_error="auth_invalid")
+        self.call("deleted account cannot login", "identity.login",
+                  {"email": email, "password_hash_client": "h0"},
+                  idem="life-login-after-delete", expect_status=401,
+                  expect_error="auth_invalid")
+        # logout must revoke the token that made the call
+        email2 = f"life2-{secrets.token_hex(4)}@example.test"
+        self.call("lifecycle register 2", "identity.register",
+                  {"email": email2, "password_hash_client": "h0"},
+                  idem=f"life-reg2-{secrets.token_hex(4)}",
+                  expect_status=200, store={"token": "LTOK2"})
+        self.call("lifecycle logout", "identity.logout", {},
+                  token=self.state.get("LTOK2"), idem="life-logout",
+                  expect_status=200)
+        self.covered_happy.add("identity.logout")
+        self.call("logged-out token rejected", "entitlements.get", {},
+                  token=self.state.get("LTOK2"), expect_status=401,
+                  expect_error="auth_invalid")
+        # an expired token must answer auth_expired, not auth_invalid
+        hook = getattr(self.impl, "_test_expire_token", None)
+        if not callable(hook):
+            self.problems.append("lifecycle: implementation lacks the "
+                                 "_test_expire_token seam; the "
+                                 "token-expiry case cannot run")
+            return
+        self.call("lifecycle login 2", "identity.login",
+                  {"email": email2, "password_hash_client": "h0"},
+                  idem="life-login2", expect_status=200,
+                  store={"token": "LTOK3"})
+        token3 = self.state.get("LTOK3")
+        if token3 is not None:
+            try:
+                hook(token3)
+            except BaseException as exc:
+                self.problems.append("lifecycle: _test_expire_token "
+                                     f"raised {type(exc).__name__}")
+                return
+            self.call("expired token", "entitlements.get", {},
+                      token=token3, expect_status=401,
+                      expect_error="auth_expired")
 
     def generated(self) -> None:
         for name in sorted(self.ops):
@@ -222,15 +332,28 @@ class Harness:
             idem = f"gen-{name}" if op["mutating"] else None
             # happy
             if name not in SKIP_GENERATED_HAPPY:
+                call_token = None
+                if name in THROWAWAY_OPS:
+                    throw_email = (f"throw-{name.replace('.', '-')}-"
+                                   f"{secrets.token_hex(4)}@example.test")
+                    self.call(f"throwaway register {name}",
+                              "identity.register",
+                              {"email": throw_email,
+                               "password_hash_client": "h0"},
+                              idem=f"throw-{name}-reg",
+                              expect_status=200,
+                              store={"token": "THROWTOK"})
+                    call_token = self.state.get("THROWTOK")
                 override = HAPPY_OVERRIDES.get(name)
                 label = f"happy {name}"
                 if override:
                     self.call(label, name, body, idem=idem,
+                              token=call_token,
                               expect_status=override[0],
                               expect_error=override[1])
                 else:
                     self.call(label, name, body, idem=idem,
-                              expect_2xx=True)
+                              token=call_token, expect_2xx=True)
                 self.covered_happy.add(name)
             # unauthenticated
             if need_auth:
@@ -259,7 +382,7 @@ class Harness:
             # key with a different body must answer conflict. The pair
             # is self-contained so it also covers state-dependent ops
             # whose happy case is curated.
-            if op["mutating"]:
+            if op["mutating"] and name not in IDEM_UNREACHABLE:
                 pair_key = f"{idem}-pair"
                 self.call(f"idempotency-first {name}", name, body,
                           idem=pair_key)
@@ -300,7 +423,8 @@ class Harness:
             if op["auth"] == "required" and name not in self.covered_auth:
                 self.problems.append(f"coverage: {name} missing "
                                      "unauthenticated case")
-            if op["mutating"] and name not in self.covered_idem:
+            if (op["mutating"] and name not in IDEM_UNREACHABLE
+                    and name not in self.covered_idem):
                 self.problems.append(f"coverage: {name} missing "
                                      "idempotency-conflict case")
             for fname, spec in op["request"].get("fields", {}).items():
@@ -313,6 +437,7 @@ class Harness:
 def run(impl, cases_path: Path = CASES) -> list[str]:
     harness = Harness(impl)
     harness.phase0_identity()
+    harness.phase_lifecycle()
     harness.generated()
     harness.curated(cases_path)
     harness.completeness()
@@ -329,7 +454,7 @@ def main() -> int:
             print(f"FAIL conformance: {p}")
         print(f"{len(problems)} problem(s)")
         return 1
-    print("OK conformance: reference fixture conforms (v2, generated "
+    print("OK conformance: reference fixture conforms (v3, generated "
           "coverage)")
     return 0
 
