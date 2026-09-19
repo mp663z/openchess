@@ -1,4 +1,4 @@
-"""T0475: conformance harness, contract schema v3.
+"""T0475: conformance harness, contract schema v4.
 
 Certifies an implementation against data/contracts/control-plane.yaml.
 Coverage is GENERATED from the contract itself - for every declared
@@ -38,14 +38,18 @@ SKIP_GENERATED_HAPPY = {"quota.commit", "quota.release",
                         "provider_routing.revoke_key"}
 SECRET_FIELD_NAMES = {"key_material"}
 
-# Ops whose happy path consumes the caller: logout revokes the token
-# that made the call, delete_account removes the account. Their happy
-# cases run against a throwaway account so the primary one survives.
-THROWAWAY_OPS = {"identity.logout", "identity.delete_account"}
-# Their idempotency replay is unreachable BY DESIGN: after a successful
-# logout/delete the token is gone, so a same-key retry fails auth before
-# any idempotency lookup can happen. The generated pair cannot run.
-IDEM_UNREACHABLE = {"identity.logout", "identity.delete_account"}
+# Ops whose happy path consumes the caller (the contract's declared
+# self-destructive operations): logout revokes the token that made the
+# call, delete_account removes the account. Their happy cases run
+# against a throwaway account so the primary one survives. Their
+# idempotency replay IS reachable: the contract's replay-before-auth
+# rule scopes the retry by the presented credential, never its
+# validity, so the generated pair and lifecycle replay cases run for
+# these ops exactly as for any other mutating op.
+def _self_destructive_ops() -> frozenset:
+    doc = yaml.safe_load(CONTRACT.read_text())
+    return frozenset(doc["contract"]["transport"][
+        "self_destructive_operations"])
 
 
 def _build_example(fields: dict) -> dict:
@@ -138,9 +142,16 @@ def _check_types(payload: object, fields: dict, where: str) -> str | None:
 
 
 class Harness:
-    def __init__(self, impl) -> None:
+    def __init__(self, impl, fixture=None) -> None:
         self.impl = impl
+        # Fixture adapter, supplied SEPARATELY from the implementation
+        # interface: an object exposing fixture_expire_token(token).
+        # Implementations are certified through handle() alone; the
+        # adapter only manipulates fixture state for the expiry case.
+        self.fixture = fixture
         doc = yaml.safe_load(CONTRACT.read_text())
+        self.self_destructive = frozenset(
+            doc["contract"]["transport"]["self_destructive_operations"])
         self.enum = set(doc["contract"]["transport"]["errors"]
                         ["closed_enum"])
         self.error_shape = doc["contract"]["transport"]["errors"][
@@ -275,6 +286,15 @@ class Harness:
                   token=self.state.get("RTOK"), idem="life-delete",
                   expect_status=200)
         self.covered_happy.add("identity.delete_account")
+        self.call("delete same-body replay",
+                  "identity.delete_account", {"confirm": "DELETE"},
+                  token=self.state.get("RTOK"), idem="life-delete",
+                  expect_status=200)
+        self.call("delete same-key conflict",
+                  "identity.delete_account", {"confirm": "YES"},
+                  token=self.state.get("RTOK"), idem="life-delete",
+                  expect_status=409,
+                  expect_error="idempotency_conflict")
         self.call("deleted token rejected", "entitlements.get", {},
                   token=self.state.get("RTOK"), expect_status=401,
                   expect_error="auth_invalid")
@@ -292,14 +312,25 @@ class Harness:
                   token=self.state.get("LTOK2"), idem="life-logout",
                   expect_status=200)
         self.covered_happy.add("identity.logout")
+        # replay-before-auth: same key + same body replays the recorded
+        # outcome even though the credential is now revoked
+        self.call("logout same-body replay", "identity.logout", {},
+                  token=self.state.get("LTOK2"), idem="life-logout",
+                  expect_status=200)
+        self.call("logout same-key conflict", "identity.logout",
+                  {"marker": "different"},
+                  token=self.state.get("LTOK2"), idem="life-logout",
+                  expect_status=409,
+                  expect_error="idempotency_conflict")
         self.call("logged-out token rejected", "entitlements.get", {},
                   token=self.state.get("LTOK2"), expect_status=401,
                   expect_error="auth_invalid")
         # an expired token must answer auth_expired, not auth_invalid
-        hook = getattr(self.impl, "_test_expire_token", None)
+        hook = (getattr(self.fixture, "fixture_expire_token", None)
+                if self.fixture is not None else None)
         if not callable(hook):
-            self.problems.append("lifecycle: implementation lacks the "
-                                 "_test_expire_token seam; the "
+            self.problems.append("lifecycle: no fixture adapter with "
+                                 "fixture_expire_token supplied; the "
                                  "token-expiry case cannot run")
             return
         self.call("lifecycle login 2", "identity.login",
@@ -318,6 +349,17 @@ class Harness:
                       token=token3, expect_status=401,
                       expect_error="auth_expired")
 
+    def _throwaway(self, name: str, purpose: str) -> str | None:
+        throw_email = (f"throw-{name.replace('.', '-')}-{purpose}-"
+                       f"{secrets.token_hex(4)}@example.test")
+        key = f"THROWTOK-{name}-{purpose}"
+        self.call(f"throwaway register {name} {purpose}",
+                  "identity.register",
+                  {"email": throw_email, "password_hash_client": "h0"},
+                  idem=f"throw-{name}-{purpose}-{secrets.token_hex(4)}",
+                  expect_status=200, store={"token": key})
+        return self.state.get(key)
+
     def generated(self) -> None:
         for name in sorted(self.ops):
             op = self.ops[name]
@@ -333,17 +375,8 @@ class Harness:
             # happy
             if name not in SKIP_GENERATED_HAPPY:
                 call_token = None
-                if name in THROWAWAY_OPS:
-                    throw_email = (f"throw-{name.replace('.', '-')}-"
-                                   f"{secrets.token_hex(4)}@example.test")
-                    self.call(f"throwaway register {name}",
-                              "identity.register",
-                              {"email": throw_email,
-                               "password_hash_client": "h0"},
-                              idem=f"throw-{name}-reg",
-                              expect_status=200,
-                              store={"token": "THROWTOK"})
-                    call_token = self.state.get("THROWTOK")
+                if name in self.self_destructive:
+                    call_token = self._throwaway(name, "happy")
                 override = HAPPY_OVERRIDES.get(name)
                 label = f"happy {name}"
                 if override:
@@ -382,10 +415,12 @@ class Harness:
             # key with a different body must answer conflict. The pair
             # is self-contained so it also covers state-dependent ops
             # whose happy case is curated.
-            if op["mutating"] and name not in IDEM_UNREACHABLE:
+            if op["mutating"]:
+                pair_token = (self._throwaway(name, "pair")
+                              if name in self.self_destructive else None)
                 pair_key = f"{idem}-pair"
                 self.call(f"idempotency-first {name}", name, body,
-                          idem=pair_key)
+                          idem=pair_key, token=pair_token)
                 alt = dict(body)
                 for fname, spec in fields.items():
                     if spec["required"] and spec["type"] != "object":
@@ -394,7 +429,8 @@ class Harness:
                 else:
                     alt["marker"] = "different"
                 self.call(f"idempotency-conflict {name}", name, alt,
-                          idem=pair_key, expect_status=409,
+                          idem=pair_key, token=pair_token,
+                          expect_status=409,
                           expect_error="idempotency_conflict")
                 self.covered_idem.add(name)
 
@@ -423,8 +459,7 @@ class Harness:
             if op["auth"] == "required" and name not in self.covered_auth:
                 self.problems.append(f"coverage: {name} missing "
                                      "unauthenticated case")
-            if (op["mutating"] and name not in IDEM_UNREACHABLE
-                    and name not in self.covered_idem):
+            if op["mutating"] and name not in self.covered_idem:
                 self.problems.append(f"coverage: {name} missing "
                                      "idempotency-conflict case")
             for fname, spec in op["request"].get("fields", {}).items():
@@ -434,8 +469,8 @@ class Harness:
                                          "missing field cases")
 
 
-def run(impl, cases_path: Path = CASES) -> list[str]:
-    harness = Harness(impl)
+def run(impl, cases_path: Path = CASES, fixture=None) -> list[str]:
+    harness = Harness(impl, fixture=fixture)
     harness.phase0_identity()
     harness.phase_lifecycle()
     harness.generated()
@@ -448,13 +483,14 @@ def main() -> int:
     import sys
     sys.path.insert(0, str(ROOT))
     from tools.control_plane_mock import MockControlPlane
-    problems = run(MockControlPlane())
+    mock = MockControlPlane()
+    problems = run(mock, fixture=mock)
     if problems:
         for p in problems[:20]:
             print(f"FAIL conformance: {p}")
         print(f"{len(problems)} problem(s)")
         return 1
-    print("OK conformance: reference fixture conforms (v3, generated "
+    print("OK conformance: reference fixture conforms (v4, generated "
           "coverage)")
     return 0
 

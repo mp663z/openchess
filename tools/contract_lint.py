@@ -170,6 +170,20 @@ def lint(doc: object) -> None:
           "transport.idempotency: must define the key header and the "
           "different-body conflict outcome")
 
+    self_destructive = transport.get("self_destructive_operations")
+    _need(type(self_destructive) is list and self_destructive,
+          "transport.self_destructive_operations: nonempty list")
+    _need(len(set(self_destructive)) == len(self_destructive),
+          "transport.self_destructive_operations: duplicate entries "
+          "rejected, not normalized")
+    sd_rule = _text(transport.get("self_destructive_rule"),
+                    "transport.self_destructive_rule")
+    for marker in ("BEFORE", "replay", "idempotency_conflict"):
+        _need(marker in sd_rule,
+              f"transport.self_destructive_rule: must state {marker}")
+    _need(len(sd_rule) >= 200,
+          "transport.self_destructive_rule: too thin to be a rule")
+
     errors = _mapping(transport.get("errors"), "transport.errors")
     enum = errors.get("closed_enum")
     _need(type(enum) is list and enum, "errors.closed_enum: nonempty list")
@@ -305,6 +319,18 @@ def lint(doc: object) -> None:
         _need(ref in public_set,
               f"transport.auth.issued_by: {ref!r} must be public - a "
               "token cannot be minted behind auth")
+    for ref in self_destructive:
+        ref = _text(ref, "transport.self_destructive_operations[]")
+        _need(ref in op_index,
+              f"transport.self_destructive_operations: {ref!r} not a "
+              "declared op")
+        target = op_index[ref]
+        _need(target.get("mutating") is True,
+              f"transport.self_destructive_operations: {ref!r} must be "
+              "mutating")
+        _need(target.get("auth") == "required",
+              f"transport.self_destructive_operations: {ref!r} must "
+              "require auth")
 
 
 def main(argv: list[str]) -> int:
@@ -319,7 +345,7 @@ def main(argv: list[str]) -> int:
     except ContractError as exc:
         print(f"FAIL contract lint: {exc}")
         return 1
-    print("OK contract lint: replaceable control-plane contract v3 clean")
+    print("OK contract lint: replaceable control-plane contract v4 clean")
     return 0
 
 

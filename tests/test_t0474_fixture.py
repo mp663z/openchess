@@ -1,4 +1,4 @@
-"""T0474 v3: reference fixture conforms; idempotent replay identical;
+"""T0474 v4: reference fixture conforms; idempotent replay identical;
 same key + different body conflicts; additive MINOR fields tolerated;
 bearer auth real; required fields enforced."""
 
@@ -9,7 +9,8 @@ from tools.control_plane_mock import MockControlPlane
 
 
 def test_reference_fixture_conforms():
-    assert run(MockControlPlane()) == []
+    mock = MockControlPlane()
+    assert run(mock, fixture=mock) == []
 
 
 def _registered(mock):
@@ -73,14 +74,15 @@ def test_additive_minor_fields_tolerated():
             payload["future_field_v1_1"] = {"new": True}
             return status, payload
 
-    assert run(NewerMinor()) == []
+    mock = NewerMinor()
+    assert run(mock, fixture=mock) == []
 
 
 def test_expired_token_distinguished_from_unknown():
     mock = MockControlPlane()
     auth = _registered(mock)
     token = auth["Authorization"][len("Bearer "):]
-    mock._test_expire_token(token)
+    mock.fixture_expire_token(token)
     status, payload = mock.handle("GET", "/entitlements", auth, {})
     assert status == 401
     assert payload["error"]["code"] == "auth_expired"
@@ -132,3 +134,47 @@ def test_refresh_mints_for_the_authenticated_account():
         "POST", "/identity/login", {"Idempotency-Key": "li3"},
         {"email": "t@example.test", "password_hash_client": "h0"})
     assert status == 401
+
+
+def test_logout_replay_precedence_over_revoked_credential():
+    mock = MockControlPlane()
+    auth = _registered(mock)
+    headers = {"Authorization": auth["Authorization"],
+               "Idempotency-Key": "lo-replay"}
+    first = mock.handle("POST", "/identity/logout", headers, {})
+    assert first[0] == 200
+    replay = mock.handle("POST", "/identity/logout", headers, {})
+    assert replay == first  # same key + same body -> original outcome
+    conflict = mock.handle("POST", "/identity/logout", headers,
+                           {"marker": "different"})
+    assert conflict[0] == 409
+    assert conflict[1]["error"]["code"] == "idempotency_conflict"
+
+
+def test_delete_replay_precedence_over_removed_account():
+    mock = MockControlPlane()
+    auth = _registered(mock)
+    headers = {"Authorization": auth["Authorization"],
+               "Idempotency-Key": "del-replay"}
+    first = mock.handle("POST", "/identity/delete-account", headers,
+                        {"confirm": "DELETE"})
+    assert first[0] == 200
+    replay = mock.handle("POST", "/identity/delete-account", headers,
+                         {"confirm": "DELETE"})
+    assert replay == first
+    conflict = mock.handle("POST", "/identity/delete-account", headers,
+                           {"confirm": "YES"})
+    assert conflict[0] == 409
+    assert conflict[1]["error"]["code"] == "idempotency_conflict"
+
+
+def test_handle_only_wrapper_conforms_with_separate_fixture_adapter():
+    # finding 4: certification must not require private seams on the
+    # implementation; the fixture adapter is supplied separately.
+    mock = MockControlPlane()
+
+    class HandleOnly:
+        def handle(self, method, path, headers, body):
+            return mock.handle(method, path, headers, body)
+
+    assert run(HandleOnly(), fixture=mock) == []

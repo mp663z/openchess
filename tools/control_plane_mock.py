@@ -1,4 +1,4 @@
-"""T0474: reference control-plane fixture, contract schema v3.
+"""T0474: reference control-plane fixture, contract schema v4.
 
 In-memory implementation of data/contracts/control-plane.yaml. Request
 validation is GENERATED from the contract's structured schemas (required
@@ -37,6 +37,15 @@ def load_ops() -> dict[tuple[str, str], dict]:
 
 
 OPS = load_ops()
+
+
+def load_self_destructive() -> frozenset:
+    doc = yaml.safe_load(CONTRACT.read_text())
+    return frozenset(doc["contract"]["transport"][
+        "self_destructive_operations"])
+
+
+SELF_DESTRUCTIVE = load_self_destructive()
 
 _ITEM_OK = {
     "string": lambda v: type(v) is str,
@@ -119,9 +128,13 @@ class MockControlPlane:
             return "expired", record
         return "ok", record
 
-    def _test_expire_token(self, token: str) -> None:
-        """Conformance seam: force a token into the expired state so the
-        harness can certify the auth_expired branch."""
+    SELF_DESTRUCTIVE_OPS = SELF_DESTRUCTIVE
+
+    def fixture_expire_token(self, token: str) -> None:
+        """Fixture adapter seam (NOT part of the handle() interface):
+        force a token into the expired state so the conformance harness
+        can certify the auth_expired branch. Supplied to the harness as
+        a separate adapter, never required of the implementation."""
         record = self.tokens.get(token)
         if record is not None:
             record["expires_at"] = 0.0
@@ -132,6 +145,23 @@ class MockControlPlane:
         if op is None:
             return self._err("malformed_request", "unknown operation",
                              retryable=False, status=404)
+        name = op["name"]
+        # Contract transport rule: for self-destructive ops the replay
+        # lookup runs BEFORE credential validity checks, scoped by the
+        # presented credential itself, never its validity.
+        if op["mutating"] and name in self.SELF_DESTRUCTIVE_OPS:
+            key = headers.get("Idempotency-Key", "")
+            token = _bearer_token(headers)
+            if type(key) is str and key.strip() and token is not None:
+                scope = ("cred", token, method, path, key)
+                prior = self.idempotency.get(scope)
+                if prior is not None:
+                    if prior[0] != _fingerprint(body):
+                        return self._err(
+                            "idempotency_conflict",
+                            "same Idempotency-Key with a different body",
+                            retryable=False, status=409)
+                    return prior[1]
         account = None
         if op["auth"] == "required":
             reason, account = self._bearer(headers)
@@ -146,8 +176,12 @@ class MockControlPlane:
                 return self._err("malformed_request",
                                  "Idempotency-Key header required",
                                  retryable=False, status=400)
-            scope = (account["account_id"] if account else "public",
-                     method, path, key)
+            if name in self.SELF_DESTRUCTIVE_OPS:
+                scope = ("cred", _bearer_token(headers), method, path,
+                         key)
+            else:
+                scope = (account["account_id"] if account else "public",
+                         method, path, key)
             fingerprint = _fingerprint(body)
             prior = self.idempotency.get(scope)
             if prior is not None:
@@ -157,10 +191,10 @@ class MockControlPlane:
                         "same Idempotency-Key with a different body",
                         retryable=False, status=409)
                 return prior[1]
-            result = self._logic(op["name"], body, account, headers)
+            result = self._logic(name, body, account, headers)
             self.idempotency[scope] = (fingerprint, result)
             return result
-        return self._logic(op["name"], body, account, headers)
+        return self._logic(name, body, account, headers)
 
     def _logic(self, name: str, body: dict, account: dict | None = None,
                headers: dict | None = None) -> tuple[int, dict]:

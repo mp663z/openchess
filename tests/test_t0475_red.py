@@ -1,4 +1,4 @@
-"""T0475 v3: the harness is RED on every non-compliant implementation.
+"""T0475 v4: the harness is RED on every non-compliant implementation.
 Permanent mutants for every reproduced gap: auth collapse, inert
 lifecycle ops, caller-unbound refresh, malformed returns, BaseException
 escapes, optional/array item types, privacy, fingerprint removal."""
@@ -10,7 +10,8 @@ from tools.control_plane_mock import MockControlPlane
 
 
 def test_clean_run_passes():
-    assert run(MockControlPlane()) == []
+    mock = MockControlPlane()
+    assert run(mock, fixture=mock) == []
 
 
 class NoDeleteConfirm(MockControlPlane):
@@ -150,6 +151,14 @@ class ArrayItemWrongType(MockControlPlane):
         return status, payload
 
 
+class AuthBeforeReplay(MockControlPlane):
+    """Reverts to auth-before-replay ordering for self-destructive ops:
+    the retried logout/delete answers 401 instead of the recorded
+    outcome."""
+
+    SELF_DESTRUCTIVE_OPS = frozenset()
+
+
 MUTANTS = {
     "no_delete_confirm": NoDeleteConfirm,
     "leak_key_material": LeakKey,
@@ -169,10 +178,12 @@ MUTANTS = {
     "system_exit_zero_escape": SystemExitZero,
     "optional_field_wrong_type": OptionalFieldWrongType,
     "array_item_wrong_type": ArrayItemWrongType,
+    "auth_before_replay_ordering": AuthBeforeReplay,
 }
 
 
 def test_every_mutant_fails_conformance():
     for name, cls in sorted(MUTANTS.items()):
-        problems = run(cls())
+        inst = cls()
+        problems = run(inst, fixture=inst)
         assert problems, f"{name}: mutant passed conformance"

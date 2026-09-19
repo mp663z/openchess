@@ -40,6 +40,19 @@ contract:
       mutating: false. A state-changing operation flipped to
       mutating: false without allowlisting is an idempotency bypass and
       fails the contract lint.
+    self_destructive_operations: [identity.logout,
+      identity.delete_account]
+    self_destructive_rule: >-
+      Operations whose success invalidates the calling credential MUST
+      be listed in self_destructive_operations, MUST be mutating and
+      MUST require auth. For these operations the idempotency replay
+      lookup runs BEFORE credential validity checks, scoped by the
+      presented credential itself, never its validity: a retry with the
+      same Idempotency-Key and a byte-identical body replays the
+      recorded outcome; the same key with a different body answers
+      idempotency_conflict; without a recorded first call a revoked
+      credential answers 401 as usual. Replay returns only what the
+      caller already received and can never authorize new work.
     idempotency: >-
       Every mutating operation REQUIRES an Idempotency-Key header
       (unique nonempty string per logical operation). A replay with the
@@ -48,6 +61,11 @@ contract:
       body answers 409 idempotency_conflict. Keys are scoped per
       authenticated account.
     errors:
+      additive_note: >-
+        Error payloads MAY carry extra fields beyond the declared shape
+        (MINOR additive); error signalling keys on the HTTP status only,
+        so a 2xx payload containing an 'error' field is data, not an
+        error.
       shape:
         error:
           fields:

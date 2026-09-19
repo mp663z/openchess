@@ -1,4 +1,4 @@
-"""T0473 v3: normative contract lint - the verifier's adversarial
+"""T0473 v4: normative contract lint - the verifier's adversarial
 mutations plus the structural sweep, each rejected for its own reason."""
 
 from __future__ import annotations
@@ -113,6 +113,22 @@ MUTATIONS = {
         .__setitem__("entitlements_cache_ttl_field", "ttl"),
     "recovery_expiry_field_wrong": lambda d: d["contract"]["recovery"]
         .__setitem__("reservation_expiry_field", "expires"),
+    # v4 sweep: self-destructive replay precedence
+    "self_destructive_removed": lambda d: d["contract"]["transport"]
+        .pop("self_destructive_operations"),
+    "self_destructive_unknown_op": lambda d: d["contract"]["transport"]
+        ["self_destructive_operations"].append("identity.magic"),
+    "self_destructive_duplicate": lambda d: d["contract"]["transport"]
+        ["self_destructive_operations"].append("identity.logout"),
+    "self_destructive_public_op": lambda d: d["contract"]["transport"]
+        ["self_destructive_operations"].append("identity.register"),
+    "self_destructive_non_mutating_op": lambda d: d["contract"]
+        ["transport"]["self_destructive_operations"].append(
+        "entitlements.get"),
+    "self_destructive_rule_thin": lambda d: d["contract"]["transport"]
+        .__setitem__("self_destructive_rule", "Replay happens."),
+    "self_destructive_not_mutating_anymore": lambda d: d["areas"]
+        ["identity"]["ops"]["logout"].__setitem__("mutating", False),
 }
 
 
