@@ -260,14 +260,13 @@
     "to": "e6"
    },
    "defect": "ep_target is not a canonical square or the sentinel",
-   "failure_class": "target_malformed",
-   "expect_error": "malformed_request"
+   "expect_failure": "target_malformed"
   },
   {
    "name": "target-wrong-rank-white",
    "kind": "ep-capture",
    "state": {
-    "ep_target": "e5",
+    "ep_target": "e3",
     "occupied": {
      "e4": "bp",
      "d4": "wp",
@@ -279,11 +278,10 @@
    "move": {
     "type": "ep-capture",
     "from": "d4",
-    "to": "e5"
+    "to": "e3"
    },
-   "defect": "target rank is not the side's target rank (6 for white)",
-   "failure_class": "target_inconsistent",
-   "expect_error": "illegal_position"
+   "defect": "rank-3 target with white to move: a target is available only to the advancing side's opponent",
+   "expect_failure": "target_inconsistent"
   },
   {
    "name": "no-enemy-pawn-on-captured-square",
@@ -303,8 +301,7 @@
     "to": "e6"
    },
    "defect": "no enemy pawn on the captured square e5",
-   "failure_class": "target_inconsistent",
-   "expect_error": "illegal_position"
+   "expect_failure": "target_inconsistent"
   },
   {
    "name": "no-adjacent-mover",
@@ -325,8 +322,7 @@
     "to": "e6"
    },
    "defect": "mover is not in a file adjacent to the target file",
-   "failure_class": "capture_precondition",
-   "expect_error": "illegal_move"
+   "expect_failure": "capture_precondition"
   },
   {
    "name": "stale-target",
@@ -347,8 +343,7 @@
     "to": "e6"
    },
    "defect": "no target set on the immediately preceding move",
-   "failure_class": "capture_precondition",
-   "expect_error": "illegal_move"
+   "expect_failure": "capture_precondition"
   },
   {
    "name": "pinned-capture-horizontal",
@@ -370,8 +365,7 @@
     "to": "d6"
    },
    "defect": "double removal opens a horizontal pin on the own king",
-   "failure_class": "pinned_capture",
-   "expect_error": "illegal_move"
+   "expect_failure": "pinned_capture"
   },
   {
    "name": "mover-wrong-rank",
@@ -392,8 +386,7 @@
     "to": "e6"
    },
    "defect": "mover is not on its mover rank (5 for white)",
-   "failure_class": "capture_precondition",
-   "expect_error": "illegal_move"
+   "expect_failure": "capture_precondition"
   }
  ],
  "rollback": [
@@ -417,8 +410,18 @@
     "to": "d6"
    },
    "defect": "double removal opens a horizontal pin on the own king",
-   "failure_class": "pinned_capture",
-   "expect_error": "illegal_move"
+   "expect_failure": "pinned_capture",
+   "expect_state_after": {
+    "ep_target": "d6",
+    "occupied": {
+     "d5": "bp",
+     "e5": "wp",
+     "a5": "br",
+     "h5": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   }
   },
   {
    "name": "rollback-stale-target",
@@ -439,8 +442,17 @@
     "to": "e6"
    },
    "defect": "no target set on the immediately preceding move",
-   "failure_class": "capture_precondition",
-   "expect_error": "illegal_move"
+   "expect_failure": "capture_precondition",
+   "expect_state_after": {
+    "ep_target": "-",
+    "occupied": {
+     "e5": "bp",
+     "d5": "wp",
+     "e1": "wk",
+     "e8": "bk"
+    },
+    "side_to_move": "w"
+   }
   }
  ]
 }
