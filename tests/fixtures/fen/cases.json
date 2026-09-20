@@ -1,8 +1,8 @@
 {
- "schema": 1,
+ "schema": 2,
  "contract": "chess-fen",
  "contract_schema_version": 1,
- "notes": "T0087 conformance fixture for the T0086 FEN contract. Every case traced through the contract-derived reference (parse_fen/emit_fen) at authoring time; happy/boundary inputs are canonical (parse-then-emit is identity); malformed cases are discriminating (declarative find/replace repair of ONLY the declared defect makes the case valid, verified at authoring time); rollback cases prove the pure-function surface - a rejection leaves no trace.",
+ "notes": "T0087 conformance fixture for the T0086 FEN contract. Every case traced through the contract-derived reference (parse_fen/emit_fen) at authoring time; happy/boundary inputs are canonical (parse-then-emit is identity). Every malformed case is single-defect by CONSTRUCTION: all non-target contract rules already pass in the input, the named layer says which contract validation layer the defect belongs to, and the declarative find/replace repair minimally removes only that violation (repairs never remove material and never delete the castling or en-passant feature - both invariants are asserted generically by the harness and were checked at authoring time). Rollback cases prove the pure-function surface - a rejection leaves no trace.",
  "happy": [
   {
    "name": "startpos",
@@ -67,8 +67,13 @@
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0",
    "defect": "only five fields",
+   "layer": "field-count",
    "expect_failure": "malformed_fen",
    "repair": {
+    "find": " w - - 0",
+    "replace": " w - - 0 1"
+   },
+   "control": {
     "find": " w - - 0",
     "replace": " w - - 0 1"
    }
@@ -77,9 +82,14 @@
    "name": "rank-sum-nine",
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/8/4K4 w - - 0 1",
-   "defect": "rank 1 sums to 9",
+   "defect": "rank 1 runs sum to 9, not 8",
+   "layer": "placement-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
+    "find": "4K4",
+    "replace": "4K3"
+   },
+   "control": {
     "find": "4K4",
     "replace": "4K3"
    }
@@ -87,23 +97,33 @@
   {
    "name": "rank-count-seven",
    "kind": "fen-parse",
-   "input_fen": "4k3/8/8/8/8/8/8 w - - 0 1",
-   "defect": "placement has 7 ranks",
+   "input_fen": "4k3/8/8/8/8/8/4K3 w - - 0 1",
+   "defect": "placement has 7 ranks (both kings present)",
+   "layer": "placement-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
-    "find": "4k3/8/8/8/8/8/8",
-    "replace": "4k3/8/8/8/8/8/8/4K3"
+    "find": "4k3/8/8/8/8/8/4K3",
+    "replace": "8/4k3/8/8/8/8/8/4K3"
+   },
+   "control": {
+    "find": "4k3/8/8/8/8/8/4K3",
+    "replace": "8/4k3/8/8/8/8/8/4K3"
    }
   },
   {
    "name": "adjacent-digits",
    "kind": "fen-parse",
-   "input_fen": "4k3/8/8/8/8/8/8/33K3 w - - 0 1",
-   "defect": "adjacent empty-run digits",
+   "input_fen": "4k3/8/8/8/8/8/8/33K1 w - - 0 1",
+   "defect": "adjacent empty-run digits in a rank that already sums to 8",
+   "layer": "placement-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
-    "find": "33K3",
-    "replace": "4K3"
+    "find": "33",
+    "replace": "6"
+   },
+   "control": {
+    "find": "33",
+    "replace": "6"
    }
   },
   {
@@ -111,8 +131,13 @@
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/8/4K3 x - - 0 1",
    "defect": "active color not w/b",
+   "layer": "active-color-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
+    "find": " x ",
+    "replace": " w "
+   },
+   "control": {
     "find": " x ",
     "replace": " w "
    }
@@ -120,21 +145,31 @@
   {
    "name": "castling-bad-letter",
    "kind": "fen-parse",
-   "input_fen": "4k3/8/8/8/8/8/8/4K3 w KX - 0 1",
-   "defect": "castling letter X undeclared",
+   "input_fen": "4k3/8/8/8/8/8/8/4K2R w KX - 0 1",
+   "defect": "undeclared castling letter X (Ke1/Rh1 present, so the surviving K right is consistent)",
+   "layer": "castling-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
-    "find": " KX ",
-    "replace": " - "
+    "find": "KX",
+    "replace": "K"
+   },
+   "control": {
+    "find": "KX",
+    "replace": "K"
    }
   },
   {
    "name": "castling-order",
    "kind": "fen-parse",
    "input_fen": "r3k2r/8/8/8/8/8/8/R3K2R w QK - 0 1",
-   "defect": "castling not KQkq-ordered",
+   "defect": "castling letters not in KQkq order",
+   "layer": "castling-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
+    "find": " QK ",
+    "replace": " KQ "
+   },
+   "control": {
     "find": " QK ",
     "replace": " KQ "
    }
@@ -142,12 +177,17 @@
   {
    "name": "ep-rank-wrong",
    "kind": "fen-parse",
-   "input_fen": "4k3/8/8/8/8/8/8/4K3 w - e4 0 1",
-   "defect": "en-passant rank not 3 or 6",
+   "input_fen": "4k3/8/8/8/4P3/8/8/4K3 b - e4 0 1",
+   "defect": "en-passant rank 4 in an otherwise fully EP-consistent position",
+   "layer": "ep-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
-    "find": " e4 ",
-    "replace": " - "
+    "find": "e4",
+    "replace": "e3"
+   },
+   "control": {
+    "find": "e4",
+    "replace": "e3"
    }
   },
   {
@@ -155,8 +195,13 @@
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 07 1",
    "defect": "leading zero on halfmove clock",
+   "layer": "counter-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
+    "find": " 07 ",
+    "replace": " 7 "
+   },
+   "control": {
     "find": " 07 ",
     "replace": " 7 "
    }
@@ -166,8 +211,13 @@
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 0",
    "defect": "fullmove number below its minimum 1",
+   "layer": "counter-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
+    "find": " 0 0",
+    "replace": " 0 1"
+   },
+   "control": {
     "find": " 0 0",
     "replace": " 0 1"
    }
@@ -177,8 +227,13 @@
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - \u0663 1",
    "defect": "non-ASCII digit in halfmove clock",
+   "layer": "counter-grammar",
    "expect_failure": "malformed_fen",
    "repair": {
+    "find": "\u0663",
+    "replace": "3"
+   },
+   "control": {
     "find": "\u0663",
     "replace": "3"
    }
@@ -188,8 +243,13 @@
    "kind": "fen-parse",
    "input_fen": "8/8/8/8/8/8/8/4K3 w - - 0 1",
    "defect": "no black king",
+   "layer": "position-rules-kings",
    "expect_failure": "impossible_position",
    "repair": {
+    "find": "8/8/8/8/8/8/8/4K3",
+    "replace": "4k3/8/8/8/8/8/8/4K3"
+   },
+   "control": {
     "find": "8/8/8/8/8/8/8/4K3",
     "replace": "4k3/8/8/8/8/8/8/4K3"
    }
@@ -198,33 +258,48 @@
    "name": "kings-adjacent",
    "kind": "fen-parse",
    "input_fen": "8/8/8/8/8/4k3/4K3/8 w - - 0 1",
-   "defect": "kings adjacent",
+   "defect": "kings adjacent (e3/e2)",
+   "layer": "position-rules-kings",
    "expect_failure": "impossible_position",
    "repair": {
-    "find": "8/8/8/8/8/4k3/4K3/8",
-    "replace": "4k3/8/8/8/8/8/8/4K3"
+    "find": "4K3",
+    "replace": "K7"
+   },
+   "control": {
+    "find": "4K3",
+    "replace": "K7"
    }
   },
   {
    "name": "pawn-on-back-rank",
    "kind": "fen-parse",
-   "input_fen": "4k3/8/8/8/8/8/8/P3K3 w - - 0 1",
-   "defect": "white pawn on rank 1",
+   "input_fen": "4kp2/8/8/8/8/8/8/4K3 w - - 0 1",
+   "defect": "black pawn on rank 8",
+   "layer": "position-rules-pawns",
    "expect_failure": "impossible_position",
    "repair": {
-    "find": "P3K3",
-    "replace": "4K3"
+    "find": "4kp2/8",
+    "replace": "4k3/5p2"
+   },
+   "control": {
+    "find": "4kp2/8",
+    "replace": "4k3/5p2"
    }
   },
   {
    "name": "non-mover-king-attacked",
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/4R3/4K3 w - - 0 1",
-   "defect": "side not to move's king is attacked",
+   "defect": "side not to move's king is attacked (rook on the e-file)",
+   "layer": "position-rules-check",
    "expect_failure": "impossible_position",
    "repair": {
     "find": "4R3",
-    "replace": "8"
+    "replace": "3R4"
+   },
+   "control": {
+    "find": "4R3",
+    "replace": "3R4"
    }
   },
   {
@@ -232,10 +307,15 @@
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/8/4K3 w K - 0 1",
    "defect": "K right without rook on h1",
+   "layer": "castling-consistency",
    "expect_failure": "impossible_position",
    "repair": {
-    "find": " K ",
-    "replace": " - "
+    "find": "4K3",
+    "replace": "4K2R"
+   },
+   "control": {
+    "find": "4K3",
+    "replace": "4K2R"
    }
   },
   {
@@ -243,8 +323,13 @@
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/4P3/8/8/4K3 b - e3 1 1",
    "defect": "en-passant target requires halfmove clock zero",
+   "layer": "ep-consistency",
    "expect_failure": "impossible_position",
    "repair": {
+    "find": " 1 1",
+    "replace": " 0 1"
+   },
+   "control": {
     "find": " 1 1",
     "replace": " 0 1"
    }
@@ -254,10 +339,15 @@
    "kind": "fen-parse",
    "input_fen": "4k3/8/8/8/8/8/8/4K3 b - e3 0 1",
    "defect": "no pawn on the advanced square for the target",
+   "layer": "ep-consistency",
    "expect_failure": "impossible_position",
    "repair": {
-    "find": "4k3/8/8/8/8/8/8/4K3",
-    "replace": "4k3/8/8/8/4P3/8/8/4K3"
+    "find": "8/8/8/8/4K3",
+    "replace": "8/4P3/8/8/4K3"
+   },
+   "control": {
+    "find": "8/8/8/8/4K3",
+    "replace": "8/4P3/8/8/4K3"
    }
   }
  ],

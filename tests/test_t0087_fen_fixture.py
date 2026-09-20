@@ -6,9 +6,15 @@ data/contracts/fen.yaml plus its linked variant, castling and
 en-passant contracts) - nothing is re-implemented here. Every case
 was traced through that reference at authoring time, so any contract
 or derivation drift breaks this battery. Every malformed case is
-discriminating (repairing ONLY its declared defect makes the case
-valid) and rollback cases prove the pure-function surface: a
-rejection leaves no trace.
+single-defect by CONSTRUCTION: all non-target contract rules already
+pass in the input, each defect is classified by contract validation
+layer (grammar layers reject malformed_fen, consistency/position
+layers reject impossible_position), and the declarative repair
+minimally removes only that violation - a per-case negative control
+(the narrowest repair of the named token) must succeed, and generic
+invariants prove no repair fixes a defect by deleting the castling
+or en-passant feature or by removing material. Rollback cases prove
+the pure-function surface: a rejection leaves no trace.
 
 DESIGN CAUTION: the reference interpreter is derived from the same
 contract document, so this fixture proves fixture/contract
@@ -44,12 +50,24 @@ TOP_KEYS = {"schema", "contract", "contract_schema_version", "notes",
             "happy", "boundary", "malformed", "rollback"}
 KIND_KEYS = {
     "roundtrip": {"name", "kind", "input_fen", "expect_fen"},
-    "fen-parse": {"name", "kind", "input_fen", "defect",
-                  "expect_failure", "repair"},
+    "fen-parse": {"name", "kind", "input_fen", "defect", "layer",
+                  "expect_failure", "repair", "control"},
     "rollback-fen-parse": {"name", "kind", "reject_fen",
                            "expect_failure", "then_fen", "expect_fen"},
 }
 REPAIR_KEYS = {"find", "replace"}
+
+# defect layer -> the contract validation layer that must catch it,
+# and therefore the failure class that layer raises
+GRAMMAR_LAYERS = {"field-count", "placement-grammar",
+                  "active-color-grammar", "castling-grammar",
+                  "ep-grammar", "counter-grammar"}
+SEMANTIC_LAYERS = {"position-rules-kings", "position-rules-pawns",
+                   "position-rules-check", "castling-consistency",
+                   "ep-consistency"}
+LAYER_CLASS = ({layer: "malformed_fen" for layer in GRAMMAR_LAYERS}
+               | {layer: "impossible_position"
+                  for layer in SEMANTIC_LAYERS})
 
 
 def _names(section):
@@ -96,6 +114,15 @@ def test_fixture_structure():
     # both failure classes also appear in the rollback battery
     rb = {c["expect_failure"] for c in CASES["rollback"]}
     assert rb == FAILURE_CLASSES
+    # every malformed case names a known validation layer, the layer
+    # pin maps to the pinned failure class, and both layer families
+    # are exercised
+    layers = {c["layer"] for c in CASES["malformed"]}
+    assert layers <= set(LAYER_CLASS)
+    for case in CASES["malformed"]:
+        assert LAYER_CLASS[case["layer"]] == case["expect_failure"],             case["name"]
+    assert layers & GRAMMAR_LAYERS
+    assert layers & SEMANTIC_LAYERS
 
 
 _ROUNDTRIP_CASES = [(section, case["name"])
@@ -181,6 +208,46 @@ def test_rollback_leaves_no_trace(name):
     assert excinfo2.value.failure_class == case["expect_failure"]
     position = parse_fen(C, case["then_fen"])
     assert emit_fen(C, position) == case["expect_fen"]
+
+
+def _pieces(fen):
+    return sum(ch.isalpha() for ch in fen.split(" ")[0])
+
+
+@pytest.mark.parametrize("name", _names("malformed"))
+def test_malformed_control_narrowest_repair_succeeds(name):
+    """Per-case negative control: the narrowest plausible repair of
+    the named token - preserving all other semantic state - must
+    SUCCEED. If it did not, the case would carry a second defect the
+    declared repair is secretly fixing."""
+    case = _case("malformed", name)
+    control = case["control"]
+    assert set(control) == REPAIR_KEYS
+    text = case["input_fen"]
+    assert text.count(control["find"]) == 1, (
+        f"{name}: control find not unique")
+    repaired = text.replace(control["find"], control["replace"])
+    position = parse_fen(C, repaired)
+    assert emit_fen(C, position) == repaired
+
+
+@pytest.mark.parametrize("name", _names("malformed"))
+def test_malformed_repair_never_evasion(name):
+    """Anti-evasion invariants: a repair may not fix the defect by
+    DELETING the optional feature it broke - castling and en-passant
+    feature presence is preserved exactly (sentinel stays sentinel,
+    real value stays a real value), and material never decreases
+    (nothing is fixed by removing pieces)."""
+    case = _case("malformed", name)
+    repaired = _repaired(case)
+    in_parts = case["input_fen"].split(" ")
+    re_parts = repaired.split(" ")
+    in_castling = in_parts[2] if len(in_parts) > 2 else "-"
+    in_ep = in_parts[3] if len(in_parts) > 3 else "-"
+    assert (in_castling != "-") == (re_parts[2] != "-"), case["name"]
+    assert (in_ep != "-") == (re_parts[3] != "-"), case["name"]
+    assert _pieces(repaired) >= _pieces(case["input_fen"]), (
+        case["name"])
 
 
 def test_battery_size():
