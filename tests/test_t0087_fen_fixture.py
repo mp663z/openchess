@@ -22,6 +22,7 @@ execute these same cases against a separately implemented runtime."""
 
 from __future__ import annotations
 
+import copy
 import json
 import sys
 from pathlib import Path
@@ -39,6 +40,10 @@ from tests.test_t0086_fen_contract import (  # noqa: E402
     parse_fen,
 )
 
+# Pinned fixture-format version: consumers validate the loaded
+# fixture against exactly this integer before interpreting any
+# case under v3 semantics (single minimal_repair source).
+FIXTURE_SCHEMA_VERSION = 3
 FIXTURE = Path(__file__).parent / "fixtures" / "fen" / "cases.json"
 CASES = json.loads(FIXTURE.read_text())
 DOC = yaml.safe_load((ROOT / "data" / "contracts" / "fen.yaml").read_text())
@@ -89,39 +94,65 @@ def _repaired(case):
     return text.replace(rep["find"], rep["replace"])
 
 
-def test_fixture_structure():
-    assert set(CASES) == TOP_KEYS
-    assert CASES["contract"] == C["id"]
-    assert CASES["contract_schema_version"] == DOC["schema_version"]
+def _validate_structure(cases):
+    assert set(cases) == TOP_KEYS
+    # the fixture-format version is pinned exactly: an int equal to
+    # FIXTURE_SCHEMA_VERSION, never a string, bool, or older/newer
+    # integer silently interpreted under v3 assumptions
+    assert type(cases["schema"]) is int, "schema must be an int"
+    assert cases["schema"] == FIXTURE_SCHEMA_VERSION
+    assert cases["contract"] == C["id"]
+    assert cases["contract_schema_version"] == DOC["schema_version"]
     for section in ("happy", "boundary", "malformed", "rollback"):
-        assert CASES[section], f"{section} must be non-empty"
-        names = _names(section)
+        assert cases[section], f"{section} must be non-empty"
+        names = [case["name"] for case in cases[section]]
         assert len(names) == len(set(names)), (
             f"{section} names must be unique")
-        for case in CASES[section]:
+        for case in cases[section]:
             assert set(case) == KIND_KEYS[case["kind"]], case["name"]
-    assert {c["kind"] for c in CASES["happy"]} == {"roundtrip"}
-    assert {c["kind"] for c in CASES["boundary"]} == {"roundtrip"}
-    assert {c["kind"] for c in CASES["malformed"]} == {"fen-parse"}
-    assert {c["kind"] for c in CASES["rollback"]} == {
+    assert {c["kind"] for c in cases["happy"]} == {"roundtrip"}
+    assert {c["kind"] for c in cases["boundary"]} == {"roundtrip"}
+    assert {c["kind"] for c in cases["malformed"]} == {"fen-parse"}
+    assert {c["kind"] for c in cases["rollback"]} == {
         "rollback-fen-parse"}
     # every declared failure class is contract-declared, and every
     # contract failure class is exercised by the malformed battery
-    declared = {c["expect_failure"] for c in CASES["malformed"]}
+    declared = {c["expect_failure"] for c in cases["malformed"]}
     assert declared <= FAILURE_CLASSES
     assert declared == FAILURE_CLASSES
     # both failure classes also appear in the rollback battery
-    rb = {c["expect_failure"] for c in CASES["rollback"]}
+    rb = {c["expect_failure"] for c in cases["rollback"]}
     assert rb == FAILURE_CLASSES
     # every malformed case names a known validation layer, the layer
     # pin maps to the pinned failure class, and both layer families
     # are exercised
-    layers = {c["layer"] for c in CASES["malformed"]}
+    layers = {c["layer"] for c in cases["malformed"]}
     assert layers <= set(LAYER_CLASS)
-    for case in CASES["malformed"]:
-        assert LAYER_CLASS[case["layer"]] == case["expect_failure"],             case["name"]
+    for case in cases["malformed"]:
+        assert LAYER_CLASS[case["layer"]] == case["expect_failure"], (
+            case["name"])
     assert layers & GRAMMAR_LAYERS
     assert layers & SEMANTIC_LAYERS
+
+
+def test_fixture_structure():
+    _validate_structure(CASES)
+
+
+def test_fixture_schema_version_mutations_fail():
+    """The pinned fixture-format version is closed: older, newer,
+    string, boolean, and missing schema values all fail structure
+    validation (verifier #1 v4)."""
+    for mutate in (
+            lambda m: m.__setitem__("schema", 2),
+            lambda m: m.__setitem__("schema", 4),
+            lambda m: m.__setitem__("schema", "3"),
+            lambda m: m.__setitem__("schema", True),
+            lambda m: m.__delitem__("schema")):
+        m = copy.deepcopy(CASES)
+        mutate(m)
+        with pytest.raises(AssertionError):
+            _validate_structure(m)
 
 
 _ROUNDTRIP_CASES = [(section, case["name"])
