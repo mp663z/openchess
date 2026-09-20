@@ -1,0 +1,238 @@
+# T0131: chess route-edge contract (implementation-neutral; the
+# product runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for the repertoire graph's EDGE everywhere in the
+# product: the graph, the delta engine, diagnosis and sync all share
+# THESE semantics. ALL normative semantics live in STRUCTURED fields
+# the lint compares exactly - prose is documentation, never the
+# enforcement surface.
+#
+# A route edge is the graph's directed connection: from one
+# transposition node to another via ONE move. The edge owns NO move
+# semantics of its own: node identity is the linked transposition
+# node contract's identity, the move model is the linked legal-moves
+# contract's move_model, and move APPLICATION is the legal-moves and
+# position runtime's layer, never this one's. This contract pins
+# what is new: the edge record shape, edge identity (the canonical
+# four-tuple), the determinism guarantee (one from-plus-move never
+# reaches two targets), the merge semantics, and the failure
+# classes.
+schema_version: 1
+
+contract:
+  id: chess-route-edge
+  role:
+    kind: graph-edge-between-nodes-over-one-move
+    direction: from-node-via-one-move-to-node
+    annotations_attach: by-edge-identity-never-by-path
+    rule: >-
+      The edge is the repertoire graph's DIRECTED connection: from
+      exactly one transposition node to exactly one transposition
+      node via exactly one move. Every path that plays the same
+      move from the same node identity arrives at the same node
+      identity and therefore travels the SAME edge - a route never
+      creates a second edge, and per-edge annotations (owned by
+      sibling contracts) attach by edge identity, never by the
+      path that first played the move. The edge owns no move
+      semantics of its own: node identity is the linked
+      transposition-node contract's identity (itself the linked
+      variant contract's canonical_fields tuple), and the move is
+      the linked legal-moves contract's move_model serialized in
+      its long-algebraic text form.
+    links:
+      transposition_node: data/contracts/transposition_node.yaml
+      legal_moves: data/contracts/legal_moves.yaml
+  identity:
+    components: [variant, move, from_node, to_node]
+    source: from-linked-transposition-node-contract-identity
+    equality: canonical-field-comparison-only
+    accelerator: from-digest-plus-move-bucket-only-never-equality
+    excluded: [move_order_path, repertoire_context, halfmove_clock,
+      fullmove_number]
+    rule: >-
+      Edge identity is EXACTLY the canonical four-tuple: the
+      variant registry id, the move text, the from-node identity
+      and the to-node identity, both node identities EXACTLY as
+      the linked transposition-node contract defines them
+      (canonical field comparison over the variant contract's
+      canonical_fields; clocks, move-order path and repertoire
+      context never participate). Two edge records are the same
+      edge iff all four components compare equal, field by field
+      - the from digest plus move bucket is a lookup accelerator
+      ONLY and never decides equality or inequality without field
+      comparison, exactly the accelerator-only role the linked
+      node and digest contracts pin.
+    links:
+      transposition_node: data/contracts/transposition_node.yaml
+      variant: data/contracts/variant.yaml
+  move:
+    form: from-linked-legal-moves-contract-move_model-long-algebraic
+    shape: from-square-then-to-square-then-optional-promotion-letter
+    from_to_distinct: true
+    promotion_enum: from-linked-legal-moves-contract-move_model
+    application: delegated-to-legal-moves-position-runtime-layer
+    determinism: same-from-plus-move-never-two-target-identities
+    rule: >-
+      The move is the linked legal-moves contract's move_model in
+      its long-algebraic text form: from-square, to-square (the
+      two always distinct), then an optional promotion letter from
+      the linked promotion enum - the field names and enum are NOT
+      restated here, the lint reads them from the sibling. Move
+      APPLICATION is delegated exactly as the linked contracts
+      assign it: whether the move is pseudo-legal or legal from
+      the from-position, and which position it produces, is the
+      legal-moves and position runtime's layer, never this
+      contract's. What THIS contract pins is DETERMINISM: one
+      from-node identity plus one move never reaches two different
+      to-node identities - a second edge with the same from and
+      move but a different target identity is a contradiction the
+      graph rejects, never a second route.
+    links:
+      legal_moves: data/contracts/legal_moves.yaml
+  record:
+    fields: [variant, move, from_snapshot_fen, to_snapshot_fen]
+    variant_form: registry-id-verbatim
+    variant_id_grammar: from-linked-variant-contract-variants-id_grammar
+    move_form: from-linked-legal-moves-contract-move_model-long-algebraic
+    snapshot_form: from-linked-transposition-node-contract-record-snapshot
+    derived_fields_stored: none
+    rule: >-
+      The edge record has EXACTLY four fields. variant is the
+      variant registry id verbatim - every registry id is PROVABLY
+      delimiter-free printable ASCII per the linked variant
+      contract's id_grammar, and the lint re-verifies every actual
+      registry id against that grammar. move is the long-algebraic
+      move text per the linked legal-moves move_model.
+      from_snapshot_fen and to_snapshot_fen are canonical
+      six-field FEN snapshots EXACTLY as the linked
+      transposition-node contract's record section pins them: the
+      en-passant field carries the IDENTITY value and both clock
+      fields are normalized to halfmove 0 and fullmove 1, so an
+      edge record never depends on which path or which clock
+      values first produced it. No digest or identity field is
+      stored: every derived value is regenerable from the four
+      stored fields through the linked contracts, never an
+      independent source of truth. Any other field, any missing
+      field, a snapshot failing the linked canonical form, or a
+      move failing the linked grammar is a malformed record.
+    links:
+      variant: data/contracts/variant.yaml
+      legal_moves: data/contracts/legal_moves.yaml
+      transposition_node: data/contracts/transposition_node.yaml
+      fen: data/contracts/fen.yaml
+  merge:
+    insert: insert-or-return-existing
+    atomic: true
+    idempotent: true
+    commutative: true
+    associative: true
+    same_edge_never_two_records: true
+    conflicting_target: rejected-as-conflicting_edge
+    conflict_in_batch: whole-merge-rejected-nothing-committed
+    source_validation: exact-stored-records-validated-before-staging
+    rejected_insert_changes_nothing: true
+    rule: >-
+      Inserting an edge into the edge table returns the existing
+      record when the identity four-tuple already exists and
+      creates one otherwise - never a second record for an
+      existing edge. Merge is IDEMPOTENT (inserting the same edge
+      twice is a no-op), COMMUTATIVE and ASSOCIATIVE (the final
+      edge table is the same for any insertion order and grouping,
+      because every record is fully determined by its identity
+      four-tuple: the snapshots are canonical and no derived
+      fields are stored). DETERMINISM is enforced at insert: a
+      record whose from-node identity and move match an existing
+      edge but whose to-node identity differs is REJECTED as
+      conflicting_edge, and every rejected insert leaves the table
+      bit-identical. A table merge is ATOMIC: the entire union is
+      preflighted before any mutation - conflicts internal to the
+      source batch or against the destination reject the WHOLE
+      merge and leave the destination bit-identical, never a
+      committed valid prefix. Over conflicting tables
+      commutativity means BOTH merge orders reject and leave the
+      same pre-merge destinations, never first-writer residue.
+      The from-digest-plus-move bucket accelerates lookup only;
+      a bucket collision between unequal identities is separated
+      by canonical field comparison, never by digest alone.
+  failures:
+    classes: [malformed_edge_record, malformed_position,
+      unknown_variant, conflicting_edge]
+    mapping:
+      malformed_edge_record: malformed_request
+      malformed_position: malformed_request
+      unknown_variant: unknown_variant
+      conflicting_edge: conflicting_edge
+    closed: true
+    rule: >-
+      Four failure classes, each mapping onto the closed error
+      enum as declared. malformed_edge_record: an edge record
+      failing the pinned shape - wrong field set, a variant id
+      failing the linked id_grammar, a move failing the linked
+      move grammar, or a snapshot failing the linked canonical
+      form (FEN validity, identity en-passant value, clock
+      normalization). malformed_position: an input position
+      failing any linked contract - a position that cannot exist
+      yields NO edge, never a best-effort one. unknown_variant: a
+      variant id absent from the linked variant registry - fail
+      closed, never coerced. conflicting_edge: an insert whose
+      from-node identity and move match an existing edge but
+      whose to-node identity differs - the determinism violation.
+      No fifth failure class exists.
+  errors:
+    closed_enum: [malformed_request, unknown_variant,
+      conflicting_edge, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+        additional_fields: forbidden
+      retryable_true_only_for: [internal]
+    rule: >-
+      The error surface is the shared shape: code from the closed
+      enum, message, retryable. retryable is true ONLY for
+      internal; every contract-level rejection is a caller error
+      and never retryable.
+  properties:
+    path_invariance: move-order-path-never-changes-the-edge
+    target_determinism: one-from-plus-move-exactly-one-target
+    merge_idempotence: reinsert-same-edge-no-op
+    merge_commutativity: insertion-order-never-changes-the-table
+    accelerator_only: bucket-never-decides-equality
+    rollback: rejected-insert-leaves-table-bit-identical
+    rule: >-
+      The edge table is a deterministic function of the SET of
+      identity four-tuples inserted: the move-order path that
+      reached a position never changes its edges, reinsertion is
+      a no-op, and insertion order never changes the final table
+      because every record is fully determined by its identity
+      four-tuple. One from-node identity plus one move names
+      exactly one target identity - the table can never hold two
+      targets for the same from and move. The bucket accelerates
+      lookup only. A rejected insert leaves the table
+      bit-identical.
+  links:
+    variant_contract: data/contracts/variant.yaml
+    fen_contract: data/contracts/fen.yaml
+    position_digest_contract: data/contracts/position_digest.yaml
+    transposition_node_contract: data/contracts/transposition_node.yaml
+    legal_moves_contract: data/contracts/legal_moves.yaml
+    rule: >-
+      The edge contract LINKS the variant contract (registry and
+      id grammar), the FEN contract (snapshot serialization and
+      validity), the position-digest contract (the bucket
+      accelerator and its format, through the node contract), the
+      transposition-node contract (node identity and the canonical
+      snapshot form), and the legal-moves contract (the move
+      model, its text form, and the application boundary). The
+      lint parses ALL siblings and compares every linked claim
+      exactly; any sibling grammar change not mirrored here fails
+      the linkage check.
+  versioning:
+    base_path: /graph/route-edge/v1
+    rule: >-
+      The contract version is in the base path. Any normative
+      change is a NEW version at a new base path; a version never
+      changes in place, so a stored edge record is forever
+      decodable by the version its table names.
