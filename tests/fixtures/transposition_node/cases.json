@@ -1,0 +1,302 @@
+{
+ "schema": 1,
+ "contract": "chess-transposition-node",
+ "contract_schema_version": 1,
+ "notes": "Pinned records/digests/serializations computed from the T0122 contract-derived reference at authoring time. Every malformed case is single-defect: the declarative minimal_repair removes ONLY the targeted violation and the repaired input then succeeds.",
+ "happy": [
+  {
+   "name": "startpos-insert",
+   "kind": "node-insert",
+   "variant": "standard",
+   "input_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "expect_record": {
+    "variant": "standard",
+    "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+    "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+   }
+  },
+  {
+   "name": "transposition-move-order",
+   "kind": "transposition",
+   "variant": "standard",
+   "input_fens": [
+    "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+    "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 1"
+   ],
+   "expect_record": {
+    "variant": "standard",
+    "digest": "pdv1:f1d35f4eebe0523bb9e7f1eec6b88ee7ae6c1c743a4ce7d991f77eab8ca0da59",
+    "snapshot_fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 1"
+   },
+   "expect_node_count": 1
+  },
+  {
+   "name": "transposition-clocks-only",
+   "kind": "transposition",
+   "variant": "standard",
+   "input_fens": [
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 47 23"
+   ],
+   "expect_record": {
+    "variant": "standard",
+    "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+    "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+   },
+   "expect_node_count": 1
+  }
+ ],
+ "boundary": [
+  {
+   "name": "kings-only",
+   "kind": "node-insert",
+   "variant": "standard",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+   "expect_record": {
+    "variant": "standard",
+    "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   }
+  },
+  {
+   "name": "ep-phantom-collapses-to-none",
+   "kind": "transposition",
+   "variant": "standard",
+   "input_fens": [
+    "4k3/8/8/3p4/8/8/8/4K3 w - d6 0 1",
+    "4k3/8/8/3p4/8/8/8/4K3 w - - 0 1"
+   ],
+   "expect_record": {
+    "variant": "standard",
+    "digest": "pdv1:da93fdff3681cc402ae4706adca034d3e5938363ea943c994c88d97613f19cd7",
+    "snapshot_fen": "4k3/8/8/3p4/8/8/8/4K3 w - - 0 1"
+   },
+   "expect_node_count": 1
+  },
+  {
+   "name": "ep-real-target-distinguishes",
+   "kind": "transposition",
+   "variant": "standard",
+   "input_fens": [
+    "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1",
+    "4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1"
+   ],
+   "expect_records": [
+    {
+     "variant": "standard",
+     "digest": "pdv1:a47758824cb6f3b306247c58860fd0f2bfc9207b9cdd7370a6b6ecb049b1adaf",
+     "snapshot_fen": "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1"
+    },
+    {
+     "variant": "standard",
+     "digest": "pdv1:24672c981bb9704eed36ba3ec5e02ccb63e88e6f5b4531b36ab2b82847d1d183",
+     "snapshot_fen": "4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1"
+    }
+   ],
+   "expect_node_count": 2
+  },
+  {
+   "name": "merge-commutative-idempotent",
+   "kind": "merge",
+   "variant": "standard",
+   "table_a": [
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   ],
+   "table_b": [
+    "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+    ],
+    [
+     "standard",
+     "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    ],
+    [
+     "standard",
+     "pdv1:f1d35f4eebe0523bb9e7f1eec6b88ee7ae6c1c743a4ce7d991f77eab8ca0da59",
+     "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 1"
+    ]
+   ]
+  }
+ ],
+ "malformed": [
+  {
+   "name": "unknown-variant-id",
+   "kind": "node-insert",
+   "variant": "standart",
+   "input_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "defect": "variant-not-in-linked-registry",
+   "expect_failure": "unknown_variant",
+   "minimal_repair": {
+    "set": {
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "name": "fen-active-color-grammar",
+   "kind": "node-insert",
+   "variant": "standard",
+   "input_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR x KQkq - 0 1",
+   "defect": "active-color-not-w-or-b",
+   "expect_failure": "malformed_position",
+   "minimal_repair": {
+    "set": {
+     "input_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    }
+   }
+  },
+  {
+   "name": "fen-impossible-two-white-kings",
+   "kind": "node-insert",
+   "variant": "standard",
+   "input_fen": "4K3/8/8/8/8/8/8/4K3 w - - 0 1",
+   "defect": "two-white-kings",
+   "expect_failure": "malformed_position",
+   "minimal_repair": {
+    "set": {
+     "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+    }
+   }
+  },
+  {
+   "name": "record-extra-field",
+   "kind": "record-validate",
+   "record": {
+    "variant": "standard",
+    "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+    "path": [
+     "e2e4"
+    ]
+   },
+   "defect": "field-set-superset",
+   "expect_failure": "malformed_node_record",
+   "minimal_repair": {
+    "remove": [
+     "path"
+    ]
+   }
+  },
+  {
+   "name": "record-missing-digest",
+   "kind": "record-validate",
+   "record": {
+    "variant": "standard",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   },
+   "defect": "field-set-missing-digest",
+   "expect_failure": "malformed_node_record",
+   "minimal_repair": {
+    "set": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b"
+    }
+   }
+  },
+  {
+   "name": "record-digest-format",
+   "kind": "record-validate",
+   "record": {
+    "variant": "standard",
+    "digest": "zz-not-a-digest",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   },
+   "defect": "digest-fails-linked-format-regex",
+   "expect_failure": "malformed_node_record",
+   "minimal_repair": {
+    "set": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b"
+    }
+   }
+  },
+  {
+   "name": "record-clocks-not-normalized",
+   "kind": "record-validate",
+   "record": {
+    "variant": "standard",
+    "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 7 42"
+   },
+   "defect": "snapshot-clocks-not-0-1",
+   "expect_failure": "malformed_node_record",
+   "minimal_repair": {
+    "set": {
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+    }
+   }
+  },
+  {
+   "name": "record-digest-inconsistent",
+   "kind": "record-validate",
+   "record": {
+    "variant": "standard",
+    "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   },
+   "defect": "digest-format-valid-but-inconsistent-with-snapshot",
+   "expect_failure": "malformed_node_record",
+   "minimal_repair": {
+    "set": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b"
+    }
+   }
+  }
+ ],
+ "rollback": [
+  {
+   "name": "rollback-unknown-variant",
+   "kind": "rollback-insert",
+   "variant": "standard",
+   "setup_fens": [
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+   ],
+   "reject_variant": "standart",
+   "reject_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+   "expect_failure": "unknown_variant",
+   "then_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+   "expect_record": {
+    "variant": "standard",
+    "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   }
+  },
+  {
+   "name": "rollback-malformed-position",
+   "kind": "rollback-insert",
+   "variant": "standard",
+   "setup_fens": [
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+   ],
+   "reject_variant": "standard",
+   "reject_fen": "4k3/8/8/8/8/8/8/4K3 x - - 0 1",
+   "expect_failure": "malformed_position",
+   "then_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+   "expect_record": {
+    "variant": "standard",
+    "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   }
+  },
+  {
+   "name": "rollback-validate",
+   "kind": "rollback-validate",
+   "reject_record": {
+    "variant": "standard",
+    "digest": "zz-not-a-digest",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   },
+   "expect_failure": "malformed_node_record",
+   "then_record": {
+    "variant": "standard",
+    "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+    "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   }
+  }
+ ]
+}
