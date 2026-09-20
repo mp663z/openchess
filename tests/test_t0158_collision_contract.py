@@ -117,6 +117,31 @@ def stateful_oracle():
     return oracle
 
 
+def raising_oracle(fail_on):
+    """UNTRUSTED: raises ValueError on the Nth call (1-based)."""
+    counter = itertools.count(1)
+
+    def oracle(variant, fen):
+        if next(counter) >= fail_on:
+            raise ValueError("oracle exploded")
+        return "pdv1:" + hashlib.sha256(
+            f"{variant}\n{fen}".encode()).hexdigest()
+    return oracle
+
+
+def midway_oracle(fail_on):
+    """UNTRUSTED: real digest for the first fail_on-1 calls, then
+    raises - sized so the FIRST merge record completes (validate +
+    insert) and the SECOND record's revalidation explodes."""
+    counter = itertools.count(1)
+
+    def oracle(variant, fen):
+        if next(counter) >= fail_on:
+            raise ValueError("midway failure")
+        return digest_fen(variant, fen)
+    return oracle
+
+
 class CollisionProbe:
     """The contract's pinned table model: buckets accelerate lookup
     ONLY; the canonical-identity index (INDEPENDENT of buckets) is
@@ -136,17 +161,31 @@ class CollisionProbe:
         nc, vc, dc, epc, fc = _NODE_DOCS
         return _record_identity(nc, vc, dc, epc, fc, record)
 
+    def _call_oracle(self, variant, fen):
+        """THE single trust-boundary crossing - EVERY oracle
+        invocation (insert path and merge revalidation) goes
+        through here. An oracle that RAISES, or returns an
+        invalid-format key, maps to the pinned
+        accelerator_inconsistent outcome. The contract's own typed
+        validation errors are raised by sibling machinery OUTSIDE
+        this wrapper and are never caught or relabeled here."""
+        try:
+            key = self.oracle(variant, fen)
+        except Exception:
+            _fail(self.cc, "accelerator_inconsistent")
+        if not isinstance(key, str) or \
+                _DIGEST_RE.fullmatch(key) is None:
+            _fail(self.cc, "accelerator_inconsistent")
+        return key
+
     def insert(self, variant_id, fen_text):
         nc, vc, dc, epc, fc = _NODE_DOCS
         try:
-            rec = _make_record(nc, vc, dc, epc, fc, self.oracle,
+            rec = _make_record(nc, vc, dc, epc, fc,
+                               self._call_oracle,
                                variant_id, fen_text)
         except NodeError:
             _fail(self.cc, "malformed_collision_record")
-        # the oracle owes a VALID-FORMAT bucket key
-        if not isinstance(rec["digest"], str) or \
-                _DIGEST_RE.fullmatch(rec["digest"]) is None:
-            _fail(self.cc, "accelerator_inconsistent")
         identity = self._identity(rec)
         existing = self.identity_index.get(identity)
         if existing is not None:
@@ -188,7 +227,7 @@ class CollisionProbe:
         for rec in other.records():
             try:
                 _validate_node_record(nc, vc, dc, epc, fc, dict(rec),
-                                      self.oracle)
+                                      self._call_oracle)
             except NodeError:
                 _fail(self.cc, "malformed_collision_record")
             staged.insert(rec["variant"], rec["snapshot_fen"])
@@ -518,6 +557,94 @@ def test_mutant_bucket_only_trust_forks():
     _assert_one_record_per_identity(real, 1)
 
 
+def test_repro_raising_oracle_first_call():
+    """An oracle that raises on the FIRST call is the same
+    inability to supply a key as a bad return: typed
+    accelerator_inconsistent, never a raw escape; table
+    bit-identical (empty)."""
+    probe = _probe(raising_oracle(1))
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", STARTPOS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert exc.value.code == FAILURE_MAPPING[
+        "accelerator_inconsistent"]
+    assert exc.value.code in ERROR_ENUM
+    assert probe.records() == []
+    assert probe.buckets == {}
+    assert probe.identity_index == {}
+
+
+def test_repro_raising_oracle_on_equal_identity():
+    """First call succeeds (STARTPOS stored); the oracle raises on
+    the SECOND call for an equal canonical identity (clock twin)
+    - typed rejection, one record, bit-identical rollback."""
+    probe = _probe(raising_oracle(2))
+    probe.insert("standard", STARTPOS)
+    before_index = copy.deepcopy(probe.identity_index)
+    before_buckets = copy.deepcopy(probe.buckets)
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", STARTPOS.replace(" 0 1", " 7 42"))
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert probe.identity_index == before_index
+    assert probe.buckets == before_buckets
+    _assert_one_record_per_identity(probe, 1)
+
+
+def test_repro_oracle_raises_during_merge_revalidation():
+    """The RECEIVER's oracle raises while revalidating an incoming
+    exact record: typed accelerator_inconsistent, destination
+    bit-identical."""
+    def fen_sensitive(variant, fen):
+        if fen == KINGS:
+            raise ValueError("oracle refuses this position")
+        return digest_fen(variant, fen)
+
+    source = _probe(digest_fen)
+    source.insert("standard", KINGS)
+    dest = _probe(fen_sensitive)
+    dest.insert("standard", STARTPOS)
+    before_index = copy.deepcopy(dest.identity_index)
+    before_buckets = copy.deepcopy(dest.buckets)
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(source)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert dest.identity_index == before_index
+    assert dest.buckets == before_buckets
+
+
+def test_repro_oracle_raises_midway_through_merge():
+    """Multi-record merge: the first incoming record validates AND
+    stages cleanly, the oracle raises on the SECOND record's
+    revalidation - the atomic merge commits nothing; destination
+    bit-identical."""
+    source = _probe(digest_fen)
+    source.insert("standard", STARTPOS)
+    source.insert("standard", KINGS)
+    dest = _probe(midway_oracle(3))  # validate+insert ok, then boom
+    dest_index = copy.deepcopy(dest.identity_index)
+    dest_buckets = copy.deepcopy(dest.buckets)
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(source)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert dest.identity_index == dest_index
+    assert dest.buckets == dest_buckets
+    assert dest.records() == []
+
+
+def test_mutant_direct_oracle_call_leaks():
+    """Behavioral mutant: invoking the oracle DIRECTLY (no
+    boundary helper) leaks the raw ValueError - pinned so the
+    battery proves the boundary is load-bearing. Counter-test:
+    the same failure through the real probe maps to typed
+    accelerator_inconsistent."""
+    probe = _probe(raising_oracle(1))
+    with pytest.raises(ValueError):
+        probe.oracle("standard", STARTPOS)  # mutant: no boundary
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", STARTPOS)  # real boundary
+    assert exc.value.failure_class == "accelerator_inconsistent"
+
+
 MALFORMED_INSERTS = [
     ("c960", STARTPOS),                       # unknown variant
     ("standard", "garbage w - - 0 1"),        # malformed FEN
@@ -645,6 +772,18 @@ def _mutants():
     add("property trust dropped", ["contract", "properties",
                                    "trust_boundary"],
         "oracle-divergence-tolerated")
+    add("oracle boundary dropped", ["contract", "properties",
+                                    "oracle_boundary"],
+        "oracle-called-directly-anywhere")
+    add("inconsistency trigger drift", ["contract", "failures",
+                                        "triggers",
+                                        "accelerator_inconsistent"],
+        "oracle-always-trusted")
+    add("trigger set incomplete", ["contract", "failures",
+                                   "triggers"],
+        {"malformed_collision_record":
+         "record-fails-linked-table-shape-or-receiver-oracle-"
+         "revalidation"})
     add("link drift", ["contract", "links", "variant_contract"],
         "data/contracts/san.yaml")
     add("base path drift", ["contract", "versioning", "base_path"],

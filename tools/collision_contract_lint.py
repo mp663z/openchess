@@ -101,6 +101,16 @@ GUARANTEES = {
 FAILURE_CLASSES = ["malformed_collision_record",
                    "accelerator_as_identity",
                    "accelerator_inconsistent"]
+FAILURE_TRIGGERS = {
+    "malformed_collision_record":
+        "record-fails-linked-table-shape-or-receiver-oracle-"
+        "revalidation",
+    "accelerator_as_identity":
+        "bucket-key-presented-as-record-identity",
+    "accelerator_inconsistent":
+        "oracle-raised-or-invalid-format-key-or-equal-identity-"
+        "divergent-key",
+}
 FAILURE_MAPPING = {
     "malformed_collision_record": "malformed_request",
     "accelerator_as_identity": "accelerator_as_identity",
@@ -127,6 +137,8 @@ PROPERTIES = {
     "no_merge": "distinct-identities-never-collapse",
     "no_fork": "one-identity-never-duplicates",
     "order_insensitivity": "permutation-invariant-table",
+    "oracle_boundary":
+        "single-boundary-helper-for-insert-and-merge-validation",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",
@@ -210,9 +222,15 @@ def lint(path: Path = CONTRACT, *, variant_path: Path = VARIANT,
 
     failures = contract["failures"]
     _check_closure("failures", failures,
-                   {"classes", "mapping", "closed", "rule"})
+                   {"classes", "triggers", "mapping", "closed",
+                    "rule"})
     _check_exact("failures.classes", failures.get("classes"),
                  FAILURE_CLASSES)
+    _check_exact("failures.triggers", failures.get("triggers"),
+                 FAILURE_TRIGGERS)
+    if set(failures["triggers"]) != set(failures["classes"]):
+        raise ContractError(
+            "failures: triggers keys must equal declared classes")
     _check_exact("failures.mapping", failures.get("mapping"),
                  FAILURE_MAPPING)
     if failures.get("closed") is not True:

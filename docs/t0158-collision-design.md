@@ -76,6 +76,24 @@ Enforcement, both halves together:
    accelerator_inconsistent with bit-identical rollback - the
    fork is surfaced, never absorbed.
 
+## Oracle invocation boundary (v3 - verifier #2 remediation)
+
+v2 still let a RAISING oracle escape the closed failure surface
+(raw ValueError through _make_record, which catches only
+NodeError). v3 puts EVERY oracle invocation - the insert path AND
+merge revalidation - behind one boundary helper
+(_call_oracle). An oracle that raises is the same inability to
+supply a key as an invalid-format return: both map to
+accelerator_inconsistent, with the structured trigger pinned in
+failures.triggers (oracle-raised-or-invalid-format-key-or-equal-
+identity-divergent-key). The contract's own typed validation
+errors are raised by sibling machinery OUTSIDE the boundary and
+are never caught or relabeled by it. Atomic merge commits nothing
+whether the oracle raises on the first call or midway through the
+batch - destinations stay bit-identical. A behavioral mutant
+calling the oracle directly leaks the raw exception, pinned to
+prove the boundary is load-bearing.
+
 Cross-oracle merges fail closed as malformed_collision_record
 when an incoming record's stored bucket key disagrees with the
 receiver's oracle (validated through the receiver's oracle over
