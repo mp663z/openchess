@@ -173,7 +173,10 @@ class CollisionProbe:
             key = self.oracle(variant, fen)
         except Exception:
             _fail(self.cc, "accelerator_inconsistent")
-        if not isinstance(key, str) or \
+        # EXACT built-in str only: a valid-text str subclass stays
+        # hostile (raising/deceptive __hash__ or __eq__) past a
+        # mere isinstance check - reject it as untrusted output.
+        if type(key) is not str or \
                 _DIGEST_RE.fullmatch(key) is None:
             _fail(self.cc, "accelerator_inconsistent")
         return key
@@ -195,8 +198,20 @@ class CollisionProbe:
             if existing["digest"] != rec["digest"]:
                 _fail(self.cc, "accelerator_inconsistent")
             return existing  # same identity, never a second record
-        self.identity_index[identity] = rec
-        self.buckets.setdefault(rec["digest"], []).append(rec)
+        # TRANSACTIONAL: both structures are staged; the commit
+        # happens only after EVERY fallible operation on the
+        # untrusted bucket key has succeeded - a hostile key can
+        # never leave index written and buckets unwritten.
+        staged_index = dict(self.identity_index)
+        staged_buckets = {k: list(v) for k, v in
+                          self.buckets.items()}
+        staged_index[identity] = rec
+        staged_buckets.setdefault(rec["digest"], []).append(rec)
+        # exercise the untrusted key's dict behavior BEFORE commit
+        _ = rec["digest"] in staged_buckets
+        _ = staged_buckets[rec["digest"]]
+        self.identity_index = staged_index
+        self.buckets = staged_buckets
         return rec
 
     def lookup_by_bucket_key(self, bucket_key):
