@@ -208,6 +208,40 @@ contract:
       optional default span that must equal one complete var when
       present; button takes nothing; string takes an optional
       "default" consuming the rest of the line.
+  setoption_semantics:
+    registry: declared-options-by-exact-name-from-handshake
+    name_matching: exact-case-sensitive-declared-name
+    undeclared_name_maps_to: malformed_line
+    domain_violation_maps_to: malformed_line
+    duplicate_declaration_maps_to: malformed_line
+    repeat_setoption: allowed-validation-idempotent
+    state_preservation: valid-setoption-mutates-no-lifecycle-or-orthogonal-state
+    type_rules:
+      check: value-marker-required-exactly-true-or-false
+      spin: value-marker-required-integer-within-declared-min-max
+      combo: value-marker-required-exactly-one-declared-full-var-string
+      button: no-value-marker-permitted
+      string: value-marker-optional-free-form-empty-allowed
+    rule: >-
+      setoption is defined against the handshake's option
+      declarations: the session persists a structured registry of
+      declared options keyed by the exact declared name, and every
+      later setoption is validated against it. The name must be a
+      declared name, matched exactly and case-sensitively; an
+      undeclared name is rejected as malformed_line. A duplicate
+      option declaration during the handshake is rejected as
+      malformed_line. The value must fit the declared type: check
+      requires a value marker with exactly true or false; spin
+      requires an integer within the declared min..max inclusive;
+      combo requires exactly one declared full var string, matched
+      exactly; button permits no value marker at all; string
+      permits the free-form value semantics of its declaration,
+      including the empty value (a trailing value marker with an
+      empty span) and no value marker. Every invalid setoption is
+      rejected as malformed_line with bit-identical rollback of
+      lifecycle, orthogonal state, and the registry; a valid
+      setoption mutates none of them either, so setoption may
+      repeat freely.
   position_validation:
     fen_fields: validated-by-linked-fen-contract-parser
     startpos: resolves-to-linked-variant-registry-standard-start_fen

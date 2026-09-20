@@ -624,6 +624,13 @@ class Session:
             "orthogonal-phase-variable-with-gui-correlation")
         self.hs_spec = life["handshake"]
         assert self.hs_spec["model"] == "orthogonal-handshake-progress"
+        self.setoption_spec = contract["setoption_semantics"]
+        assert self.setoption_spec["registry"] == (
+            "declared-options-by-exact-name-from-handshake")
+        assert self.setoption_spec["name_matching"] == (
+            "exact-case-sensitive-declared-name")
+        assert self.setoption_spec["repeat_setoption"] == (
+            "allowed-validation-idempotent")
         self.state = life["initial"]
         # Terminal state derived from the contract: the declared state
         # whose transition table is empty in both directions.
@@ -637,6 +644,10 @@ class Session:
         self.cp_phase = self.cp_spec["initial"]
         self.reg_phase = self.reg_spec["initial"]
         self.hs_phase = self.hs_spec["initial"]
+        # Option registry: declared options by exact declared name,
+        # built ONLY from accepted handshake declarations; setoption
+        # validation consults it and mutates nothing.
+        self.options = {}
 
     def snapshot(self):
         return (self.state, self.position_flag, self.readiness,
@@ -682,6 +693,63 @@ class Session:
             _fail(c, c["lifecycle"]["unlisted_pair"])
         assert value in self.debug_spec["values"]
         self.debug = value
+
+    def _declare_option(self, resp):
+        c = self.c
+        sem = self.setoption_spec
+        # Registration into the handshake-built registry: a duplicate
+        # declared name is rejected before ANY state moves.
+        assert sem["duplicate_declaration_maps_to"] == "malformed_line"
+        if resp["name"] in self.options:
+            _fail(c, "malformed_line")
+        self.options[resp["name"]] = {
+            key: value for key, value in resp.items()
+            if key != "response"}
+
+    def _setoption(self, cmd):
+        c = self.c
+        sem = self.setoption_spec
+        # Every setoption is validated against the declaration
+        # registry: the name must be declared (exact, case-sensitive)
+        # and the value must fit the declared type and domain. A
+        # rejection mutates nothing; a valid setting mutates nothing
+        # either - lifecycle, orthogonal state and the registry are
+        # all preserved, so setoption may repeat.
+        rules = sem["type_rules"]
+        if cmd["name"] not in self.options:
+            assert sem["undeclared_name_maps_to"] == "malformed_line"
+            _fail(c, "malformed_line")
+        decl = self.options[cmd["name"]]
+        otype = decl["type"]
+        value = cmd["value"]
+        assert sem["domain_violation_maps_to"] == "malformed_line"
+        if otype == "check":
+            assert rules["check"] == (
+                "value-marker-required-exactly-true-or-false")
+            if value not in ("true", "false"):
+                _fail(c, "malformed_line")
+        elif otype == "spin":
+            assert rules["spin"] == (
+                "value-marker-required-integer-within-declared-min-max")
+            if (value is None
+                    or not re.fullmatch(r"-?[0-9]+", value)
+                    or not decl["min"] <= int(value) <= decl["max"]):
+                _fail(c, "malformed_line")
+        elif otype == "combo":
+            assert rules["combo"] == (
+                "value-marker-required-exactly-one-declared-full-var-"
+                "string")
+            if value is None or value not in decl["var"]:
+                _fail(c, "malformed_line")
+        elif otype == "button":
+            assert rules["button"] == "no-value-marker-permitted"
+            if value is not None:
+                _fail(c, "malformed_line")
+        elif otype == "string":
+            assert rules["string"] == (
+                "value-marker-optional-free-form-empty-allowed")
+        else:
+            raise AssertionError(f"undeclared option type {otype}")
 
     def _handshake(self, event):
         c = self.c
@@ -771,6 +839,9 @@ class Session:
         if kw == "go" and self.state == "ready" and not \
                 self.position_flag:
             _fail(c, life["unlisted_pair"])  # go_requires
+        if (kw == "setoption"
+                and "setoption" in self.transitions[self.state]["gui"]):
+            self._setoption(cmd)
         self._step("gui", kw,
                    ponder=(kw == "go" and cmd["parameters"].get("ponder")
                            is True))
@@ -796,6 +867,12 @@ class Session:
                 and resp["response"] in ("id", "option", "uciok")):
             event = ("id_" + resp["kind"] if resp["response"] == "id"
                      else resp["response"])
+            if (resp["response"] == "option"
+                    and self.hs_spec["transitions"][self.hs_phase]
+                    ["option"] != "rejected-protocol_state"):
+                # the phase accepts the declaration: registry
+                # duplicate check fires before any state moves
+                self._declare_option(resp)
             self._handshake(event)
             return resp
         self._step("engine", resp["response"])
@@ -1034,6 +1111,8 @@ HAPPY_TRACE = [
     ("gui", "uci", "awaiting_uciok"),
     ("engine", "id name Stockfish 17", "awaiting_uciok"),
     ("engine", "id author the Stockfish developers", "awaiting_uciok"),
+    ("engine", "option name Threads type spin default 1 min 1 max 512",
+     "awaiting_uciok"),
     ("engine", "uciok", "ready"),
     ("gui", "setoption name Threads value 4", "ready"),
     ("gui", "debug on", "ready"),
@@ -2598,3 +2677,222 @@ def test_handshake_phase_injection_launders_name_requirement():
     object.__setattr__(s, "hs_phase", "awaiting_options")
     s.feed_engine("uciok")               # nameless, laundered
     assert s.state == "ready"
+
+
+# -- v13: option registry constrains setoption ---------------------------
+
+DECL_THREADS = "option name Threads type spin default 1 min 1 max 10"
+DECL_PONDER = "option name Ponder type check default false"
+DECL_STYLE = "option name Style type combo var Solid var Aggressive"
+DECL_CLEAR = "option name Clear Hash type button"
+DECL_PATH = "option name Syzygy Path type string"
+DECL_PLAY = "option name Play Style type combo var Slow Play var Fast Play"
+
+FIVE_DECLS = ([("gui", "uci"), ("engine", "id name S")]
+              + [("engine", d) for d in (
+                  DECL_THREADS, DECL_PONDER, DECL_STYLE, DECL_CLEAR,
+                  DECL_PATH)]
+              + [("engine", "uciok")])
+
+
+def _full_state(s):
+    return (s.snapshot(), copy.deepcopy(s.options))
+
+
+def _session(prefix):
+    s = Session(_doc()["contract"])
+    for d, line in prefix:
+        _feed(s, d, line)
+    return s
+
+
+def test_setoption_happy_all_five_types():
+    """Declaration-to-use happy traces for all five option types,
+    including boundaries, free-form string values, and repeats; a
+    valid setoption mutates no lifecycle or orthogonal state and no
+    registry entry (verifier #2 v13)."""
+    s = _session(FIVE_DECLS)
+    baseline = _full_state(s)
+    valid = [
+        "setoption name Threads value 1",       # spin min
+        "setoption name Threads value 10",      # spin max
+        "setoption name Threads value 5",
+        "setoption name Threads value 3",       # repeat: allowed
+        "setoption name Ponder value true",
+        "setoption name Ponder value false",
+        "setoption name Style value Solid",
+        "setoption name Style value Aggressive",
+        "setoption name Clear Hash",            # button: no value
+        "setoption name Syzygy Path value /tmp/tb/5men",
+        "setoption name Syzygy Path value",     # empty value
+        "setoption name Syzygy Path",           # no value marker
+    ]
+    for line in valid:
+        s.feed_gui(line)
+        assert _full_state(s) == baseline, line
+
+
+def test_setoption_multiword_combo_var():
+    """A combo value must equal one complete declared var string,
+    spaces included; a prefix of a var is not the var."""
+    s = _session([("gui", "uci"), ("engine", "id name S"),
+                  ("engine", DECL_PLAY), ("engine", "uciok")])
+    baseline = _full_state(s)
+    s.feed_gui("setoption name Play Style value Slow Play")
+    s.feed_gui("setoption name Play Style value Fast Play")
+    assert _full_state(s) == baseline
+    for line in ("setoption name Play Style value Slow",
+                 "setoption name Play Style value Play",
+                 "setoption name Play Style value slow play"):
+        with pytest.raises(UciError) as exc:
+            s.feed_gui(line)
+        assert exc.value.failure_class == "malformed_line"
+        assert _full_state(s) == baseline
+
+
+def test_setoption_negative_repros_rollback():
+    """The four v12 repros plus undeclared names, case mismatches,
+    missing markers, and button values are all malformed_line with
+    bit-identical rollback of lifecycle, orthogonal state, and the
+    registry."""
+    # repro 1: no declarations, unknown name
+    s = _session(HANDSHAKE)
+    baseline = _full_state(s)
+    with pytest.raises(UciError) as exc:
+        s.feed_gui("setoption name Unknown value 1")
+    assert exc.value.failure_class == "malformed_line"
+    assert _full_state(s) == baseline
+
+    s = _session(FIVE_DECLS)
+    baseline = _full_state(s)
+    negatives = [
+        # repro 2: spin outside the declared domain
+        "setoption name Threads value 999",
+        "setoption name Threads value 0",
+        "setoption name Threads value 11",
+        "setoption name Threads value abc",
+        "setoption name Threads value 4.5",
+        "setoption name Threads",                # missing value
+        # repro 3: check with a non-boolean value
+        "setoption name Ponder value maybe",
+        "setoption name Ponder value True",      # case
+        "setoption name Ponder value 1",
+        "setoption name Ponder",                 # missing value
+        # repro 4: combo with an undeclared var
+        "setoption name Style value Banana",
+        "setoption name Style value solid",      # case
+        "setoption name Style",                  # missing value
+        # button takes no value marker
+        "setoption name Clear Hash value 1",
+        "setoption name Clear Hash value",
+        # undeclared names, exact case-sensitive matching
+        "setoption name Unknown value 1",
+        "setoption name threads value 4",
+        "setoption name PONDER value true",
+        "setoption name Thread value 4",
+    ]
+    for line in negatives:
+        with pytest.raises(UciError) as exc:
+            s.feed_gui(line)
+        assert exc.value.failure_class == "malformed_line", line
+        assert _full_state(s) == baseline, line
+
+
+def test_setoption_spin_negative_bounds():
+    """Spin bounds are the declared ones, signed integers included."""
+    s = _session([("gui", "uci"), ("engine", "id name S"),
+                  ("engine", "option name Skill Level type spin "
+                   "default 0 min -20 max 20"),
+                  ("engine", "uciok")])
+    baseline = _full_state(s)
+    s.feed_gui("setoption name Skill Level value -20")
+    s.feed_gui("setoption name Skill Level value 20")
+    assert _full_state(s) == baseline
+    for line in ("setoption name Skill Level value -21",
+                 "setoption name Skill Level value 21"):
+        with pytest.raises(UciError):
+            s.feed_gui(line)
+        assert _full_state(s) == baseline
+
+
+def test_duplicate_option_declaration_rejected():
+    """A duplicate option name during the handshake is malformed_line
+    with bit-identical rollback, including the handshake phase and
+    the registry."""
+    s = _session([("gui", "uci"), ("engine", "id name S"),
+                  ("engine", DECL_THREADS)])
+    baseline = _full_state(s)
+    with pytest.raises(UciError) as exc:
+        s.feed_engine("option name Threads type check default true")
+    assert exc.value.failure_class == "malformed_line"
+    assert _full_state(s) == baseline
+    # same name with different spacing/case is still that name;
+    # a genuinely different name declares fine
+    s.feed_engine(DECL_PONDER)
+    s.feed_engine("uciok")
+    assert s.state == "ready"
+
+
+def test_setoption_registry_mutants_launder_violations():
+    """Every setoption check is driven by the registry CONTENT:
+    editing the live registry in memory launders the matching
+    violation, and deleting an entry breaks a valid setting - so
+    the negatives above are not vacuous (verifier #2 v13)."""
+    # mutant: unknown name laundered by an injected registry entry
+    s = _session(HANDSHAKE)
+    s.options["Unknown"] = {"name": "Unknown", "type": "check",
+                            "default": False}
+    s.feed_gui("setoption name Unknown value true")
+    # mutant: spin domain bypassed by edited bounds
+    s = _session(FIVE_DECLS)
+    s.options["Threads"]["max"] = 1000
+    s.feed_gui("setoption name Threads value 999")
+    # mutant: combo domain bypassed by an injected var
+    s = _session(FIVE_DECLS)
+    s.options["Style"]["var"].append("Banana")
+    s.feed_gui("setoption name Style value Banana")
+    # mutant: type check bypassed by an edited declared type
+    s = _session(FIVE_DECLS)
+    s.options["Ponder"]["type"] = "string"
+    s.feed_gui("setoption name Ponder value maybe")
+    # counter-mutant: deleting an entry rejects a valid setting
+    s = _session(FIVE_DECLS)
+    del s.options["Threads"]
+    baseline = _full_state(s)
+    with pytest.raises(UciError):
+        s.feed_gui("setoption name Threads value 4")
+    assert _full_state(s) == baseline
+
+
+def test_setoption_semantics_mutations_fail_lint():
+    """Lint mutants that weaken the registry, name matching, or any
+    type rule are all rejected."""
+    base = _doc()
+
+    def mut(fn):
+        m = copy.deepcopy(base)
+        fn(m["contract"]["setoption_semantics"])
+        return m
+
+    mutants = [
+        mut(lambda s: s.__setitem__("registry", "discarded")),
+        mut(lambda s: s.__setitem__("name_matching",
+                                    "case-insensitive")),
+        mut(lambda s: s.__setitem__("undeclared_name_maps_to",
+                                    "protocol_state")),
+        mut(lambda s: s["type_rules"].__setitem__(
+            "check", "value-optional")),
+        mut(lambda s: s["type_rules"].__setitem__(
+            "spin", "value-marker-required-any-integer")),
+        mut(lambda s: s["type_rules"].__setitem__(
+            "combo", "value-marker-required-any-string")),
+        mut(lambda s: s["type_rules"].__setitem__(
+            "button", "value-marker-optional")),
+        mut(lambda s: s.__setitem__("repeat_setoption", "forbidden")),
+    ]
+    for i, m in enumerate(mutants):
+        try:
+            lint(m)
+        except ContractError:
+            continue
+        raise AssertionError(f"setoption mutant {i} passed the lint")

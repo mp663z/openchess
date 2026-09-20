@@ -387,6 +387,7 @@ ALLOWED_CONTRACT = {
     "bestmove_semantics",
     "go_parameters", "engine_responses", "info_fields",
     "option_markers", "option_types", "position_validation",
+    "setoption_semantics",
     "lifecycle", "resolution_failures",
     "failure_classes", "failure_mapping", "errors", "serialization",
     "links", "versioning",
@@ -407,6 +408,25 @@ ALLOWED_INFO_FIELDS_SECTION = set(INFO_FIELDS) | {
 ALLOWED_OPTION_MARKERS = set(OPTION_MARKERS) | {"rule"}
 ALLOWED_OPTION_TYPES = set(OPTION_TYPES) | {"rule"}
 ALLOWED_POSITION_VALIDATION = set(POSITION_VALIDATION) | {"rule"}
+SETOPTION_SEMANTICS = {
+    "registry": "declared-options-by-exact-name-from-handshake",
+    "name_matching": "exact-case-sensitive-declared-name",
+    "undeclared_name_maps_to": "malformed_line",
+    "domain_violation_maps_to": "malformed_line",
+    "duplicate_declaration_maps_to": "malformed_line",
+    "repeat_setoption": "allowed-validation-idempotent",
+    "state_preservation":
+        "valid-setoption-mutates-no-lifecycle-or-orthogonal-state",
+    "type_rules": {
+        "check": "value-marker-required-exactly-true-or-false",
+        "spin": "value-marker-required-integer-within-declared-min-max",
+        "combo":
+            "value-marker-required-exactly-one-declared-full-var-string",
+        "button": "no-value-marker-permitted",
+        "string": "value-marker-optional-free-form-empty-allowed",
+    },
+}
+ALLOWED_SETOPTION_SEMANTICS = set(SETOPTION_SEMANTICS) | {"rule"}
 ALLOWED_LIFECYCLE = (set(LIFECYCLE_META)
                      | {"states", "transitions", "readiness", "debug",
                         "copyprotection", "registration", "handshake",
@@ -601,6 +621,24 @@ def lint(doc: dict, root: Path | None = None) -> None:
     for key, value in OPTION_TYPES.items():
         _exact(option.get(key), value, f"option_types.{key}")
     _text(option.get("rule"), "option_types.rule")
+
+    sem = _mapping(contract.get("setoption_semantics"),
+                   "contract.setoption_semantics")
+    _keys(sem, ALLOWED_SETOPTION_SEMANTICS,
+          "contract.setoption_semantics")
+    for key, value in SETOPTION_SEMANTICS.items():
+        _exact(sem.get(key), value, f"setoption_semantics.{key}")
+    _need(set(sem["type_rules"]) == (
+        set(OPTION_TYPES) - {"rule"}),
+          "setoption_semantics.type_rules must cover every declared "
+          "option type")
+    for key in ("undeclared_name_maps_to", "domain_violation_maps_to",
+                "duplicate_declaration_maps_to"):
+        _need(sem[key] in _mapping(contract.get("failure_mapping"),
+                                   "contract.failure_mapping"),
+              f"setoption_semantics.{key} must map to a declared "
+              "failure class")
+    _text(sem.get("rule"), "setoption_semantics.rule")
 
     pv = _mapping(contract.get("position_validation"),
                   "contract.position_validation")
