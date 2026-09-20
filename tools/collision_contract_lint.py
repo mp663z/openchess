@@ -159,6 +159,9 @@ PROPERTIES = {
     "record_content_restoration":
         "stored-record-contents-snapshotted-restored-identity-"
         "preserved",
+    "merge_identity_preservation":
+        "successful-merge-commits-staged-containers-referencing-"
+        "original-records-never-clones",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",

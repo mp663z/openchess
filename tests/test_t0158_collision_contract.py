@@ -404,8 +404,14 @@ class CollisionProbe:
         orig, saved_b, saved_i, saved_recs = \
             self._snapshot_live()
         staged = CollisionProbe(self.oracle, self.cc)
-        staged.buckets = copy.deepcopy(self.buckets)
-        staged.identity_index = copy.deepcopy(self.identity_index)
+        # STAGED ISOLATION WITHOUT CLONING RECORDS: fresh staged
+        # containers REFERENCE the original pre-existing record
+        # dicts - stored-record identity is observable and MUST
+        # survive a clean successful merge. Only the incoming
+        # records staged below are fresh (the frozen snapshots).
+        staged.buckets = {k: list(v) for k, v in
+                          self.buckets.items()}
+        staged.identity_index = dict(self.identity_index)
         try:
           for rec in other.records():
             # SHAPE FIRST: validate the incoming record's shape
@@ -453,8 +459,12 @@ class CollisionProbe:
             raise
         finally:
             self._exit()
-        # SUCCESS: commit ONLY the isolated staged structures -
-        # any direct live-receiver corruption is overwritten
+        # SUCCESS: first repair any oracle-induced in-place
+        # mutations to existing record CONTENTS (same objects,
+        # identity preserved), then commit ONLY the isolated
+        # staged containers - whose pre-existing entries still
+        # reference those same original record objects.
+        self._restore_live(orig, saved_b, saved_i, saved_recs)
         self.buckets = staged.buckets
         self.identity_index = staged.identity_index
         return self
@@ -1294,6 +1304,9 @@ def _mutants():
     add("record_content_restoration dropped",
         ["contract", "properties", "record_content_restoration"],
         "container-topology-only")
+    add("merge_identity_preservation dropped",
+        ["contract", "properties", "merge_identity_preservation"],
+        "deepcopy-staging-commits-clones")
     return out
 
 
@@ -2025,3 +2038,131 @@ def test_mutant_container_only_restore_leaves_record_corruption():
     stored2["snapshot_fen"] = []
     dest2._restore_live(*snap)
     assert stored2 == original_content
+
+
+# -- v11: successful merge preserves stored-record identity -------------------
+
+
+def _assert_objects_preserved(dest, records):
+    """Every given record object survives by `is` in BOTH the
+    identity index and the bucket lists."""
+    index_records = list(dest.identity_index.values())
+    bucket_records = [r for bucket in dest.buckets.values()
+                      for r in bucket]
+    for rec in records:
+        assert any(r is rec for r in index_records)
+        assert any(r is rec for r in bucket_records)
+
+
+def test_successful_merge_preserves_preexisting_record_identity():
+    """A CLEAN successful merge (stable constant oracle, no oracle
+    corruption, TOTAL collision, MULTIPLE existing records) never
+    replaces pre-existing stored record objects: every pre-merge
+    returned reference survives by `is` in the identity index AND
+    the bucket lists, and reinserting each old identity returns
+    the ORIGINAL object."""
+    dest = _probe(constant_oracle)   # total collision: one bucket
+    olds = [dest.insert("standard", fen)
+            for fen in (STARTPOS, AFTER_E4, KINGS)]
+    src = _probe(constant_oracle)
+    incoming = src.insert("standard", LEGAL_EP)
+    dest.merge(src)
+    assert len(dest.records()) == 4
+    _assert_objects_preserved(dest, olds)
+    # the incoming record is staged as a FRESH object - never
+    # aliased to the source's stored dict
+    assert not any(r is incoming
+                   for r in dest.identity_index.values())
+    # reinserting each old identity returns the ORIGINAL object
+    for rec in olds:
+        assert dest.insert(rec["variant"],
+                           rec["snapshot_fen"]) is rec
+
+
+def test_successful_merge_dedup_keeps_original_object():
+    """An incoming identity ALREADY PRESENT dedupes to the
+    pre-existing stored object across a successful MULTI-RECORD
+    merge: the committed structures keep referencing THAT object,
+    never the incoming record nor a clone."""
+    dest = _probe(constant_oracle)
+    old = dest.insert("standard", STARTPOS)
+    src = _probe(constant_oracle)
+    src.insert("standard", STARTPOS)      # duplicate identity
+    src.insert("standard", AFTER_E4)      # new identity
+    dest.merge(src)
+    assert len(dest.records()) == 2
+    assert dest.identity_index[dest._identity(old)] is old
+    _assert_objects_preserved(dest, [old])
+    assert dest.insert("standard", STARTPOS) is old
+
+
+def test_successful_merge_restores_record_contents_then_commits():
+    """Mutate-then-return on a SUCCESSFUL multi-record merge: the
+    oracle corrupts pre-existing records' contents mid-batch and
+    returns valid keys; before commit the merge repairs the
+    ORIGINAL objects' contents in place, so the committed table
+    holds the same objects with their original contents."""
+    dest = _probe(constant_oracle)
+    olds = [dest.insert("standard", fen)
+            for fen in (STARTPOS, AFTER_E4)]
+    originals = [dict(r) for r in olds]
+    src = _probe(constant_oracle)
+    src.insert("standard", KINGS)
+    src.insert("standard", LEGAL_EP)
+
+    def oracle(variant, fen):
+        olds[0]["snapshot_fen"] = []      # in-place corruption
+        olds[1]["evil"] = True
+        return constant_oracle(variant, fen)
+
+    dest.oracle = oracle
+    dest.merge(src)
+    assert len(dest.records()) == 4
+    for rec, original in zip(olds, originals, strict=True):
+        assert rec == original
+    _assert_objects_preserved(dest, olds)
+    assert dest.insert("standard", STARTPOS) is olds[0]
+
+
+def test_mutant_merge_deepcopy_staging_replaces_records():
+    """Behavioral mutant: staging via copy.deepcopy and committing
+    the clones (the v10 shape) silently replaces EVERY
+    pre-existing stored record object on a clean successful
+    merge. Counter-test: the real merge stages fresh containers
+    referencing the ORIGINAL record objects."""
+    def mutant_merge(dest, other):
+        staged = CollisionProbe(dest.oracle, dest.cc)
+        staged.buckets = copy.deepcopy(dest.buckets)
+        staged.identity_index = copy.deepcopy(
+            dest.identity_index)
+        for rec in other.records():
+            dest._validate_record_shape(dest.cc, rec)
+            frozen = {"variant": rec["variant"],
+                      "digest": rec["digest"],
+                      "snapshot_fen": rec["snapshot_fen"]}
+            dest._validate_record_semantics(frozen)
+            key = dest._call_oracle(frozen["variant"],
+                                    frozen["snapshot_fen"])
+            staged._staged_insert(frozen,
+                                  staged._identity(frozen), key)
+        dest.buckets = staged.buckets
+        dest.identity_index = staged.identity_index
+        return dest
+
+    dest = _probe(constant_oracle)
+    old = dest.insert("standard", KINGS)
+    src = _probe(constant_oracle)
+    src.insert("standard", STARTPOS)
+    mutant_merge(dest, src)
+    # the clone-commit replaced the original object everywhere
+    assert not any(r is old for r in dest.identity_index.values())
+    # the real merge preserves the original object
+    dest2 = _probe(constant_oracle)
+    old2 = dest2.insert("standard", KINGS)
+    src2 = _probe(constant_oracle)
+    src2.insert("standard", STARTPOS)
+    dest2.merge(src2)
+    assert any(r is old2 for r in dest2.identity_index.values())
+    assert any(r is old2 for b in dest2.buckets.values()
+               for r in b)
+    assert dest2.insert("standard", KINGS) is old2
