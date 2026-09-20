@@ -87,7 +87,9 @@ def _snapshot_fen(nc, fc, identity):
     return f"{placement} {color} {castling} {ep_value} 0 1"
 
 
-def _make_record(nc, vc, dc, ec, fc, variant_id, fen_text):
+def _make_record(nc, vc, dc, ec, fc, digest_fn, variant_id, fen_text):
+    """Build the exact three-field node record - nothing else is
+    stored, returned, or compared."""
     ids = [e["id"] for e in vc["variants"]["entries"]]
     if variant_id not in ids:
         _fail(nc, "unknown_variant")
@@ -98,30 +100,57 @@ def _make_record(nc, vc, dc, ec, fc, variant_id, fen_text):
     identity = _identity_tuple(nc, vc, dc, ec, fc, variant_id, position)
     return {
         "variant": variant_id,
-        "digest": digest_fen(variant_id, fen_text),
+        "digest": digest_fn(variant_id, fen_text),
         "snapshot_fen": _snapshot_fen(nc, fc, identity),
-        "_identity": identity,
     }
+
+
+def _record_identity(nc, vc, dc, ec, fc, record):
+    """Canonical identity tuple DERIVED from the exact three-field
+    record (variant + EP-normalized snapshot) - the only equality
+    basis; no cache can disagree with the record because none is
+    kept."""
+    position = parse_fen(fc, record["snapshot_fen"])
+    return _identity_tuple(nc, vc, dc, ec, fc,
+                           record["variant"], position)
 
 
 class NodeTable:
     """The merge semantics of the contract's merge section: buckets
     keyed by the digest accelerator, equality by canonical field
-    comparison ONLY, insert-or-return-existing."""
+    comparison derived from the stored three-field records ONLY,
+    insert-or-return-existing. The digest oracle is injectable so
+    collision behavior is tested with VALID records."""
 
-    def __init__(self, docs):
+    def __init__(self, docs, digest_fn=digest_fen):
         self.nc, self.vc, self.dc, self.ec, self.fc = docs
+        self.digest_fn = digest_fn
         self.buckets = {}
+
+    def _identity(self, record):
+        return _record_identity(self.nc, self.vc, self.dc, self.ec,
+                                self.fc, record)
 
     def insert(self, variant_id, fen_text):
         rec = _make_record(self.nc, self.vc, self.dc, self.ec,
-                           self.fc, variant_id, fen_text)
+                           self.fc, self.digest_fn,
+                           variant_id, fen_text)
         bucket = self.buckets.setdefault(rec["digest"], [])
+        new_identity = self._identity(rec)
         for existing in bucket:
-            if existing["_identity"] == rec["_identity"]:
+            if self._identity(existing) == new_identity:
                 return existing  # same node, never a second one
         bucket.append(rec)
         return rec
+
+    def merge(self, other):
+        """Table-to-table merge IS iterated insertion of the exact
+        stored records (snapshots are canonical inputs) - the
+        structural definition that makes associativity a witness,
+        not a claim."""
+        for rec in other.records():
+            self.insert(rec["variant"], rec["snapshot_fen"])
+        return self
 
     def records(self):
         return [rec for bucket in self.buckets.values()
@@ -133,17 +162,17 @@ class NodeTable:
             for r in self.records())
 
 
-def _table():
-    return NodeTable(_docs())
+def _table(digest_fn=digest_fen):
+    return NodeTable(_docs(), digest_fn)
 
 
-def validate_record(nc, vc, dc, ec, fc, record):
+def validate_record(nc, vc, dc, ec, fc, record, digest_fn=digest_fen):
     """A stored node record must satisfy the record section exactly:
-    field set, known variant, pinned digest format, canonical
-    snapshot with identity ep value and normalized clocks, and the
-    digest consistent with the identity inside the snapshot."""
-    if set(record.keys()) - {"_identity"} != set(
-            nc["record"]["fields"]):
+    EXACTLY the declared field set, known variant, pinned digest
+    format, canonical snapshot with identity ep value and
+    normalized clocks, and the digest consistent with the identity
+    inside the snapshot under the table's digest oracle."""
+    if set(record.keys()) != set(nc["record"]["fields"]):
         _fail(nc, "malformed_node_record")
     ids = [e["id"] for e in vc["variants"]["entries"]]
     if record["variant"] not in ids:
@@ -163,15 +192,15 @@ def validate_record(nc, vc, dc, ec, fc, record):
                                record["variant"], position)
     if fields[3] != identity[4]:
         _fail(nc, "malformed_node_record")  # ep identity value
-    if record["digest"] != digest_fen(record["variant"],
-                                      record["snapshot_fen"]):
+    if record["digest"] != digest_fn(record["variant"],
+                                     record["snapshot_fen"]):
         _fail(nc, "malformed_node_record")  # digest consistency
     return record
 
 
-def _validate(record):
+def _validate(record, digest_fn=digest_fen):
     nc, vc, dc, ec, fc = _docs()
-    return validate_record(nc, vc, dc, ec, fc, record)
+    return validate_record(nc, vc, dc, ec, fc, record, digest_fn)
 
 
 # -- pinned vectors -----------------------------------------------------
@@ -235,10 +264,15 @@ def test_boundary_minimal_and_distinct():
 
 
 def test_merge_algebra():
-    """Idempotent, commutative, associative: the table is a function
-    of the SET of identities inserted."""
+    """Idempotent, commutative, associative: merge is STRUCTURALLY
+    iterated insertion of exact three-field records, so all
+    groupings of independently built tables agree."""
     positions = [STARTPOS, AFTER_E4, LEGAL_EP, KINGS,
-                 KINGS.replace(" w ", " b ")]
+                 KINGS.replace(" w ", " b "),
+                 STARTPOS.replace(" 0 1", " 7 42")]  # duplicate
+    a_positions, b_positions, c_positions = (positions[:2],
+                                             positions[2:4],
+                                             positions[4:])
     t1 = _table()
     for fen in positions:
         t1.insert("standard", fen)
@@ -247,7 +281,51 @@ def test_merge_algebra():
     for fen in reversed(positions):
         t2.insert("standard", fen)
     assert t1.serialize() == t2.serialize()
-    assert len(t1.records()) == len(positions)
+    assert len(t1.records()) == 5  # the clock variant is a duplicate
+
+    def built(fens):
+        t = _table()
+        for fen in fens:
+            t.insert("standard", fen)
+        return t
+
+    left = _table().merge(built(a_positions)).merge(
+        built(b_positions)).merge(built(c_positions))
+    right = _table().merge(built(a_positions)).merge(
+        _table().merge(built(b_positions)).merge(built(c_positions)))
+    assert left.serialize() == right.serialize() == t1.serialize()
+    # permutations
+    import itertools
+    results = set()
+    for order in itertools.permutations(
+            [a_positions, b_positions, c_positions]):
+        t = _table()
+        for group in order:
+            t.merge(built(group))
+        results.add(tuple(t.serialize()))
+    assert len(results) == 1
+
+
+def test_records_exact_three_fields_and_rebuild():
+    """Adversarial witness: no hidden cache exists or can diverge -
+    every stored/returned record has EXACTLY the three declared
+    fields, and a table rebuilt from only those records is
+    identical."""
+    t = _table()
+    for fen in (STARTPOS, AFTER_E4, LEGAL_EP, KINGS):
+        rec = t.insert("standard", fen)
+        assert set(rec.keys()) == {"variant", "digest",
+                                   "snapshot_fen"}
+    for rec in t.records():
+        assert set(rec.keys()) == {"variant", "digest",
+                                   "snapshot_fen"}
+    rebuilt = _table().merge(t)
+    assert rebuilt.serialize() == t.serialize()
+    # a tampered record is rejected, never silently diverging
+    rec = dict(t.records()[0])
+    rec["snapshot_fen"] = rec["snapshot_fen"].replace(" w ", " b ")
+    with pytest.raises(NodeError):
+        _validate(rec)
 
 
 MALFORMED_INSERTS = [
@@ -268,7 +346,7 @@ def test_malformed_insert_rejected(variant, fen, cls):
 
 
 def _valid_record():
-    return _make_record(*_docs(), "standard", STARTPOS)
+    return _make_record(*_docs(), digest_fen, "standard", STARTPOS)
 
 
 MALFORMED_RECORDS = []
@@ -298,7 +376,7 @@ def _record_cases():
     def phantom_ep(r):
         # stored-form target with no legal capture: identity demands
         # the none sentinel.
-        rec = _make_record(*_docs(), "standard", AFTER_E4)
+        rec = _make_record(*_docs(), digest_fen, "standard", AFTER_E4)
         r["snapshot_fen"] = AFTER_E4
         r["digest"] = rec["digest"]
     add("ep-not-identity-value", phantom_ep)
@@ -328,27 +406,35 @@ def test_rollback_bit_identical():
 
 
 def test_collision_separated_by_field_comparison():
-    """A digest collision never merges nodes: canonical field
-    comparison separates unequal identities in one bucket."""
-    t = _table()
-    # force every insert into one bucket by rigging the accelerator
-    real_make = _make_record
-
-    def rigged(nc, vc, dc, ec, fc, variant_id, fen_text):
-        rec = real_make(nc, vc, dc, ec, fc, variant_id, fen_text)
-        rec["digest"] = STARTPOS_DIGEST  # collide everything
-        return rec
-
-    import tests.test_t0122_transposition_node_contract as self_mod
-    self_mod._make_record = rigged
-    try:
-        a = t.insert("standard", STARTPOS)
-        b = t.insert("standard", KINGS)
-    finally:
-        self_mod._make_record = real_make
+    """A digest collision never merges nodes: with an injected
+    digest oracle that maps BOTH positions to one (valid) digest,
+    the two records validate, share one bucket, and stay two
+    nodes - separated by canonical field comparison derived from
+    the three-field records."""
+    oracle = lambda variant, fen: STARTPOS_DIGEST  # noqa: E731
+    t = _table(digest_fn=oracle)
+    a = t.insert("standard", STARTPOS)
+    b = t.insert("standard", KINGS)
+    # both records carry the same VALID digest under the oracle
+    _validate(a, digest_fn=oracle)
+    _validate(b, digest_fn=oracle)
+    assert a["digest"] == b["digest"] == STARTPOS_DIGEST
     assert a is not b
     assert len(t.records()) == 2  # same bucket, different nodes
     assert len(t.buckets) == 1
+    # equality basis is the reconstructed canonical tuple
+    assert t._identity(a) != t._identity(b)
+    # reinsertion under collision still finds the right node
+    assert t.insert("standard", KINGS) is b
+    assert t.insert("standard", STARTPOS) is a
+    assert len(t.records()) == 2
+    # collision inside table merge as well
+    left = _table(digest_fn=oracle)
+    left.insert("standard", STARTPOS)
+    right = _table(digest_fn=oracle)
+    right.insert("standard", KINGS)
+    merged = _table(digest_fn=oracle).merge(left).merge(right)
+    assert len(merged.records()) == 2
 
 
 # -- mutation battery ----------------------------------------------------
