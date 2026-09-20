@@ -1,8 +1,8 @@
 {
- "schema": 2,
+ "schema": 3,
  "contract": "chess-fen",
  "contract_schema_version": 1,
- "notes": "T0087 conformance fixture for the T0086 FEN contract. Every case traced through the contract-derived reference (parse_fen/emit_fen) at authoring time; happy/boundary inputs are canonical (parse-then-emit is identity). Every malformed case is single-defect by CONSTRUCTION: all non-target contract rules already pass in the input, the named layer says which contract validation layer the defect belongs to, and the declarative find/replace repair minimally removes only that violation (repairs never remove material and never delete the castling or en-passant feature - both invariants are asserted generically by the harness and were checked at authoring time). Rollback cases prove the pure-function surface - a rejection leaves no trace.",
+ "notes": "T0087 conformance fixture for the T0086 FEN contract. Every case traced through the contract-derived reference (parse_fen/emit_fen) at authoring time; happy/boundary inputs are canonical (parse-then-emit is identity). Every malformed case is single-defect by CONSTRUCTION: all non-target contract rules already pass in the input, the named layer says which contract validation layer the defect belongs to, and the declarative find/replace minimal_repair (the single repair source - there is no second control copy) minimally removes only that violation: repairs never remove material and never delete the castling or en-passant feature, both asserted generically by the harness. Rollback cases prove the pure-function surface - a rejection leaves no trace.",
  "happy": [
   {
    "name": "startpos",
@@ -69,11 +69,7 @@
    "defect": "only five fields",
    "layer": "field-count",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": " w - - 0",
-    "replace": " w - - 0 1"
-   },
-   "control": {
+   "minimal_repair": {
     "find": " w - - 0",
     "replace": " w - - 0 1"
    }
@@ -85,11 +81,7 @@
    "defect": "rank 1 runs sum to 9, not 8",
    "layer": "placement-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": "4K4",
-    "replace": "4K3"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "4K4",
     "replace": "4K3"
    }
@@ -101,11 +93,7 @@
    "defect": "placement has 7 ranks (both kings present)",
    "layer": "placement-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": "4k3/8/8/8/8/8/4K3",
-    "replace": "8/4k3/8/8/8/8/8/4K3"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "4k3/8/8/8/8/8/4K3",
     "replace": "8/4k3/8/8/8/8/8/4K3"
    }
@@ -117,11 +105,7 @@
    "defect": "adjacent empty-run digits in a rank that already sums to 8",
    "layer": "placement-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": "33",
-    "replace": "6"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "33",
     "replace": "6"
    }
@@ -133,11 +117,7 @@
    "defect": "active color not w/b",
    "layer": "active-color-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": " x ",
-    "replace": " w "
-   },
-   "control": {
+   "minimal_repair": {
     "find": " x ",
     "replace": " w "
    }
@@ -149,11 +129,7 @@
    "defect": "undeclared castling letter X (Ke1/Rh1 present, so the surviving K right is consistent)",
    "layer": "castling-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": "KX",
-    "replace": "K"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "KX",
     "replace": "K"
    }
@@ -165,11 +141,7 @@
    "defect": "castling letters not in KQkq order",
    "layer": "castling-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": " QK ",
-    "replace": " KQ "
-   },
-   "control": {
+   "minimal_repair": {
     "find": " QK ",
     "replace": " KQ "
    }
@@ -181,11 +153,7 @@
    "defect": "en-passant rank 4 in an otherwise fully EP-consistent position",
    "layer": "ep-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": "e4",
-    "replace": "e3"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "e4",
     "replace": "e3"
    }
@@ -197,11 +165,7 @@
    "defect": "leading zero on halfmove clock",
    "layer": "counter-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": " 07 ",
-    "replace": " 7 "
-   },
-   "control": {
+   "minimal_repair": {
     "find": " 07 ",
     "replace": " 7 "
    }
@@ -213,11 +177,7 @@
    "defect": "fullmove number below its minimum 1",
    "layer": "counter-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": " 0 0",
-    "replace": " 0 1"
-   },
-   "control": {
+   "minimal_repair": {
     "find": " 0 0",
     "replace": " 0 1"
    }
@@ -229,11 +189,7 @@
    "defect": "non-ASCII digit in halfmove clock",
    "layer": "counter-grammar",
    "expect_failure": "malformed_fen",
-   "repair": {
-    "find": "\u0663",
-    "replace": "3"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "\u0663",
     "replace": "3"
    }
@@ -245,11 +201,7 @@
    "defect": "no black king",
    "layer": "position-rules-kings",
    "expect_failure": "impossible_position",
-   "repair": {
-    "find": "8/8/8/8/8/8/8/4K3",
-    "replace": "4k3/8/8/8/8/8/8/4K3"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "8/8/8/8/8/8/8/4K3",
     "replace": "4k3/8/8/8/8/8/8/4K3"
    }
@@ -261,11 +213,7 @@
    "defect": "kings adjacent (e3/e2)",
    "layer": "position-rules-kings",
    "expect_failure": "impossible_position",
-   "repair": {
-    "find": "4K3",
-    "replace": "K7"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "4K3",
     "replace": "K7"
    }
@@ -277,11 +225,7 @@
    "defect": "black pawn on rank 8",
    "layer": "position-rules-pawns",
    "expect_failure": "impossible_position",
-   "repair": {
-    "find": "4kp2/8",
-    "replace": "4k3/5p2"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "4kp2/8",
     "replace": "4k3/5p2"
    }
@@ -293,11 +237,7 @@
    "defect": "side not to move's king is attacked (rook on the e-file)",
    "layer": "position-rules-check",
    "expect_failure": "impossible_position",
-   "repair": {
-    "find": "4R3",
-    "replace": "3R4"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "4R3",
     "replace": "3R4"
    }
@@ -309,11 +249,7 @@
    "defect": "K right without rook on h1",
    "layer": "castling-consistency",
    "expect_failure": "impossible_position",
-   "repair": {
-    "find": "4K3",
-    "replace": "4K2R"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "4K3",
     "replace": "4K2R"
    }
@@ -325,11 +261,7 @@
    "defect": "en-passant target requires halfmove clock zero",
    "layer": "ep-consistency",
    "expect_failure": "impossible_position",
-   "repair": {
-    "find": " 1 1",
-    "replace": " 0 1"
-   },
-   "control": {
+   "minimal_repair": {
     "find": " 1 1",
     "replace": " 0 1"
    }
@@ -341,11 +273,7 @@
    "defect": "no pawn on the advanced square for the target",
    "layer": "ep-consistency",
    "expect_failure": "impossible_position",
-   "repair": {
-    "find": "8/8/8/8/4K3",
-    "replace": "8/4P3/8/8/4K3"
-   },
-   "control": {
+   "minimal_repair": {
     "find": "8/8/8/8/4K3",
     "replace": "8/4P3/8/8/4K3"
    }

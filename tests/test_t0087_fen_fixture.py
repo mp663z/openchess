@@ -9,11 +9,10 @@ or derivation drift breaks this battery. Every malformed case is
 single-defect by CONSTRUCTION: all non-target contract rules already
 pass in the input, each defect is classified by contract validation
 layer (grammar layers reject malformed_fen, consistency/position
-layers reject impossible_position), and the declarative repair
-minimally removes only that violation - a per-case negative control
-(the narrowest repair of the named token) must succeed, and generic
-invariants prove no repair fixes a defect by deleting the castling
-or en-passant feature or by removing material. Rollback cases prove
+layers reject impossible_position), and the declarative minimal_repair
+(the single repair source) minimally removes only that violation -
+generic invariants prove no repair fixes a defect by deleting the
+castling or en-passant feature or by removing material. Rollback cases prove
 the pure-function surface: a rejection leaves no trace.
 
 DESIGN CAUTION: the reference interpreter is derived from the same
@@ -51,7 +50,7 @@ TOP_KEYS = {"schema", "contract", "contract_schema_version", "notes",
 KIND_KEYS = {
     "roundtrip": {"name", "kind", "input_fen", "expect_fen"},
     "fen-parse": {"name", "kind", "input_fen", "defect", "layer",
-                  "expect_failure", "repair", "control"},
+                  "expect_failure", "minimal_repair"},
     "rollback-fen-parse": {"name", "kind", "reject_fen",
                            "expect_failure", "then_fen", "expect_fen"},
 }
@@ -82,7 +81,7 @@ def _case(section, name):
 
 
 def _repaired(case):
-    rep = case["repair"]
+    rep = case["minimal_repair"]
     assert set(rep) == REPAIR_KEYS
     text = case["input_fen"]
     assert text.count(rep["find"]) == 1, (
@@ -146,17 +145,10 @@ def test_roundtrip_battery_depth():
     assert len(CASES["boundary"]) >= 5
 
 
-@pytest.mark.parametrize("name", [
-    "field-count-five", "rank-sum-nine", "rank-count-seven",
-    "adjacent-digits", "active-color-x", "castling-bad-letter",
-    "castling-order", "ep-rank-wrong", "halfmove-leading-zero",
-    "fullmove-zero", "halfmove-non-ascii-digit", "kingless-black",
-    "kings-adjacent", "pawn-on-back-rank", "non-mover-king-attacked",
-    "castling-rook-missing", "ep-halfmove-nonzero",
-    "ep-mover-pawn-missing",
-])
-def test_malformed(name):
-    case = _case("malformed", name)
+def _assert_original_rejects(case):
+    """The fixture's original malformed input MUST reject with the
+    pinned class and the contract-mapped error code - the evidence
+    that the case isolates a real defect at its named layer."""
     with pytest.raises(FenError) as excinfo:
         parse_fen(C, case["input_fen"])
     assert excinfo.value.failure_class == case["expect_failure"]
@@ -164,6 +156,40 @@ def test_malformed(name):
     # pinned class - no re-declared codes in the fixture
     assert excinfo.value.code == (
         C["failure_mapping"][case["expect_failure"]]["error"])
+
+
+@pytest.mark.parametrize("name", _names("malformed"))
+def test_malformed(name):
+    # parametrization is derived from the fixture itself - a case
+    # added to the fixture MUST prove its original input rejects;
+    # it can never pass the generic tests while silently skipping
+    # original rejection
+    _assert_original_rejects(_case("malformed", name))
+
+
+def test_malformed_param_ids_equal_fixture_names():
+    """Collection guard: test_malformed's parameter IDs are exactly
+    the fixture's malformed-name set - a manually repeated list that
+    drifts from the fixture fails here."""
+    marks = [m for m in test_malformed.pytestmark
+             if m.name == "parametrize"]
+    assert len(marks) == 1
+    assert set(marks[0].args[1]) == set(_names("malformed"))
+
+
+def test_injected_valid_malformed_row_fails_rejection():
+    """Regression mutation: an in-memory 'malformed' row whose input
+    is already VALID (with a trivially valid repair) must FAIL the
+    original-rejection assertion - a valid row cannot launder into
+    the fixture."""
+    injected = {"name": "injected-valid", "kind": "fen-parse",
+                "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                "defect": "none - input already valid",
+                "layer": "active-color-grammar",
+                "expect_failure": "malformed_fen",
+                "minimal_repair": {"find": " w ", "replace": " b "}}
+    with pytest.raises((AssertionError, pytest.fail.Exception)):
+        _assert_original_rejects(injected)
 
 
 @pytest.mark.parametrize("name", _names("malformed"))
@@ -184,7 +210,7 @@ def test_malformed_repair_touches_only_the_declared_span(name):
     """The repair replaces exactly one contiguous span; everything
     outside the span is byte-identical."""
     case = _case("malformed", name)
-    rep = case["repair"]
+    rep = case["minimal_repair"]
     text = case["input_fen"]
     idx = text.index(rep["find"])
     repaired = _repaired(case)
@@ -212,23 +238,6 @@ def test_rollback_leaves_no_trace(name):
 
 def _pieces(fen):
     return sum(ch.isalpha() for ch in fen.split(" ")[0])
-
-
-@pytest.mark.parametrize("name", _names("malformed"))
-def test_malformed_control_narrowest_repair_succeeds(name):
-    """Per-case negative control: the narrowest plausible repair of
-    the named token - preserving all other semantic state - must
-    SUCCEED. If it did not, the case would carry a second defect the
-    declared repair is secretly fixing."""
-    case = _case("malformed", name)
-    control = case["control"]
-    assert set(control) == REPAIR_KEYS
-    text = case["input_fen"]
-    assert text.count(control["find"]) == 1, (
-        f"{name}: control find not unique")
-    repaired = text.replace(control["find"], control["replace"])
-    position = parse_fen(C, repaired)
-    assert emit_fen(C, position) == repaired
 
 
 @pytest.mark.parametrize("name", _names("malformed"))
