@@ -622,6 +622,8 @@ class Session:
         self.reg_spec = life["registration"]
         assert self.reg_spec["model"] == (
             "orthogonal-phase-variable-with-gui-correlation")
+        self.hs_spec = life["handshake"]
+        assert self.hs_spec["model"] == "orthogonal-handshake-progress"
         self.state = life["initial"]
         # Terminal state derived from the contract: the declared state
         # whose transition table is empty in both directions.
@@ -634,10 +636,12 @@ class Session:
         self.debug = self.debug_spec["initial"]
         self.cp_phase = self.cp_spec["initial"]
         self.reg_phase = self.reg_spec["initial"]
+        self.hs_phase = self.hs_spec["initial"]
 
     def snapshot(self):
         return (self.state, self.position_flag, self.readiness,
-                self.debug, self.cp_phase, self.reg_phase)
+                self.debug, self.cp_phase, self.reg_phase,
+                self.hs_phase)
 
     def _step(self, direction, event, ponder=False):
         c = self.c
@@ -678,6 +682,23 @@ class Session:
             _fail(c, c["lifecycle"]["unlisted_pair"])
         assert value in self.debug_spec["values"]
         self.debug = value
+
+    def _handshake(self, event):
+        c = self.c
+        spec = self.hs_spec
+        # Structured handshake progress: exactly one id name before
+        # any option and before uciok; at most one optional author
+        # after the name and before the first option; then options;
+        # then exactly one uciok moves the lifecycle to the pinned
+        # target. Every violation is protocol_state with
+        # bit-identical rollback.
+        target = spec["transitions"][self.hs_phase][event]
+        if target == "rejected-protocol_state":
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        if event == "uciok":
+            self.state = spec["uciok_target"]
+        else:
+            self.hs_phase = target
 
     def _copyprotection(self, status):
         c = self.c
@@ -770,6 +791,12 @@ class Session:
             return resp
         if resp["response"] == "registration":
             self._registration(resp["state"])
+            return resp
+        if (self.state == "awaiting_uciok"
+                and resp["response"] in ("id", "option", "uciok")):
+            event = ("id_" + resp["kind"] if resp["response"] == "id"
+                     else resp["response"])
+            self._handshake(event)
             return resp
         self._step("engine", resp["response"])
         return resp
@@ -1056,6 +1083,7 @@ def _ready_session():
     doc = _doc()["contract"]
     s = Session(doc)
     s.feed_gui("uci")
+    s.feed_engine("id name S")
     s.feed_engine("uciok")
     return doc, s
 
@@ -1286,6 +1314,7 @@ def test_handshake_option_rejected_outside_handshake():
     assert s.snapshot() == before
     # during the handshake itself the declaration is legal...
     s.feed_gui("uci")
+    s.feed_engine("id name H")
     s.feed_engine("option name Hash type spin default 16 min 1 max 512")
     s.feed_engine("uciok")
     # ...but after uciok (ready) and during a search it is not
@@ -1309,6 +1338,7 @@ def test_lifecycle_ucinewgame_resets_position_requirement():
     doc = _doc()["contract"]
     s = Session(doc)
     s.feed_gui("uci")
+    s.feed_engine("id name S")
     s.feed_engine("uciok")
     s.feed_gui("position startpos")
     s.feed_gui("go depth 5")
@@ -1608,17 +1638,38 @@ def test_readiness_during_normal_search():
     for d, line in SEARCHING:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("searching", True, True, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "searching",
+        True,
+        True,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     s.feed_engine("info depth 7")           # search unaffected
     assert s.state == "searching"
     with pytest.raises(UciError):           # still outstanding
         s.feed_gui("go depth 3")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("searching", True, False, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "searching",
+        True,
+        False,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     with pytest.raises(UciError):           # still outstanding
         s.feed_gui("position startpos")
     s.feed_engine("bestmove e2e4")
-    assert s.snapshot() == ("ready", True, False, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "ready",
+        True,
+        False,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
 
 
 def test_readiness_during_ponder_search():
@@ -1627,11 +1678,32 @@ def test_readiness_during_ponder_search():
     for d, line in PONDERING:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("pondering", True, True, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "pondering",
+        True,
+        True,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     s.feed_gui("ponderhit")                 # converts, flag preserved
-    assert s.snapshot() == ("searching", True, True, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "searching",
+        True,
+        True,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("searching", True, False, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "searching",
+        True,
+        False,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     s.feed_engine("bestmove d2d4")
     assert s.state == "ready"
 
@@ -1644,11 +1716,11 @@ def test_readiness_after_stop_requested():
     s.feed_gui("isready")
     assert s.snapshot() == (
         "stop_requested", True, True, "off", "cp_idle",
-        "reg_awaiting_indication")
+        "reg_awaiting_indication", "awaiting_author_or_options")
     s.feed_engine("readyok")
     assert s.snapshot() == (
         "stop_requested", True, False, "off", "cp_idle",
-        "reg_awaiting_indication")
+        "reg_awaiting_indication", "awaiting_author_or_options")
     # stop-requested survived the whole exchange: bestmove still due
     s.feed_engine("bestmove e2e4")
     assert s.state == "ready"
@@ -1663,11 +1735,11 @@ def test_readiness_during_ponder_stop_requested():
     s.feed_gui("isready")
     assert s.snapshot() == (
         "ponder_stop_requested", True, True, "off", "cp_idle",
-        "reg_awaiting_indication")
+        "reg_awaiting_indication", "awaiting_author_or_options")
     s.feed_engine("readyok")
     assert s.snapshot() == (
         "ponder_stop_requested", True, False, "off", "cp_idle",
-        "reg_awaiting_indication")
+        "reg_awaiting_indication", "awaiting_author_or_options")
     s.feed_gui("ponderhit")
     assert s.state == "stop_requested"
 
@@ -1701,7 +1773,7 @@ def test_readiness_terminal_gate():
         # on_termination: flag cleared on entry to terminated.
         assert s.snapshot() == (
             "terminated", s.position_flag, False, "off",
-            "cp_idle", "reg_awaiting_indication")
+            "cp_idle", "reg_awaiting_indication", "awaiting_author_or_options")
         before = s.snapshot()
         for d, line in (("engine", "readyok"), ("gui", "isready")):
             with pytest.raises(UciError) as exc:
@@ -1780,7 +1852,14 @@ def test_debug_orthogonal_setting():
     _feed(s, "engine", "info depth 3")  # info still flows
     _feed(s, "gui", "debug on")
     _feed(s, "engine", "bestmove e2e4")  # bestmove ends the search
-    assert s.snapshot() == ("ready", True, False, "on", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "ready",
+        True,
+        False,
+        "on",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     # ponder search: debug, then ponderhit still converts
     s = Session(doc)
     for d, line in PONDERING:
@@ -1788,23 +1867,51 @@ def test_debug_orthogonal_setting():
     toggles(s, ("pondering", True, False))
     _feed(s, "gui", "debug on")
     _feed(s, "gui", "ponderhit")
-    assert s.snapshot() == ("searching", True, False, "on", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "searching",
+        True,
+        False,
+        "on",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     # stop-requested: debug, search outstanding until bestmove
     s = Session(doc)
     for d, line in SEARCHING + [("gui", "stop")]:
         _feed(s, d, line)
     toggles(s, ("stop_requested", True, False))
     _feed(s, "engine", "bestmove e2e4")
-    assert s.snapshot() == ("ready", True, False, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "ready",
+        True,
+        False,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     # readiness-pending search: debug touches neither flag nor search
     s = Session(doc)
     for d, line in SEARCHING + [("gui", "isready")]:
         _feed(s, d, line)
     toggles(s, ("searching", True, True))
     _feed(s, "engine", "readyok")  # flag still pending, clears it
-    assert s.snapshot() == ("searching", True, False, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "searching",
+        True,
+        False,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
     _feed(s, "engine", "bestmove e2e4")
-    assert s.snapshot() == ("ready", True, False, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "ready",
+        True,
+        False,
+        "off",
+        "cp_idle",
+        "reg_awaiting_indication",
+        "awaiting_author_or_options")
 
 
 def test_stop_requests_but_never_clears_search():
@@ -2177,6 +2284,7 @@ def test_phase_flattening_mutants_launder_violations():
             {"checking": phase, "ok": phase, "error": phase}
     s = Session(cp_flat)
     s.feed_gui("uci")
+    s.feed_engine("id name S")
     s.feed_engine("uciok")
     s.feed_engine("copyprotection ok")        # no checking: laundered
     s.feed_engine("copyprotection ok")        # repeat: laundered
@@ -2190,6 +2298,7 @@ def test_phase_flattening_mutants_launder_violations():
             {"checking": phase, "ok": phase, "error": phase}
     s = Session(reg_flat)
     s.feed_gui("uci")
+    s.feed_engine("id name S")
     s.feed_engine("uciok")
     s.feed_engine("registration ok")          # unsolicited: laundered
     s.feed_engine("registration checking")
@@ -2201,6 +2310,7 @@ def test_phase_flattening_mutants_launder_violations():
     # carry the constraint)
     s = Session(doc)
     s.feed_gui("uci")
+    s.feed_engine("id name S")
     s.feed_engine("uciok")
     for line in ("copyprotection ok", "registration ok"):
         with pytest.raises(UciError):
@@ -2317,3 +2427,174 @@ def test_linkage_missing_sibling_fails(tmp_path):
     doc, dst = _lint_with_root(tmp_path, mutate)
     with pytest.raises(ContractError):
         lint(doc, root=tmp_path)
+
+
+OPT1 = "option name Hash type spin default 16 min 1 max 128"
+OPT2 = "option name Threads type spin default 1 min 1 max 512"
+OPT3 = "option name Ponder type check default false"
+
+
+def test_handshake_identity_happy_paths():
+    """Structured handshake progress (verifier #2 v12): exactly one
+    id name before any option and before uciok; author optional, at
+    most one, after the name and before the first option; then zero
+    or more options; then exactly one uciok."""
+    doc = _doc()["contract"]
+    cases = [
+        # name only, zero options
+        (["id name S"], "awaiting_author_or_options"),
+        # name only, multiple options
+        (["id name S", OPT1, OPT2], "awaiting_options"),
+        # name + author, zero options
+        (["id name S", "id author A"], "awaiting_options"),
+        # name + author, multiple options
+        (["id name S", "id author A", OPT1, OPT2, OPT3],
+         "awaiting_options"),
+    ]
+    for engine_lines, phase_before_uciok in cases:
+        s = Session(doc)
+        s.feed_gui("uci")
+        for line in engine_lines:
+            s.feed_engine(line)
+        assert s.hs_phase == phase_before_uciok
+        s.feed_engine("uciok")
+        assert s.state == "ready"
+        assert s.snapshot() == ("ready", False, False, "off",
+                                "cp_idle",
+                                "reg_awaiting_indication",
+                                phase_before_uciok)
+
+
+def test_handshake_identity_negative_repros_rollback():
+    """Every rejected handshake ordering is protocol_state with
+    bit-identical rollback: nameless uciok, author-only start,
+    duplicate id name, duplicate id author, any id after the first
+    option, and every handshake event after uciok."""
+    doc = _doc()["contract"]
+    cases = [
+        # nameless uciok
+        ([("gui", "uci")], "engine", "uciok"),
+        # author-only start: author before any name
+        ([("gui", "uci")], "engine", "id author A"),
+        # author-only start, then uciok still blocked
+        ([("gui", "uci")], "engine", "id author A"),
+        # duplicate id name
+        ([("gui", "uci"), ("engine", "id name S")],
+         "engine", "id name T"),
+        # duplicate id author
+        ([("gui", "uci"), ("engine", "id name S"),
+          ("engine", "id author A")], "engine", "id author B"),
+        # id name after the first option
+        ([("gui", "uci"), ("engine", "id name S"),
+          ("engine", OPT1)], "engine", "id name T"),
+        # id author after the first option
+        ([("gui", "uci"), ("engine", "id name S"),
+          ("engine", OPT1)], "engine", "id author B"),
+        # handshake events after uciok
+        (HANDSHAKE, "engine", "id name X"),
+        (HANDSHAKE, "engine", "id author Y"),
+        (HANDSHAKE, "engine", OPT1),
+        (HANDSHAKE, "engine", "uciok"),
+    ]
+    for prefix, direction, line in cases:
+        s = Session(doc)
+        for d, pline in prefix:
+            _feed(s, d, pline)
+        before = s.snapshot()
+        with pytest.raises(UciError) as exc:
+            _feed(s, direction, line)
+        assert exc.value.failure_class == "protocol_state"
+        assert s.snapshot() == before
+
+
+def test_handshake_author_only_flow_stays_blocked():
+    """An author-only start never lets the handshake complete: the
+    early author is rejected, and a following uciok is still a
+    nameless uciok."""
+    doc = _doc()["contract"]
+    s = Session(doc)
+    s.feed_gui("uci")
+    with pytest.raises(UciError):
+        s.feed_engine("id author A")
+    before = s.snapshot()
+    with pytest.raises(UciError) as exc:
+        s.feed_engine("uciok")
+    assert exc.value.failure_class == "protocol_state"
+    assert s.snapshot() == before
+
+
+def _hs_mutants():
+    base = _doc()
+
+    def mut(name, fn):
+        m = copy.deepcopy(base)
+        fn(m["contract"]["lifecycle"]["handshake"]["transitions"])
+        return name, m
+
+    return [
+        mut("hs-name-not-required",
+            lambda t: t["awaiting_name"].__setitem__("uciok", "ready")),
+        mut("hs-duplicate-name-allowed",
+            lambda t: t["awaiting_author_or_options"].__setitem__(
+                "id_name", "awaiting_author_or_options")),
+        mut("hs-duplicate-author-allowed",
+            lambda t: t["awaiting_options"].__setitem__(
+                "id_author", "awaiting_options")),
+        mut("hs-id-after-first-option",
+            lambda t: t["awaiting_options"].__setitem__(
+                "id_name", "awaiting_options")),
+        mut("hs-author-before-name",
+            lambda t: t["awaiting_name"].__setitem__(
+                "id_author", "awaiting_options")),
+    ]
+
+
+def test_handshake_mutations_fail_lint():
+    """Lint mutants that remove the name requirement, duplicate
+    prevention, or ordering are all rejected (verifier #2 v12)."""
+    mutants = _hs_mutants()
+    assert len(mutants) == 5
+    for name, m in mutants:
+        try:
+            lint(m)
+        except ContractError:
+            continue
+        raise AssertionError(f"mutant {name!r} passed the lint")
+
+
+def test_handshake_phase_flattening_mutants_launder_violations():
+    """If the handshake phase table is flattened to self-loops IN
+    MEMORY, every rejected repro becomes accepted - proving the
+    table, not prose, carries the identity/ordering constraint (the
+    linter separately rejects these mutations in the FILE)."""
+    doc = _doc()["contract"]
+    hs_flat = copy.deepcopy(doc)
+    rows = hs_flat["lifecycle"]["handshake"]["transitions"]
+    for phase in rows:
+        rows[phase] = {"id_name": phase, "id_author": phase,
+                       "option": phase, "uciok": "ready"}
+    s = Session(hs_flat)
+    s.feed_gui("uci")
+    s.feed_engine("uciok")               # nameless: laundered
+    s = Session(hs_flat)
+    s.feed_gui("uci")
+    s.feed_engine("id author A")         # author-only start: laundered
+    s.feed_engine("id name S")
+    s.feed_engine("id name T")           # duplicate name: laundered
+    s.feed_engine(OPT1)
+    s.feed_engine("id author B")         # id after option: laundered
+    s.feed_engine("id author C")         # duplicate author: laundered
+    s.feed_engine("uciok")
+    assert s.state == "ready"
+
+
+def test_handshake_phase_injection_launders_name_requirement():
+    """Jumping the live session's handshake phase past the name
+    requirement lets a nameless uciok through - the negative repros
+    above are therefore not vacuous."""
+    doc = _doc()["contract"]
+    s = Session(doc)
+    s.feed_gui("uci")
+    object.__setattr__(s, "hs_phase", "awaiting_options")
+    s.feed_engine("uciok")               # nameless, laundered
+    assert s.state == "ready"

@@ -259,6 +259,36 @@ LIFECYCLE_REGISTRATION = {
         "defers-without-opening-an-attempt-engine-may-start-one-later-"
         "checking-cycle-from-unregistered",
 }
+LIFECYCLE_HANDSHAKE = {
+    "model": "orthogonal-handshake-progress",
+    "phases": ["awaiting_name", "awaiting_author_or_options",
+               "awaiting_options"],
+    "initial": "awaiting_name",
+    "active_in_states": ["awaiting_uciok"],
+    "name_required":
+        "exactly-one-id-name-before-any-option-and-uciok",
+    "author": "optional-at-most-one-after-name-before-first-option",
+    "ordering": "name-then-optional-author-then-options-then-uciok",
+    "uciok_target": "ready",
+    "on_termination": "handshake-events-rejected-protocol_state",
+    "transitions": {
+        "awaiting_name": {
+            "id_name": "awaiting_author_or_options",
+            "id_author": "rejected-protocol_state",
+            "option": "rejected-protocol_state",
+            "uciok": "rejected-protocol_state"},
+        "awaiting_author_or_options": {
+            "id_name": "rejected-protocol_state",
+            "id_author": "awaiting_options",
+            "option": "awaiting_options",
+            "uciok": "ready"},
+        "awaiting_options": {
+            "id_name": "rejected-protocol_state",
+            "id_author": "rejected-protocol_state",
+            "option": "awaiting_options",
+            "uciok": "ready"},
+    },
+}
 LIFECYCLE_READINESS = {
     "model": "orthogonal-pending-flag",
     "set_by": "isready",
@@ -291,9 +321,7 @@ LIFECYCLE_TRANSITIONS = {
     "pre_uci": {"gui": {"uci": "awaiting_uciok", "quit": "terminated"},
                 "engine": {}},
     "awaiting_uciok": {"gui": {"quit": "terminated"},
-                       "engine": {"id": "awaiting_uciok",
-                                  "option": "awaiting_uciok",
-                                  "uciok": "ready"}},
+                       "engine": {}},
     "ready": {"gui": {"setoption": "ready", "ucinewgame": "ready",
                       "position": "ready", "go": SEARCH_START,
                       "quit": "terminated"},
@@ -381,11 +409,13 @@ ALLOWED_OPTION_TYPES = set(OPTION_TYPES) | {"rule"}
 ALLOWED_POSITION_VALIDATION = set(POSITION_VALIDATION) | {"rule"}
 ALLOWED_LIFECYCLE = (set(LIFECYCLE_META)
                      | {"states", "transitions", "readiness", "debug",
-                        "copyprotection", "registration", "rule"})
+                        "copyprotection", "registration", "handshake",
+                        "rule"})
 ALLOWED_READINESS = set(LIFECYCLE_READINESS) | {"rule"}
 ALLOWED_DEBUG = set(LIFECYCLE_DEBUG) | {"rule"}
 ALLOWED_COPYPROTECTION = set(LIFECYCLE_COPYPROTECTION) | {"rule"}
 ALLOWED_REGISTRATION = set(LIFECYCLE_REGISTRATION) | {"rule"}
+ALLOWED_HANDSHAKE = set(LIFECYCLE_HANDSHAKE) | {"rule"}
 ALLOWED_RESOLUTION = set(RESOLUTION_FAILURES) | {"rule"}
 ALLOWED_ERRORS = {"closed_enum", "shape"}
 ALLOWED_SERIALIZATION = {"canonical", "roundtrip", "rule"}
@@ -625,6 +655,11 @@ def lint(doc: dict, root: Path | None = None) -> None:
                       f"lifecycle.transitions.{state}.{direction}: "
                       f"{event} belongs to the orthogonal phase "
                       "variables, never the state table")
+                _need(direction != "engine"
+                      or event not in ("id", "option", "uciok"),
+                      f"lifecycle.transitions.{state}.{direction}: "
+                      f"{event} belongs to the orthogonal handshake "
+                      "progress, never the state table")
     debug = _mapping(life.get("debug"), "lifecycle.debug")
     _keys(debug, ALLOWED_DEBUG, "lifecycle.debug")
     for key, value in LIFECYCLE_DEBUG.items():
@@ -667,6 +702,27 @@ def lint(doc: dict, root: Path | None = None) -> None:
                           f"{label}.{phase}.{status}: target must be "
                           "a declared phase or the pinned rejection")
         _text(spec.get("rule"), f"{label}.rule")
+
+    handshake = _mapping(life.get("handshake"), "lifecycle.handshake")
+    _keys(handshake, ALLOWED_HANDSHAKE, "lifecycle.handshake")
+    for key, value in LIFECYCLE_HANDSHAKE.items():
+        _exact(handshake.get(key), value, f"lifecycle.handshake.{key}")
+    _need(set(handshake["active_in_states"]) <= states,
+          "lifecycle.handshake.active_in_states must be declared "
+          "states")
+    _need(handshake["initial"] in handshake["phases"],
+          "lifecycle.handshake.initial must be a declared phase")
+    _need(set(handshake["transitions"]) == set(handshake["phases"]),
+          "lifecycle.handshake: every phase needs a transition row")
+    for phase, row in handshake["transitions"].items():
+        for event, target in row.items():
+            _need(target in handshake["phases"]
+                  or target in ("rejected-protocol_state",
+                                handshake["uciok_target"]),
+                  f"lifecycle.handshake.{phase}.{event}: target must "
+                  "be a declared phase, the pinned rejection or the "
+                  "pinned uciok target")
+    _text(handshake.get("rule"), "lifecycle.handshake.rule")
 
     readiness = _mapping(life.get("readiness"), "lifecycle.readiness")
     _keys(readiness, ALLOWED_READINESS, "lifecycle.readiness")

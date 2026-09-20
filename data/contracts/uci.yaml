@@ -239,7 +239,7 @@ contract:
     ponder_bestmove_gate: gui-release-required-even-on-mate-or-completion
     transitions:
       pre_uci: {gui: {uci: awaiting_uciok, quit: terminated}, engine: {}}
-      awaiting_uciok: {gui: {quit: terminated}, engine: {id: awaiting_uciok, option: awaiting_uciok, uciok: ready}}
+      awaiting_uciok: {gui: {quit: terminated}, engine: {}}
       ready: {gui: {setoption: ready, ucinewgame: ready, position: ready, go: search-start, quit: terminated}, engine: {}}
       searching: {gui: {stop: stop_requested, quit: terminated}, engine: {info: searching, bestmove: ready}}
       pondering: {gui: {ponderhit: searching, stop: ponder_stop_requested, quit: terminated}, engine: {info: pondering}}
@@ -270,6 +270,48 @@ contract:
         debug is PINNED as protocol_state - rejected deliberately,
         never accidentally. The setting never appears in the
         transition table, and debug never appears there.
+    handshake:
+      model: orthogonal-handshake-progress
+      phases: [awaiting_name, awaiting_author_or_options,
+        awaiting_options]
+      initial: awaiting_name
+      active_in_states: [awaiting_uciok]
+      name_required: exactly-one-id-name-before-any-option-and-uciok
+      author: optional-at-most-one-after-name-before-first-option
+      ordering: name-then-optional-author-then-options-then-uciok
+      uciok_target: ready
+      on_termination: handshake-events-rejected-protocol_state
+      transitions:
+        awaiting_name:
+          id_name: awaiting_author_or_options
+          id_author: rejected-protocol_state
+          option: rejected-protocol_state
+          uciok: rejected-protocol_state
+        awaiting_author_or_options:
+          id_name: rejected-protocol_state
+          id_author: awaiting_options
+          option: awaiting_options
+          uciok: ready
+        awaiting_options:
+          id_name: rejected-protocol_state
+          id_author: rejected-protocol_state
+          option: awaiting_options
+          uciok: ready
+      rule: >-
+        The handshake is STRUCTURED progress, never an unconstrained
+        id self-loop: exactly one id name is REQUIRED before any
+        option declaration and before uciok; id author is OPTIONAL,
+        at most one, accepted only after the name and before the
+        first option (pin: author is intentionally optional, name is
+        required); then zero or more option declarations; then
+        exactly one uciok completes the handshake and moves the
+        lifecycle to ready. A nameless uciok, an author without a
+        preceding name, a duplicate id name, a duplicate id author,
+        any id after the first option declaration, and every
+        handshake event after uciok are REJECTED
+        (protocol_state) with bit-identical rollback. The handshake
+        phase never appears in the lifecycle transition table and
+        id, option and uciok never appear there.
     copyprotection:
       model: orthogonal-phase-variable
       phases: [cp_idle, cp_checking, cp_done]
@@ -422,9 +464,10 @@ contract:
     rule: >-
       The session is a bidirectional state machine over BOTH GUI
       commands and engine responses. uci moves pre_uci to
-      awaiting_uciok; only id, option declarations and uciok are
-      valid engine responses there (the handshake: id and any
-      option declarations, then uciok), and no normal command is
+      awaiting_uciok; the handshake there is structured progress
+      (see handshake): exactly one id name is required, then at
+      most one optional id author, then zero or more option
+      declarations, then exactly one uciok. No normal command is
       accepted before uciok arrives. option declarations are
       handshake-only: invalid before uci, after uciok, during
       searches and after termination.
