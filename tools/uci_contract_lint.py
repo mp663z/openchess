@@ -409,21 +409,27 @@ ALLOWED_OPTION_MARKERS = set(OPTION_MARKERS) | {"rule"}
 ALLOWED_OPTION_TYPES = set(OPTION_TYPES) | {"rule"}
 ALLOWED_POSITION_VALIDATION = set(POSITION_VALIDATION) | {"rule"}
 SETOPTION_SEMANTICS = {
-    "registry": "declared-options-by-exact-name-from-handshake",
-    "name_matching": "exact-case-sensitive-declared-name",
+    "registry": "declared-options-by-normalized-name-from-handshake",
+    "name_matching": "ascii-case-insensitive-preserve-declared-spelling",
+    "normalization": "ascii-lowercase-comparison-key",
     "undeclared_name_maps_to": "malformed_line",
     "domain_violation_maps_to": "malformed_line",
     "duplicate_declaration_maps_to": "malformed_line",
+    "duplicate_normalization_collision": "rejected-as-duplicate",
     "repeat_setoption": "allowed-validation-idempotent",
     "state_preservation":
         "valid-setoption-mutates-no-lifecycle-or-orthogonal-state",
     "type_rules": {
-        "check": "value-marker-required-exactly-true-or-false",
+        "check":
+            "value-marker-required-true-or-false-ascii-case-insensitive",
         "spin": "value-marker-required-integer-within-declared-min-max",
         "combo":
-            "value-marker-required-exactly-one-declared-full-var-string",
+            "value-marker-required-one-declared-full-var-string-ascii-"
+            "case-insensitive",
         "button": "no-value-marker-permitted",
-        "string": "value-marker-optional-free-form-empty-allowed",
+        "string":
+            "value-marker-optional-free-form-empty-allowed-payload-"
+            "opaque-no-case-folding",
     },
 }
 ALLOWED_SETOPTION_SEMANTICS = set(SETOPTION_SEMANTICS) | {"rule"}

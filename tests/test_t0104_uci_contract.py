@@ -626,9 +626,11 @@ class Session:
         assert self.hs_spec["model"] == "orthogonal-handshake-progress"
         self.setoption_spec = contract["setoption_semantics"]
         assert self.setoption_spec["registry"] == (
-            "declared-options-by-exact-name-from-handshake")
+            "declared-options-by-normalized-name-from-handshake")
         assert self.setoption_spec["name_matching"] == (
-            "exact-case-sensitive-declared-name")
+            "ascii-case-insensitive-preserve-declared-spelling")
+        assert self.setoption_spec["normalization"] == (
+            "ascii-lowercase-comparison-key")
         assert self.setoption_spec["repeat_setoption"] == (
             "allowed-validation-idempotent")
         self.state = life["initial"]
@@ -697,14 +699,21 @@ class Session:
     def _declare_option(self, resp):
         c = self.c
         sem = self.setoption_spec
-        # Registration into the handshake-built registry: a duplicate
-        # declared name is rejected before ANY state moves.
+        # Registration into the handshake-built registry, keyed by
+        # the ASCII-lowercase normalization of the declared name
+        # (the original spelling is preserved in the entry): a
+        # duplicate - including a normalization-only collision such
+        # as Threads vs threads - is rejected before ANY state
+        # moves.
         assert sem["duplicate_declaration_maps_to"] == "malformed_line"
-        if resp["name"] in self.options:
+        assert sem["duplicate_normalization_collision"] == (
+            "rejected-as-duplicate")
+        key = resp["name"].lower()
+        if key in self.options:
             _fail(c, "malformed_line")
-        self.options[resp["name"]] = {
-            key: value for key, value in resp.items()
-            if key != "response"}
+        self.options[key] = {
+            k: value for k, value in resp.items()
+            if k != "response"}
 
     def _setoption(self, cmd):
         c = self.c
@@ -716,17 +725,20 @@ class Session:
         # either - lifecycle, orthogonal state and the registry are
         # all preserved, so setoption may repeat.
         rules = sem["type_rules"]
-        if cmd["name"] not in self.options:
+        # UCI: option names and values are case-insensitive; the
+        # registry key is the ASCII-lowercase normalization.
+        decl = self.options.get(cmd["name"].lower())
+        if decl is None:
             assert sem["undeclared_name_maps_to"] == "malformed_line"
             _fail(c, "malformed_line")
-        decl = self.options[cmd["name"]]
         otype = decl["type"]
         value = cmd["value"]
         assert sem["domain_violation_maps_to"] == "malformed_line"
         if otype == "check":
             assert rules["check"] == (
-                "value-marker-required-exactly-true-or-false")
-            if value not in ("true", "false"):
+                "value-marker-required-true-or-false-ascii-case-"
+                "insensitive")
+            if value is None or value.lower() not in ("true", "false"):
                 _fail(c, "malformed_line")
         elif otype == "spin":
             assert rules["spin"] == (
@@ -737,17 +749,21 @@ class Session:
                 _fail(c, "malformed_line")
         elif otype == "combo":
             assert rules["combo"] == (
-                "value-marker-required-exactly-one-declared-full-var-"
-                "string")
-            if value is None or value not in decl["var"]:
+                "value-marker-required-one-declared-full-var-string-"
+                "ascii-case-insensitive")
+            if (value is None or value.lower() not in
+                    [var.lower() for var in decl["var"]]):
                 _fail(c, "malformed_line")
         elif otype == "button":
             assert rules["button"] == "no-value-marker-permitted"
             if value is not None:
                 _fail(c, "malformed_line")
         elif otype == "string":
+            # the string payload is OPAQUE: never case-folded, never
+            # domain-checked
             assert rules["string"] == (
-                "value-marker-optional-free-form-empty-allowed")
+                "value-marker-optional-free-form-empty-allowed-payload-"
+                "opaque-no-case-folding")
         else:
             raise AssertionError(f"undeclared option type {otype}")
 
@@ -2726,6 +2742,16 @@ def test_setoption_happy_all_five_types():
         "setoption name Syzygy Path value /tmp/tb/5men",
         "setoption name Syzygy Path value",     # empty value
         "setoption name Syzygy Path",           # no value marker
+        # UCI case-insensitivity: names and values in any ASCII
+        # case variant, original spelling irrelevant
+        "setoption name threads value 4",
+        "setoption name THREADS value 7",
+        "setoption name PONDER value TRUE",
+        "setoption name ponder value False",
+        "setoption name STYLE value solid",
+        "setoption name style value AGGRESSIVE",
+        "setoption name CLEAR HASH",
+        "setoption name syzygy path value C:\\TB",
     ]
     for line in valid:
         s.feed_gui(line)
@@ -2740,10 +2766,12 @@ def test_setoption_multiword_combo_var():
     baseline = _full_state(s)
     s.feed_gui("setoption name Play Style value Slow Play")
     s.feed_gui("setoption name Play Style value Fast Play")
+    # case-insensitive, multiword boundaries preserved
+    s.feed_gui("setoption name Play Style value slow play")
+    s.feed_gui("setoption name PLAY STYLE value FAST PLAY")
     assert _full_state(s) == baseline
     for line in ("setoption name Play Style value Slow",
-                 "setoption name Play Style value Play",
-                 "setoption name Play Style value slow play"):
+                 "setoption name Play Style value Play"):
         with pytest.raises(UciError) as exc:
             s.feed_gui(line)
         assert exc.value.failure_class == "malformed_line"
@@ -2775,21 +2803,20 @@ def test_setoption_negative_repros_rollback():
         "setoption name Threads",                # missing value
         # repro 3: check with a non-boolean value
         "setoption name Ponder value maybe",
-        "setoption name Ponder value True",      # case
         "setoption name Ponder value 1",
+        "setoption name Ponder value truthsy",
         "setoption name Ponder",                 # missing value
         # repro 4: combo with an undeclared var
         "setoption name Style value Banana",
-        "setoption name Style value solid",      # case
+        "setoption name Style value Soli",
         "setoption name Style",                  # missing value
         # button takes no value marker
         "setoption name Clear Hash value 1",
         "setoption name Clear Hash value",
-        # undeclared names, exact case-sensitive matching
+        # undeclared names under ASCII-case-insensitive matching
         "setoption name Unknown value 1",
-        "setoption name threads value 4",
-        "setoption name PONDER value true",
         "setoption name Thread value 4",
+        "setoption name Threadz value 4",
     ]
     for line in negatives:
         with pytest.raises(UciError) as exc:
@@ -2826,7 +2853,12 @@ def test_duplicate_option_declaration_rejected():
         s.feed_engine("option name Threads type check default true")
     assert exc.value.failure_class == "malformed_line"
     assert _full_state(s) == baseline
-    # same name with different spacing/case is still that name;
+    # a normalization-only collision (Threads vs threads) is the
+    # same option under ASCII-case-insensitive matching
+    with pytest.raises(UciError) as exc:
+        s.feed_engine("option name THREADS type check default true")
+    assert exc.value.failure_class == "malformed_line"
+    assert _full_state(s) == baseline
     # a genuinely different name declares fine
     s.feed_engine(DECL_PONDER)
     s.feed_engine("uciok")
@@ -2840,28 +2872,46 @@ def test_setoption_registry_mutants_launder_violations():
     the negatives above are not vacuous (verifier #2 v13)."""
     # mutant: unknown name laundered by an injected registry entry
     s = _session(HANDSHAKE)
-    s.options["Unknown"] = {"name": "Unknown", "type": "check",
+    s.options["unknown"] = {"name": "Unknown", "type": "check",
                             "default": False}
     s.feed_gui("setoption name Unknown value true")
     # mutant: spin domain bypassed by edited bounds
     s = _session(FIVE_DECLS)
-    s.options["Threads"]["max"] = 1000
+    s.options["threads"]["max"] = 1000
     s.feed_gui("setoption name Threads value 999")
     # mutant: combo domain bypassed by an injected var
     s = _session(FIVE_DECLS)
-    s.options["Style"]["var"].append("Banana")
+    s.options["style"]["var"].append("Banana")
     s.feed_gui("setoption name Style value Banana")
     # mutant: type check bypassed by an edited declared type
     s = _session(FIVE_DECLS)
-    s.options["Ponder"]["type"] = "string"
+    s.options["ponder"]["type"] = "string"
     s.feed_gui("setoption name Ponder value maybe")
     # counter-mutant: deleting an entry rejects a valid setting
     s = _session(FIVE_DECLS)
-    del s.options["Threads"]
+    del s.options["threads"]
     baseline = _full_state(s)
     with pytest.raises(UciError):
         s.feed_gui("setoption name Threads value 4")
     assert _full_state(s) == baseline
+
+
+def test_setoption_exact_matching_mutant_rejects_case_variants():
+    """Restoring exact-case matching IN MEMORY (re-keying the
+    registry by the original spelling) makes every case-variant
+    trace below reject - proving the acceptance of case variants is
+    driven by the pinned ASCII-case-insensitive normalization, not
+    by missing checks."""
+    s = _session(FIVE_DECLS)
+    s.options = {entry["name"]: entry
+                 for entry in s.options.values()}
+    baseline = _full_state(s)
+    for line in ("setoption name threads value 4",
+                 "setoption name PONDER value true",
+                 "setoption name style value Solid"):
+        with pytest.raises(UciError):
+            s.feed_gui(line)
+        assert _full_state(s) == baseline
 
 
 def test_setoption_semantics_mutations_fail_lint():
@@ -2878,6 +2928,13 @@ def test_setoption_semantics_mutations_fail_lint():
         mut(lambda s: s.__setitem__("registry", "discarded")),
         mut(lambda s: s.__setitem__("name_matching",
                                     "case-insensitive")),
+        # v14: restoring exact-case matching must fail lint
+        mut(lambda s: s.__setitem__(
+            "name_matching", "exact-case-sensitive-declared-name")),
+        # v14: folding the opaque string payload must fail lint
+        mut(lambda s: s["type_rules"].__setitem__(
+            "string", "value-marker-optional-free-form-empty-allowed"),
+            ),
         mut(lambda s: s.__setitem__("undeclared_name_maps_to",
                                     "protocol_state")),
         mut(lambda s: s["type_rules"].__setitem__(
