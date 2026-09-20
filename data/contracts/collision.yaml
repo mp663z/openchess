@@ -1,0 +1,159 @@
+# T0158: graph collision contract (implementation-neutral; the
+# product runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for accelerator COLLISION semantics everywhere in
+# the product: what a bucket collision is, how colliding records
+# are separated, and which guarantees hold when distinct canonical
+# identities share one accelerator bucket key. ALL normative
+# semantics live in STRUCTURED fields the lint compares exactly -
+# prose is documentation, never the enforcement surface.
+#
+# Every graph table (node, edge, provenance) already pins the
+# accelerator-only lookup ROLE; this contract pins the collision
+# behavior itself, once, so each table's accelerator-only claim has
+# one normative definition. It owns NO new identity semantics:
+# canonical identities are exactly the linked contracts' identities,
+# and the accelerator rule is exactly the linked variant contract's
+# hash_rule - read by the lint, never restated.
+schema_version: 1
+
+contract:
+  id: graph-collision
+  role:
+    kind: bucket-collision-semantics-for-accelerated-lookup
+    collision_is: normal-operation-never-an-error
+    scope: all-graph-tables-with-accelerated-bucket-lookup
+    owns: collision-definition-separation-and-guarantees-only
+    rule: >-
+      A collision is NORMAL OPERATION, never an error: accelerators
+      exist to make lookup cheap, and two distinct canonical
+      identities sharing one bucket key MUST NOT change any
+      observable behavior beyond bucket membership. This contract
+      pins the collision definition, the separation rule and the
+      cross-table guarantees - it owns NO identity semantics of
+      its own: canonical identity is exactly each linked table
+      contract's identity, and the accelerator rule is exactly the
+      linked variant contract's hash_rule.
+    links:
+      variant: data/contracts/variant.yaml
+      position_digest: data/contracts/position_digest.yaml
+      transposition_node: data/contracts/transposition_node.yaml
+  definition:
+    collision: bucket-key-equal-and-canonical-identity-unequal
+    bucket_key: derived-value-never-stored-as-identity
+    identity: from-linked-table-contract-identity-read-never-restated
+    rule: >-
+      A COLLISION is exactly: two records whose accelerator bucket
+      keys compare EQUAL while their canonical identities - per
+      the linked table contract's own identity rules - compare
+      UNEQUAL. The bucket key is a DERIVED value, recomputed from
+      the stored record, never stored as or consulted as identity.
+      What counts as the canonical identity is NOT restated here:
+      the lint reads the linked table contracts.
+    links:
+      variant: data/contracts/variant.yaml
+      transposition_node: data/contracts/transposition_node.yaml
+  separation:
+    rule_kind: canonical-field-comparison-over-exact-stored-records
+    bucket_role: lookup-accelerator-only-from-linked-hash_rule
+    digest_equality: never-decides-record-equality
+    digest_inequality: never-decides-record-inequality
+    rule: >-
+      Inside a bucket, EVERY equality or inequality decision is
+      canonical field comparison over the exact stored records,
+      per the linked table contract's identity - exactly the
+      accelerator-only role the linked variant contract's
+      hash_rule pins: equal bucket keys never decide equality
+      without field comparison, and unequal bucket keys never
+      decide inequality without field comparison. Bucket
+      membership accelerates the search for a candidate; it never
+      settles one.
+    links:
+      variant: data/contracts/variant.yaml
+  guarantees:
+    no_merge: collision-never-merges-distinct-records
+    no_fork: collision-never-splits-one-record
+    count_exact: n-distinct-identities-in-one-bucket-yield-n-records
+    order_insensitivity: canonical-identity-order-never-arrival-order
+    merge_algebra_preserved: idempotent-commutative-associative-under-collision
+    rule: >-
+      NO-MERGE: a collision never merges two distinct-identity
+      records into one - no silent dedup, no first-writer wins.
+      NO-FORK: a collision never splits one record into two.
+      COUNT-EXACT: inserting N records with pairwise-distinct
+      canonical identities into ONE bucket yields exactly N
+      records. ORDER-INSENSITIVITY: the observable table
+      (iteration, serialization) is canonical-identity order,
+      never bucket-arrival order - every insertion permutation of
+      the same record set yields the same table. MERGE ALGEBRA
+      PRESERVED: the linked tables' merge algebra (idempotent,
+      commutative, associative) holds unchanged when every record
+      collides into one bucket.
+  failures:
+    classes: [malformed_collision_record, accelerator_as_identity]
+    mapping:
+      malformed_collision_record: malformed_request
+      accelerator_as_identity: accelerator_as_identity
+    closed: true
+    rule: >-
+      Two failure classes, each mapping onto the closed error enum
+      as declared - and NOTE equality is never one: a collision
+      itself is normal operation. malformed_collision_record: a
+      record failing the linked table contract's own record shape
+      - collision handling never relaxes record validity.
+      accelerator_as_identity: a caller presenting a bucket key AS
+      a record identity (a lookup or merge keyed by bucket key
+      without the exact stored record) - fail closed, never
+      resolved by bucket key alone. No third failure class exists.
+  errors:
+    closed_enum: [malformed_request, accelerator_as_identity,
+      internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+        additional_fields: forbidden
+      retryable_true_only_for: [internal]
+    rule: >-
+      The error surface is the shared shape: code from the closed
+      enum, message, retryable. retryable is true ONLY for
+      internal; every contract-level rejection is a caller error
+      and never retryable.
+  properties:
+    separation_completeness: every-bucket-decision-by-field-comparison
+    collision_transparency: observable-behavior-identical-under-collision
+    no_merge: distinct-identities-never-collapse
+    no_fork: one-identity-never-duplicates
+    order_insensitivity: permutation-invariant-table
+    rollback: rejected-insert-leaves-table-bit-identical
+    rule: >-
+      Observable table behavior under total collision (every record
+      in one bucket) is IDENTICAL to behavior collision-free: the
+      same records, the same canonical order, the same merge
+      results. Distinct identities never collapse, one identity
+      never duplicates, the table is invariant under insertion
+      permutations, and a rejected insert leaves the table
+      bit-identical - all pinned for the collision case exactly as
+      the linked table contracts pin it collision-free.
+  links:
+    variant_contract: data/contracts/variant.yaml
+    position_digest_contract: data/contracts/position_digest.yaml
+    transposition_node_contract: data/contracts/transposition_node.yaml
+    rule: >-
+      The collision contract LINKS the variant contract (the
+      hash_rule accelerator rule and canonical identity), the
+      position-digest contract (the bucket-key format and its
+      accelerator-only role) and the transposition-node contract
+      (the reference table whose bucket machinery the witnesses
+      exercise). The lint parses ALL siblings and compares every
+      linked claim exactly; any sibling change not mirrored here
+      fails the linkage check.
+  versioning:
+    base_path: /graph/collision/v1
+    rule: >-
+      The contract version is in the base path. Any normative
+      change is a NEW version at a new base path; a version never
+      changes in place, so collision semantics are forever
+      decodable by the version its table names.
