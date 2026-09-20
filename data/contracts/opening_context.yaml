@@ -1,0 +1,188 @@
+schema_version: 1
+contract:
+  id: chess-opening-context
+  role:
+    kind: path-attributed-opening-classification
+    attribution: by-variant-plus-ordered-move-path-never-by-node-identity
+    identity_boundary: node-contract-excludes-move-order-path-this-contract-owns-it
+    origin: variant-initial-position
+    rule: >-
+      An opening context is the classification of an ORDERED move
+      path from the variant's initial position. This is the ONE
+      graph attribution keyed by PATH, never by canonical node
+      identity: the linked transposition-node contract excludes
+      move_order_path from identity, and THIS contract is where
+      move_order_path is load-bearing - the same node reached via
+      two different move orders may carry two different opening
+      contexts (the product model's position-identity / move-order
+      -path / repertoire-context separation).
+    links:
+      variant: data/contracts/variant.yaml
+      transposition_node: data/contracts/transposition_node.yaml
+  registry:
+    source: data/openings/registry.yaml
+    entries_shape: [code, name, moves]
+    code_grammar: from-linked-registry-code_grammar
+    codes_unique: true
+    move_sequences_unique: true
+    move_sequences_nonempty: true
+    names_nonempty: true
+    moves_form: from-linked-legal-moves-contract-move_model-long-algebraic
+    none_sentinel: "-"
+    rule: >-
+      The opening registry lives at the pinned source path. Every
+      entry has EXACTLY the shape [code, name, moves]: an ECO-style
+      code per the registry's own code_grammar, a nonempty name,
+      and a NONEMPTY ordered list of long-algebraic move texts per
+      the linked legal-moves move_model (grammar read from the
+      sibling, never restated). Codes are unique and move sequences
+      are unique - no two entries may classify the same path
+      prefix, or longest-prefix resolution could tie. The
+      none_sentinel is the pinned unclassified marker. Registry
+      content growth is data work, never contract drift: the lint
+      enforces these invariants, not any particular opening.
+  identity:
+    key: [variant, path_moves]
+    path: ordered-list-of-move-model-texts
+    equality: exact-path-sequence-comparison-only
+    excluded: [node_canonical_identity, move_timestamps, source_game]
+    rule: >-
+      A context record is keyed by (variant, path_moves): the
+      EXACT ordered move sequence. Two paths are equal only when
+      every move matches in order. The node's canonical identity is
+      EXCLUDED from this key on purpose - it is exactly what this
+      attribution must not collapse into - along with timestamps
+      and which source game the path came from.
+  resolution:
+    match: longest-registry-prefix-wins
+    prefix: entry-moves-equal-path-prefix-exactly
+    no_match: none-sentinel
+    empty_path: always-unclassified
+    determinism: same-variant-plus-path-always-same-context
+    extension_refinement: extension-resolves-to-prior-or-strictly-longer-extending-entry
+    rule: >-
+      Resolution is a pure function of (registry, variant, path):
+      the entry whose ENTIRE move sequence equals a prefix of the
+      path, longest such entry wins; entry move sequences are
+      nonempty so an empty path is always unclassified; no match
+      yields the none sentinel for both code and name - never an
+      error, never a guess. Determinism: the same (variant, path)
+      always resolves to the same context. Extension refinement:
+      extending a path resolves either to the SAME entry the
+      shorter path resolved to or to a STRICTLY LONGER registry
+      entry whose move sequence extends the prior entry's sequence
+      (unclassified may become classified) - a longer path may
+      refine B20 to B90 but never jumps to a shorter or non-prefix
+      entry.
+  record:
+    fields: [variant, path_moves, opening_code, opening_name]
+    variant_form: registry-id-verbatim
+    path_form: ordered-list-of-move-model-texts
+    unclassified: both-code-and-name-none-sentinel
+    derived_fields_stored: none
+    rule: >-
+      A context record carries EXACTLY four fields: the variant
+      registry id verbatim, the ordered move path, and the resolved
+      opening code and name - the registry entry verbatim, or the
+      none sentinel for BOTH when unclassified (never one sentinel
+      without the other, never an empty string, never null). No
+      derived fields are stored.
+    links:
+      variant: data/contracts/variant.yaml
+      legal_moves: data/contracts/legal_moves.yaml
+  merge:
+    insert: insert-or-return-existing
+    atomic: true
+    consumes_records: exact-stored-records-validated-against-receiver-registry
+    idempotent: true
+    commutative: true
+    associative: true
+    same_key_never_two_records: true
+    conflicting_context: rejected-as-conflicting_context
+    conflict_in_batch: whole-merge-rejected-nothing-committed
+    rejected_insert_changes_nothing: true
+    rule: >-
+      Context maps merge by insertion only:
+      insert-or-return-existing. Reinsertion is a no-op, insertion
+      order never changes the result, grouping never changes the
+      result, and the same key never holds two records. A merge
+      CONSUMES each exact stored record - it never re-derives the
+      context from the receiver's registry. For an existing key the
+      exact incoming record is compared with the stored record and
+      any context mismatch is a conflicting_context rejection
+      before any mutation; an incoming code unknown under the
+      receiver's registry is unknown_opening_code, a failure
+      separate from same-key conflict. A table merge is ATOMIC:
+      the whole batch is preflighted in a staged copy and committed
+      only when every record passes - a rejected merge leaves the
+      destination bit-identical, never a committed valid prefix,
+      and over conflicting tables both merge orders reject rather
+      than leaving first-writer residue.
+  failures:
+    classes: [malformed_context_record, malformed_path,
+              unknown_variant, unknown_opening_code,
+              conflicting_context]
+    mapping:
+      malformed_context_record: malformed_request
+      malformed_path: malformed_request
+      unknown_variant: unknown_variant
+      unknown_opening_code: unknown_opening_code
+      conflicting_context: conflicting_context
+    closed: true
+    rule: >-
+      Exactly these failure classes exist, each mapping to the
+      pinned error code: malformed_context_record (shape, sentinel
+      misuse, code grammar, code/name pair not in the registry),
+      malformed_path (a path entry that is not a well-formed move
+      text), unknown_variant, unknown_opening_code (a cited code
+      absent from the registry), conflicting_context. The class set
+      is closed.
+  errors:
+    closed_enum: [malformed_request, unknown_variant,
+                  unknown_opening_code, conflicting_context,
+                  internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+        additional_fields: forbidden
+      retryable_true_only_for: [internal]
+    rule: >-
+      Errors use the pinned envelope: exactly code, message,
+      retryable; no additional fields; retryable is true only for
+      internal.
+  properties:
+    path_attribution: same-node-different-paths-may-carry-different-contexts
+    longest_prefix: longest-matching-registry-entry-wins
+    extension_refinement: extension-resolves-to-prior-or-strictly-longer-extending-entry
+    shorter_key_immutability: stored-shorter-records-never-change-under-extensions
+    resolution_determinism: same-variant-plus-path-always-same-context
+    merge_idempotence: reinsert-same-record-no-op
+    merge_commutativity: insertion-order-never-changes-the-table
+    rollback: rejected-insert-leaves-table-bit-identical
+    rule: >-
+      Behavioral pins: context follows the PATH (the same canonical
+      node may classify differently by path); longest matching
+      registry entry wins; resolution is deterministic and
+      extension-refining; an already stored shorter record never
+      changes when extensions are inserted or resolved; map merges
+      are idempotent and commutative; a rejected insert leaves the
+      table bit-identical.
+  links:
+    variant_contract: data/contracts/variant.yaml
+    legal_moves_contract: data/contracts/legal_moves.yaml
+    transposition_node_contract: data/contracts/transposition_node.yaml
+    opening_registry: data/openings/registry.yaml
+    rule: >-
+      Linked contracts and data. The variant contract supplies the
+      variant registry and id_grammar; legal-moves supplies the
+      move grammar; the transposition-node contract owns the
+      canonical identity this attribution deliberately does NOT
+      use; the opening registry is the classification source.
+  versioning:
+    base_path: /graph/opening-context/v1
+    rule: >-
+      The contract is versioned by base path; breaking changes
+      require a new base path.
