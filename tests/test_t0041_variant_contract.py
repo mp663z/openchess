@@ -45,6 +45,36 @@ MUTATIONS = {
     "duplicate_variant_id": lambda d: d["contract"]["variants"]["entries"].append(
         copy.deepcopy(d["contract"]["variants"]["entries"][0])
     ),
+    "id_grammar_pattern_drift": lambda d: d["contract"]["variants"]["id_grammar"].__setitem__(
+        "pattern", "^[a-z]+$"
+    ),
+    "id_grammar_dropped": lambda d: d["contract"]["variants"].__setitem__(
+        "id_grammar", {"pattern": "^[a-z][a-z0-9_-]*$"}
+    ),
+    "variant_id_non_ascii": lambda d: d["contract"]["variants"]["entries"].append(
+        {**copy.deepcopy(d["contract"]["variants"]["entries"][0]),
+         "id": "échecs", "status": "experimental"}
+    ),
+    "variant_id_literal_space": lambda d: d["contract"]["variants"]["entries"].append(
+        {**copy.deepcopy(d["contract"]["variants"]["entries"][0]),
+         "id": "has space", "status": "experimental"}
+    ),
+    "variant_id_tab": lambda d: d["contract"]["variants"]["entries"].append(
+        {**copy.deepcopy(d["contract"]["variants"]["entries"][0]),
+         "id": "has\ttab", "status": "experimental"}
+    ),
+    "variant_id_newline": lambda d: d["contract"]["variants"]["entries"].append(
+        {**copy.deepcopy(d["contract"]["variants"]["entries"][0]),
+         "id": "new\nline", "status": "experimental"}
+    ),
+    "variant_id_control_byte": lambda d: d["contract"]["variants"]["entries"].append(
+        {**copy.deepcopy(d["contract"]["variants"]["entries"][0]),
+         "id": "ctrl\x01id", "status": "experimental"}
+    ),
+    "variant_id_uppercase_lead": lambda d: d["contract"]["variants"]["entries"].append(
+        {**copy.deepcopy(d["contract"]["variants"]["entries"][0]),
+         "id": "Standard", "status": "experimental"}
+    ),
     "wrong_standard_start_fen": lambda d: d["contract"]["variants"]["entries"][0].__setitem__(
         "start_fen", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"
     ),

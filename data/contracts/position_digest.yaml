@@ -1,0 +1,161 @@
+# T0113: chess position-digest contract (implementation-neutral; the
+# product runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for the position digest everywhere in the product:
+# analysis dedup, repertoire memory, delta scoring and sync all share
+# THESE semantics. ALL normative semantics live in STRUCTURED fields
+# the lint compares exactly - prose is documentation, never the
+# enforcement surface.
+#
+# The digest is a DERIVED artifact over position identity; it owns no
+# identity semantics of its own. Identity is the canonical_fields of
+# the linked variant contract (v5 report line 224: variant, board,
+# side to move, castling rights, en-passant - move-order path and
+# repertoire context never participate). This contract pins only what
+# is new: the canonical byte encoding of the identity tuple, the
+# digest algorithm and format, the digest's accelerator-only ROLE
+# (linked, not restated), and the failure classes.
+schema_version: 1
+
+contract:
+  id: chess-position-digest
+  role:
+    kind: lookup-accelerator-only
+    equality_source: from-linked-variant-contract-identity
+    collision_rule: from-linked-variant-contract-identity-hash_rule
+    rule: >-
+      The digest is a lookup and dedup accelerator ONLY, exactly as
+      the linked variant contract's identity.hash_rule pins: position
+      equality is ALWAYS the canonical field comparison owned by the
+      variant contract; equal digests never decide equality without
+      field comparison, and a digest difference never decides
+      inequality without field comparison. The digest exists so that
+      comparison has a cheap, deterministic bucket key. Nothing in
+      this contract widens or narrows what "the same position" means.
+    link: data/contracts/variant.yaml
+  identity:
+    source: from-linked-variant-contract-identity-canonical_fields
+    en_passant_value: from-linked-en-passant-contract-identity_value
+    board_value: from-linked-fen-contract-placement
+    castling_value: from-linked-fen-contract-castling
+    side_value: from-linked-fen-contract-active_color
+    excluded: [halfmove_clock, fullmove_number, move_order_path,
+      repertoire_context]
+    rule: >-
+      The digested identity is EXACTLY the canonical_fields tuple of
+      the linked variant contract, in its declared order - the field
+      list is NOT restated here, the lint reads it from the sibling.
+      The en-passant component is the identity VALUE pinned by the
+      linked en-passant contract's storage_vs_identity section: the
+      target square when at least one legal en-passant capture
+      exists against it, the none sentinel otherwise - a target no
+      pawn can legally take never distinguishes two digests. The
+      halfmove clock, the fullmove number, the move-order path by
+      which the position was reached, and the repertoire context
+      NEVER participate: two positions differing only in one of
+      those share a digest.
+    links:
+      variant: data/contracts/variant.yaml
+      en_passant: data/contracts/en_passant.yaml
+      fen: data/contracts/fen.yaml
+  encoding:
+    field_order: from-linked-variant-contract-identity-canonical_fields
+    separator: single-ascii-space
+    variant_form: registry-id-verbatim
+    variant_id_grammar: from-linked-variant-contract-variants-id_grammar
+    board_form: canonical-fen-placement-serialization
+    side_to_move_form: {white: w, black: b}
+    castling_form: canonical-fen-castling-serialization
+    en_passant_form: identity-square-or-none-sentinel
+    alphabet: ascii-only
+    trailing_bytes: forbidden
+    rule: >-
+      The canonical encoding is the identity tuple serialized as
+      text: the variant registry id verbatim - every registry id is
+      PROVABLY safe here because the linked variant contract's
+      id_grammar restricts ids to delimiter-free printable ASCII,
+      and the lint re-verifies every actual registry id against
+      that grammar - then the board in the
+      linked FEN contract's canonical placement serialization, then
+      the side to move as its FEN active-color letter, then castling
+      rights in the FEN contract's canonical castling serialization
+      (KQkq-ordered subsequence or the none sentinel), then the
+      en-passant identity value (square or none sentinel). Fields
+      join with exactly one ASCII space; the alphabet is ASCII only;
+      no leading, trailing, or repeated separators; no trailing
+      newline or other bytes. Every component grammar is OWNED by
+      the linked contracts - the lint verifies this encoding's
+      forms against the actual siblings, and any sibling grammar
+      change that is not mirrored here fails the linkage check.
+  digest:
+    algorithm: sha-256
+    input: utf-8-bytes-of-canonical-encoding
+    output_bytes: 32
+    truncated: forbidden
+    hex_case: lowercase
+    hex_length: 64
+    format:
+      prefix: "pdv1:"
+      total_length: 69
+      regex: "^pdv1:[0-9a-f]{64}$"
+    version_policy: prefix-bump-on-any-change
+    rule: >-
+      The digest is the full, untruncated SHA-256 of the UTF-8 bytes
+      of the canonical encoding - nothing prepended, appended, or
+      mixed in. Its text form is the literal prefix pdv1: followed by
+      the 64 lowercase hexadecimal digits of the 32 output bytes.
+      Any change to the encoding, the algorithm, or the output form
+      is a NEW digest version with a new prefix; a version never
+      changes in place, so a stored digest is forever decodable by
+      the version its prefix names.
+  parse:
+    unknown_prefix: malformed_digest
+    wrong_length: malformed_digest
+    uppercase_hex: malformed_digest
+    non_hex: malformed_digest
+    empty_input: malformed_digest
+    surrounding_whitespace: malformed_digest
+    rule: >-
+      Digest text is accepted only when it matches the pinned format
+      exactly: the pdv1: prefix, exactly 64 lowercase hex digits, no
+      surrounding whitespace, nothing else. Canonical serialization
+      of a digest is byte-identical to its accepted text form;
+      parse-of-emit is identity. Anything else is malformed_digest.
+  failures:
+    classes: [malformed_digest, malformed_position, unknown_variant]
+    mapping:
+      malformed_digest: malformed_request
+      malformed_position: malformed_request
+      unknown_variant: malformed_request
+    closed: true
+    rule: >-
+      Three failure classes, each mapping onto the closed error
+      enum as declared. malformed_digest: digest text failing the
+      pinned format. malformed_position: an input position failing
+      any linked contract (board, side, castling, en-passant per
+      the FEN and en-passant contracts) - a position that cannot
+      exist yields NO digest, never a best-effort one.
+      unknown_variant: a variant id absent from the linked variant
+      registry - fail closed, never coerced. No fourth failure
+      class exists.
+  properties:
+    determinism: same-identity-tuple-same-digest-always
+    clock_invariance: clocks-never-change-the-digest
+    phantom_ep_invariance: uncapturable-target-never-changes-the-digest
+    legal_ep_sensitivity: capturable-target-always-changes-the-digest
+    field_sensitivity: identity-field-changes-change-canonical-encoding
+    statelessness: pure-function-no-state-no-rollback-surface
+    rule: >-
+      Digestion is a pure function of the identity tuple: no state,
+      no clock, no environment, so there is no rollback surface.
+      Two positions whose identity tuples agree - including pairs
+      differing only in clocks or only in an uncapturable en-passant
+      target - share a digest; that direction is the deterministic
+      guarantee. The converse is NOT guaranteed: the identity domain
+      is unbounded and the digest is a fixed-size bucket key, so
+      unequal identity tuples may share a digest and ALWAYS require
+      canonical field comparison to separate (the accelerator-only
+      role). What every identity-field change does change is the
+      canonical encoding; the resulting digest change is expected
+      and pinned by test vectors, never asserted as a universal
+      property.

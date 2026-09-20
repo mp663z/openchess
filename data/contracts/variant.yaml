@@ -43,6 +43,21 @@ contract:
       Unknown variant ids fail closed (malformed_request); they are
       never coerced to standard. Adding a variant is MINOR additive;
       removing or renaming one is a MAJOR bump.
+    id_grammar:
+      pattern: "^[a-z][a-z0-9_-]*$"
+      alphabet: printable-ascii-only
+      whitespace: forbidden
+      control_bytes: forbidden
+      rule: >-
+        A variant id matches the pattern exactly: one lowercase
+        ASCII letter followed by lowercase ASCII letters, digits,
+        underscores or hyphens. Printable ASCII only - no whitespace
+        of any kind (space, tab, newline), no control bytes, no
+        non-ASCII. The id is a wire token: consumers such as the
+        position-digest canonical encoding embed it verbatim where
+        the single ASCII space is the field separator, so any id
+        outside this grammar would silently corrupt every
+        downstream encoding.
     entries:
       - id: standard
         name: Standard chess
