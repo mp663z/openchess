@@ -2,21 +2,27 @@
 
 Reference probe FULLY DERIVED from data/contracts/collision.yaml
 plus the linked siblings (variant, position-digest, transposition-
-node): the collision definition, separation rule and guarantees
-come from the definition/separation/guarantees sections, and the
-witness machinery is the REAL transposition-node table (imported,
-never reimplemented) driven by an injectable digest oracle - a
-constant oracle forces every record into one VALID bucket, so the
-battery exercises the contract's collision semantics through
-actual table behavior, never a mock. Happy, forced-collision,
-transparency, order-insensitivity, merge-algebra, malformed,
-rollback, lint-mutant and sibling-linkage batteries below.
+node): the collision definition, separation rule, TRUST BOUNDARY
+and guarantees come from the definition/separation/guarantees
+sections. The probe composes the REAL transposition-node machinery
+(record construction, canonical identity, record validation -
+imported, never reimplemented) with the contract's pinned table
+model: buckets as an accelerator ONLY, plus a canonical-identity
+index INDEPENDENT of buckets as the equality search domain, and
+insert-time consistency validation of the oracle (equal canonical
+identity must yield the same valid-format bucket key; divergence
+fails closed as accelerator_inconsistent). Happy, forced-
+collision, trust-boundary repro, adversarial-twin permutation,
+cross-oracle merge, malformed, rollback, behavioral-mutant,
+lint-mutant and sibling-linkage batteries below.
 """
 
 from __future__ import annotations
 
 import copy
+import hashlib
 import itertools
+import re
 import sys
 from pathlib import Path
 
@@ -27,16 +33,23 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from tests.test_t0113_position_digest_contract import (  # noqa: E402
+    digest_fen,
+)
 from tests.test_t0122_transposition_node_contract import (  # noqa: E402
     AFTER_E4,
     KINGS,
     LEGAL_EP,
     STARTPOS,
     NodeError,
-    NodeTable,
+    _make_record,
+    _record_identity,
 )
 from tests.test_t0122_transposition_node_contract import (  # noqa: E402
     _docs as _node_docs,
+)
+from tests.test_t0122_transposition_node_contract import (  # noqa: E402
+    validate_record as _validate_node_record,
 )
 from tools.collision_contract_lint import (  # noqa: E402
     CONTRACT,
@@ -54,6 +67,20 @@ def _docs():
     return yaml.safe_load(CONTRACT.read_text())["contract"]
 
 
+_NODE_DOCS = _node_docs()
+
+
+def _digest_re():
+    """The bucket-key format READ from the linked digest contract,
+    never restated; compiled once."""
+    return re.compile(
+        yaml.safe_load(DIGEST.read_text())["contract"]["digest"]
+        ["format"]["regex"])
+
+
+_DIGEST_RE = _digest_re()
+
+
 class CollisionError(Exception):
     def __init__(self, failure_class, code):
         super().__init__(failure_class)
@@ -65,33 +92,73 @@ def _fail(cc, cls):
     raise CollisionError(cls, cc["failures"]["mapping"][cls])
 
 
-# A VALID-format oracle that maps everything to one bucket: the
-# total-collision condition, with real digest FORMAT (the linked
-# digest contract's pinned shape) so every record stays valid.
+# VALID-format oracles for the witness batteries:
 def constant_oracle(variant, fen):
+    """Total collision: everything into one valid bucket."""
     return "pdv1:" + "0" * 64
 
 
+def raw_oracle(variant, fen):
+    """UNTRUSTED: hashes the raw FEN text INCLUDING the identity-
+    excluded clocks and the raw EP field - equal canonical
+    identities get different bucket keys."""
+    return "pdv1:" + hashlib.sha256(
+        f"{variant}\n{fen}".encode()).hexdigest()
+
+
+def stateful_oracle():
+    """UNTRUSTED: a fresh valid-format digest per call - even
+    byte-identical input never repeats a key."""
+    counter = itertools.count()
+
+    def oracle(variant, fen):
+        return "pdv1:" + hashlib.sha256(
+            f"call-{next(counter)}".encode()).hexdigest()
+    return oracle
+
+
 class CollisionProbe:
-    """The contract's semantics riding on the REAL node-table
-    machinery: bucket membership accelerates lookup ONLY, every
-    equality decision inside a bucket is canonical field comparison
-    over the exact stored records, and a bucket key presented AS an
-    identity fails closed."""
+    """The contract's pinned table model: buckets accelerate lookup
+    ONLY; the canonical-identity index (INDEPENDENT of buckets) is
+    the equality search domain; and the oracle trust boundary is
+    enforced at insert - an equal canonical identity yielding a
+    DIFFERENT bucket key, or an invalid-format key, fails closed
+    as accelerator_inconsistent. Record construction, identity and
+    validation all compose the REAL node machinery."""
 
     def __init__(self, oracle, docs=None):
         self.cc = docs if docs is not None else _docs()
-        self.table = NodeTable(_node_docs(), digest_fn=oracle)
+        self.oracle = oracle
+        self.buckets = {}         # accelerator ONLY
+        self.identity_index = {}  # canonical identity -> record
+
+    def _identity(self, record):
+        nc, vc, dc, epc, fc = _NODE_DOCS
+        return _record_identity(nc, vc, dc, epc, fc, record)
 
     def insert(self, variant_id, fen_text):
-        """Insert through the real table; a record failing the
-        linked node contract's own shape surfaces HERE as
-        malformed_collision_record - collision handling never
-        relaxes record validity."""
+        nc, vc, dc, epc, fc = _NODE_DOCS
         try:
-            return self.table.insert(variant_id, fen_text)
+            rec = _make_record(nc, vc, dc, epc, fc, self.oracle,
+                               variant_id, fen_text)
         except NodeError:
             _fail(self.cc, "malformed_collision_record")
+        # the oracle owes a VALID-FORMAT bucket key
+        if not isinstance(rec["digest"], str) or \
+                _DIGEST_RE.fullmatch(rec["digest"]) is None:
+            _fail(self.cc, "accelerator_inconsistent")
+        identity = self._identity(rec)
+        existing = self.identity_index.get(identity)
+        if existing is not None:
+            # TRUST BOUNDARY: equal canonical identity MUST yield
+            # the same bucket key - divergence fails closed and
+            # the insert changes nothing (caller rolls back)
+            if existing["digest"] != rec["digest"]:
+                _fail(self.cc, "accelerator_inconsistent")
+            return existing  # same identity, never a second record
+        self.identity_index[identity] = rec
+        self.buckets.setdefault(rec["digest"], []).append(rec)
+        return rec
 
     def lookup_by_bucket_key(self, bucket_key):
         """A bucket key presented AS a record identity: fail closed,
@@ -99,23 +166,53 @@ class CollisionProbe:
         _fail(self.cc, "accelerator_as_identity")
 
     def records(self):
-        return self.table.records()
+        return list(self.identity_index.values())
 
     def canonical_view(self):
         """The observable table in CANONICAL-IDENTITY order - never
         bucket-arrival order."""
-        return sorted(
-            repr(self.table._identity(rec))
-            for rec in self.table.records())
+        return sorted(repr(identity)
+                      for identity in self.identity_index)
 
     def merge(self, other):
+        """ATOMIC: every incoming EXACT stored record is validated
+        against the RECEIVER's oracle and linked docs (a stored
+        bucket key disagreeing with the receiver's oracle is
+        malformed_collision_record - cross-oracle merges fail
+        closed, never silently re-bucket), staged into a copy,
+        committed only when the whole batch validates."""
+        nc, vc, dc, epc, fc = _NODE_DOCS
+        staged = CollisionProbe(self.oracle, self.cc)
+        staged.buckets = copy.deepcopy(self.buckets)
+        staged.identity_index = copy.deepcopy(self.identity_index)
         for rec in other.records():
-            self.insert(rec["variant"], rec["snapshot_fen"])
+            try:
+                _validate_node_record(nc, vc, dc, epc, fc, dict(rec),
+                                      self.oracle)
+            except NodeError:
+                _fail(self.cc, "malformed_collision_record")
+            staged.insert(rec["variant"], rec["snapshot_fen"])
+        self.buckets = staged.buckets
+        self.identity_index = staged.identity_index
         return self
 
 
 def _probe(oracle=constant_oracle):
     return CollisionProbe(oracle)
+
+
+def _assert_one_record_per_identity(probe, expected_count):
+    """Exactly one record per canonical identity: count exact, no
+    duplicate identities, and the sorted view carries no duplicate
+    either (a forked table can produce a stable sorted view WITH
+    duplicates - uniqueness is asserted, never assumed)."""
+    recs = probe.records()
+    assert len(recs) == expected_count
+    identities = [probe._identity(r) for r in recs]
+    assert len(set(identities)) == expected_count
+    view = probe.canonical_view()
+    assert len(view) == len(set(view)) == expected_count
+    return identities
 
 
 # -- pinned vectors: valid positions with pairwise-distinct identities ------
@@ -124,6 +221,20 @@ PROMO_FROM = "4k3/P7/8/8/8/8/8/4K3 w - - 0 1"
 PAWN_E2 = "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1"
 COLLIDING_SET = [STARTPOS, AFTER_E4, KINGS, LEGAL_EP, PROMO_FROM,
                  PAWN_E2]
+# canonical twins: raw-clock variants (identity-excluded) and the
+# phantom-EP twin (identity collapses to the none sentinel)
+TWIN_FORMS = {
+    STARTPOS: [STARTPOS, STARTPOS.replace(" 0 1", " 7 42")],
+    AFTER_E4: [AFTER_E4, AFTER_E4.replace(" e3 ", " - "),
+               AFTER_E4.replace(" e3 ", " - ").replace(" 0 1",
+                                                       " 3 9")],
+    KINGS: [KINGS, KINGS.replace(" 0 1", " 5 12")],
+    # halfmove stays 0 with an EP target set; fullmove is also
+    # identity-excluded, so the twin moves only the fullmove number
+    LEGAL_EP: [LEGAL_EP, LEGAL_EP.replace(" 0 1", " 0 11")],
+    PROMO_FROM: [PROMO_FROM, PROMO_FROM.replace(" 0 1", " 9 1")],
+    PAWN_E2: [PAWN_E2, PAWN_E2.replace(" 0 1", " 1 30")],
+}
 
 
 def test_lint_clean():
@@ -132,81 +243,96 @@ def test_lint_clean():
 
 def test_happy_collision_free_baseline():
     """With the real digest oracle (no forced collisions) the probe
-    behaves exactly as the linked node table."""
-    from tests.test_t0113_position_digest_contract import digest_fen
+    behaves exactly as the linked node contract's table."""
     probe = _probe(digest_fen)
     for fen in COLLIDING_SET:
         probe.insert("standard", fen)
-    assert len(probe.records()) == len(COLLIDING_SET)
-    # same-position reinsert folds (same identity, same record)
+    _assert_one_record_per_identity(probe, len(COLLIDING_SET))
     rec = probe.insert("standard", STARTPOS)
     assert rec is probe.insert("standard", STARTPOS)
-    assert len(probe.records()) == len(COLLIDING_SET)
+    _assert_one_record_per_identity(probe, len(COLLIDING_SET))
 
 
 def test_forced_collision_count_exact_no_merge_no_fork():
-    """COUNT-EXACT: N pairwise-distinct identities in ONE bucket
-    yield exactly N records - NO-MERGE (no silent dedup, no
-    first-writer wins) and NO-FORK (no record splits)."""
+    """COUNT-EXACT under total collision: N pairwise-distinct
+    identities in ONE bucket yield exactly N records - NO-MERGE and
+    NO-FORK, one record per canonical identity."""
     probe = _probe()
     inserted = [probe.insert("standard", fen) for fen in
                 COLLIDING_SET]
-    assert len(probe.table.buckets) == 1  # all in one bucket
-    assert len(probe.records()) == len(COLLIDING_SET)
-    assert len({probe.table._identity(r) for r in
-                probe.records()}) == len(COLLIDING_SET)
-    # reinsertion finds the EXACT right record by field comparison,
-    # never the bucket head - and never duplicates
+    assert len(probe.buckets) == 1
+    _assert_one_record_per_identity(probe, len(COLLIDING_SET))
     for fen, rec in zip(COLLIDING_SET, inserted, strict=True):
         assert probe.insert("standard", fen) is rec
-    assert len(probe.records()) == len(COLLIDING_SET)
+    _assert_one_record_per_identity(probe, len(COLLIDING_SET))
 
 
 def test_separation_completeness_under_collision():
-    """Separation: inside the single bucket, equal bucket keys never
-    merge unequal identities and the path-normalization twin still
-    folds into its canonical record by FIELD comparison."""
+    """Inside the single bucket: equal bucket keys never merge
+    unequal identities; the phantom-EP twin and clock twins fold
+    by FIELD comparison through the identity index."""
     probe = _probe()
     a = probe.insert("standard", AFTER_E4)
-    # the phantom-EP collapse: AFTER_E4 with the none sentinel is
-    # the SAME canonical identity - folds even under collision
     collapsed = AFTER_E4.replace(" e3 ", " - ")
     assert probe.insert("standard", collapsed) is a
-    # a DIFFERENT position with a colliding bucket never folds
     b = probe.insert("standard", STARTPOS)
     assert b is not a
-    assert len(probe.records()) == 2
-    # clock-only differences (excluded from identity) still fold
-    c = probe.insert("standard", STARTPOS.replace(" 0 1", " 7 42"))
-    assert c is b
-    assert len(probe.records()) == 2
+    assert probe.insert("standard",
+                        STARTPOS.replace(" 0 1", " 7 42")) is b
+    _assert_one_record_per_identity(probe, 2)
 
 
 def test_collision_transparency():
-    """TRANSPARENCY: the canonical-identity view of the same record
-    set is IDENTICAL collision-free and under total collision."""
-    from tests.test_t0113_position_digest_contract import digest_fen
+    """TRANSPARENCY: identical canonical view, identity count and
+    record count collision-free vs total collision."""
     free = _probe(digest_fen)
     colliding = _probe()
     for fen in COLLIDING_SET:
         free.insert("standard", fen)
         colliding.insert("standard", fen)
     assert free.canonical_view() == colliding.canonical_view()
-    assert len(free.table.buckets) > 1  # genuinely different shape
-    assert len(colliding.table.buckets) == 1
+    _assert_one_record_per_identity(free, len(COLLIDING_SET))
+    _assert_one_record_per_identity(colliding, len(COLLIDING_SET))
+    assert len(free.buckets) > 1
+    assert len(colliding.buckets) == 1
 
 
 def test_order_insensitivity_under_collision():
-    """ORDER-INSENSITIVITY: every insertion permutation of the
-    colliding set yields the same canonical table - arrival order
-    inside the bucket is never observable."""
+    """Every insertion permutation yields the same canonical table
+    with exactly one record per identity - arrival order inside the
+    bucket is never observable, and a stable sorted view WITH
+    duplicates would be caught by the uniqueness pin."""
     views = set()
     for perm in itertools.permutations(COLLIDING_SET):
         probe = _probe()
         for fen in perm:
             probe.insert("standard", fen)
+        _assert_one_record_per_identity(probe, len(COLLIDING_SET))
         views.add(tuple(probe.canonical_view()))
     assert len(views) == 1
+
+
+def test_adversarial_twin_permutations():
+    """Large adversarial battery: all 720 permutations of the base
+    set, each position inserted in EVERY canonical-twin form
+    (raw-clock variants, the phantom-EP twin) - exactly one record
+    per canonical identity in every permutation."""
+    expected_view = None
+    for index, perm in enumerate(
+            itertools.permutations(COLLIDING_SET)):
+        probe = _probe()
+        for position in perm:
+            twins = TWIN_FORMS[position]
+            # rotate which twin form leads, then insert the rest
+            forms = twins[index % len(twins):] + \
+                twins[:index % len(twins)]
+            for fen in forms:
+                probe.insert("standard", fen)
+        _assert_one_record_per_identity(probe, len(COLLIDING_SET))
+        view = tuple(probe.canonical_view())
+        if expected_view is None:
+            expected_view = view
+        assert view == expected_view
 
 
 def test_merge_algebra_under_collision():
@@ -222,24 +348,23 @@ def test_merge_algebra_under_collision():
         return probe
 
     full = built(COLLIDING_SET)
-    full.insert("standard", COLLIDING_SET[0])  # idempotent reinsert
+    full.insert("standard", COLLIDING_SET[0])
     results = set()
     for order in itertools.permutations(groups):
         probe = _probe()
         for group in order:
             probe.merge(built(group))
+        _assert_one_record_per_identity(probe, len(COLLIDING_SET))
         results.add(tuple(probe.canonical_view()))
     assert len(results) == 1
     assert results.pop() == tuple(full.canonical_view())
 
 
 def test_accelerator_as_identity_rejected():
-    """A bucket key presented AS identity fails closed - never
-    resolved by bucket key alone, even when the bucket holds
-    exactly one record."""
     probe = _probe()
     probe.insert("standard", STARTPOS)
     before = probe.canonical_view()
+    before_index = copy.deepcopy(probe.identity_index)
     with pytest.raises(CollisionError) as exc:
         probe.lookup_by_bucket_key("pdv1:" + "0" * 64)
     assert exc.value.failure_class == "accelerator_as_identity"
@@ -247,6 +372,150 @@ def test_accelerator_as_identity_rejected():
         "accelerator_as_identity"]
     assert exc.value.code in ERROR_ENUM
     assert probe.canonical_view() == before
+    assert probe.identity_index == before_index
+
+
+# -- trust-boundary repros (verifier #2 remediation) -------------------------
+
+
+def test_repro_oracle_hashing_raw_clocks_rejected():
+    """REPRO 1: an oracle hashing the raw FEN (including the
+    identity-excluded clocks) hands equal canonical identities
+    different bucket keys - the trust boundary catches it:
+    accelerator_inconsistent, no fork, exactly one record."""
+    probe = _probe(raw_oracle)
+    probe.insert("standard", STARTPOS)
+    before = probe.canonical_view()
+    before_index = copy.deepcopy(probe.identity_index)
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", STARTPOS.replace(" 0 1", " 7 42"))
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert exc.value.code == FAILURE_MAPPING[
+        "accelerator_inconsistent"]
+    assert exc.value.code in ERROR_ENUM
+    assert probe.canonical_view() == before
+    assert probe.identity_index == before_index
+    _assert_one_record_per_identity(probe, 1)
+
+
+def test_repro_oracle_hashing_phantom_ep_rejected():
+    """REPRO 2: the same raw oracle hands the uncapturable-EP twin
+    (raw 'e3' vs canonical '-') a different bucket key for an equal
+    canonical identity - caught, rejected, no fork."""
+    probe = _probe(raw_oracle)
+    probe.insert("standard", AFTER_E4)
+    before_index = copy.deepcopy(probe.identity_index)
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", AFTER_E4.replace(" e3 ", " - "))
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert probe.identity_index == before_index
+    _assert_one_record_per_identity(probe, 1)
+
+
+def test_repro_stateful_oracle_rejected():
+    """REPRO 3: a stateful oracle returning fresh valid-format
+    digests hands byte-identical STARTPOS a new key - caught,
+    rejected, the equal identity is never stored twice."""
+    probe = _probe(stateful_oracle())
+    probe.insert("standard", STARTPOS)
+    before_index = copy.deepcopy(probe.identity_index)
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", STARTPOS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert probe.identity_index == before_index
+    _assert_one_record_per_identity(probe, 1)
+
+
+def test_invalid_format_bucket_key_rejected():
+    """The oracle owes a VALID-FORMAT bucket key per the linked
+    digest contract - anything else is accelerator_inconsistent."""
+    probe = _probe(lambda variant, fen: "not-a-digest")
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", STARTPOS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert probe.records() == []
+    assert probe.buckets == {}
+    assert probe.identity_index == {}
+
+
+def test_repro_reverse_insertion_order():
+    """Reverse order with the raw-clocking oracle: the FIRST twin
+    form wins the insert and the SECOND form is the rejected
+    divergence - direction changes, the outcome class does not."""
+    probe = _probe(raw_oracle)
+    probe.insert("standard", STARTPOS.replace(" 0 1", " 7 42"))
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", STARTPOS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    _assert_one_record_per_identity(probe, 1)
+    # the stored record is the first form's, canonically equal
+    rec = probe.records()[0]
+    assert rec["snapshot_fen"] == STARTPOS  # canonical storage
+
+
+def test_merge_across_inconsistent_oracles():
+    """Cross-oracle merge: an incoming record whose stored bucket
+    key disagrees with the RECEIVER's oracle fails closed as
+    malformed_collision_record - BOTH merge orders reject, no
+    re-bucketing, destinations bit-identical."""
+    a = _probe(digest_fen)
+    a.insert("standard", STARTPOS)
+    b = _probe()
+    b.insert("standard", STARTPOS)  # same canonical identity
+    a_index = copy.deepcopy(a.identity_index)
+    b_index = copy.deepcopy(b.identity_index)
+    with pytest.raises(CollisionError) as exc:
+        a.merge(b)
+    assert exc.value.failure_class == "malformed_collision_record"
+    with pytest.raises(CollisionError) as exc:
+        b.merge(a)
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert a.identity_index == a_index
+    assert b.identity_index == b_index
+    # a merge across CONSISTENT oracles still succeeds
+    c = _probe()
+    c.insert("standard", KINGS)
+    d = _probe()
+    d.insert("standard", STARTPOS)
+    d.merge(c)
+    _assert_one_record_per_identity(d, 2)
+
+
+def test_mutant_bucket_only_trust_forks():
+    """Behavioral mutant: the v1 shape (bucket-scoped search, no
+    identity index, no consistency validation) FORKS one canonical
+    identity under the raw-clocking oracle - pinned here so the
+    battery proves the trust boundary is load-bearing.
+    Counter-test: the same inserts through the real probe are
+    caught and never fork."""
+    def mutant_insert(probe, variant_id, fen_text):
+        nc, vc, dc, epc, fc = _NODE_DOCS
+        rec = _make_record(nc, vc, dc, epc, fc, probe.oracle,
+                           variant_id, fen_text)
+        bucket = probe.buckets.setdefault(rec["digest"], [])
+        identity = probe._identity(rec)
+        for existing in bucket:
+            if probe._identity(existing) == identity:
+                return existing
+        bucket.append(rec)
+        return rec
+
+    mutant_probe = _probe(raw_oracle)
+    mutant_insert(mutant_probe, "standard", STARTPOS)
+    mutant_insert(mutant_probe, "standard",
+                  STARTPOS.replace(" 0 1", " 7 42"))
+    forked = [r for bucket in mutant_probe.buckets.values()
+              for r in bucket]
+    assert len(forked) == 2  # the mutant forks the one identity
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    assert len({_record_identity(nc, vc, dc, epc, fc, r)
+                for r in forked}) == 1  # ...of ONE identity
+    # counter-test: the real probe rejects and never forks
+    real = _probe(raw_oracle)
+    real.insert("standard", STARTPOS)
+    with pytest.raises(CollisionError):
+        real.insert("standard", STARTPOS.replace(" 0 1", " 7 42"))
+    _assert_one_record_per_identity(real, 1)
 
 
 MALFORMED_INSERTS = [
@@ -260,9 +529,6 @@ MALFORMED_INSERTS = [
 
 @pytest.mark.parametrize("variant,fen", MALFORMED_INSERTS)
 def test_malformed_collision_record_rejected(variant, fen):
-    """A record failing the linked node contract's own shape is
-    malformed_collision_record HERE - under total collision exactly
-    as collision-free."""
     probe = _probe()
     with pytest.raises(CollisionError) as exc:
         probe.insert(variant, fen)
@@ -277,14 +543,22 @@ def test_rollback_bit_identical_under_collision():
     probe.insert("standard", STARTPOS)
     probe.insert("standard", KINGS)
     before = probe.canonical_view()
-    before_buckets = copy.deepcopy(probe.table.buckets)
+    before_index = copy.deepcopy(probe.identity_index)
+    before_buckets = copy.deepcopy(probe.buckets)
     for variant, fen in MALFORMED_INSERTS:
         with pytest.raises(CollisionError):
             probe.insert(variant, fen)
     with pytest.raises(CollisionError):
         probe.lookup_by_bucket_key("pdv1:" + "1" * 64)
+    raw = _probe(raw_oracle)
+    raw.insert("standard", STARTPOS)
+    raw_index = copy.deepcopy(raw.identity_index)
+    with pytest.raises(CollisionError):
+        raw.insert("standard", STARTPOS.replace(" 0 1", " 7 42"))
     assert probe.canonical_view() == before
-    assert probe.table.buckets == before_buckets
+    assert probe.identity_index == before_index
+    assert probe.buckets == before_buckets
+    assert raw.identity_index == raw_index
 
 
 # -- mutation battery --------------------------------------------------------
@@ -327,6 +601,14 @@ def _mutants():
     add("digest inequality decides", ["contract", "separation",
                                       "digest_inequality"],
         "decides-record-inequality")
+    add("trust boundary dropped", ["contract", "separation",
+                                   "trust_boundary"],
+        "oracle-always-trusted")
+    add("enforcement dropped", ["contract", "separation",
+                                "enforcement"],
+        "bucket-search-only")
+    add("oracle output drift", ["contract", "separation",
+                                "oracle_output"], "any-string")
     add("no_merge dropped", ["contract", "guarantees", "no_merge"],
         "first-writer-wins")
     add("no_fork dropped", ["contract", "guarantees", "no_fork"],
@@ -339,22 +621,30 @@ def _mutants():
     add("algebra dropped", ["contract", "guarantees",
                             "merge_algebra_preserved"],
         "commutativity-lost-under-collision")
+    add("guarantee trust dropped", ["contract", "guarantees",
+                                    "trust_boundary"],
+        "misbucketed-twins-may-fork")
     add("failure class dropped", ["contract", "failures", "classes"],
-        ["malformed_collision_record"])
-    add("failure mapping drift", ["contract", "failures", "mapping",
-                                  "accelerator_as_identity"],
+        ["malformed_collision_record", "accelerator_as_identity"])
+    add("inconsistency mapped away", ["contract", "failures",
+                                      "mapping",
+                                      "accelerator_inconsistent"],
         "malformed_request")
     add("failures open", ["contract", "failures", "closed"], False)
     add("error enum drift", ["contract", "errors", "closed_enum"],
-        ["malformed_request", "internal"])
+        ["malformed_request", "accelerator_as_identity",
+         "internal"])
     add("retryable drift", ["contract", "errors", "shape",
                             "retryable_true_only_for"],
-        ["internal", "accelerator_as_identity"])
+        ["internal", "accelerator_inconsistent"])
     add("transparency drift", ["contract", "properties",
                                "collision_transparency"],
         "collision-visible")
     add("rollback drift", ["contract", "properties", "rollback"],
         "best-effort")
+    add("property trust dropped", ["contract", "properties",
+                                   "trust_boundary"],
+        "oracle-divergence-tolerated")
     add("link drift", ["contract", "links", "variant_contract"],
         "data/contracts/san.yaml")
     add("base path drift", ["contract", "versioning", "base_path"],

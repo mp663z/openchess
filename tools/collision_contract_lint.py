@@ -72,8 +72,18 @@ SEPARATION = {
     "bucket_role": "lookup-accelerator-only-from-linked-hash_rule",
     "digest_equality": "never-decides-record-equality",
     "digest_inequality": "never-decides-record-inequality",
+    "trust_boundary":
+        "equal-canonical-identities-must-yield-same-"
+        "valid-format-bucket-key",
+    "enforcement":
+        "independent-canonical-identity-index-plus-insert-"
+        "consistency-validation",
+    "oracle_output":
+        "valid-format-bucket-key-from-linked-digest-contract-"
+        "format",
     "links": {
         "variant": "data/contracts/variant.yaml",
+        "position_digest": "data/contracts/position_digest.yaml",
     },
 }
 GUARANTEES = {
@@ -85,15 +95,19 @@ GUARANTEES = {
         "canonical-identity-order-never-arrival-order",
     "merge_algebra_preserved":
         "idempotent-commutative-associative-under-collision",
+    "trust_boundary":
+        "equal-identities-never-fork-misbucketed-or-stateful-oracle",
 }
 FAILURE_CLASSES = ["malformed_collision_record",
-                   "accelerator_as_identity"]
+                   "accelerator_as_identity",
+                   "accelerator_inconsistent"]
 FAILURE_MAPPING = {
     "malformed_collision_record": "malformed_request",
     "accelerator_as_identity": "accelerator_as_identity",
+    "accelerator_inconsistent": "accelerator_inconsistent",
 }
 ERROR_ENUM = ["malformed_request", "accelerator_as_identity",
-              "internal"]
+              "accelerator_inconsistent", "internal"]
 ERROR_SHAPE = {
     "error": {
         "fields": {
@@ -114,6 +128,8 @@ PROPERTIES = {
     "no_fork": "one-identity-never-duplicates",
     "order_insensitivity": "permutation-invariant-table",
     "rollback": "rejected-insert-leaves-table-bit-identical",
+    "trust_boundary":
+        "oracle-divergence-fails-closed-no-fork-persists",
 }
 VERSIONING = {"base_path": "/graph/collision/v1"}
 PROSE_KEYS = {"rule"}

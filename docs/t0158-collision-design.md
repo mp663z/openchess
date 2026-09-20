@@ -48,8 +48,44 @@ accelerator-only claim has one normative definition to point at.
 - Failure classes: malformed_collision_record (a record failing the
   linked table's own record shape), accelerator_as_identity
   (callers must not present a bucket key AS an identity - fail
-  closed), plus internal. Equality is never a failure class: a
+  closed), accelerator_inconsistent (the oracle trust boundary,
+  below), plus internal. Equality is never a failure class: a
   collision is normal operation, never an error.
+
+## Oracle trust boundary (v2 - verifier #2 remediation)
+
+The injectable digest oracle is UNTRUSTED input. v1 left the
+boundary unguarded: an oracle hashing raw FEN text (including the
+identity-excluded clocks or the raw uncapturable EP target), or a
+stateful oracle, could silently fork one canonical identity into
+two records across two buckets - bucket-scoped search would never
+see the twin.
+
+Enforcement, both halves together:
+
+1. Independent canonical-identity index: the equality search
+   domain is a canonical-identity index maintained INDEPENDENTLY
+   of the bucket structure. Equal canonical identities dedupe
+   against the index even when the oracle misbuckets them, so a
+   fork can never silently persist.
+2. Insert-time consistency validation, fail closed: the oracle
+   owes a bucket key in the linked digest contract's exact format,
+   and an equal canonical identity MUST yield the same bucket key
+   as the already-stored record. Divergence (equal identity,
+   different key) or an invalid-format key rejects the insert as
+   accelerator_inconsistent with bit-identical rollback - the
+   fork is surfaced, never absorbed.
+
+Cross-oracle merges fail closed as malformed_collision_record
+when an incoming record's stored bucket key disagrees with the
+receiver's oracle (validated through the receiver's oracle over
+the exact incoming record, never re-bucketed silently). Merges
+across consistent oracles succeed.
+
+Sorted canonical views pin BOTH count and uniqueness against the
+set of canonical identities in every permutation - a forked table
+can produce a stable sorted view WITH duplicates, so uniqueness
+is asserted, never assumed.
 - Witness model: an injectable digest oracle (constant oracle maps
   everything to one valid bucket) exercised through the REAL table
   machinery (transposition node table), proving the battery tests
@@ -69,3 +105,13 @@ accelerator-only claim has one normative definition to point at.
   bit-identical.
 - Linkage: variant hash_rule, digest format, node identity sections
   re-verified against the actual siblings.
+- Trust-boundary repros (v2): raw-clock-hashing oracle,
+  phantom-EP-hashing oracle, stateful fresh-key oracle - each
+  rejected accelerator_inconsistent with one record per identity
+  and bit-identical rollback; reverse insertion order; an
+  invalid-format bucket key rejected; 720 adversarial permutations
+  x canonical twins (raw-clock + phantom-EP forms) asserting
+  count-exactness AND per-identity uniqueness; cross-oracle merge
+  rejection both directions with consistent-oracle merge success;
+  a behavioral mutant (v1-shaped bucket-only search) pinned to
+  fork under the raw oracle while the real probe rejects.
