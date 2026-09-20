@@ -113,6 +113,26 @@ second-insert, midway-merge reject typed with bit-identical
 state; a mutant restoring isinstance acceptance + index-first
 mutation is pinned to fork.
 
+## Single evaluation at merge (v5 - verifier #2 remediation)
+
+v4 still invoked the receiver oracle TWICE per incoming merge
+record (validate, then staged insert re-queried) without
+requiring the answers to agree: a K1-then-K2 oracle silently
+re-bucketed the exact record. v5 evaluates the receiver oracle
+EXACTLY ONCE per incoming record per merge: the retained exact
+built-in key validates the source record AND stages the insert
+through a centralized staged-insert API accepting a prevalidated
+(record, canonical identity, bucket key) tuple - validation and
+commit structurally cannot re-query untrusted input (pinned as
+properties.single_evaluation; transactional writes alone did not
+prevent semantic TOCTOU). Probes: K1-then-K2 (one call, retained
+K1, never re-bucketed), K2-then-K1 reverse (malformed),
+divergence after a valid staged prefix (atomic: nothing
+commits), equal canonical twins diverging on merge
+(accelerator_inconsistent), a call-count assertion (N records =
+N calls), and a validate-then-requery mutant pinned to
+re-bucket.
+
 Cross-oracle merges fail closed as malformed_collision_record
 when an incoming record's stored bucket key disagrees with the
 receiver's oracle (validated through the receiver's oracle over

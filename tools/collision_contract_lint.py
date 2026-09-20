@@ -140,6 +140,9 @@ PROPERTIES = {
     "oracle_boundary":
         "single-boundary-helper-for-insert-and-merge-validation",
     "transactional_insert": "staged-writes-single-commit-point",
+    "single_evaluation":
+        "receiver-oracle-evaluated-exactly-once-per-incoming-"
+        "record-retained-key-validates-and-stages",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",

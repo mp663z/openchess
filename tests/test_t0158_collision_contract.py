@@ -131,8 +131,9 @@ def raising_oracle(fail_on):
 
 def midway_oracle(fail_on):
     """UNTRUSTED: real digest for the first fail_on-1 calls, then
-    raises - sized so the FIRST merge record completes (validate +
-    insert) and the SECOND record's revalidation explodes."""
+    raises - under SINGLE EVALUATION (one oracle call per incoming
+    record per merge), fail_on=2 means the FIRST record's call
+    succeeds and the SECOND record's only call explodes."""
     counter = itertools.count(1)
 
     def oracle(variant, fen):
@@ -243,26 +244,33 @@ class CollisionProbe:
         except NodeError:
             _fail(self.cc, "malformed_collision_record")
         identity = self._identity(rec)
+        return self._staged_insert(rec, identity, rec["digest"])
+
+    def _staged_insert(self, rec, identity, key):
+        """THE single commit path: accepts ONLY a prevalidated
+        (record, canonical identity, bucket key) tuple - the exact
+        built-in key RETAINED from one boundary evaluation. No
+        untrusted input is re-queried here."""
         existing = self.identity_index.get(identity)
         if existing is not None:
             # TRUST BOUNDARY: equal canonical identity MUST yield
             # the same bucket key - divergence fails closed and
             # the insert changes nothing (caller rolls back)
-            if existing["digest"] != rec["digest"]:
+            if existing["digest"] != key:
                 _fail(self.cc, "accelerator_inconsistent")
             return existing  # same identity, never a second record
         # TRANSACTIONAL: both structures are staged; the commit
         # happens only after EVERY fallible operation on the
-        # untrusted bucket key has succeeded - a hostile key can
-        # never leave index written and buckets unwritten.
+        # bucket key has succeeded - a hostile key can never
+        # leave index written and buckets unwritten.
         staged_index = dict(self.identity_index)
         staged_buckets = {k: list(v) for k, v in
                           self.buckets.items()}
         staged_index[identity] = rec
-        staged_buckets.setdefault(rec["digest"], []).append(rec)
-        # exercise the untrusted key's dict behavior BEFORE commit
-        _ = rec["digest"] in staged_buckets
-        _ = staged_buckets[rec["digest"]]
+        staged_buckets.setdefault(key, []).append(rec)
+        # exercise the key's dict behavior BEFORE commit
+        _ = key in staged_buckets
+        _ = staged_buckets[key]
         self.identity_index = staged_index
         self.buckets = staged_buckets
         return rec
@@ -293,12 +301,22 @@ class CollisionProbe:
         staged.buckets = copy.deepcopy(self.buckets)
         staged.identity_index = copy.deepcopy(self.identity_index)
         for rec in other.records():
+            # SINGLE EVALUATION: the receiver oracle is invoked
+            # EXACTLY ONCE per incoming record, at the boundary;
+            # the retained exact built-in key validates the source
+            # record AND stages the insert - nothing re-queries
+            # untrusted input (semantic TOCTOU is closed
+            # structurally, not by transaction alone)
+            key = self._call_oracle(rec["variant"],
+                                    rec["snapshot_fen"])
             try:
                 _validate_node_record(nc, vc, dc, epc, fc, dict(rec),
-                                      self._call_oracle)
+                                      lambda v, f, _k=key: _k)
             except NodeError:
                 _fail(self.cc, "malformed_collision_record")
-            staged.insert(rec["variant"], rec["snapshot_fen"])
+            exact = copy.deepcopy(rec)
+            staged._staged_insert(exact, staged._identity(exact),
+                                  key)
         self.buckets = staged.buckets
         self.identity_index = staged.identity_index
         return self
@@ -688,7 +706,7 @@ def test_repro_oracle_raises_midway_through_merge():
     source = _probe(digest_fen)
     source.insert("standard", STARTPOS)
     source.insert("standard", KINGS)
-    dest = _probe(midway_oracle(3))  # validate+insert ok, then boom
+    dest = _probe(midway_oracle(2))  # record 1 ok, record 2 boom
     dest_index = copy.deepcopy(dest.identity_index)
     dest_buckets = copy.deepcopy(dest.buckets)
     with pytest.raises(CollisionError) as exc:
@@ -697,6 +715,165 @@ def test_repro_oracle_raises_midway_through_merge():
     assert dest.identity_index == dest_index
     assert dest.buckets == dest_buckets
     assert dest.records() == []
+
+
+K1 = "pdv1:" + "1" * 64
+K2 = "pdv1:" + "2" * 64
+
+
+def _sequence_oracle(keys):
+    """UNTRUSTED: returns each pinned key per call in order -
+    two inconsistent SUCCESSFUL outputs inside one merge."""
+    counter = itertools.count(0)
+
+    def oracle(variant, fen):
+        return keys[min(next(counter), len(keys) - 1)]
+    return oracle
+
+
+def test_repro_k1_then_k2_merge_single_evaluation():
+    """K1-then-K2 repro: the source stores STARTPOS under K1; the
+    receiver oracle would answer K1 then K2. SINGLE EVALUATION
+    neutralizes the TOCTOU: exactly ONE call per incoming record,
+    the retained K1 validates AND stages - the exact source record
+    is never silently re-bucketed to K2."""
+    source = _probe(_sequence_oracle([K1]))
+    source.insert("standard", STARTPOS)
+    counter = {"n": 0}
+
+    def count_oracle(variant, fen):
+        counter["n"] += 1
+        return K1 if counter["n"] == 1 else K2
+
+    dest = _probe(count_oracle)
+    dest.merge(source)
+    assert counter["n"] == 1  # ONE call per incoming record
+    assert dest.records() == source.records()  # exact record
+    assert list(dest.buckets) == [K1]  # retained key, never K2
+    _assert_one_record_per_identity(dest, 1)
+
+
+def test_repro_k2_then_k1_reverse_rejected():
+    """Reverse: the source stored STARTPOS under K1 but the
+    receiver's single evaluation answers K2 - source key !=
+    retained key rejects as malformed_collision_record
+    (cross-oracle disagreement), destination bit-identical."""
+    source = _probe(_sequence_oracle([K1]))
+    source.insert("standard", STARTPOS)
+    dest = _probe(_sequence_oracle([K2, K1]))
+    dest_index = copy.deepcopy(dest.identity_index)
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(source)
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert exc.value.code == FAILURE_MAPPING[
+        "malformed_collision_record"]
+    assert dest.identity_index == dest_index
+    assert dest.buckets == {}
+    assert dest.records() == []
+
+
+def test_repro_divergence_after_valid_staged_prefix():
+    """Three incoming records: the first two validate and stage
+    (source keys match the receiver's single answers), the THIRD
+    source key disagrees with the receiver's answer - atomic merge
+    commits nothing, destination bit-identical."""
+    source = _probe(digest_fen)
+    source.insert("standard", STARTPOS)
+    source.insert("standard", KINGS)
+    source.insert("standard", AFTER_E4)
+    # answers keyed by the CANONICAL stored snapshots; the third
+    # record's answer diverges from its stored key
+    answers = {r["snapshot_fen"]: r["digest"]
+               for r in source.records()}
+    answers[source.records()[2]["snapshot_fen"]] = K1
+
+    def oracle(variant, fen):
+        return answers[fen]
+
+    dest = _probe(oracle)
+    dest_index = copy.deepcopy(dest.identity_index)
+    dest_buckets = copy.deepcopy(dest.buckets)
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(source)
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert dest.identity_index == dest_index
+    assert dest.buckets == dest_buckets
+    assert dest.records() == []  # valid prefix NOT committed
+
+
+def test_repro_equal_canonical_twin_divergence_on_merge():
+    """Equal canonical twins under different keys: the destination
+    already holds STARTPOS under K2; the incoming STARTPOS is
+    stored under K1 and the receiver's single answer is K1 - the
+    staged insert meets an equal identity with a divergent key:
+    accelerator_inconsistent, destination bit-identical."""
+    source = _probe(_sequence_oracle([K1]))
+    source.insert("standard", STARTPOS)
+    dest = _probe(_sequence_oracle([K2, K1]))
+    dest.insert("standard", STARTPOS)  # consumes K2
+    before_index = copy.deepcopy(dest.identity_index)
+    before_buckets = copy.deepcopy(dest.buckets)
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(source)  # single answer K1 != stored K2
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert exc.value.code == FAILURE_MAPPING[
+        "accelerator_inconsistent"]
+    assert dest.identity_index == before_index
+    assert dest.buckets == before_buckets
+    _assert_one_record_per_identity(dest, 1)
+
+
+def test_call_count_one_oracle_call_per_incoming_record():
+    """The single-evaluation principle, counted: merging N records
+    invokes the receiver oracle EXACTLY N times."""
+    source = _probe(digest_fen)
+    for fen in [STARTPOS, KINGS, AFTER_E4]:
+        source.insert("standard", fen)
+    counter = {"n": 0}
+
+    def counting(variant, fen):
+        counter["n"] += 1
+        return digest_fen(variant, fen)
+
+    dest = _probe(counting)
+    dest.merge(source)
+    assert counter["n"] == 3
+    _assert_one_record_per_identity(dest, 3)
+
+
+def test_mutant_validate_then_requery_rebuckets():
+    """Behavioral mutant: the v4 merge shape validates with one
+    call then RE-QUERIES for staging - under K1-then-K2 the exact
+    record is silently re-bucketed to K2. Pinned to prove single
+    evaluation is load-bearing. Counter-test: the real merge
+    retains K1 and never re-queries."""
+    def mutant_merge(dest, other):
+        nc, vc, dc, epc, fc = _NODE_DOCS
+        for rec in other.records():
+            _validate_node_record(nc, vc, dc, epc, fc, dict(rec),
+                                  dest._call_oracle)   # call 1
+            dest.insert(rec["variant"], rec["snapshot_fen"])
+        # insert re-queries the oracle (call 2)
+        return dest
+
+    source = _probe(_sequence_oracle([K1]))
+    source.insert("standard", STARTPOS)
+    counter = {"n": 0}
+
+    def oracle(variant, fen):
+        counter["n"] += 1
+        return K1 if counter["n"] == 1 else K2
+
+    mutant_dest = _probe(oracle)
+    mutant_merge(mutant_dest, source)
+    assert counter["n"] == 2  # the mutant queried twice
+    assert list(mutant_dest.buckets) == [K2]  # silent re-bucket
+    # counter-test
+    counter["n"] = 0
+    real_dest = _probe(oracle)
+    real_dest.merge(source)
+    assert counter["n"] == 1
+    assert list(real_dest.buckets) == [K1]
 
 
 def test_mutant_direct_oracle_call_leaks():
@@ -755,7 +932,9 @@ def test_repro_hostile_str_subclass_midway_merge(cls):
     counter = itertools.count(1)
 
     def oracle(variant, fen):
-        if next(counter) <= 2:
+        # single evaluation: record 1's only call is plain,
+        # record 2's only call turns hostile
+        if next(counter) <= 1:
             return digest_fen(variant, fen)
         return cls("pdv1:" + "0" * 64)
 
