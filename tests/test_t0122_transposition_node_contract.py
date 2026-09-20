@@ -215,12 +215,20 @@ def validate_record(nc, vc, dc, ec, fc, record, digest_fn=digest_fen):
         position = parse_fen(fc, record["snapshot_fen"])
     except FenError:
         _fail(nc, "malformed_node_record")
-    fields = record["snapshot_fen"].split(" ")
-    if fields[4:] != ["0", "1"]:
+    # Named FEN-field mapping driven by the LINKED FEN contract's
+    # field order - no positional index into either representation
+    # (the FEN field order itself stays lint-pinned; only the
+    # identity tuple claims runtime order independence).
+    fen_named = dict(zip(fc["fields"]["order"],
+                         record["snapshot_fen"].split(" "),
+                         strict=True))
+    if (fen_named["halfmove_clock"] != "0"
+            or fen_named["fullmove_number"] != "1"):
         _fail(nc, "malformed_node_record")  # clock normalization
     identity = _identity_tuple(nc, vc, dc, ec, fc,
                                record["variant"], position)
-    if fields[3] != identity[4]:
+    named = _identity_named(vc, identity)
+    if fen_named["en_passant"] != named["en_passant"]:
         _fail(nc, "malformed_node_record")  # ep identity value
     if record["digest"] != digest_fn(record["variant"],
                                      record["snapshot_fen"]):
@@ -384,6 +392,19 @@ def test_identity_follows_sibling_canonical_order():
     with pytest.raises(AssertionError):
         _identity_tuple(nc, broken_vc, dc, ec, fc, "standard",
                         position)
+    # the claim holds across the ACTUAL record path: a record made
+    # under the mutated sibling order validates under that same
+    # order - the digest oracle is over (variant, fen text), so it
+    # is consistent for both orders
+    rec_mut = _make_record(nc, mutated_vc, dc, ec, fc, digest_fen,
+                           "standard", AFTER_E4)
+    rec_base = _make_record(nc, vc, dc, ec, fc, digest_fen,
+                            "standard", AFTER_E4)
+    assert rec_mut == rec_base  # snapshot reads by linked names
+    assert validate_record(nc, mutated_vc, dc, ec, fc, rec_mut,
+                           digest_fen) is rec_mut
+    assert validate_record(nc, vc, dc, ec, fc, rec_base,
+                           digest_fen) is rec_base
 
 
 def test_records_exact_three_fields_and_rebuild():
