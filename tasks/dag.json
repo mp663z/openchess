@@ -3528,11 +3528,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "f7f53285199d9b2d238648b3d7189db76c3b2b45",
+   "evidence_manifest": "evidence/T0167.md"
   },
   {
    "id": "T0168",
