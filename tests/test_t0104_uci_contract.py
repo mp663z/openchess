@@ -1579,9 +1579,13 @@ def test_readiness_after_stop_requested():
     for d, line in STOPPED:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("stop_requested", True, True, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "stop_requested", True, True, "off", "cp_idle",
+        "reg_awaiting_indication")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("stop_requested", True, False, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "stop_requested", True, False, "off", "cp_idle",
+        "reg_awaiting_indication")
     # stop-requested survived the whole exchange: bestmove still due
     s.feed_engine("bestmove e2e4")
     assert s.state == "ready"
@@ -1594,9 +1598,13 @@ def test_readiness_during_ponder_stop_requested():
         _feed(s, d, line)
     assert s.state == "ponder_stop_requested"
     s.feed_gui("isready")
-    assert s.snapshot() == ("ponder_stop_requested", True, True, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "ponder_stop_requested", True, True, "off", "cp_idle",
+        "reg_awaiting_indication")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("ponder_stop_requested", True, False, "off", "cp_idle", "reg_awaiting_indication")
+    assert s.snapshot() == (
+        "ponder_stop_requested", True, False, "off", "cp_idle",
+        "reg_awaiting_indication")
     s.feed_gui("ponderhit")
     assert s.state == "stop_requested"
 
