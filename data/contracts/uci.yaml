@@ -1,0 +1,208 @@
+# T0104: chess UCI contract (implementation-neutral; the engine worker
+# pool drives Stockfish-compatible engines over THIS dialect per
+# ADR-0001).
+#
+# Source of truth for the Universal Chess Interface dialect OpenChess
+# speaks in both directions: the worker pool's outbound commands and
+# its parsing of engine responses share THESE semantics. ALL normative
+# semantics live in STRUCTURED fields the lint compares exactly -
+# prose is documentation, never the enforcement surface. The dialect
+# is STRICT: an undeclared keyword, a grammar violation, or a command
+# out of lifecycle order is a classified rejection, never a silent
+# ignore or a best-effort interpretation.
+schema_version: 1
+
+contract:
+  id: chess-uci
+  transport:
+    framing: one-command-per-line
+    line_terminator: LF
+    encoding: UTF-8
+    token_separator: single-space
+    leading_trailing_whitespace: forbidden
+    empty_line: malformed
+    keyword_case: exact-lowercase
+    rule: >-
+      A session is a sequence of text lines over the engine's
+      stdin/stdout. Each line is exactly one command or response:
+      tokens separated by single spaces, no leading or trailing
+      whitespace, LF termination, UTF-8 encoding. An empty line is
+      malformed. Keywords are exact lowercase; case variants are
+      unknown keywords, never folded.
+  move_encoding:
+    form: from-square-then-to-square-then-optional-promotion-letter
+    square_grammar: exactly-file-char-then-rank-char-per-legal-moves
+    promotion_letters: [q, r, b, n]
+    promotion_letter_case: lowercase
+    castling: king-two-square-move-per-legal-moves
+    none_token: "(none)"
+    rule: >-
+      A UCI move is the long algebraic form: origin square,
+      destination square, and - exactly when promoting - one
+      lowercase promotion letter from the legal-moves contract enum.
+      Castling is the king's two-square move (e.g. e1g1); there is
+      no separate castling token. The literal (none) appears only
+      where a move slot may legitimately be empty (a bestmove when
+      the side to move has no legal move).
+  gui_commands:
+    uci: bare-keyword
+    debug: keyword-then-on-or-off
+    isready: bare-keyword
+    setoption: keyword-name-then-id-then-optional-value
+    register: keyword-then-later-or-name-code-pair
+    ucinewgame: bare-keyword
+    position: keyword-then-startpos-or-fen-then-optional-moves
+    go: keyword-then-zero-or-more-declared-parameters
+    stop: bare-keyword
+    ponderhit: bare-keyword
+    quit: bare-keyword
+    rule: >-
+      The client speaks exactly these commands. Bare-keyword commands
+      carry no arguments. debug takes exactly "on" or "off".
+      setoption is "setoption name <id tokens> [value <value
+      tokens>]" with a nonempty id; the value, when the keyword is
+      present, takes the rest of the line (possibly empty). register
+      is "register later" or "register name <tokens> code <tokens>"
+      with both parts nonempty. position is "position startpos" or
+      "position fen <six FEN fields>", each optionally followed by
+      "moves" and one or more move tokens. go takes declared
+      parameters only, each at most once.
+  go_parameters:
+    searchmoves: {kind: move-list, min: 1, greedy: until-next-declared-parameter-keyword}
+    ponder: {kind: flag}
+    wtime: {kind: nonneg-int}
+    btime: {kind: nonneg-int}
+    winc: {kind: nonneg-int}
+    binc: {kind: nonneg-int}
+    movestogo: {kind: pos-int}
+    depth: {kind: pos-int}
+    nodes: {kind: pos-int}
+    mate: {kind: pos-int}
+    movetime: {kind: pos-int}
+    infinite: {kind: flag}
+    duplicates: forbidden
+    int_grammar: ascii-digits-0-9-only-no-leading-zeros-except-zero-itself
+    rule: >-
+      Each declared go parameter appears at most once in one go
+      command. searchmoves consumes every following move token (at
+      least one) up to the next declared parameter keyword. The
+      integer parameters are ASCII digits only, with leading zeros
+      forbidden except the literal 0; time/clock parameters are
+      non-negative, the count parameters strictly positive. Flags
+      carry no argument.
+  engine_responses:
+    id: keyword-then-name-or-author-then-nonempty-rest
+    uciok: bare-keyword
+    readyok: bare-keyword
+    bestmove: keyword-then-move-or-none-then-optional-ponder-move
+    copyprotection: keyword-then-checking-ok-or-error
+    registration: keyword-then-checking-ok-or-error
+    info: keyword-then-one-or-more-declared-fields
+    option: keyword-name-then-id-then-type-then-type-specific-tail
+    rule: >-
+      The engine speaks exactly these responses. id is "id name
+      <text>" or "id author <text>" with nonempty text. bestmove is
+      "bestmove <move|(none)> [ponder <move>]". copyprotection and
+      registration take exactly one of checking, ok, error. info
+      carries one or more declared fields, each at most once.
+      option declares one engine option; the tail after "type" is
+      owned by the option's type.
+  info_fields:
+    depth: {kind: pos-int}
+    seldepth: {kind: pos-int}
+    time: {kind: nonneg-int}
+    nodes: {kind: pos-int}
+    pv: {kind: move-list, min: 1, greedy: until-next-declared-field-keyword}
+    multipv: {kind: pos-int}
+    score: {kind: score, forms: [cp, mate], value_kind: int}
+    currmove: {kind: move}
+    currmovenumber: {kind: pos-int}
+    hashfull: {kind: nonneg-int}
+    nps: {kind: pos-int}
+    tbhits: {kind: pos-int}
+    sbhits: {kind: pos-int}
+    cpuload: {kind: nonneg-int}
+    string: {kind: rest-of-line, min: 1}
+    refutation: {kind: move-list, min: 1, greedy: until-next-declared-field-keyword}
+    currline: {kind: currline, optional_cpunr: nonneg-int, then_moves: min-1}
+    duplicates: forbidden
+    int_grammar: ascii-digits-0-9-only-no-leading-zeros-except-zero-itself
+    rule: >-
+      Each declared info field appears at most once in one info
+      response. pv and refutation consume following move tokens up
+      to the next declared field keyword. score is "score cp
+      <integer>" or "score mate <integer>"; a score integer may be
+      negative (leading "-"). currline is "currline [<cpunr>]
+      <move>..." with at least one move. string takes the rest of
+      the line and is never empty.
+  option_types:
+    check: {tail: [default], default_kind: bool-literal-true-or-false, required: [default]}
+    spin: {tail: [default, min, max], value_kind: int, required: [default, min, max], bounds: min-le-default-le-max}
+    combo: {tail: [default, var-plus], required: [var], default_membership: default-in-vars-when-present}
+    button: {tail: [], required: []}
+    string: {tail: [default], default_kind: rest-of-line-may-be-empty, required: []}
+    rule: >-
+      An option response is "option name <id tokens> type <type>
+      <tail>". The id is every token between name and type, nonempty.
+      The tail follows the type: check takes "default true|false";
+      spin takes integer "default", "min" and "max" with min <=
+      default <= max; combo takes one or more "var <token>" entries
+      and an optional "default <token>" that must be one of the vars
+      when present; button takes nothing; string takes an optional
+      "default" consuming the rest of the line.
+  lifecycle:
+    first_command: uci
+    go_requires: position-since-last-uci-or-ucinewgame
+    stop_requires: search-outstanding
+    ponderhit_requires: pondered-search-outstanding
+    after_quit: no-further-commands
+    rule: >-
+      uci is the first command of a session. A go is valid only when
+      a position has been set since the last uci or ucinewgame. stop
+      is valid only while a search is outstanding (a go whose
+      bestmove has not yet been consumed by the session model).
+      ponderhit is valid only while that outstanding search was
+      started with the ponder parameter. quit ends the session; any
+      further command is a lifecycle violation. A rejected command
+      changes no lifecycle state.
+  resolution_failures:
+    malformed_line: any-token-or-grammar-violation
+    unknown_command: first-token-not-a-declared-keyword
+    protocol_state: declared-command-out-of-lifecycle-order
+    rule: >-
+      Rejection has exactly three classes. A line whose first token
+      is no declared keyword is unknown_command; a declared keyword
+      whose tail violates the grammar is malformed_line; a
+      well-formed command out of lifecycle order is protocol_state.
+      Rejection never falls back to a partial interpretation.
+  failure_classes: [malformed_line, unknown_command, protocol_state]
+  failure_mapping:
+    malformed_line: {trigger: any-token-or-grammar-violation, error: malformed_request}
+    unknown_command: {trigger: first-token-not-a-declared-keyword, error: unknown_command}
+    protocol_state: {trigger: declared-command-out-of-lifecycle-order, error: illegal_state}
+  errors:
+    closed_enum: [malformed_request, unknown_command, illegal_state, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  serialization:
+    canonical: true
+    roundtrip: parse-of-emit-is-structure-identity
+    rule: >-
+      Every parsed command or response has exactly one canonical
+      line form; emitting a structure yields it, and parsing that
+      line yields the identical structure. The emitter is total over
+      structures the parser accepts.
+  links:
+    legal_moves_contract: data/contracts/legal_moves.yaml
+    fen_contract: data/contracts/fen.yaml
+  versioning:
+    base_path: /uci/v1
+    rule: >-
+      MINOR additions (new optional fields) keep the base path;
+      MAJOR changes (commands, grammar, lifecycle, parameter sets,
+      error enum narrowing) bump it; a consumer must never silently
+      downgrade a document to a lower major version.
