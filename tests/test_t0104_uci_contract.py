@@ -322,10 +322,19 @@ def parse_engine(contract, line):
         return {"response": kw, "state": rest[0]}
     if kw == "bestmove":
         none = c["move_encoding"]["none_token"]
+        bms = c["bestmove_semantics"]
+        assert bms["ponder_condition"] == (
+            "only-when-primary-move-is-real")
+        assert bms["none_tail"] == "ends-immediately"
         if not rest or (rest[0] != none and not _is_move(c, rest[0])):
             _fail(c, "malformed_line")
         out = {"response": "bestmove", "move": rest[0]}
         if len(rest) > 1:
+            # Relational constraint: ponder is conditional on a REAL
+            # best move; the none token ends the line immediately -
+            # no legal move means no predicted reply.
+            if rest[0] == none:
+                _fail(c, "malformed_line")
             if (len(rest) != 3 or rest[1] != "ponder"
                     or not _is_move(c, rest[2])):
                 _fail(c, "malformed_line")
@@ -1025,6 +1034,8 @@ MALFORMED_ENGINE = [
     "id", "id name", "id rating 3000", "uciok now", "readyok ok",
     "bestmove", "bestmove e2e4 ponder",
     "bestmove e2e4 e7e5",
+    "bestmove (none) ponder e2e4",  # no legal move: no predicted reply
+    "bestmove (none) e2e4",
     "copyprotection", "copyprotection fine", "registration ok ok",
     "info", "info depth", "info depth -1", "info nodes -1",
     "info depth 03", "info depth x", "info foo 1",
@@ -1583,6 +1594,12 @@ def _mutants():
                                  "int_grammar"], "any-digits")
     add("response dropped", ["contract", "engine_responses", "readyok"],
         "bare-keyword-with-suffix")
+    add("ponder laundered to independent syntax", ["contract",
+                                                   "bestmove_semantics",
+                                                   "ponder_condition"],
+        "independent-optional-syntax")
+    add("none tail drift", ["contract", "bestmove_semantics",
+                            "none_tail"], "ponder-allowed")
     add("info field kind drift", ["contract", "info_fields", "score"],
         {"kind": "score", "forms": ["cp"], "value_kind": "int"})
     add("info counter pos-int drift", ["contract", "info_fields",

@@ -108,6 +108,17 @@ contract:
       forbidden except the literal 0; time/clock parameters are
       non-negative, the count parameters strictly positive. Flags
       carry no argument.
+  bestmove_semantics:
+    ponder_condition: only-when-primary-move-is-real
+    none_tail: ends-immediately
+    rule: >-
+      The optional ponder move is conditional on a REAL best move,
+      never independent syntax: ponder is permitted only when the
+      primary move is a move, and the none token - valid only when
+      the side to move has no legal move (see move_encoding) -
+      requires the line to end immediately, because a position with
+      no legal move has no predicted reply. "bestmove (none) ponder
+      <move>" is malformed_line.
   engine_responses:
     id: keyword-then-name-or-author-then-nonempty-rest
     uciok: bare-keyword

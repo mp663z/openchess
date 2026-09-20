@@ -276,11 +276,16 @@ LINKS = {
 ALLOWED_TOP = {"schema_version", "contract"}
 ALLOWED_CONTRACT = {
     "id", "transport", "move_encoding", "gui_commands",
+    "bestmove_semantics",
     "go_parameters", "engine_responses", "info_fields",
     "option_markers", "option_types", "position_validation",
     "lifecycle", "resolution_failures",
     "failure_classes", "failure_mapping", "errors", "serialization",
     "links", "versioning",
+}
+BESTMOVE_SEMANTICS = {
+    "ponder_condition": "only-when-primary-move-is-real",
+    "none_tail": "ends-immediately",
 }
 ALLOWED_TRANSPORT = {"byte_framing", "line_grammar"}
 ALLOWED_BYTE_FRAMING = set(BYTE_FRAMING) | {"rule"}
@@ -446,6 +451,14 @@ def lint(doc: dict, root: Path | None = None) -> None:
     _exact(gop.get("int_grammar"), INT_GRAMMAR,
            "go_parameters.int_grammar")
     _text(gop.get("rule"), "go_parameters.rule")
+
+    bms = _mapping(contract.get("bestmove_semantics"),
+                   "contract.bestmove_semantics")
+    _keys(bms, set(BESTMOVE_SEMANTICS) | {"rule"},
+          "contract.bestmove_semantics")
+    for key, value in BESTMOVE_SEMANTICS.items():
+        _exact(bms.get(key), value, f"bestmove_semantics.{key}")
+    _text(bms.get("rule"), "bestmove_semantics.rule")
 
     responses = _mapping(contract.get("engine_responses"),
                          "contract.engine_responses")
