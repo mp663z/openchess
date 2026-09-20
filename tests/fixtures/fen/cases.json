@@ -1,0 +1,282 @@
+{
+ "schema": 1,
+ "contract": "chess-fen",
+ "contract_schema_version": 1,
+ "notes": "T0087 conformance fixture for the T0086 FEN contract. Every case traced through the contract-derived reference (parse_fen/emit_fen) at authoring time; happy/boundary inputs are canonical (parse-then-emit is identity); malformed cases are discriminating (declarative find/replace repair of ONLY the declared defect makes the case valid, verified at authoring time); rollback cases prove the pure-function surface - a rejection leaves no trace.",
+ "happy": [
+  {
+   "name": "startpos",
+   "kind": "roundtrip",
+   "input_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "expect_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+  },
+  {
+   "name": "midgame-full-state",
+   "kind": "roundtrip",
+   "input_fen": "r3k2r/pppb1ppp/2n2np1/3Pp3/4P3/2N2N2/PPPBPPBP/R3K2R w KQkq e6 0 9",
+   "expect_fen": "r3k2r/pppb1ppp/2n2np1/3Pp3/4P3/2N2N2/PPPBPPBP/R3K2R w KQkq e6 0 9"
+  },
+  {
+   "name": "black-to-move-queens",
+   "kind": "roundtrip",
+   "input_fen": "4k3/8/8/8/3q4/8/4Q3/4K3 b - - 12 34",
+   "expect_fen": "4k3/8/8/8/3q4/8/4Q3/4K3 b - - 12 34"
+  }
+ ],
+ "boundary": [
+  {
+   "name": "kings-only-minimum-counters",
+   "kind": "roundtrip",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+   "expect_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+  },
+  {
+   "name": "large-counters",
+   "kind": "roundtrip",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 b - - 999 1000",
+   "expect_fen": "4k3/8/8/8/8/8/8/4K3 b - - 999 1000"
+  },
+  {
+   "name": "all-twelve-piece-letters",
+   "kind": "roundtrip",
+   "input_fen": "4k3/8/8/1prqnb2/8/2NQRBP1/8/4K3 w - - 0 1",
+   "expect_fen": "4k3/8/8/1prqnb2/8/2NQRBP1/8/4K3 w - - 0 1"
+  },
+  {
+   "name": "full-castling-rights",
+   "kind": "roundtrip",
+   "input_fen": "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+   "expect_fen": "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"
+  },
+  {
+   "name": "ep-white-advanced-black-to-move",
+   "kind": "roundtrip",
+   "input_fen": "4k3/8/8/8/4P3/8/8/4K3 b - e3 0 1",
+   "expect_fen": "4k3/8/8/8/4P3/8/8/4K3 b - e3 0 1"
+  },
+  {
+   "name": "ep-black-advanced-white-to-move",
+   "kind": "roundtrip",
+   "input_fen": "4k3/8/8/4p3/8/8/8/4K3 w - e6 0 1",
+   "expect_fen": "4k3/8/8/4p3/8/8/8/4K3 w - e6 0 1"
+  }
+ ],
+ "malformed": [
+  {
+   "name": "field-count-five",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0",
+   "defect": "only five fields",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": " w - - 0",
+    "replace": " w - - 0 1"
+   }
+  },
+  {
+   "name": "rank-sum-nine",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K4 w - - 0 1",
+   "defect": "rank 1 sums to 9",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": "4K4",
+    "replace": "4K3"
+   }
+  },
+  {
+   "name": "rank-count-seven",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8 w - - 0 1",
+   "defect": "placement has 7 ranks",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": "4k3/8/8/8/8/8/8",
+    "replace": "4k3/8/8/8/8/8/8/4K3"
+   }
+  },
+  {
+   "name": "adjacent-digits",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/33K3 w - - 0 1",
+   "defect": "adjacent empty-run digits",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": "33K3",
+    "replace": "4K3"
+   }
+  },
+  {
+   "name": "active-color-x",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 x - - 0 1",
+   "defect": "active color not w/b",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": " x ",
+    "replace": " w "
+   }
+  },
+  {
+   "name": "castling-bad-letter",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w KX - 0 1",
+   "defect": "castling letter X undeclared",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": " KX ",
+    "replace": " - "
+   }
+  },
+  {
+   "name": "castling-order",
+   "kind": "fen-parse",
+   "input_fen": "r3k2r/8/8/8/8/8/8/R3K2R w QK - 0 1",
+   "defect": "castling not KQkq-ordered",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": " QK ",
+    "replace": " KQ "
+   }
+  },
+  {
+   "name": "ep-rank-wrong",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w - e4 0 1",
+   "defect": "en-passant rank not 3 or 6",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": " e4 ",
+    "replace": " - "
+   }
+  },
+  {
+   "name": "halfmove-leading-zero",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 07 1",
+   "defect": "leading zero on halfmove clock",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": " 07 ",
+    "replace": " 7 "
+   }
+  },
+  {
+   "name": "fullmove-zero",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 0",
+   "defect": "fullmove number below its minimum 1",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": " 0 0",
+    "replace": " 0 1"
+   }
+  },
+  {
+   "name": "halfmove-non-ascii-digit",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - \u0663 1",
+   "defect": "non-ASCII digit in halfmove clock",
+   "expect_failure": "malformed_fen",
+   "repair": {
+    "find": "\u0663",
+    "replace": "3"
+   }
+  },
+  {
+   "name": "kingless-black",
+   "kind": "fen-parse",
+   "input_fen": "8/8/8/8/8/8/8/4K3 w - - 0 1",
+   "defect": "no black king",
+   "expect_failure": "impossible_position",
+   "repair": {
+    "find": "8/8/8/8/8/8/8/4K3",
+    "replace": "4k3/8/8/8/8/8/8/4K3"
+   }
+  },
+  {
+   "name": "kings-adjacent",
+   "kind": "fen-parse",
+   "input_fen": "8/8/8/8/8/4k3/4K3/8 w - - 0 1",
+   "defect": "kings adjacent",
+   "expect_failure": "impossible_position",
+   "repair": {
+    "find": "8/8/8/8/8/4k3/4K3/8",
+    "replace": "4k3/8/8/8/8/8/8/4K3"
+   }
+  },
+  {
+   "name": "pawn-on-back-rank",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/P3K3 w - - 0 1",
+   "defect": "white pawn on rank 1",
+   "expect_failure": "impossible_position",
+   "repair": {
+    "find": "P3K3",
+    "replace": "4K3"
+   }
+  },
+  {
+   "name": "non-mover-king-attacked",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/4R3/4K3 w - - 0 1",
+   "defect": "side not to move's king is attacked",
+   "expect_failure": "impossible_position",
+   "repair": {
+    "find": "4R3",
+    "replace": "8"
+   }
+  },
+  {
+   "name": "castling-rook-missing",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 w K - 0 1",
+   "defect": "K right without rook on h1",
+   "expect_failure": "impossible_position",
+   "repair": {
+    "find": " K ",
+    "replace": " - "
+   }
+  },
+  {
+   "name": "ep-halfmove-nonzero",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/4P3/8/8/4K3 b - e3 1 1",
+   "defect": "en-passant target requires halfmove clock zero",
+   "expect_failure": "impossible_position",
+   "repair": {
+    "find": " 1 1",
+    "replace": " 0 1"
+   }
+  },
+  {
+   "name": "ep-mover-pawn-missing",
+   "kind": "fen-parse",
+   "input_fen": "4k3/8/8/8/8/8/8/4K3 b - e3 0 1",
+   "defect": "no pawn on the advanced square for the target",
+   "expect_failure": "impossible_position",
+   "repair": {
+    "find": "4k3/8/8/8/8/8/8/4K3",
+    "replace": "4k3/8/8/8/4P3/8/8/4K3"
+   }
+  }
+ ],
+ "rollback": [
+  {
+   "name": "rejected-malformed-then-valid-parse",
+   "kind": "rollback-fen-parse",
+   "reject_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 0",
+   "expect_failure": "malformed_fen",
+   "then_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+   "expect_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+  },
+  {
+   "name": "rejected-impossible-then-valid",
+   "kind": "rollback-fen-parse",
+   "reject_fen": "8/8/8/8/8/8/8/4K3 w - - 0 1",
+   "expect_failure": "impossible_position",
+   "then_fen": "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+   "expect_fen": "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"
+  }
+ ]
+}
