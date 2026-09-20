@@ -25,6 +25,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.test_t0086_fen_contract import FenError
+from tests.test_t0086_fen_contract import parse_fen as fen_parse
 from tools.uci_contract_lint import lint
 from tools.variant_contract_lint import ContractError
 
@@ -55,6 +57,13 @@ def _square_grammar():
 
 
 @__import__("functools").cache
+def _fen_contract():
+    path = DATA_DIR / "fen.yaml"
+    with open(path) as fh:
+        return yaml.safe_load(fh)["contract"]
+
+
+@__import__("functools").cache
 def _fen_field_count():
     path = DATA_DIR / "fen.yaml"
     with open(path) as fh:
@@ -64,10 +73,11 @@ def _fen_field_count():
 
 
 class UciError(Exception):
-    def __init__(self, failure_class, code):
+    def __init__(self, failure_class, code, subclass=None):
         super().__init__(failure_class)
         self.failure_class = failure_class
         self.code = code
+        self.subclass = subclass
 
 
 def _fail(contract, failure_class):
@@ -77,8 +87,47 @@ def _fail(contract, failure_class):
 
 # -- executable reference parser/emitter, contract-derived ------------
 
+class FrameReader:
+    """The contract's byte-framing layer, derived from
+    transport.byte_framing: a byte stream in, complete frames out.
+    Each frame is exactly one LF-terminated line; any CR byte, an
+    empty frame, invalid UTF-8, or unterminated trailing bytes are
+    malformed at THIS layer. Buffering never depends on chunking."""
+
+    def __init__(self, contract):
+        framing = contract["transport"]["byte_framing"]
+        assert framing["input"] == "byte-stream"
+        assert framing["frame_delimiter"] == "exactly-one-LF-per-frame"
+        assert framing["one_command_per_frame"] is True
+        self.c = contract
+        self.buffer = b""
+
+    def feed(self, chunk: bytes):
+        self.buffer += chunk
+        frames = []
+        while b"\n" in self.buffer:
+            raw, self.buffer = self.buffer.split(b"\n", 1)
+            frames.append(self._decode(raw))
+        return frames
+
+    def finish(self):
+        if self.buffer:
+            _fail(self.c, "malformed_line")  # unterminated bytes
+
+    def _decode(self, raw: bytes) -> str:
+        framing = self.c["transport"]["byte_framing"]
+        if raw == b"":
+            _fail(self.c, "malformed_line")  # empty_frame
+        if framing["crlf"] == "malformed" and b"\r" in raw:
+            _fail(self.c, "malformed_line")  # crlf / bare_cr
+        try:
+            return raw.decode("utf-8", errors="strict")
+        except UnicodeDecodeError:
+            _fail(self.c, "malformed_line")  # invalid_utf8
+
+
 def _check_line(contract, line):
-    t = contract["transport"]
+    t = contract["transport"]["line_grammar"]
     if type(line) is not str or line == "":
         _fail(contract, "malformed_line")
     if line != line.strip():
@@ -189,6 +238,21 @@ def parse_gui(contract, line):
         if body == ["startpos"]:
             out = {"command": "position", "setup": "startpos"}
         elif len(body) == 1 + _fen_field_count() and body[0] == "fen":
+            # position_validation: the joined fields are validated by
+            # the LINKED FEN contract parser; its failure class is
+            # preserved as the subclass while both map to
+            # malformed_line at this layer.
+            pv = c["position_validation"]
+            assert pv["fen_fields"] == (
+                "validated-by-linked-fen-contract-parser")
+            fen_contract = _fen_contract()
+            try:
+                fen_parse(fen_contract, " ".join(body[1:]))
+            except FenError as exc:
+                raise UciError(
+                    "malformed_line",
+                    c["failure_mapping"]["malformed_line"]["error"],
+                    subclass=exc.failure_class) from exc
             out = {"command": "position", "setup": "fen",
                    "fen": body[1:]}
         else:
@@ -304,8 +368,15 @@ def parse_engine(contract, line):
                 digits = raw.lstrip("-")
                 if len(digits) > 1 and digits[0] == "0":
                     _fail(c, "malformed_line")
-                out[key] = {rest[i + 1]: int(raw)}
-                i += 3
+                entry = {"form": rest[i + 1], "value": int(raw)}
+                bound = spec["bound"]
+                consumed = 3
+                if (i + 3 < len(rest)
+                        and rest[i + 3] in bound["values"]):
+                    entry["bound"] = rest[i + 3]
+                    consumed = 4
+                out[key] = entry
+                i += consumed
             elif kind == "rest-of-line":
                 text = rest[i + 1:]
                 if not text:
@@ -329,18 +400,21 @@ def parse_engine(contract, line):
                 raise AssertionError(f"undeclared info kind {kind}")
         return {"response": "info", "fields": out}
     if kw == "option":
-        if "name" not in rest or "type" not in rest:
+        types = c["option_types"]
+        markers = c["option_markers"]
+        assert markers["name_terminator"] == (
+            'last-"-type-"-marker-whose-next-token-is-a-declared-type')
+        if not rest or rest[0] != "name":
             _fail(c, "malformed_line")
-        if rest[0] != "name":
+        candidates = [j for j in range(1, len(rest) - 1)
+                      if rest[j] == "type" and rest[j + 1] in types]
+        if not candidates:
             _fail(c, "malformed_line")
-        ti = rest.index("type")
+        ti = candidates[-1]  # the LAST marker before a declared type
         name = rest[1:ti]
-        if not name or ti + 1 >= len(rest):
+        if not name:
             _fail(c, "malformed_line")
         otype = rest[ti + 1]
-        types = c["option_types"]
-        if otype not in types:
-            _fail(c, "malformed_line")
         tail = rest[ti + 2:]
         out = {"response": "option", "name": " ".join(name),
                "type": otype}
@@ -372,20 +446,38 @@ def parse_engine(contract, line):
                 _fail(c, "malformed_line")
             out.update(vals)
         elif otype == "combo":
+            # Marker-delimited spans: an optional default span first
+            # (until the first var marker), then one or more var
+            # spans (until the next var marker or end of line); every
+            # span value nonempty; the default must equal one
+            # complete var string.
             varz = []
             default = None
             j = 0
-            while j < len(tail):
-                if tail[j] == "var" and j + 1 < len(tail):
-                    varz.append(tail[j + 1])
-                    j += 2
-                elif tail[j] == "default" and j + 1 < len(tail):
-                    if default is not None:
+            if j < len(tail) and tail[j] == "default":
+                k = j + 1
+                while k < len(tail) and tail[k] != "var":
+                    if tail[k] in ("default",):
                         _fail(c, "malformed_line")
-                    default = tail[j + 1]
-                    j += 2
-                else:
+                    k += 1
+                span = tail[j + 1:k]
+                if not span:
                     _fail(c, "malformed_line")
+                default = " ".join(span)
+                j = k
+            while j < len(tail):
+                if tail[j] != "var":
+                    _fail(c, "malformed_line")
+                k = j + 1
+                while k < len(tail) and tail[k] != "var":
+                    if tail[k] == "default":
+                        _fail(c, "malformed_line")
+                    k += 1
+                span = tail[j + 1:k]
+                if not span:
+                    _fail(c, "malformed_line")
+                varz.append(" ".join(span))
+                j = k
             if not varz:
                 _fail(c, "malformed_line")
             if default is not None and default not in varz:
@@ -464,8 +556,10 @@ def emit(struct):
                         chunk += f" {value['cpunr']}"
                     parts.append(chunk + " " + " ".join(value["moves"]))
                 elif isinstance(value, dict):
-                    form, n = next(iter(value.items()))
-                    parts.append(f"{key} {form} {n}")
+                    chunk = f"{key} {value['form']} {value['value']}"
+                    if "bound" in value:
+                        chunk += f" {value['bound']}"
+                    parts.append(chunk)
                 elif isinstance(value, int):
                     parts.append(f"{key} {value}")
                 else:
@@ -492,51 +586,58 @@ def emit(struct):
 # -- session lifecycle model, contract-derived -------------------------
 
 class Session:
-    """The contract lifecycle as an executable tracker. A rejected
-    command changes NO state."""
+    """The contract lifecycle as an executable BIDIRECTIONAL state
+    machine: both GUI commands and engine responses step the machine
+    through the contract's own transition table. Parse failures
+    (malformed/unknown) raise before any state inspection; an
+    unlisted (state, event) pair is protocol_state; a rejected line
+    changes NO state - the snapshot is bit-identical."""
 
     def __init__(self, contract):
         self.c = contract
-        self.state = {"uci": False, "position": False, "search": False,
-                      "ponder_search": False, "quit": False}
+        life = contract["lifecycle"]
+        assert life["model"] == "bidirectional-session-state-machine"
+        self.transitions = life["transitions"]
+        self.state = life["initial"]
+        self.position_flag = False
 
-    def feed(self, line):
+    def snapshot(self):
+        return (self.state, self.position_flag)
+
+    def _step(self, direction, event, ponder=False):
         c = self.c
         life = c["lifecycle"]
-        assert life["first_command"] == "uci"
+        mapping = self.transitions[self.state][direction]
+        if event not in mapping:
+            _fail(c, life["unlisted_pair"])
+        target = mapping[event]
+        if target == "search-start":
+            # go_ponder_target: pondering when the ponder parameter
+            # is present, searching otherwise.
+            target = "pondering" if ponder else "searching"
+        self.state = target
+
+    def feed_gui(self, line):
+        c = self.c
+        life = c["lifecycle"]
         cmd = parse_gui(c, line)  # malformed/unknown raise first
-        s = self.state
         kw = cmd["command"]
-        if s["quit"]:
-            _fail(c, "protocol_state")
-        if kw == "uci":
-            if s["uci"]:
-                _fail(c, "protocol_state")
-            s["uci"] = True
-            s["position"] = False
-        elif not s["uci"]:
-            _fail(c, "protocol_state")
-        elif kw == "ucinewgame":
-            s["position"] = False
+        if kw == "go" and self.state == "ready" and not                 self.position_flag:
+            _fail(c, life["unlisted_pair"])  # go_requires
+        self._step("gui", kw,
+                   ponder=(kw == "go" and cmd["parameters"].get("ponder")
+                           is True))
+        if kw in ("uci", "ucinewgame"):
+            self.position_flag = False
         elif kw == "position":
-            s["position"] = True
-        elif kw == "go":
-            if not s["position"] or s["search"]:
-                _fail(c, "protocol_state")
-            s["search"] = True
-            s["ponder_search"] = cmd["parameters"].get("ponder") is True
-        elif kw == "stop":
-            if not s["search"]:
-                _fail(c, "protocol_state")
-            s["search"] = s["ponder_search"] = False
-        elif kw == "ponderhit":
-            if not s["ponder_search"]:
-                _fail(c, "protocol_state")
-            s["ponder_search"] = False
-        elif kw == "quit":
-            s["quit"] = True
-        # debug/isready/setoption/register: valid once uci was sent
+            self.position_flag = True
         return cmd
+
+    def feed_engine(self, line):
+        c = self.c
+        resp = parse_engine(c, line)  # malformed/unknown raise first
+        self._step("engine", resp["response"])
+        return resp
 
 
 # -- happy: every declared command and response form --------------------
@@ -629,16 +730,42 @@ HAPPY_ENGINE = [
                                      "nps": 4000000}}),
     ("info depth 12 score cp 35",
      {"response": "info",
-      "fields": {"depth": 12, "score": {"cp": 35}}}),
+      "fields": {"depth": 12, "score": {"form": "cp", "value": 35}}}),
     ("info depth 12 score cp -17",
      {"response": "info",
-      "fields": {"depth": 12, "score": {"cp": -17}}}),
+      "fields": {"depth": 12, "score": {"form": "cp", "value": -17}}}),
     ("info depth 25 score mate 4",
      {"response": "info",
-      "fields": {"depth": 25, "score": {"mate": 4}}}),
+      "fields": {"depth": 25, "score": {"form": "mate", "value": 4}}}),
     ("info depth 25 score mate -2",
      {"response": "info",
-      "fields": {"depth": 25, "score": {"mate": -2}}}),
+      "fields": {"depth": 25, "score": {"form": "mate", "value": -2}}}),
+    ("info depth 12 score cp 35 lowerbound",
+     {"response": "info",
+      "fields": {"depth": 12, "score": {"form": "cp", "value": 35,
+                                        "bound": "lowerbound"}}}),
+    ("info depth 12 score cp -17 upperbound",
+     {"response": "info",
+      "fields": {"depth": 12, "score": {"form": "cp", "value": -17,
+                                        "bound": "upperbound"}}}),
+    ("info depth 25 score mate 4 upperbound",
+     {"response": "info",
+      "fields": {"depth": 25, "score": {"form": "mate", "value": 4,
+                                        "bound": "upperbound"}}}),
+    ("info depth 25 score mate -2 lowerbound",
+     {"response": "info",
+      "fields": {"depth": 25, "score": {"form": "mate", "value": -2,
+                                        "bound": "lowerbound"}}}),
+    ("info depth 0 seldepth 0 time 0 nodes 0 multipv 0 "
+     "currmovenumber 0 hashfull 0 nps 0 tbhits 0 sbhits 0 cpuload 0",
+     {"response": "info",
+      "fields": {"depth": 0, "seldepth": 0, "time": 0, "nodes": 0,
+                 "multipv": 0, "currmovenumber": 0, "hashfull": 0,
+                 "nps": 0, "tbhits": 0, "sbhits": 0, "cpuload": 0}}),
+    ("info depth 11 currline 0 e2e4 e7e5",
+     {"response": "info", "fields": {
+         "depth": 11,
+         "currline": {"cpunr": 0, "moves": ["e2e4", "e7e5"]}}}),
     ("info depth 10 multipv 2 currmove e2e4 currmovenumber 1",
      {"response": "info", "fields": {"depth": 10, "multipv": 2,
                                      "currmove": "e2e4",
@@ -649,7 +776,8 @@ HAPPY_ENGINE = [
     ("info depth 14 pv e2e4 e7e5 score cp 20 nodes 100",
      {"response": "info", "fields": {"depth": 14,
                                      "pv": ["e2e4", "e7e5"],
-                                     "score": {"cp": 20},
+                                     "score": {"form": "cp",
+                                               "value": 20},
                                      "nodes": 100}}),
     ("info depth 9 hashfull 500 tbhits 12 sbhits 3 cpuload 750",
      {"response": "info", "fields": {"depth": 9, "hashfull": 500,
@@ -683,6 +811,16 @@ HAPPY_ENGINE = [
      "Normal var Risky",
      {"response": "option", "name": "Style", "type": "combo",
       "default": "Normal", "var": ["Solid", "Normal", "Risky"]}),
+    ("option name Style type combo default Very Solid var Very Solid "
+     "var Aggressive",
+     {"response": "option", "name": "Style", "type": "combo",
+      "default": "Very Solid", "var": ["Very Solid", "Aggressive"]}),
+    ("option name Style type combo var Very Solid var Aggressive",
+     {"response": "option", "name": "Style", "type": "combo",
+      "var": ["Very Solid", "Aggressive"]}),
+    ("option name My type Filter type check default true",
+     {"response": "option", "name": "My type Filter", "type": "check",
+      "default": True}),
     ("option name Clear Hash type button",
      {"response": "option", "name": "Clear Hash", "type": "button"}),
     ("option name NalimovPath type string default c:/chess/tb",
@@ -724,27 +862,59 @@ def test_emit_parse_roundtrip_identity():
 
 # -- lifecycle: happy sessions ------------------------------------------
 
+HAPPY_TRACE = [
+    ("gui", "uci", "awaiting_uciok"),
+    ("engine", "id name Stockfish 17", "awaiting_uciok"),
+    ("engine", "id author the Stockfish developers", "awaiting_uciok"),
+    ("engine", "uciok", "ready"),
+    ("gui", "setoption name Threads value 4", "ready"),
+    ("gui", "debug on", "ready"),
+    ("gui", "ucinewgame", "ready"),
+    ("gui", "position startpos", "ready"),
+    ("gui", "isready", "readiness_pending"),
+    ("engine", "readyok", "ready"),
+    ("gui", "go depth 10", "searching"),
+    ("engine", "info depth 5 score cp 30", "searching"),
+    ("gui", "stop", "stop_requested"),
+    ("engine", "info depth 6 score cp 31", "stop_requested"),
+    ("engine", "bestmove e2e4 ponder e7e5", "ready"),
+    ("gui", "position startpos moves e2e4", "ready"),
+    ("gui", "go ponder wtime 1000 btime 1000", "pondering"),
+    ("engine", "info depth 1", "pondering"),
+    ("gui", "stop", "ponder_stop_requested"),
+    ("gui", "ponderhit", "stop_requested"),
+    ("engine", "bestmove e7e5", "ready"),
+    ("gui", "register later", "ready"),
+    ("engine", "registration ok", "ready"),
+    ("engine", "copyprotection ok", "ready"),
+    ("gui", "quit", "terminated"),
+]
+
+
 def test_lifecycle_full_session():
     doc = _doc()["contract"]
     s = Session(doc)
-    for line in ("uci", "setoption name Threads value 4", "isready",
-                 "ucinewgame", "position startpos", "go depth 10",
-                 "stop", "position startpos moves e2e4",
-                 "go ponder wtime 1000 btime 1000", "ponderhit", "stop",
-                 "quit"):
-        s.feed(line)
-    assert s.state == {"uci": True, "position": True, "search": False,
-                       "ponder_search": False, "quit": True}
+    for direction, line, expected_state in HAPPY_TRACE:
+        if direction == "gui":
+            s.feed_gui(line)
+        else:
+            s.feed_engine(line)
+        assert s.state == expected_state, (line, s.state)
+    assert s.state == "terminated"
+    assert s.position_flag is True
 
 
 def test_lifecycle_ucinewgame_resets_position_requirement():
     doc = _doc()["contract"]
     s = Session(doc)
-    for line in ("uci", "position startpos", "go depth 5", "stop",
-                 "ucinewgame"):
-        s.feed(line)
+    s.feed_gui("uci")
+    s.feed_engine("uciok")
+    s.feed_gui("position startpos")
+    s.feed_gui("go depth 5")
+    s.feed_engine("bestmove e2e4")
+    s.feed_gui("ucinewgame")
     with pytest.raises(UciError) as exc:
-        s.feed("go depth 5")  # no position since ucinewgame
+        s.feed_gui("go depth 5")  # no position since ucinewgame
     assert exc.value.failure_class == "protocol_state"
 
 
@@ -759,6 +929,14 @@ MALFORMED_GUI = [
     "position startpos moves e2e4 e7e5x", "position startpos moves e9e4",
     "position fen 4k3/8/8/8/8/8/8/4K3 w - - 0",  # five fen fields
     "position fen 4k3/8/8/8/8/8/8/4K3 w - - 0 1 extra",
+    "position fen garbage x6 tokens here now bad",  # not a FEN at all
+    "position fen 8/8/8/8/8/8/8/4K3 w - - 0 1",    # kingless
+    "position fen r3k2r/8/8/8/8/8/8/4K3 w Kq - 0 1",  # right w/o rook
+    "position fen rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR "
+    "w KQkq e3 0 1",                               # ep wrong side
+    "position fen rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR "
+    "b KQkq e3 1 1",                               # stale ep clock
+    "position fen 4k3/8/8/8/8/8/8/4K3 w - - x 1",  # nonnumeric clock
     "go wtime", "go wtime -5", "go wtime 05", "go depth 0", "go mate x",
     "go wtime ١٠٠",  # Arabic-Indic digits are not ASCII
     "go depth 5 depth 6", "go ponder ponder",
@@ -777,13 +955,19 @@ MALFORMED_ENGINE = [
     "bestmove", "bestmove e2e4 ponder",
     "bestmove e2e4 e7e5",
     "copyprotection", "copyprotection fine", "registration ok ok",
-    "info", "info depth", "info depth -1", "info depth 0",
+    "info", "info depth", "info depth -1", "info nodes -1",
     "info depth 03", "info depth x", "info foo 1",
     "info depth 5 depth 6", "info score cp", "info score elo 20",
     "info score cp +3", "info score cp 03",
+    "info score cp lowerbound",  # qualifier where the value belongs
+    "info score lowerbound",     # qualifier without a score value
+    "info score cp 4 lowerbound upperbound",   # both qualifiers
+    "info score cp 4 lowerbound lowerbound",   # duplicate qualifier
+    "info score cp 4 middlebound",             # undeclared qualifier
+    "info depth ٣",              # non-ASCII digit
     "info pv", "info pv e2e4x", "info currmove e9e4",
     "info currline", "info currline 1", "info currline 1 e9e4",
-    "info string", "info multipv 0", "info time -3",
+    "info string", "info time -3",
     "option", "option name", "option name X", "option name X type",
     "option name X type dial", "option name X type check",
     "option name X type check default yes",
@@ -793,6 +977,13 @@ MALFORMED_ENGINE = [
     "option name X type spin default 3 min 5 max 1",  # min > max
     "option name X type combo",  # no var
     "option name X type combo default A var B",  # default not in vars
+    "option name X type combo default var X",    # empty default span
+    "option name X type combo var var X",        # empty var span
+    "option name X type combo var X var",        # trailing empty span
+    "option name X type combo default A default A var A",  # dup default
+    "option name X type combo var A default A",  # default after var
+    "option name X type combo default Very var Very Solid",
+    # ^ default must equal one COMPLETE var string
     "option name X type button default 1",
     "option name X type string min 3",
     "option type spin name X default 1 min 1 max 2",  # name must lead
@@ -806,6 +997,99 @@ def test_malformed_gui_rejected(bad):
         parse_gui(doc, bad)
     assert exc.value.failure_class == "malformed_line"
     assert exc.value.code == "malformed_request"
+
+
+POSITION_SUBCLASSES = [
+    ("position fen garbage x6 tokens here now bad", "malformed_fen"),
+    ("position fen 4k3/8/8/8/8/8/8/4K3 w - - x 1", "malformed_fen"),
+    ("position fen 8/8/8/8/8/8/8/4K3 w - - 0 1", "impossible_position"),
+    ("position fen r3k2r/8/8/8/8/8/8/4K3 w Kq - 0 1",
+     "impossible_position"),
+    ("position fen rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR "
+     "w KQkq e3 0 1", "impossible_position"),
+    ("position fen rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR "
+     "b KQkq e3 1 1", "impossible_position"),
+]
+
+
+@pytest.mark.parametrize("bad,subclass", POSITION_SUBCLASSES)
+def test_position_fen_subclass_preserved(bad, subclass):
+    # position_validation: the FEN contract's own failure class is
+    # preserved as the rejection subclass; both map to malformed_line.
+    doc = _doc()["contract"]
+    with pytest.raises(UciError) as exc:
+        parse_gui(doc, bad)
+    assert exc.value.failure_class == "malformed_line"
+    assert exc.value.subclass == subclass
+
+
+def test_startpos_resolves_to_variant_registry():
+    doc = _doc()["contract"]
+    assert doc["position_validation"]["startpos"] == (
+        "resolves-to-linked-variant-registry-standard-start_fen")
+    with open(DATA_DIR / "variant.yaml") as fh:
+        registry = yaml.safe_load(fh)["contract"]["variants"]["entries"]
+    standard = [e for e in registry if e["id"] == "standard"]
+    assert len(standard) == 1
+    # the registry start FEN is itself valid under the FEN contract
+    fen_parse(_fen_contract(), standard[0]["start_fen"])
+
+
+# -- byte framing: the wire layer ---------------------------------------
+
+def test_framing_happy_and_multiframe():
+    doc = _doc()["contract"]
+    r = FrameReader(doc)
+    assert r.feed(b"uci\n") == ["uci"]
+    assert r.feed(b"isready\ngo depth 5\n") == ["isready",
+                                                  "go depth 5"]
+    r.finish()
+
+
+def test_framing_chunk_boundaries_and_utf8_split():
+    doc = _doc()["contract"]
+    r = FrameReader(doc)
+    assert r.feed(b"uc") == []
+    assert r.feed(b"i\nid name \xc3") == ["uci"]
+    assert r.feed(b"\xa9checs\n") == ["id name échecs"]
+    r.finish()
+
+
+FRAMING_MALFORMED = [
+    b"uci\r\n",            # CRLF
+    b"uc\ri\n",            # bare CR
+    b"\n",                  # empty frame
+    b"uci\n\n",            # empty second frame
+    b"uc\xffi\n",          # invalid UTF-8
+    b"id name \xc3\xa9\xc3\n",  # truncated multi-byte sequence
+]
+
+
+@pytest.mark.parametrize("blob", FRAMING_MALFORMED)
+def test_framing_rejected(blob):
+    doc = _doc()["contract"]
+    r = FrameReader(doc)
+    with pytest.raises(UciError) as exc:
+        r.feed(blob)
+    assert exc.value.failure_class == "malformed_line"
+    assert exc.value.code == "malformed_request"
+
+
+def test_framing_unterminated_trailing_bytes():
+    doc = _doc()["contract"]
+    r = FrameReader(doc)
+    r.feed(b"uci")
+    with pytest.raises(UciError) as exc:
+        r.finish()
+    assert exc.value.failure_class == "malformed_line"
+
+
+def test_framing_then_grammar_layers_compose():
+    doc = _doc()["contract"]
+    r = FrameReader(doc)
+    frames = r.feed(b"go depth 5\n")
+    assert [parse_gui(doc, f) for f in frames] == [
+        {"command": "go", "parameters": {"depth": 5}}]
 
 
 @pytest.mark.parametrize("bad", UNKNOWN)
@@ -826,40 +1110,84 @@ def test_malformed_engine_rejected(bad):
     assert exc.value.code == "malformed_request"
 
 
+def _feed(session, direction, line):
+    if direction == "gui":
+        return session.feed_gui(line)
+    return session.feed_engine(line)
+
+
+HANDSHAKE = [("gui", "uci"), ("engine", "id name S"),
+             ("engine", "uciok")]
+POSITIONED = HANDSHAKE + [("gui", "position startpos")]
+SEARCHING = POSITIONED + [("gui", "go depth 5")]
+PONDERING = POSITIONED + [("gui", "go ponder wtime 1 btime 1")]
+STOPPED = SEARCHING + [("gui", "stop")]
+READINESS = POSITIONED + [("gui", "isready")]
+AFTER_QUIT = HANDSHAKE + [("gui", "quit")]
+
 PROTOCOL_VIOLATIONS = [
-    ([], "position startpos"),                      # uci not first
-    (["uci"], "go depth 5"),                        # no position set
-    (["uci", "position startpos", "go depth 5"], "go depth 5"),
-    (["uci"], "stop"),                              # no search
-    (["uci", "position startpos", "go depth 5", "stop"], "stop"),
-    (["uci", "position startpos", "go depth 5"], "ponderhit"),
-    (["uci", "position startpos", "go depth 5", "stop"], "ponderhit"),
-    (["uci", "quit"], "isready"),                   # after quit
-    (["uci", "quit"], "quit"),
-    (["uci", "uci"], None),                         # uci twice
+    ([], "gui", "position startpos"),       # uci first
+    ([("gui", "uci")], "gui", "isready"),   # uciok gates commands
+    ([("gui", "uci")], "gui", "position startpos"),
+    ([("gui", "uci")], "gui", "go depth 5"),
+    ([("gui", "uci")], "gui", "setoption name X value 1"),
+    ([("gui", "uci")], "engine", "readyok"),
+    ([("gui", "uci")], "engine", "bestmove e2e4"),
+    ([("gui", "uci")], "engine", "info depth 3"),
+    (HANDSHAKE, "engine", "uciok"),         # duplicate uciok
+    (HANDSHAKE, "engine", "id name X"),     # id only pre-uciok
+    (HANDSHAKE, "gui", "go depth 5"),       # no position set
+    (HANDSHAKE, "gui", "stop"),             # no search outstanding
+    (HANDSHAKE, "gui", "ponderhit"),
+    (HANDSHAKE, "gui", "uci"),              # uci twice
+    (HANDSHAKE, "engine", "readyok"),       # no pending readiness
+    (SEARCHING, "gui", "go depth 6"),       # second go
+    (SEARCHING, "gui", "position startpos"),
+    (SEARCHING, "gui", "setoption name X value 1"),
+    (SEARCHING, "gui", "ucinewgame"),
+    (SEARCHING, "gui", "isready"),
+    (SEARCHING, "gui", "ponderhit"),        # not a pondered search
+    (SEARCHING, "engine", "readyok"),
+    (STOPPED, "gui", "stop"),               # already stop-requested
+    (STOPPED, "gui", "position startpos"),  # search still outstanding
+    (STOPPED, "gui", "go depth 6"),
+    (STOPPED, "gui", "ponderhit"),          # search was not pondered
+    (PONDERING, "gui", "go depth 6"),
+    (PONDERING + [("gui", "stop")], "gui", "stop"),
+    (READINESS, "gui", "position startpos"),  # readyok must resolve
+    (READINESS, "gui", "isready"),
+    (READINESS, "gui", "go depth 5"),
+    (READINESS, "engine", "bestmove e2e4"),
+    (AFTER_QUIT, "gui", "isready"),         # nothing after quit
+    (AFTER_QUIT, "gui", "quit"),
+    (AFTER_QUIT, "engine", "uciok"),
+    (AFTER_QUIT, "engine", "info depth 3"),
 ]
 
 
-@pytest.mark.parametrize("prefix,final", [
-    (p, f) for p, f in PROTOCOL_VIOLATIONS if f is not None])
-def test_protocol_state_rejected(prefix, final):
+@pytest.mark.parametrize("prefix,direction,final", PROTOCOL_VIOLATIONS)
+def test_protocol_state_rejected(prefix, direction, final):
     doc = _doc()["contract"]
     s = Session(doc)
-    for line in prefix:
-        s.feed(line)
+    for d, line in prefix:
+        _feed(s, d, line)
     with pytest.raises(UciError) as exc:
-        s.feed(final)
+        _feed(s, direction, final)
     assert exc.value.failure_class == "protocol_state"
     assert exc.value.code == "illegal_state"
 
 
-def test_protocol_uci_twice_rejected():
+def test_stop_requests_but_never_clears_search():
+    # stop marks the search stop-requested; ONLY bestmove clears it.
     doc = _doc()["contract"]
     s = Session(doc)
-    s.feed("uci")
-    with pytest.raises(UciError) as exc:
-        s.feed("uci")
-    assert exc.value.failure_class == "protocol_state"
+    for d, line in STOPPED:
+        _feed(s, d, line)
+    assert s.state == "stop_requested"
+    s.feed_engine("info depth 9")   # still searching: info valid
+    assert s.state == "stop_requested"
+    s.feed_engine("bestmove e2e4")
+    assert s.state == "ready"
 
 
 # -- rollback: rejection changes NO state -------------------------------
@@ -867,23 +1195,33 @@ def test_protocol_uci_twice_rejected():
 def test_rejected_commands_leave_state_bit_identical():
     doc = _doc()["contract"]
     scripts = [
-        (["uci", "position startpos", "go depth 5"],
-         ["go depth 6", "stop stop", "ponderhit", "go",
-          "position startpos moves e2e4x", "quit quit"]),
-        (["uci"], ["go infinite", "stop", "ponderhit", "position",
-                   "setoption name", "register name N code"]),
-        (["uci", "quit"], ["isready", "quit", "position startpos"]),
+        (SEARCHING,
+         [("gui", "go depth 6"), ("gui", "stop stop"),
+          ("gui", "ponderhit"), ("gui", "position startpos"),
+          ("gui", "setoption name X value 1"),
+          ("engine", "readyok"), ("engine", "uciok"),
+          ("engine", "bestmove"), ("gui", "go")]),
+        (STOPPED,
+         [("gui", "stop"), ("gui", "go depth 6"),
+          ("gui", "ponderhit"), ("engine", "readyok")]),
+        ([("gui", "uci")],
+         [("gui", "go infinite"), ("gui", "stop"),
+          ("engine", "readyok"), ("gui", "position"),
+          ("gui", "setoption name"), ("engine", "bestmove e2e4")]),
+        (AFTER_QUIT,
+         [("gui", "isready"), ("gui", "quit"),
+          ("engine", "uciok"), ("engine", "bestmove e2e4")]),
     ]
     for prefix, rejections in scripts:
         s = Session(doc)
-        for line in prefix:
-            s.feed(line)
-        before = copy.deepcopy(s.state)
-        for bad in rejections:
+        for d, line in prefix:
+            _feed(s, d, line)
+        before = s.snapshot()
+        for d, bad in rejections:
             with contextlib.suppress(UciError):
-                s.feed(bad)
-            assert s.state == before, (
-                f"{bad!r} changed state {before} -> {s.state}")
+                _feed(s, d, bad)
+            assert s.snapshot() == before, (
+                f"{bad!r} changed state {before} -> {s.snapshot()}")
 
 
 # -- mutation battery ----------------------------------------------------
@@ -900,14 +1238,29 @@ def _mutants():
         node[path[-1]] = value
         out.append((name, m))
 
-    add("framing drift", ["contract", "transport", "framing"],
-        "json-rpc")
-    add("terminator drift", ["contract", "transport",
-                             "line_terminator"], "CRLF")
-    add("separator drift", ["contract", "transport", "token_separator"],
-        "any-whitespace")
+    add("framing input drift", ["contract", "transport",
+                                "byte_framing", "input"], "text-stream")
+    add("crlf tolerated", ["contract", "transport", "byte_framing",
+                           "crlf"], "tolerated")
+    add("bare cr tolerated", ["contract", "transport", "byte_framing",
+                              "bare_cr"], "tolerated")
+    add("unterminated tolerated", ["contract", "transport",
+                                   "byte_framing",
+                                   "unterminated_trailing_bytes"],
+        "tolerated")
+    add("invalid utf8 tolerated", ["contract", "transport",
+                                   "byte_framing", "invalid_utf8"],
+        "replacement-char")
+    add("empty frame tolerated", ["contract", "transport",
+                                  "byte_framing", "empty_frame"],
+        "skipped")
+    add("chunking drift", ["contract", "transport", "byte_framing",
+                           "chunking"], "frames-align-with-reads")
+    add("separator drift", ["contract", "transport", "line_grammar",
+                            "token_separator"], "any-whitespace")
     add("keyword case folding", ["contract", "transport",
-                                 "keyword_case"], "case-insensitive")
+                                 "line_grammar", "keyword_case"],
+        "case-insensitive")
     add("move form drift", ["contract", "move_encoding", "form"],
         "san")
     add("promotion uppercase", ["contract", "move_encoding",
@@ -932,6 +1285,13 @@ def _mutants():
         "bare-keyword-with-suffix")
     add("info field kind drift", ["contract", "info_fields", "score"],
         {"kind": "score", "forms": ["cp"], "value_kind": "int"})
+    add("info counter pos-int drift", ["contract", "info_fields",
+                                       "depth"], {"kind": "pos-int"})
+    add("score bound dropped", ["contract", "info_fields", "score",
+                                "bound"], None)
+    add("score bound values drift", ["contract", "info_fields",
+                                     "score", "bound", "values"],
+        ["lowerbound"])
     add("info duplicates allowed", ["contract", "info_fields",
                                     "duplicates"], "allowed")
     add("option type dropped", ["contract", "option_types", "spin"],
@@ -940,14 +1300,59 @@ def _mutants():
                                 "bounds"], "none")
     add("combo default free", ["contract", "option_types", "combo",
                                "default_membership"], "any-token")
-    add("lifecycle first drift", ["contract", "lifecycle",
-                                  "first_command"], "isready")
-    add("lifecycle go drift", ["contract", "lifecycle", "go_requires"],
-        "nothing")
-    add("lifecycle stop drift", ["contract", "lifecycle",
-                                 "stop_requires"], "nothing")
-    add("lifecycle after_quit drift", ["contract", "lifecycle",
-                                       "after_quit"], "commands-allowed")
+    add("combo value kind drift", ["contract", "option_types", "combo",
+                                   "value_kind"], "single-token")
+    add("option marker drift", ["contract", "option_markers",
+                                "name_terminator"], "first-type-token")
+    add("combo span drift", ["contract", "option_markers",
+                             "combo_var_span"], "single-token")
+    add("position validation drift", ["contract", "position_validation",
+                                      "fen_fields"], "token-count-only")
+    add("fen impossible remap", ["contract", "position_validation",
+                                 "fen_impossible_maps_to"],
+        "protocol_state")
+    add("subclass dropped", ["contract", "position_validation",
+                             "subclass_preservation"], "dropped")
+    add("startpos resolution drift", ["contract", "position_validation",
+                                      "startpos"], "hardcoded-fen")
+    add("lifecycle model drift", ["contract", "lifecycle", "model"],
+        "gui-command-only")
+    add("lifecycle initial drift", ["contract", "lifecycle", "initial"],
+        "ready")
+    add("lifecycle states drift", ["contract", "lifecycle", "states"],
+        ["pre_uci", "ready", "terminated"])
+    add("stop clears search", ["contract", "lifecycle", "transitions",
+                               "searching", "gui", "stop"], "ready")
+    add("bestmove does not clear", ["contract", "lifecycle",
+                                    "transitions", "stop_requested",
+                                    "engine", "bestmove"],
+        "stop_requested")
+    add("uciok gate removed", ["contract", "lifecycle", "transitions",
+                               "awaiting_uciok", "gui"],
+        {"position": "ready", "quit": "terminated"})
+    add("readyok gate removed", ["contract", "lifecycle", "transitions",
+                                 "readiness_pending", "gui"],
+        {"position": "ready", "quit": "terminated"})
+    add("ponderhit free", ["contract", "lifecycle", "transitions",
+                           "searching", "gui"],
+        {"stop": "stop_requested", "ponderhit": "searching",
+         "quit": "terminated"})
+    add("info in ready", ["contract", "lifecycle", "transitions",
+                          "ready", "engine"],
+        {"info": "ready", "copyprotection": "ready",
+         "registration": "ready"})
+    add("post quit commands", ["contract", "lifecycle", "transitions",
+                               "terminated", "gui"], {"uci": "ready"})
+    add("unlisted pair drift", ["contract", "lifecycle",
+                                "unlisted_pair"], "ignored")
+    add("transition target invented", ["contract", "lifecycle",
+                                       "transitions", "searching",
+                                       "engine", "bestmove"],
+        "done")
+    add("go ponder target drift", ["contract", "lifecycle",
+                                   "go_ponder_target"], "always-normal")
+    add("variant link dropped", ["contract", "links",
+                                 "variant_contract"], None)
     add("failure class dropped", ["contract", "resolution_failures",
                                   "protocol_state"], "none")
     add("failure classes drift", ["contract", "failure_classes"],
@@ -1030,6 +1435,42 @@ def test_linkage_fen_field_order_drift_fails(tmp_path):
         d["contract"]["fields"]["order"] = [
             "placement", "castling", "active_color", "en_passant",
             "halfmove_clock", "fullmove_number"]
+        p.write_text(yaml.safe_dump(d))
+    doc, dst = _lint_with_root(tmp_path, mutate)
+    with pytest.raises(ContractError):
+        lint(doc, root=tmp_path)
+
+
+def test_linkage_fen_semantic_rule_drift_fails(tmp_path):
+    # a SEMANTIC rule change, not only grammar/field-order
+    def mutate(dst):
+        p = dst / "fen.yaml"
+        d = yaml.safe_load(p.read_text())
+        d["contract"]["position_rules"]["white_kings"] = "at-most-1"
+        p.write_text(yaml.safe_dump(d))
+    doc, dst = _lint_with_root(tmp_path, mutate)
+    with pytest.raises(ContractError):
+        lint(doc, root=tmp_path)
+
+
+def test_linkage_fen_ep_storage_drift_fails(tmp_path):
+    def mutate(dst):
+        p = dst / "fen.yaml"
+        d = yaml.safe_load(p.read_text())
+        d["contract"]["en_passant"]["storage"] = \
+            "recorded-only-when-capturable"
+        p.write_text(yaml.safe_dump(d))
+    doc, dst = _lint_with_root(tmp_path, mutate)
+    with pytest.raises(ContractError):
+        lint(doc, root=tmp_path)
+
+
+def test_linkage_variant_start_fen_drift_fails(tmp_path):
+    def mutate(dst):
+        p = dst / "variant.yaml"
+        d = yaml.safe_load(p.read_text())
+        d["contract"]["variants"]["entries"][0]["start_fen"] = \
+            "8/8/8/8/8/8/8/8 w - - 0 1"
         p.write_text(yaml.safe_dump(d))
     doc, dst = _lint_with_root(tmp_path, mutate)
     with pytest.raises(ContractError):

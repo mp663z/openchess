@@ -2,8 +2,8 @@
 # pool drives Stockfish-compatible engines over THIS dialect per
 # ADR-0001).
 #
-# Source of truth for the Universal Chess Interface dialect OpenChess
-# speaks in both directions: the worker pool's outbound commands and
+# Source of truth for the Universal Chess Interface dialect the
+# product speaks in both directions: the worker pool's outbound commands and
 # its parsing of engine responses share THESE semantics. ALL normative
 # semantics live in STRUCTURED fields the lint compares exactly -
 # prose is documentation, never the enforcement surface. The dialect
@@ -93,8 +93,8 @@ contract:
     winc: {kind: nonneg-int}
     binc: {kind: nonneg-int}
     movestogo: {kind: pos-int}
-    depth: {kind: nonneg-int}
-    nodes: {kind: nonneg-int}
+    depth: {kind: pos-int}
+    nodes: {kind: pos-int}
     mate: {kind: pos-int}
     movetime: {kind: pos-int}
     infinite: {kind: flag}
@@ -195,7 +195,7 @@ contract:
   position_validation:
     fen_fields: validated-by-linked-fen-contract-parser
     startpos: resolves-to-linked-variant-registry-standard-start_fen
-    moves_tail: each-move-applied-per-linked-legal-moves-contract
+    moves_tail: grammar-per-linked-legal-moves-move-encoding
     fen_malformed_maps_to: malformed_line
     fen_impossible_maps_to: malformed_line
     subclass_preservation: fen-failure-class-preserved-as-subclass
@@ -207,9 +207,11 @@ contract:
       failure class (malformed vs impossible) is preserved as the
       rejection subclass while both map to malformed_line at this
       layer. "startpos" resolves to the standard variant's
-      start_fen from the linked variant registry. Every move in the
-      optional moves tail is applied per the linked legal-moves
-      contract; an illegal move there is malformed_line.
+      start_fen from the linked variant registry. Move tokens in the
+      optional moves tail are validated against the move grammar
+      derived from the linked legal-moves contract; applying them to
+      the position is the legal-moves runtime's layer, not this
+      one.
   lifecycle:
     model: bidirectional-session-state-machine
     states: [pre_uci, awaiting_uciok, ready, readiness_pending,

@@ -36,10 +36,19 @@ CONTRACT = ROOT / "data" / "contracts" / "uci.yaml"
 LEGAL_MOVES = ROOT / "data" / "contracts" / "legal_moves.yaml"
 FEN = ROOT / "data" / "contracts" / "fen.yaml"
 
-TRANSPORT = {
-    "framing": "one-command-per-line",
-    "line_terminator": "LF",
-    "encoding": "UTF-8",
+BYTE_FRAMING = {
+    "input": "byte-stream",
+    "frame_delimiter": "exactly-one-LF-per-frame",
+    "crlf": "malformed",
+    "bare_cr": "malformed",
+    "unterminated_trailing_bytes": "malformed",
+    "empty_frame": "malformed",
+    "invalid_utf8": "malformed",
+    "one_command_per_frame": True,
+    "chunking":
+        "frames-may-arrive-split-across-arbitrary-read-boundaries",
+}
+LINE_GRAMMAR = {
     "token_separator": "single-space",
     "leading_trailing_whitespace": "forbidden",
     "empty_line": "malformed",
@@ -60,7 +69,8 @@ GUI_COMMANDS = {
     "setoption": "keyword-name-then-id-then-optional-value",
     "register": "keyword-then-later-or-name-code-pair",
     "ucinewgame": "bare-keyword",
-    "position": "keyword-then-startpos-or-fen-then-optional-moves",
+    "position":
+        "keyword-then-startpos-or-fen-then-optional-moves-validated",
     "go": "keyword-then-zero-or-more-declared-parameters",
     "stop": "bare-keyword",
     "ponderhit": "bare-keyword",
@@ -95,20 +105,24 @@ ENGINE_RESPONSES = {
 }
 FIELD_GREEDY = "until-next-declared-field-keyword"
 INFO_FIELDS = {
-    "depth": {"kind": "pos-int"},
-    "seldepth": {"kind": "pos-int"},
+    "depth": {"kind": "nonneg-int"},
+    "seldepth": {"kind": "nonneg-int"},
     "time": {"kind": "nonneg-int"},
-    "nodes": {"kind": "pos-int"},
+    "nodes": {"kind": "nonneg-int"},
     "pv": {"kind": "move-list", "min": 1, "greedy": FIELD_GREEDY},
-    "multipv": {"kind": "pos-int"},
+    "multipv": {"kind": "nonneg-int"},
     "score": {"kind": "score", "forms": ["cp", "mate"],
-              "value_kind": "int"},
+              "value_kind": "int",
+              "bound": {"optional": True,
+                        "values": ["lowerbound", "upperbound"],
+                        "at_most_once": True,
+                        "position": "immediately-after-value"}},
     "currmove": {"kind": "move"},
-    "currmovenumber": {"kind": "pos-int"},
+    "currmovenumber": {"kind": "nonneg-int"},
     "hashfull": {"kind": "nonneg-int"},
-    "nps": {"kind": "pos-int"},
-    "tbhits": {"kind": "pos-int"},
-    "sbhits": {"kind": "pos-int"},
+    "nps": {"kind": "nonneg-int"},
+    "tbhits": {"kind": "nonneg-int"},
+    "sbhits": {"kind": "nonneg-int"},
     "cpuload": {"kind": "nonneg-int"},
     "string": {"kind": "rest-of-line", "min": 1},
     "refutation": {"kind": "move-list", "min": 1, "greedy": FIELD_GREEDY},
@@ -123,18 +137,79 @@ OPTION_TYPES = {
              "required": ["default", "min", "max"],
              "bounds": "min-le-default-le-max"},
     "combo": {"tail": ["default", "var-plus"], "required": ["var"],
-              "default_membership": "default-in-vars-when-present"},
+              "value_kind": "span-string",
+              "default_membership":
+                  "default-equals-one-complete-var-when-present"},
     "button": {"tail": [], "required": []},
     "string": {"tail": ["default"],
                "default_kind": "rest-of-line-may-be-empty",
                "required": []},
 }
-LIFECYCLE = {
-    "first_command": "uci",
-    "go_requires": "position-since-last-uci-or-ucinewgame",
-    "stop_requires": "search-outstanding",
-    "ponderhit_requires": "pondered-search-outstanding",
-    "after_quit": "no-further-commands",
+OPTION_MARKERS = {
+    "name_terminator":
+        'last-"-type-"-marker-whose-next-token-is-a-declared-type',
+    "combo_default_span": "from-default-marker-until-first-var-marker",
+    "combo_var_span":
+        "from-var-marker-until-next-var-marker-or-end-of-line",
+    "span_value": "rest-of-span-nonempty",
+}
+POSITION_VALIDATION = {
+    "fen_fields": "validated-by-linked-fen-contract-parser",
+    "startpos":
+        "resolves-to-linked-variant-registry-standard-start_fen",
+    "moves_tail":
+        "grammar-per-linked-legal-moves-move-encoding",
+    "fen_malformed_maps_to": "malformed_line",
+    "fen_impossible_maps_to": "malformed_line",
+    "subclass_preservation": "fen-failure-class-preserved-as-subclass",
+}
+LIFECYCLE_STATES = [
+    "pre_uci", "awaiting_uciok", "ready", "readiness_pending",
+    "searching", "pondering", "stop_requested",
+    "ponder_stop_requested", "terminated",
+]
+LIFECYCLE_META = {
+    "model": "bidirectional-session-state-machine",
+    "initial": "pre_uci",
+    "position_flag":
+        "set-by-position-command-reset-by-uci-or-ucinewgame",
+    "go_requires": "position_flag-set",
+    "go_ponder_target":
+        "pondering-when-ponder-parameter-else-searching",
+    "unlisted_pair": "protocol_state",
+}
+SEARCH_START = "search-start"
+LIFECYCLE_TRANSITIONS = {
+    "pre_uci": {"gui": {"uci": "awaiting_uciok", "quit": "terminated"},
+                "engine": {}},
+    "awaiting_uciok": {"gui": {"quit": "terminated"},
+                       "engine": {"id": "awaiting_uciok",
+                                  "uciok": "ready"}},
+    "ready": {"gui": {"debug": "ready", "isready": "readiness_pending",
+                      "setoption": "ready", "register": "ready",
+                      "ucinewgame": "ready", "position": "ready",
+                      "go": SEARCH_START, "quit": "terminated"},
+              "engine": {"copyprotection": "ready",
+                         "registration": "ready"}},
+    "readiness_pending": {"gui": {"quit": "terminated"},
+                          "engine": {"readyok": "ready"}},
+    "searching": {"gui": {"stop": "stop_requested",
+                          "quit": "terminated"},
+                  "engine": {"info": "searching",
+                             "bestmove": "ready"}},
+    "pondering": {"gui": {"ponderhit": "searching",
+                          "stop": "ponder_stop_requested",
+                          "quit": "terminated"},
+                  "engine": {"info": "pondering",
+                             "bestmove": "ready"}},
+    "stop_requested": {"gui": {"quit": "terminated"},
+                       "engine": {"info": "stop_requested",
+                                  "bestmove": "ready"}},
+    "ponder_stop_requested": {"gui": {"ponderhit": "stop_requested",
+                                      "quit": "terminated"},
+                              "engine": {"info": "ponder_stop_requested",
+                                         "bestmove": "ready"}},
+    "terminated": {"gui": {}, "engine": {}},
 }
 RESOLUTION_FAILURES = {
     "malformed_line": "any-token-or-grammar-violation",
@@ -171,25 +246,32 @@ ERROR_SHAPE = {
 LINKS = {
     "legal_moves_contract": "data/contracts/legal_moves.yaml",
     "fen_contract": "data/contracts/fen.yaml",
+    "variant_contract": "data/contracts/variant.yaml",
 }
 
 ALLOWED_TOP = {"schema_version", "contract"}
 ALLOWED_CONTRACT = {
     "id", "transport", "move_encoding", "gui_commands",
     "go_parameters", "engine_responses", "info_fields",
-    "option_types", "lifecycle", "resolution_failures",
+    "option_markers", "option_types", "position_validation",
+    "lifecycle", "resolution_failures",
     "failure_classes", "failure_mapping", "errors", "serialization",
     "links", "versioning",
 }
-ALLOWED_TRANSPORT = set(TRANSPORT) | {"rule"}
+ALLOWED_TRANSPORT = {"byte_framing", "line_grammar"}
+ALLOWED_BYTE_FRAMING = set(BYTE_FRAMING) | {"rule"}
+ALLOWED_LINE_GRAMMAR = set(LINE_GRAMMAR) | {"rule"}
 ALLOWED_MOVE_ENCODING = set(MOVE_ENCODING) | {"rule"}
 ALLOWED_GO_PARAMETERS_SECTION = set(GO_PARAMETERS) | {
     "duplicates", "int_grammar", "rule"}
 ALLOWED_ENGINE_RESPONSES = set(ENGINE_RESPONSES) | {"rule"}
 ALLOWED_INFO_FIELDS_SECTION = set(INFO_FIELDS) | {
     "duplicates", "int_grammar", "rule"}
+ALLOWED_OPTION_MARKERS = set(OPTION_MARKERS) | {"rule"}
 ALLOWED_OPTION_TYPES = set(OPTION_TYPES) | {"rule"}
-ALLOWED_LIFECYCLE = set(LIFECYCLE) | {"rule"}
+ALLOWED_POSITION_VALIDATION = set(POSITION_VALIDATION) | {"rule"}
+ALLOWED_LIFECYCLE = (set(LIFECYCLE_META)
+                     | {"states", "transitions", "rule"})
 ALLOWED_RESOLUTION = set(RESOLUTION_FAILURES) | {"rule"}
 ALLOWED_ERRORS = {"closed_enum", "shape"}
 ALLOWED_SERIALIZATION = {"canonical", "roundtrip", "rule"}
@@ -265,6 +347,30 @@ def _check_links(root: Path) -> None:
             "halfmove_clock", "fullmove_number"],
            "fen field order")
     _exact(fields.get("exactly_six"), True, "fen exactly_six")
+    rules = _mapping(fen.get("position_rules"), "fen.position_rules")
+    for key, value in {
+            "white_kings": "exactly-1",
+            "black_kings": "exactly-1",
+            "kings_adjacent": "forbidden",
+            "pawns_on_back_ranks": "forbidden",
+            "non_mover_king_attacked": "forbidden"}.items():
+        _exact(rules.get(key), value, f"fen.position_rules.{key}")
+    fen_ep = _mapping(fen.get("en_passant"), "fen.en_passant")
+    _exact(fen_ep.get("storage"), "recorded-on-every-two-square-advance",
+           "fen.en_passant.storage")
+    _exact(fen_ep.get("ranks"), ["3", "6"], "fen.en_passant.ranks")
+
+    variant = _load(root / LINKS["variant_contract"], "variant link")
+    entries = variant.get("variants", {}).get("entries")
+    _need(type(entries) is list and entries,
+          "variant registry: nonempty entries required")
+    standard = [e for e in entries
+                if isinstance(e, dict) and e.get("id") == "standard"]
+    _need(len(standard) == 1,
+          "variant registry: exactly one standard entry required")
+    _exact(standard[0].get("start_fen"),
+           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+           "variant registry standard start_fen")
 
 
 def lint(doc: dict, root: Path | None = None) -> None:
@@ -278,9 +384,18 @@ def lint(doc: dict, root: Path | None = None) -> None:
 
     transport = _mapping(contract.get("transport"), "contract.transport")
     _keys(transport, ALLOWED_TRANSPORT, "contract.transport")
-    for key, value in TRANSPORT.items():
-        _exact(transport.get(key), value, f"transport.{key}")
-    _text(transport.get("rule"), "transport.rule")
+    framing = _mapping(transport.get("byte_framing"),
+                       "transport.byte_framing")
+    _keys(framing, ALLOWED_BYTE_FRAMING, "transport.byte_framing")
+    for key, value in BYTE_FRAMING.items():
+        _exact(framing.get(key), value, f"transport.byte_framing.{key}")
+    _text(framing.get("rule"), "transport.byte_framing.rule")
+    grammar = _mapping(transport.get("line_grammar"),
+                       "transport.line_grammar")
+    _keys(grammar, ALLOWED_LINE_GRAMMAR, "transport.line_grammar")
+    for key, value in LINE_GRAMMAR.items():
+        _exact(grammar.get(key), value, f"transport.line_grammar.{key}")
+    _text(grammar.get("rule"), "transport.line_grammar.rule")
 
     enc = _mapping(contract.get("move_encoding"),
                    "contract.move_encoding")
@@ -321,6 +436,13 @@ def lint(doc: dict, root: Path | None = None) -> None:
            "info_fields.int_grammar")
     _text(info.get("rule"), "info_fields.rule")
 
+    markers = _mapping(contract.get("option_markers"),
+                       "contract.option_markers")
+    _keys(markers, ALLOWED_OPTION_MARKERS, "contract.option_markers")
+    for key, value in OPTION_MARKERS.items():
+        _exact(markers.get(key), value, f"option_markers.{key}")
+    _text(markers.get("rule"), "option_markers.rule")
+
     option = _mapping(contract.get("option_types"),
                       "contract.option_types")
     _keys(option, ALLOWED_OPTION_TYPES, "contract.option_types")
@@ -328,10 +450,43 @@ def lint(doc: dict, root: Path | None = None) -> None:
         _exact(option.get(key), value, f"option_types.{key}")
     _text(option.get("rule"), "option_types.rule")
 
+    pv = _mapping(contract.get("position_validation"),
+                  "contract.position_validation")
+    _keys(pv, ALLOWED_POSITION_VALIDATION,
+          "contract.position_validation")
+    for key, value in POSITION_VALIDATION.items():
+        _exact(pv.get(key), value, f"position_validation.{key}")
+    _text(pv.get("rule"), "position_validation.rule")
+
     life = _mapping(contract.get("lifecycle"), "contract.lifecycle")
     _keys(life, ALLOWED_LIFECYCLE, "contract.lifecycle")
-    for key, value in LIFECYCLE.items():
+    for key, value in LIFECYCLE_META.items():
         _exact(life.get(key), value, f"lifecycle.{key}")
+    _exact(life.get("states"), LIFECYCLE_STATES, "lifecycle.states")
+    transitions = _mapping(life.get("transitions"),
+                           "lifecycle.transitions")
+    _exact(transitions, LIFECYCLE_TRANSITIONS,
+           "lifecycle.transitions")
+    states = set(LIFECYCLE_STATES)
+    _need(set(transitions) == states,
+          "lifecycle.transitions: must define every declared state")
+    for state, pair in transitions.items():
+        for direction, mapping in pair.items():
+            _need(direction in ("gui", "engine"),
+                  f"lifecycle.transitions.{state}: direction"
+                  f" {direction!r} must be gui or engine")
+            for event, target in mapping.items():
+                if target == SEARCH_START:
+                    _need(state == "ready" and event == "go",
+                          "lifecycle.transitions: search-start only"
+                          " on ready/go")
+                    continue
+                _need(target in states,
+                      f"lifecycle.transitions.{state}.{direction}"
+                      f".{event}: target {target!r} not a declared"
+                      " state")
+    _need(LIFECYCLE_META["unlisted_pair"] in FAILURE_CLASSES,
+          "lifecycle.unlisted_pair must name a declared failure class")
     _text(life.get("rule"), "lifecycle.rule")
 
     res = _mapping(contract.get("resolution_failures"),
