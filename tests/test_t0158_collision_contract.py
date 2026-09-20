@@ -342,25 +342,36 @@ class CollisionProbe:
             # KeyError/AttributeError can never escape the closed
             # failure enum at this boundary.
             self._validate_record_shape(self.cc, rec)
+            # FREEZE FIRST: the shape check proved an exact plain
+            # dict with exact built-in str values, so this capture
+            # cannot execute hostile code. Every later phase -
+            # semantic validation, oracle arguments, linked
+            # validation, identity derivation, staged insertion -
+            # reads ONLY this detached snapshot; the live incoming
+            # record is never re-read after untrusted code runs
+            # (cross-phase TOCTOU closed structurally).
+            frozen = {"variant": rec["variant"],
+                      "digest": rec["digest"],
+                      "snapshot_fen": rec["snapshot_fen"]}
             # PHASE ONE: oracle-independent semantic validation -
             # a semantically malformed record fails closed HERE
             # and never reaches the receiver oracle.
-            self._validate_record_semantics(rec)
+            self._validate_record_semantics(frozen)
             # SINGLE EVALUATION: the receiver oracle is invoked
             # EXACTLY ONCE per incoming record, at the boundary;
             # the retained exact built-in key validates the source
             # record AND stages the insert - nothing re-queries
             # untrusted input (semantic TOCTOU is closed
             # structurally, not by transaction alone)
-            key = self._call_oracle(rec["variant"],
-                                    rec["snapshot_fen"])
+            key = self._call_oracle(frozen["variant"],
+                                    frozen["snapshot_fen"])
             try:
-                _validate_node_record(nc, vc, dc, epc, fc, dict(rec),
+                _validate_node_record(nc, vc, dc, epc, fc,
+                                      dict(frozen),
                                       lambda v, f, _k=key: _k)
             except NodeError:
                 _fail(self.cc, "malformed_collision_record")
-            exact = copy.deepcopy(rec)
-            staged._staged_insert(exact, staged._identity(exact),
+            staged._staged_insert(frozen, staged._identity(frozen),
                                   key)
         self.buckets = staged.buckets
         self.identity_index = staged.identity_index
@@ -1192,6 +1203,9 @@ def _mutants():
     add("semantic_first dropped", ["contract", "properties",
                                    "semantic_first"],
         "semantics-checked-after-oracle")
+    add("frozen_snapshot dropped", ["contract", "properties",
+                                    "frozen_snapshot"],
+        "live-record-re-read-after-oracle")
     return out
 
 
@@ -1524,3 +1538,114 @@ def test_mutant_semantics_after_oracle_launders_failure_class():
     assert exc.value.failure_class == "malformed_collision_record"
     assert calls["n"] == 0
     assert (real.buckets, real.identity_index) == before
+
+
+# -- v8: frozen snapshot across the oracle boundary --------------------------
+
+
+def _mutating_oracle(source_ref, field, mutation, calls):
+    """UNTRUSTED: mutates the LIVE source record during its call,
+    then returns the valid constant key."""
+    def oracle(variant, fen):
+        calls["n"] += 1
+        rec = source_ref[0]
+        if mutation == "delete":
+            del rec[field]
+        elif mutation == "hostile":
+            rec[field] = []
+        elif mutation == "valid-substitute":
+            rec[field] = {"variant": "standard",
+                          "snapshot_fen": AFTER_E4,
+                          "digest": rec["digest"]}[field]
+        return constant_oracle(variant, fen)
+    return oracle
+
+
+@pytest.mark.parametrize("field", ["variant", "digest",
+                                   "snapshot_fen"])
+@pytest.mark.parametrize("mutation", ["delete", "hostile",
+                                      "valid-substitute"])
+def test_frozen_snapshot_survives_mutating_oracle(field, mutation):
+    """An oracle mutating/deleting/replacing the LIVE source record
+    during its call cannot affect the merge: the PRE-CALL frozen
+    record is what validates and inserts, the destination is
+    bit-identical to a clean merge, and no raw exception
+    escapes."""
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    original = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                            "standard", STARTPOS)
+    source_ref = [dict(original)]
+    calls = {"n": 0}
+    oracle = _mutating_oracle(source_ref, field, mutation, calls)
+    dest = _probe(oracle)
+    dest.merge(_raw_source(source_ref))
+    assert calls["n"] == 1
+    # the destination holds the PRE-CALL frozen record, whatever
+    # the oracle did to the live one
+    assert dest.records() == [original]
+    _assert_one_record_per_identity(dest, 1)
+    # clean-merge equivalence
+    clean = _probe(constant_oracle)
+    clean.merge(_raw_source([dict(original)]))
+    assert (dest.buckets, dest.identity_index) == \
+        (clean.buckets, clean.identity_index)
+
+
+def test_aliased_source_record_mutated_between_iterations():
+    """The SAME live dict yielded twice: the oracle mutates it to
+    a hostile shape on the first call, so the second iteration's
+    shape check fails typed - never raw - with full atomic
+    rollback of the first insertion."""
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    live = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                        "standard", STARTPOS)
+    calls = {"n": 0}
+
+    def oracle(variant, fen):
+        calls["n"] += 1
+        live["snapshot_fen"] = []  # hostile mutation mid-merge
+        return constant_oracle(variant, fen)
+
+    dest = _probe(oracle)
+    before = (copy.deepcopy(dest.buckets),
+              copy.deepcopy(dest.identity_index))
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(_raw_source([live, live]))
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert calls["n"] == 1
+    assert (dest.buckets, dest.identity_index) == before
+
+
+def test_mutant_validate_live_then_reread_after_oracle():
+    """Behavioral mutant: the v7 merge validated the live record,
+    invoked the oracle, then DEEP-COPIED the live record - an
+    oracle mutation to [] escapes as raw AttributeError. Pinned
+    to prove freezing is load-bearing. Counter-test: the real
+    merge inserts the pre-call frozen record cleanly."""
+    def mutant_merge(dest, other):
+        nc, vc, dc, epc, fc = _NODE_DOCS
+        for rec in other.records():
+            dest._validate_record_shape(dest.cc, rec)
+            dest._validate_record_semantics(rec)
+            key = dest._call_oracle(rec["variant"],
+                                    rec["snapshot_fen"])
+            exact = copy.deepcopy(rec)  # mutant: re-read live
+            dest._staged_insert(exact, dest._identity(exact), key)
+        return dest
+
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    original = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                            "standard", STARTPOS)
+    source_ref = [dict(original)]
+    calls = {"n": 0}
+    oracle = _mutating_oracle(source_ref, "snapshot_fen",
+                              "hostile", calls)
+    with pytest.raises(AttributeError):
+        mutant_merge(_probe(oracle), _raw_source(source_ref))
+    calls["n"] = 0
+    source_ref = [dict(original)]
+    oracle = _mutating_oracle(source_ref, "snapshot_fen",
+                              "hostile", calls)
+    real = _probe(oracle)
+    real.merge(_raw_source(source_ref))
+    assert real.records() == [original]

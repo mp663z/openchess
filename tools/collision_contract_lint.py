@@ -149,6 +149,9 @@ PROPERTIES = {
     "semantic_first":
         "oracle-independent-semantic-validation-before-receiver-"
         "oracle-zero-calls-for-malformed-records",
+    "frozen_snapshot":
+        "incoming-record-frozen-before-oracle-never-re-read-"
+        "after-untrusted-code",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",
