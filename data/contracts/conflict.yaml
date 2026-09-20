@@ -1,0 +1,71 @@
+contract:
+  id: graph-conflict
+  role:
+    kind: three-way-edit-incompatibility-detection-over-graph-states
+    serves: no-silent-writes-approval-gate
+    scope: base-plus-two-derived-states
+    owns: conflict-detection-and-witness-shape
+    not_scope: automatic-conflict-resolution
+  record:
+    fields: [base_id, left_id, right_id, conflicts]
+    exact: true
+  identity:
+    key_source: from-linked-table-contracts-canonical-identity
+    digest_keys: never-keyed-by-accelerator-digests
+    change_derivation: identity-keyed-symmetric-difference-vs-base
+  conflicts_section:
+    kind: map-canonical-identity-to-witness
+    witness:
+      fields: [kind, left, right]
+      absent_sentinel: null-means-side-did-not-touch-identity
+    kinds:
+      - both_changed_differently
+      - changed_vs_removed
+      - added_differently
+  compatibility:
+    disjoint_identities: always-compatible
+    identical_outcomes: byte-identical-add-remove-or-change-compatible
+    everything_else: incompatible-and-reported
+  identifiers:
+    state_id:
+      kind: canonical-state-content-digest
+      grammar: ^gs1:[0-9a-f]{64}$
+      derivation: sha256-over-canonical-serialization-of-sorted-identity-record-map
+      source: derived-from-validated-state-never-caller-supplied
+  base_check:
+    distinct_ids: derived-base-id-distinct-from-each-derived-side-id
+    violation: divergent_base-fail-closed-on-derived-id-collision
+  guarantees:
+    determinism: pure-function-canonical-identity-order
+    symmetry: left-right-swap-flips-witnesses
+    completeness: every-incompatible-overlap-surfaces-empty-iff-compatible
+    no_silent_resolution: conflicts-reported-never-auto-merged
+  failures:
+    classes:
+      - malformed_conflict_record
+      - divergent_base
+    triggers:
+      malformed_conflict_record: state-validation-field-set-grammar-witness-shape-or-kind-violation
+      divergent_base: base-derived-id-equals-a-side-derived-id
+    mapping:
+      malformed_conflict_record: malformed_request
+      divergent_base: divergent_base
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - divergent_base
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    witnesses_exact: both-side-exact-change-payloads
+    atomic: detection-never-mutates-inputs
+    canonical_order: conflicts-ordered-by-canonical-identity
+    state_validation: every-state-validated-through-linked-machinery-before-change-derivation
+  versioning:
+    base_path: /graph/conflict/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    transposition_node_contract: data/contracts/transposition_node.yaml
+    collision_contract: data/contracts/collision.yaml
