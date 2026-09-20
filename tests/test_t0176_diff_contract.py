@@ -199,8 +199,13 @@ class DiffEngine:
             (set(diff["removed"]) & set(changed))
         if overlap:
             _fail("malformed_diff_record")
-        if diff["base_id"] == diff["target_id"] and (
-                diff["added"] or diff["removed"] or changed):
+        # ID AGREEMENT, both directions: an empty diff must carry
+        # EQUAL base and target ids (a no-op cannot lie about its
+        # target); a non-empty diff must carry DISTINCT ids.
+        empty = not (diff["added"] or diff["removed"] or changed)
+        if empty and diff["base_id"] != diff["target_id"]:
+            _fail("divergent_target")
+        if not empty and diff["base_id"] == diff["target_id"]:
             _fail("malformed_diff_record")
 
     def apply(self, diff, base):
@@ -233,6 +238,13 @@ class DiffEngine:
             staged[key] = copy.deepcopy(witness["target"])
         for key, rec in diff["added"].items():
             staged[key] = copy.deepcopy(rec)
+        # TARGET VERIFICATION: the staged result must BE the
+        # diff's claimed target - recompute the state id and
+        # require exact equality with target_id before returning;
+        # a corrupted or malicious diff that lies about its
+        # target fails closed here (base never mutated).
+        if state_id(staged) != diff["target_id"]:
+            _fail("divergent_target")
         return staged
 
 
@@ -735,3 +747,110 @@ def test_mutants_never_silent_subset():
                        "identifiers", "guarantees", "apply",
                        "failures", "errors", "properties",
                        "versioning", "links"}
+
+
+# -- v3: target-id verification ----------------------------------------------
+
+TAMPERED_ID = "gs1:" + "f" * 64
+
+
+def _tampered_pairs():
+    """Real computed diffs across add/remove/change/mixed shapes,
+    each with target_id swapped to a grammar-valid lie."""
+    engine = DiffEngine()
+    cases = []
+    b1 = _state()
+    t1 = _state(_node(STARTPOS))
+    cases.append(("add-only", b1, engine.compute(b1, t1)))
+    b2 = _state(_node(STARTPOS), _node(KINGS))
+    t2 = _state(_node(STARTPOS))
+    cases.append(("remove-only", b2, engine.compute(b2, t2)))
+    b3 = _state(_node(STARTPOS), _node(KINGS, K1))
+    t3 = _state(_node(STARTPOS), _node(KINGS, K2))
+    cases.append(("change-only", b3, engine.compute(b3, t3)))
+    b4 = _state(_node(STARTPOS), _node(KINGS, K1), _node(AFTER_E4))
+    t4 = _state(_node(STARTPOS), _node(KINGS, K2), _node(LEGAL_EP))
+    cases.append(("mixed", b4, engine.compute(b4, t4)))
+    return cases
+
+
+@pytest.mark.parametrize("name,base,diff", _tampered_pairs(),
+                         ids=[c[0] for c in _tampered_pairs()])
+def test_apply_rejects_target_id_tampering(name, base, diff):
+    """A corrupted/malicious diff that passes every check but lies
+    about its target is rejected AFTER staging, BEFORE return:
+    typed divergent_target, base bit-identical."""
+    engine = DiffEngine()
+    tampered = copy.deepcopy(diff)
+    tampered["target_id"] = TAMPERED_ID
+    engine.validate_diff(tampered)  # grammar-valid lie passes
+    before = copy.deepcopy(base)
+    with pytest.raises(DiffError) as exc:
+        engine.apply(tampered, base)
+    assert exc.value.failure_class == "divergent_target"
+    assert exc.value.code == FAILURE_MAPPING["divergent_target"]
+    assert exc.value.code in ERROR_ENUM
+    assert base == before
+
+
+def test_noop_diff_with_unequal_ids_rejected():
+    """An empty diff claiming distinct base/target ids is a lie
+    about the target: rejected by validate_diff itself."""
+    engine = DiffEngine()
+    state = _state(_node(STARTPOS))
+    diff = {"base_id": state_id(state), "target_id": TAMPERED_ID,
+            "added": {}, "removed": {}, "changed": {}}
+    before = copy.deepcopy(state)
+    with pytest.raises(DiffError) as exc:
+        engine.apply(diff, state)
+    assert exc.value.failure_class == "divergent_target"
+    assert state == before
+
+
+def test_computed_diffs_land_on_target_and_reverse_on_base():
+    """Converse positives: every computed diff's APPLIED result
+    digest equals its target_id, and every reversed diff applied
+    to the target lands exactly on the forward diff's base_id."""
+    engine = DiffEngine()
+    records = [_node(STARTPOS), _node(AFTER_E4), _node(KINGS),
+               _node(LEGAL_EP)]
+    for perm in itertools.permutations(records, 3):
+        base = _state(*perm[:2])
+        target = _state(perm[1], perm[2])
+        forward = engine.compute(base, target)
+        applied = engine.apply(forward, base)
+        assert state_id(applied) == forward["target_id"]
+        reverse = engine.compute(target, base)
+        landed = engine.apply(reverse, target)
+        assert landed == base
+        assert state_id(landed) == reverse["target_id"] == \
+            forward["base_id"]
+
+
+def test_mutant_apply_skipping_target_check_accepts_lies():
+    """Behavioral mutant: the v2 apply returned the staged copy
+    WITHOUT target verification - a target_id lie passed every
+    gate and applied. Pinned to prove target verification is
+    load-bearing. Counter-test: the real apply rejects."""
+    def mutant_apply(engine, diff, base):
+        engine.validate_diff(diff)
+        staged = copy.deepcopy(base)
+        for key in diff["removed"]:
+            del staged[key]
+        for key, witness in diff["changed"].items():
+            staged[key] = copy.deepcopy(witness["target"])
+        for key, rec in diff["added"].items():
+            staged[key] = copy.deepcopy(rec)
+        return staged  # mutant: no target check
+
+    engine = DiffEngine()
+    base = _state()
+    target = _state(_node(STARTPOS))
+    diff = engine.compute(base, target)
+    tampered = copy.deepcopy(diff)
+    tampered["target_id"] = TAMPERED_ID
+    applied = mutant_apply(engine, tampered, base)
+    assert state_id(applied) != tampered["target_id"]  # the lie
+    with pytest.raises(DiffError) as exc:
+        engine.apply(tampered, base)
+    assert exc.value.failure_class == "divergent_target"

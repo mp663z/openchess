@@ -85,9 +85,12 @@ APPLY = {
         "recomputed-base-state-id-must-equal-diff-base-id-and-"
         "added-identities-must-be-absent",
     "commit": "atomic-staged-copy",
+    "target_check":
+        "recomputed-staged-target-state-id-must-equal-diff-"
+        "target-id-before-return",
 }
 FAILURE_CLASSES = ["malformed_diff_record", "conflicting_base",
-                   "unknown_identity"]
+                   "unknown_identity", "divergent_target"]
 FAILURE_TRIGGERS = {
     "malformed_diff_record":
         "diff-or-state-shape-grammar-identity-or-record-"
@@ -97,11 +100,15 @@ FAILURE_TRIGGERS = {
         "present",
     "unknown_identity":
         "changed-or-removed-identity-absent-from-base",
+    "divergent_target":
+        "recomputed-staged-target-state-id-differs-from-diff-"
+        "target-id-or-empty-diff-with-unequal-ids",
 }
 FAILURE_MAPPING = {
     "malformed_diff_record": "malformed_request",
     "conflicting_base": "conflicting_base",
     "unknown_identity": "unknown_identity",
+    "divergent_target": "malformed_request",
 }
 ERROR_ENUM = ["malformed_request", "conflicting_base",
               "unknown_identity", "internal"]
@@ -113,6 +120,11 @@ PROPERTIES = {
     "no_silent_difference": "completeness-theorem-pinned",
     "rollback": "rejected-apply-leaves-base-bit-identical",
     "canonical_order": "sections-ordered-by-canonical-identity",
+    "target_verification":
+        "applied-staged-result-digest-must-equal-target-id-before-"
+        "return",
+    "id_agreement":
+        "empty-diff-equal-ids-nonempty-diff-distinct-ids",
 }
 VERSIONING = {
     "base_path": "/graph/diff/v1",
