@@ -196,6 +196,9 @@ def escalating_subclass_oracle(cls):
     return oracle
 
 
+_RECORD_FIELDS = frozenset({"variant", "digest", "snapshot_fen"})
+
+
 class CollisionProbe:
     """The contract's pinned table model: buckets accelerate lookup
     ONLY; the canonical-identity index (INDEPENDENT of buckets) is
@@ -289,6 +292,21 @@ class CollisionProbe:
         return sorted(repr(identity)
                       for identity in self.identity_index)
 
+    @staticmethod
+    def _validate_record_shape(cc, rec):
+        """Oracle-independent shape validation at the merge
+        boundary: BEFORE any field dereference or receiver-oracle
+        call, the incoming value must be a PLAIN dict with EXACTLY
+        the declared record keys and exact built-in str values.
+        A non-dict mapping (hostile accessors), missing/extra keys,
+        or non-string / str-subclass fields fail closed as
+        malformed_collision_record with ZERO oracle calls."""
+        if type(rec) is not dict or \
+                set(rec) != _RECORD_FIELDS or \
+                any(type(rec[field]) is not str
+                    for field in _RECORD_FIELDS):
+            _fail(cc, "malformed_collision_record")
+
     def merge(self, other):
         """ATOMIC: every incoming EXACT stored record is validated
         against the RECEIVER's oracle and linked docs (a stored
@@ -301,6 +319,11 @@ class CollisionProbe:
         staged.buckets = copy.deepcopy(self.buckets)
         staged.identity_index = copy.deepcopy(self.identity_index)
         for rec in other.records():
+            # SHAPE FIRST: validate the incoming record's shape
+            # BEFORE any field dereference or oracle call - a raw
+            # KeyError/AttributeError can never escape the closed
+            # failure enum at this boundary.
+            self._validate_record_shape(self.cc, rec)
             # SINGLE EVALUATION: the receiver oracle is invoked
             # EXACTLY ONCE per incoming record, at the boundary;
             # the retained exact built-in key validates the source
@@ -1141,6 +1164,9 @@ def _mutants():
         "data/contracts/san.yaml")
     add("base path drift", ["contract", "versioning", "base_path"],
         "/graph/collision/v0")
+    add("shape_first dropped", ["contract", "properties",
+                                "shape_first"],
+        "oracle-called-before-shape-validation")
     return out
 
 
@@ -1233,3 +1259,119 @@ def test_linkage_node_exclusions_drift_fails(tmp_path):
     paths = _lint_doc(tmp_path, "x", drift, target="node")
     with pytest.raises(ContractError):
         _lint_with(paths)
+
+
+# -- shape-first boundary battery (v6) ---------------------------------------
+
+
+def _raw_source(records):
+    """A merge source serving RAW (possibly hostile) records - the
+    merge boundary must never assume probe-built input."""
+    class _Source:
+        def records(self):
+            return list(records)
+    return _Source()
+
+
+def _counting_oracle():
+    calls = {"n": 0}
+
+    def oracle(variant, fen):
+        calls["n"] += 1
+        return constant_oracle(variant, fen)
+    return oracle, calls
+
+
+def _bad_shape_records():
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    good = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                        "standard", STARTPOS)
+    bads = []
+    for field in sorted(_RECORD_FIELDS):
+        missing = {k: v for k, v in good.items() if k != field}
+        bads.append((f"missing-{field}", missing))
+        for value in (None, [], 5):
+            wrong = dict(good)
+            wrong[field] = value
+            bads.append((f"{field}-type-{type(value).__name__}",
+                         wrong))
+    extra = dict(good)
+    extra["label"] = "x"
+    bads.append(("extra-field", extra))
+    for value in (None, [], "text", 5):
+        bads.append((f"nonmapping-{type(value).__name__}", value))
+
+    class HostileMap(dict):
+        def __getitem__(self, key):
+            raise RuntimeError("hostile access")
+    bads.append(("hostile-accessor", HostileMap(good)))
+
+    class EvilStr(str):
+        def __hash__(self):
+            raise RuntimeError("hostile hash")
+    evil = dict(good)
+    evil["digest"] = EvilStr(good["digest"])
+    bads.append(("evil-str-subclass-value", evil))
+    return bads
+
+
+BAD_SHAPES = _bad_shape_records()
+
+
+@pytest.mark.parametrize("bad", [b for _, b in BAD_SHAPES],
+                         ids=[n for n, _ in BAD_SHAPES])
+def test_merge_shape_validated_before_boundary(bad):
+    """A malformed incoming merge record fails closed BEFORE any
+    field dereference or receiver-oracle call: typed
+    malformed_collision_record, ZERO oracle calls for the bad
+    record, and an atomic rollback leaving the destination
+    bit-identical - even after a valid staged prefix."""
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    oracle, calls = _counting_oracle()
+    good = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                        "standard", STARTPOS)
+    dest = _probe(oracle)
+    before = (copy.deepcopy(dest.buckets),
+              copy.deepcopy(dest.identity_index))
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(_raw_source([good, bad]))
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert exc.value.code == FAILURE_MAPPING[
+        "malformed_collision_record"]
+    assert exc.value.code in ERROR_ENUM
+    # exactly ONE oracle call: the valid staged prefix; ZERO for
+    # the shape-hostile record
+    assert calls["n"] == 1
+    assert (dest.buckets, dest.identity_index) == before
+
+
+def test_mutant_dereference_before_shape_validation():
+    """Behavioral mutant: the v5 merge dereferenced
+    rec["variant"]/rec["snapshot_fen"] and called the receiver
+    oracle BEFORE shape validation - a missing key escaped as a
+    raw KeyError OUTSIDE the closed enum. Pinned to prove the
+    shape-first boundary is load-bearing. Counter-test: the real
+    merge maps it to typed malformed_collision_record with ZERO
+    oracle calls."""
+    def mutant_merge(dest, other):
+        for rec in other.records():
+            key = dest._call_oracle(rec["variant"],
+                                    rec["snapshot_fen"])
+            dest._staged_insert(rec, dest._identity(rec), key)
+        return dest
+
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    good = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                        "standard", STARTPOS)
+    bad = {k: v for k, v in good.items() if k != "snapshot_fen"}
+    with pytest.raises(KeyError):
+        mutant_merge(_probe(constant_oracle), _raw_source([bad]))
+    oracle, calls = _counting_oracle()
+    real = _probe(oracle)
+    before = (copy.deepcopy(real.buckets),
+              copy.deepcopy(real.identity_index))
+    with pytest.raises(CollisionError) as exc:
+        real.merge(_raw_source([bad]))
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert calls["n"] == 0
+    assert (real.buckets, real.identity_index) == before

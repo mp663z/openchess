@@ -143,6 +143,9 @@ PROPERTIES = {
     "single_evaluation":
         "receiver-oracle-evaluated-exactly-once-per-incoming-"
         "record-retained-key-validates-and-stages",
+    "shape_first":
+        "incoming-merge-record-shape-validated-before-any-field-"
+        "dereference-or-oracle-call",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",
