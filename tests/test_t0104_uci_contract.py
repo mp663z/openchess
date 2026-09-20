@@ -154,7 +154,7 @@ def _is_move(contract, token):
     return len(token) != 5 or token[4] in enc["promotion_letters"]
 
 
-def _int_kind(contract, token, kind, section):
+def _int_kind(contract, token, kind, section, spec=None):
     grammar = section["int_grammar"]
     assert grammar == ("ascii-digits-0-9-only-no-leading-zeros-"
                        "except-zero-itself")
@@ -165,6 +165,12 @@ def _int_kind(contract, token, kind, section):
     value = int(token)
     if kind == "pos-int" and value < 1:
         return None
+    if spec is not None:
+        # declared bounds, read from the contract, never hardcoded
+        if "min" in spec and value < spec["min"]:
+            return None
+        if "max" in spec and value > spec["max"]:
+            return None
     return value
 
 
@@ -339,11 +345,11 @@ def parse_engine(contract, line):
                 _fail(c, "malformed_line")  # duplicates: forbidden
             spec = fields[key]
             kind = spec["kind"]
-            if kind in ("pos-int", "nonneg-int"):
+            if kind in ("pos-int", "nonneg-int", "permill-int"):
                 if i + 1 >= len(rest):
                     _fail(c, "malformed_line")
                 value = _int_kind(c, rest[i + 1], kind,
-                                  c["info_fields"])
+                                  c["info_fields"], spec)
                 if value is None:
                     _fail(c, "malformed_line")
                 out[key] = value
@@ -815,12 +821,18 @@ HAPPY_ENGINE = [
      {"response": "info",
       "fields": {"depth": 25, "score": {"form": "mate", "value": -2,
                                         "bound": "lowerbound"}}}),
-    ("info depth 0 seldepth 0 time 0 nodes 0 multipv 0 "
-     "currmovenumber 0 hashfull 0 nps 0 tbhits 0 sbhits 0 cpuload 0",
+    ("info depth 0 seldepth 0 time 0 nodes 0 multipv 1 "
+     "currmovenumber 1 hashfull 0 nps 0 tbhits 0 sbhits 0 cpuload 0",
      {"response": "info",
       "fields": {"depth": 0, "seldepth": 0, "time": 0, "nodes": 0,
-                 "multipv": 0, "currmovenumber": 0, "hashfull": 0,
+                 "multipv": 1, "currmovenumber": 1, "hashfull": 0,
                  "nps": 0, "tbhits": 0, "sbhits": 0, "cpuload": 0}}),
+    # domain boundaries: ordinals at their minimum 1, permill fields
+    # at both inclusive bounds 0 and 1000.
+    ("info multipv 1 currmovenumber 1 hashfull 1000 cpuload 1000",
+     {"response": "info",
+      "fields": {"multipv": 1, "currmovenumber": 1,
+                 "hashfull": 1000, "cpuload": 1000}}),
     ("info depth 11 currline 0 e2e4 e7e5",
      {"response": "info", "fields": {
          "depth": 11,
@@ -1024,6 +1036,11 @@ MALFORMED_ENGINE = [
     "info score cp 4 lowerbound lowerbound",   # duplicate qualifier
     "info score cp 4 middlebound",             # undeclared qualifier
     "info depth ٣",              # non-ASCII digit
+    "info multipv 0",            # ordinal minimum is 1
+    "info currmovenumber 0",     # one-based: first move is 1
+    "info hashfull 1001",        # permill bound is inclusive 1000
+    "info cpuload 1001",
+    "info hashfull 999999999999999999999999999999999999999999999999",
     "info pv", "info pv e2e4x", "info currmove e9e4",
     "info currline", "info currline 1", "info currline 1 e9e4",
     "info string", "info time -3",
@@ -1570,6 +1587,26 @@ def _mutants():
         {"kind": "score", "forms": ["cp"], "value_kind": "int"})
     add("info counter pos-int drift", ["contract", "info_fields",
                                        "depth"], {"kind": "pos-int"})
+    add("multipv laundered to nonneg", ["contract", "info_fields",
+                                        "multipv"],
+        {"kind": "nonneg-int"})
+    add("multipv min drift", ["contract", "info_fields", "multipv",
+                              "min"], 0)
+    add("currmovenumber laundered", ["contract", "info_fields",
+                                     "currmovenumber"],
+        {"kind": "nonneg-int"})
+    add("currmovenumber min drift", ["contract", "info_fields",
+                                     "currmovenumber", "min"], 0)
+    add("hashfull laundered", ["contract", "info_fields", "hashfull"],
+        {"kind": "nonneg-int"})
+    add("hashfull max drift", ["contract", "info_fields", "hashfull",
+                               "max"], 1001)
+    add("hashfull min drift", ["contract", "info_fields", "hashfull",
+                               "min"], 1)
+    add("cpuload laundered", ["contract", "info_fields", "cpuload"],
+        {"kind": "nonneg-int"})
+    add("cpuload max drift", ["contract", "info_fields", "cpuload",
+                              "max"], 10000)
     add("score bound dropped", ["contract", "info_fields", "score",
                                 "bound"], None)
     add("score bound values drift", ["contract", "info_fields",
