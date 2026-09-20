@@ -79,8 +79,8 @@ SEPARATION = {
         "independent-canonical-identity-index-plus-insert-"
         "consistency-validation",
     "oracle_output":
-        "valid-format-bucket-key-from-linked-digest-contract-"
-        "format",
+        "exact-built-in-str-valid-format-bucket-key-from-linked-"
+        "digest-contract-format",
     "links": {
         "variant": "data/contracts/variant.yaml",
         "position_digest": "data/contracts/position_digest.yaml",
@@ -108,8 +108,8 @@ FAILURE_TRIGGERS = {
     "accelerator_as_identity":
         "bucket-key-presented-as-record-identity",
     "accelerator_inconsistent":
-        "oracle-raised-or-invalid-format-key-or-equal-identity-"
-        "divergent-key",
+        "oracle-raised-or-non-exact-string-or-invalid-format-key-"
+        "or-equal-identity-divergent-key",
 }
 FAILURE_MAPPING = {
     "malformed_collision_record": "malformed_request",
@@ -139,6 +139,7 @@ PROPERTIES = {
     "order_insensitivity": "permutation-invariant-table",
     "oracle_boundary":
         "single-boundary-helper-for-insert-and-merge-validation",
+    "transactional_insert": "staged-writes-single-commit-point",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",

@@ -142,6 +142,59 @@ def midway_oracle(fail_on):
     return oracle
 
 
+class _HostileHashStr(str):
+    """Valid text, hostile hash: explodes as a dict key."""
+
+    def __hash__(self):
+        raise ValueError("hostile hash")
+
+
+class _HostileEqStr(str):
+    """Valid text, hostile equality."""
+
+    def __eq__(self, other):
+        raise ValueError("hostile eq")
+
+    def __hash__(self):
+        return str.__hash__(self)
+
+
+class _DeceptiveStr(str):
+    """Valid text, deceptive semantics: never equal, constant
+    hash - would silently misbucket every lookup."""
+
+    def __eq__(self, other):
+        return False
+
+    def __hash__(self):
+        return 0
+
+
+HOSTILE_SUBCLASSES = [_HostileHashStr, _HostileEqStr,
+                      _DeceptiveStr]
+
+
+def subclass_oracle(cls):
+    """UNTRUSTED: every call returns a VALID-TEXT key built from a
+    hostile str subclass."""
+    def oracle(variant, fen):
+        return cls("pdv1:" + "0" * 64)
+    return oracle
+
+
+def escalating_subclass_oracle(cls):
+    """UNTRUSTED: plain built-in str on the first call, hostile
+    subclass from the second."""
+    counter = itertools.count(1)
+
+    def oracle(variant, fen):
+        if next(counter) == 1:
+            return "pdv1:" + hashlib.sha256(
+                f"{variant}\n{fen}".encode()).hexdigest()
+        return cls("pdv1:" + "0" * 64)
+    return oracle
+
+
 class CollisionProbe:
     """The contract's pinned table model: buckets accelerate lookup
     ONLY; the canonical-identity index (INDEPENDENT of buckets) is
@@ -660,6 +713,102 @@ def test_mutant_direct_oracle_call_leaks():
     assert exc.value.failure_class == "accelerator_inconsistent"
 
 
+@pytest.mark.parametrize("cls", HOSTILE_SUBCLASSES)
+def test_repro_hostile_str_subclass_first_insert(cls):
+    """A valid-text str subclass (raising __hash__, raising __eq__,
+    deceptive eq/hash) must not pass the boundary: exact built-in
+    str required, typed accelerator_inconsistent, table
+    bit-identical (empty)."""
+    probe = _probe(subclass_oracle(cls))
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", STARTPOS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert exc.value.code == FAILURE_MAPPING[
+        "accelerator_inconsistent"]
+    assert probe.records() == []
+    assert probe.buckets == {}
+    assert probe.identity_index == {}
+
+
+@pytest.mark.parametrize("cls", HOSTILE_SUBCLASSES)
+def test_repro_hostile_str_subclass_second_insert(cls):
+    """First call returns a plain str (STARTPOS stored); the second
+    call turns hostile - typed rejection, one record, index and
+    buckets bit-identical."""
+    probe = _probe(escalating_subclass_oracle(cls))
+    probe.insert("standard", STARTPOS)
+    before_index = copy.deepcopy(probe.identity_index)
+    before_buckets = copy.deepcopy(probe.buckets)
+    with pytest.raises(CollisionError) as exc:
+        probe.insert("standard", KINGS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert probe.identity_index == before_index
+    assert probe.buckets == before_buckets
+    _assert_one_record_per_identity(probe, 1)
+
+
+@pytest.mark.parametrize("cls", HOSTILE_SUBCLASSES)
+def test_repro_hostile_str_subclass_midway_merge(cls):
+    """Merge: the first incoming record validates AND stages with
+    plain keys; the second record's revalidation turns hostile -
+    atomic merge commits nothing, destination bit-identical."""
+    counter = itertools.count(1)
+
+    def oracle(variant, fen):
+        if next(counter) <= 2:
+            return digest_fen(variant, fen)
+        return cls("pdv1:" + "0" * 64)
+
+    source = _probe(digest_fen)
+    source.insert("standard", STARTPOS)
+    source.insert("standard", KINGS)
+    dest = _probe(oracle)
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(source)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert dest.records() == []
+    assert dest.buckets == {}
+    assert dest.identity_index == {}
+
+
+def test_mutant_isinstance_acceptance_index_first_leaks():
+    """Behavioral mutant: the v3 shape (mere isinstance acceptance
+    + index mutated BEFORE the bucket write) lets a hostile
+    subclass through the boundary and explodes MID-WRITE: index
+    holds the record, buckets do not - rollback false, surface
+    broken. Pinned to prove the v4 exact-str boundary and
+    transactional insert are load-bearing. Counter-test: the real
+    probe rejects typed with bit-identical state."""
+    def mutant_insert(probe, variant_id, fen_text):
+        nc, vc, dc, epc, fc = _NODE_DOCS
+        key = probe.oracle(variant_id, fen_text)
+        if not isinstance(key, str) or \
+                _DIGEST_RE.fullmatch(key) is None:
+            _fail(probe.cc, "accelerator_inconsistent")
+        rec = _make_record(nc, vc, dc, epc, fc,
+                           lambda v, f: key, variant_id, fen_text)
+        identity = probe._identity(rec)
+        probe.identity_index[identity] = rec  # index FIRST (v3)
+        probe.buckets.setdefault(
+            rec["digest"], []).append(rec)    # hostile hash boom
+        return rec
+
+    probe = _probe(subclass_oracle(_HostileHashStr))
+    with pytest.raises(ValueError):
+        mutant_insert(probe, "standard", STARTPOS)
+    # the v3 shape left the table forked: written index, empty
+    # buckets
+    assert len(probe.identity_index) == 1
+    assert len(probe.buckets) == 0
+    # counter-test: the real probe rejects typed, nothing written
+    real = _probe(subclass_oracle(_HostileHashStr))
+    with pytest.raises(CollisionError) as exc:
+        real.insert("standard", STARTPOS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert real.identity_index == {}
+    assert real.buckets == {}
+
+
 MALFORMED_INSERTS = [
     ("c960", STARTPOS),                       # unknown variant
     ("standard", "garbage w - - 0 1"),        # malformed FEN
@@ -790,6 +939,16 @@ def _mutants():
     add("oracle boundary dropped", ["contract", "properties",
                                     "oracle_boundary"],
         "oracle-called-directly-anywhere")
+    add("transactional insert dropped", ["contract", "properties",
+                                         "transactional_insert"],
+        "index-mutated-before-bucket-write")
+    add("non-exact strings accepted", ["contract", "separation",
+                                       "oracle_output"],
+        "any-str-subclass-accepted")
+    add("trigger drops non-exact", ["contract", "failures",
+                                    "triggers",
+                                    "accelerator_inconsistent"],
+        "oracle-raised-or-invalid-format-key")
     add("inconsistency trigger drift", ["contract", "failures",
                                         "triggers",
                                         "accelerator_inconsistent"],

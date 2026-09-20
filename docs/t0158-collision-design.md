@@ -94,6 +94,25 @@ batch - destinations stay bit-identical. A behavioral mutant
 calling the oracle directly leaks the raw exception, pinned to
 prove the boundary is load-bearing.
 
+## Exact-string boundary + transactional insert (v4)
+
+v3 validated isinstance(key, str) + regex - but a valid-text str
+SUBCLASS stays hostile past isinstance: a raising __hash__
+explodes as a dict key AFTER the identity index was mutated
+(index 1 record, buckets 0: rollback false). v4 requires
+type(key) is str exactly - non-exact strings reject as
+accelerator_inconsistent (pinned in separation.oracle_output:
+exact-built-in-str; trigger: oracle-raised-or-non-exact-string-
+or-invalid-format-key-or-equal-identity-divergent-key). Insert is
+TRANSACTIONAL: identity_index and buckets are staged as copies,
+the untrusted key's dict behavior is exercised pre-commit, and a
+single commit point publishes both - pinned as
+properties.transactional_insert. Hostile subclasses (raising
+__hash__, raising __eq__, deceptive eq/hash) x first-insert,
+second-insert, midway-merge reject typed with bit-identical
+state; a mutant restoring isinstance acceptance + index-first
+mutation is pinned to fork.
+
 Cross-oracle merges fail closed as malformed_collision_record
 when an incoming record's stored bucket key disagrees with the
 receiver's oracle (validated through the receiver's oracle over
