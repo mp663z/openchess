@@ -1,0 +1,234 @@
+# T0149: graph provenance contract (implementation-neutral; the
+# product runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for provenance everywhere in the product: which
+# source observations produced every graph record. The graph, the
+# retrieval surface, the rights attribution and sync all share THESE
+# semantics. ALL normative semantics live in STRUCTURED fields the
+# lint compares exactly - prose is documentation, never the
+# enforcement surface.
+#
+# A provenance record is the evidence-grade origin record for ONE
+# graph record: the complete set of source observations (imported
+# games through the linked import capability) that produced it.
+# Provenance owns NO chess semantics: target identities are EXACTLY
+# the linked sibling contracts' identities, and the source registry
+# is the linked import contract's registry, read by the lint, never
+# restated here. This contract pins what is new: the target-kind
+# enum, the provenance record shape, the keyed-by-target-identity
+# uniqueness rule, the union merge algebra, and the failure classes.
+schema_version: 1
+
+contract:
+  id: graph-provenance
+  role:
+    kind: origin-attribution-for-graph-records
+    attribution: by-target-record-identity-never-by-path-or-digest
+    completeness: source-set-is-the-complete-origin-evidence
+    additive_only: merged-source-entries-never-removed
+    rights_surface: attribution-carried-as-provenance-fail-closed
+    rule: >-
+      A provenance record is the evidence-grade ORIGIN record for
+      exactly one graph record: the complete set of source
+      observations that produced it, keyed by the target record's
+      identity EXACTLY as the owning sibling contract pins it -
+      never by the move-order path that first produced the target,
+      never by any digest accelerator. The source set is COMPLETE:
+      every source observation that produced the target is in the
+      set, and provenance is ADDITIVE ONLY - a source entry, once
+      merged, is never removed by any merge (retraction would be a
+      new contract version). Provenance is also the rights
+      attribution surface (imported-corpus licenses carry their
+      attribution here), so source ids fail closed exactly as the
+      linked import contract pins: unknown is rejected, never
+      coerced.
+    links:
+      import_contract: data/contracts/import.yaml
+      transposition_node: data/contracts/transposition_node.yaml
+      route_edge: data/contracts/route_edge.yaml
+      opening_context: data/contracts/opening_context.yaml
+  targets:
+    kinds: [transposition_node, route_edge, opening_context]
+    closed: true
+    identity_source: from-linked-sibling-contracts-read-never-restated
+    transposition_node_identity: from-linked-transposition-node-contract-identity
+    route_edge_identity: from-linked-route-edge-contract-identity
+    opening_context_identity: from-linked-opening-context-contract-identity
+    rule: >-
+      The target kind enum is CLOSED: transposition_node,
+      route_edge, opening_context - exactly the graph records the
+      pinned sibling contracts own. A target kind outside the enum
+      fails closed as unknown_target_kind; adding a kind is a NEW
+      contract version, never in-place drift. Each kind's target
+      identity is EXACTLY the owning sibling's identity: the node
+      contract's canonical-field-comparison identity for
+      transposition_node, the edge contract's canonical four-tuple
+      for route_edge, and the (variant, path_moves) key for
+      opening_context. The identity definitions are NOT restated
+      here - the lint reads them from the siblings.
+    links:
+      transposition_node: data/contracts/transposition_node.yaml
+      route_edge: data/contracts/route_edge.yaml
+      opening_context: data/contracts/opening_context.yaml
+  source_entry:
+    fields: [source_id, game_id, first_observed_at]
+    source_id_form: from-linked-import-contract-sources-registry
+    game_id_form: import-record-game_id-nonempty-delimiter-free-printable-ascii
+    game_id_grammar: from-linked-import-contract-dedup-identity-never-recomputed
+    timestamp_grammar: rfc3339-utc-seconds-Z-suffix-ascii-no-leap-second
+    set_semantics: order-free-duplicates-collapsed
+    rule: >-
+      A source entry has EXACTLY three fields. source_id is a
+      source id from the linked import contract's sources registry,
+      read from the sibling, never restated - an unknown source id
+      fails closed, exactly the import contract's registry rule.
+      game_id is the import record's stored game_id verbatim - the
+      dedup identity the linked import contract owns; this contract
+      NEVER recomputes or reinterprets it, only pins the storage
+      form: nonempty, delimiter-free printable ASCII.
+      first_observed_at is an RFC3339 UTC timestamp with seconds
+      precision and a Z suffix, printable ASCII, validated as an
+      ACTUAL calendar instant: Gregorian calendar rules with
+      leap-year February 29 (divisible by 4, centuries only when
+      divisible by 400), 30/31-day months, hour 00-23, minute
+      00-59. LEAP-SECOND POLICY: this is a pinned NON-LEAP
+      profile - second is 00-59, a :60 leap second is rejected,
+      never normalized. Entries are a SET:
+      order never matters and exact duplicates collapse - two
+      entries are the same entry iff all three fields compare
+      equal.
+    links:
+      import_contract: data/contracts/import.yaml
+  record:
+    fields: [target_kind, target, sources]
+    target_form: target-identity-fields-verbatim-per-kind
+    sources_nonempty: true
+    derived_fields_stored: none
+    rule: >-
+      The provenance record has EXACTLY three fields. target_kind
+      is one of the closed enum. target is the target identity
+      fields verbatim, per kind, EXACTLY as the owning sibling
+      contract serializes them. sources is a NONEMPTY set of source
+      entries - a record with no source is no provenance and is
+      malformed. No digest, no counts, no caches are stored: every
+      derived value is regenerable from the three stored fields,
+      never an independent source of truth. Any other field, any
+      missing field, a target failing its sibling's identity
+      validation, or a source entry failing the pinned shape is a
+      malformed record.
+    links:
+      transposition_node: data/contracts/transposition_node.yaml
+      route_edge: data/contracts/route_edge.yaml
+      opening_context: data/contracts/opening_context.yaml
+  merge:
+    insert: insert-or-union-sources
+    atomic: true
+    idempotent: true
+    commutative: true
+    associative: true
+    same_target_never_two_records: true
+    same_key_conflict: none-union-is-total
+    conflict_in_batch: whole-merge-rejected-nothing-committed
+    source_validation: exact-stored-records-validated-before-staging
+    rejected_insert_changes_nothing: true
+    rule: >-
+      Inserting provenance returns the existing record when the
+      (target_kind, target) key already exists and creates one
+      otherwise - never a second record for an existing key. For an
+      existing key the merged sources are the UNION of the source
+      sets, so merge is IDEMPOTENT (re-inserting the same record is
+      a no-op), COMMUTATIVE and ASSOCIATIVE (the final table is the
+      same for any insertion order and grouping, because union is a
+      set operation). NO same-key conflict class exists: two
+      provenance records for the same target NEVER conflict - the
+      merged record is always the union, and this is the one graph
+      table where a same-key pair is a merge, never a
+      contradiction. A table merge is ATOMIC: every incoming record
+      is preflighted - shape, target-kind membership, target
+      identity against the linked sibling, source ids against the
+      import registry - before any mutation, consuming and
+      validating the EXACT stored source records, never records
+      reconstructed under the receiver's own linked docs; a
+      malformed or unknown-source record rejects the WHOLE merge
+      and leaves the destination bit-identical, never a committed
+      valid prefix. Over failing batches commutativity means BOTH
+      merge orders reject and leave the same pre-merge
+      destinations.
+  failures:
+    classes: [malformed_provenance_record, unknown_target_kind,
+      malformed_target_identity, unknown_source]
+    mapping:
+      malformed_provenance_record: malformed_request
+      unknown_target_kind: unknown_target_kind
+      malformed_target_identity: malformed_request
+      unknown_source: unknown_source
+    closed: true
+    rule: >-
+      Four failure classes, each mapping onto the closed error enum
+      as declared. malformed_provenance_record: a record failing
+      the pinned shape - wrong field set, an empty sources set, a
+      duplicate-free set violated by construction, or a source
+      entry failing its pinned field shapes. unknown_target_kind: a
+      target_kind outside the closed enum - fail closed, never
+      coerced. malformed_target_identity: a target identity failing
+      the owning sibling contract's validation (the node, edge or
+      context identity rules) - an impossible target yields NO
+      provenance, never a best-effort record. unknown_source: a
+      source_id absent from the linked import contract's sources
+      registry - fail closed on the rights surface, never coerced
+      to a known class. No fifth failure class exists.
+  errors:
+    closed_enum: [malformed_request, unknown_target_kind,
+      unknown_source, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+        additional_fields: forbidden
+      retryable_true_only_for: [internal]
+    rule: >-
+      The error surface is the shared shape: code from the closed
+      enum, message, retryable. retryable is true ONLY for
+      internal; every contract-level rejection is a caller error
+      and never retryable.
+  properties:
+    key_uniqueness: one-target-exactly-one-record
+    source_completeness: every-producing-observation-in-the-set
+    monotone_growth: merge-only-adds-source-entries
+    merge_idempotence: reinsert-same-record-no-op
+    merge_commutativity: insertion-order-never-changes-the-table
+    union_total: same-key-pair-always-merges-never-conflicts
+    rollback: rejected-insert-leaves-table-bit-identical
+    rule: >-
+      The provenance table is a deterministic function of the SET
+      of (target key, source entry) pairs ever inserted: one target
+      carries exactly one record, the source set holds every source
+      observation that produced the target and only grows, and
+      insertion order never changes the final table because union
+      is idempotent, commutative and associative. A same-key pair
+      always merges - the table never holds two records for one
+      target and never rejects a same-key pair as a contradiction.
+      A rejected insert or merge leaves the table bit-identical.
+  links:
+    import_contract: data/contracts/import.yaml
+    transposition_node_contract: data/contracts/transposition_node.yaml
+    route_edge_contract: data/contracts/route_edge.yaml
+    opening_context_contract: data/contracts/opening_context.yaml
+    rule: >-
+      The provenance contract LINKS the import contract (the
+      sources registry and the game_id dedup identity), the
+      transposition-node contract (node identity), the route-edge
+      contract (edge identity) and the opening-context contract
+      (context identity). The lint parses ALL siblings and compares
+      every linked claim exactly; any sibling change not mirrored
+      here fails the linkage check.
+  versioning:
+    base_path: /graph/provenance/v1
+    rule: >-
+      The contract version is in the base path. Any normative
+      change - including adding a target kind or retracting a
+      source entry - is a NEW version at a new base path; a version
+      never changes in place, so a stored provenance record is
+      forever decodable by the version its table names.
