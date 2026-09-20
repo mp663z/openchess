@@ -73,6 +73,9 @@ SEMANTICS = {
         "before-migration",
     "target_verification":
         "recomputed-migrated-state-id-is-the-receipt-target-id",
+    "post_transform_validation":
+        "staged-state-validated-against-target-schema-identity-"
+        "set-and-cardinality-exact",
     "cardinality": "record-count-preserved-exactly",
     "identity_preservation":
         "canonical-identities-unchanged-under-re-digest",
@@ -81,7 +84,9 @@ SEMANTICS = {
 ORACLE_BOUNDARY = {
     "role": "target-digest-oracle-is-untrusted-input",
     "single_evaluation": "exactly-one-call-per-record-retained-key",
-    "frozen_snapshots": "records-frozen-before-oracle-never-re-read",
+    "frozen_snapshots":
+        "entire-source-frozen-before-first-oracle-call-never-re-"
+        "read",
     "output_validation":
         "exact-built-in-string-pinned-format-or-fail-closed",
 }

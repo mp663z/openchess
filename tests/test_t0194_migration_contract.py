@@ -153,6 +153,38 @@ class MigrationEngine:
             if _identity(rec) != key:
                 _fail("malformed_migration_record")
 
+    def _validate_target_state(self, staged, frozen, to_schema):
+        """Post-transform validation: every staged record against
+        the TARGET schema and the retained key set - drift fails
+        closed as divergent_target (engine-side, never caller
+        malformed)."""
+        grammar = _schema(to_schema)["digest_grammar"]
+        digest_re = re.compile(grammar)
+        if set(staged) != set(frozen) or len(staged) != len(frozen):
+            _fail("divergent_target")
+        for key, rec in staged.items():
+            if set(rec.keys()) != \
+                    set(_NDOCS[0]["record"]["fields"]):
+                _fail("divergent_target")
+            if type(rec["variant"]) is not str or \
+                    type(rec["snapshot_fen"]) is not str or \
+                    type(rec["digest"]) is not str:
+                _fail("divergent_target")
+            try:
+                derived = _make_record(*_NDOCS, digest_fen,
+                                       rec["variant"],
+                                       rec["snapshot_fen"])
+            except NodeError:
+                _fail("divergent_target")
+            if rec["variant"] != derived["variant"] or \
+                    rec["snapshot_fen"] != \
+                    derived["snapshot_fen"]:
+                _fail("divergent_target")
+            if digest_re.fullmatch(rec["digest"]) is None:
+                _fail("divergent_target")
+            if _identity(rec) != key:
+                _fail("divergent_target")
+
     def _call_target_oracle(self, variant, snapshot_fen):
         """THE target-oracle boundary: raising or non-exact-str or
         wrong-grammar output fails closed as divergent_target."""
@@ -190,24 +222,47 @@ class MigrationEngine:
         source_schema = _schema(request["from_schema"])
         self._validate_state(source_state,
                              source_schema["digest_grammar"])
-        if state_id(source_state) != request["source_id"]:
-            _fail("conflicting_source")
-        # STAGED transform: frozen record snapshots, ONE oracle
-        # call per record, retained exact built-in-str key
-        staged = {}
-        for key in sorted(source_state):
-            rec = source_state[key]
-            frozen = {"variant": rec["variant"],
-                      "digest": rec["digest"],
-                      "snapshot_fen": rec["snapshot_fen"]}
-            new_key = self._call_target_oracle(
-                frozen["variant"], frozen["snapshot_fen"])
-            staged[key] = {"variant": frozen["variant"],
-                           "digest": new_key,
-                           "snapshot_fen": frozen["snapshot_fen"]}
-        if len(staged) != len(source_state):
-            _fail("divergent_target")
-        target_id = state_id(staged)
+        # INPUT PRESERVATION snapshot (reference-preserving): the
+        # oracle may hold external references into the caller's
+        # live state - every exit restores it bit-identical.
+        saved_container = dict(source_state)
+        saved_recs = {id(rec): (rec, dict(rec))
+                      for rec in source_state.values()}
+        # FREEZE THE ENTIRE SOURCE: one detached plain-dict
+        # snapshot taken BEFORE the first oracle call; every later
+        # phase - source-id derivation, iteration, transform -
+        # reads ONLY the frozen copy, never the caller's live
+        # mapping or records.
+        frozen = {key: dict(rec)
+                  for key, rec in source_state.items()}
+        try:
+            if state_id(frozen) != request["source_id"]:
+                _fail("conflicting_source")
+            # STAGED transform: ONE oracle call per retained key,
+            # retained exact built-in-str result
+            staged = {}
+            for key in sorted(frozen):
+                rec = frozen[key]
+                new_key = self._call_target_oracle(
+                    rec["variant"], rec["snapshot_fen"])
+                staged[key] = {"variant": rec["variant"],
+                               "digest": new_key,
+                               "snapshot_fen":
+                               rec["snapshot_fen"]}
+            # POST-TRANSFORM validation: the full staged state
+            # against the TARGET schema - exact fields/types,
+            # canonical snapshot, target digest grammar, derived
+            # identity == retained key - plus exact identity-set
+            # and cardinality agreement with the frozen source.
+            self._validate_target_state(staged, frozen,
+                                        request["to_schema"])
+            target_id = state_id(staged)
+        finally:
+            for rec, content in saved_recs.values():
+                rec.clear()
+                rec.update(content)
+            source_state.clear()
+            source_state.update(saved_container)
         return {
             "migration_id": "mg1:" + hashlib.sha256(
                 f"{request['from_schema']}\n{request['to_schema']}"
@@ -557,6 +612,9 @@ def _mutants():
     add("frozen dropped",
         ["contract", "oracle_boundary", "frozen_snapshots"],
         "live-records")
+    add("post-transform validation dropped",
+        ["contract", "semantics", "post_transform_validation"],
+        "digest-only")
     add("output validation dropped",
         ["contract", "oracle_boundary", "output_validation"],
         "any-output")
@@ -654,3 +712,140 @@ def test_mutant_in_place_migration_corrupts_source():
     engine = MigrationEngine(pdv2_oracle)
     engine.migrate(_request(source), source)
     assert source == before
+
+
+# -- v2: full-source freeze + post-transform validation -----------------------
+
+
+def _future_record_attack_oracle(source, later_key, calls):
+    """UNTRUSTED: on call 1, corrupts the record scheduled for a
+    LATER call (replace contents, delete it, add a new one) AND
+    mutates the live container."""
+    def oracle(variant, fen):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            source[later_key]["snapshot_fen"] = []  # hostile
+            source["injected"] = {"variant": "standard",
+                                  "digest": "pdv1:" + "9" * 64,
+                                  "snapshot_fen": STARTPOS}
+            doomed = sorted(k for k in source
+                            if k != later_key)[0]
+            if doomed in source:
+                del source[doomed]
+        return pdv2_oracle(variant, fen)
+    return oracle
+
+
+def test_future_record_attack_closed_by_full_freeze():
+    """The verifier's replay: an oracle corrupting FUTURE records
+    and the live container on call 1 cannot affect the migration
+    - receipt and migrated state derive EXACTLY from the pre-call
+    frozen snapshot, one oracle call per original retained key,
+    and the caller's input is restored bit-identical."""
+    source = _v1_state(STARTPOS, KINGS, AFTER_E4)
+    before = copy.deepcopy(source)
+    keys = sorted(source)
+    later_key = keys[1]
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _future_record_attack_oracle(source, later_key, calls))
+    receipt = engine.migrate(_request(source), source)
+    assert calls["n"] == 3  # one per ORIGINAL retained key
+    expected = {}
+    for key, rec in before.items():
+        expected[key] = {"variant": rec["variant"],
+                         "digest": pdv2_oracle(rec["variant"],
+                                               rec["snapshot_fen"]),
+                         "snapshot_fen": rec["snapshot_fen"]}
+    assert receipt["state"] == expected
+    assert receipt["target_id"] == state_id(expected)
+    assert receipt["source_id"] == state_id(before)
+    assert source == before  # input restored bit-identical
+
+
+def test_input_restored_after_success_against_external_reference():
+    """A hostile oracle with an external reference into the
+    caller's state: even a SUCCESSFUL migration leaves the
+    caller's input bit-identical."""
+    source = _v1_state(STARTPOS, KINGS)
+    before = copy.deepcopy(source)
+
+    def oracle(variant, fen):
+        for rec in source.values():
+            rec["digest"] = "corrupted"
+        source["junk"] = {"x": 1}
+        return pdv2_oracle(variant, fen)
+
+    engine = MigrationEngine(oracle)
+    receipt = engine.migrate(_request(source), source)
+    assert _MID_RE.fullmatch(receipt["migration_id"])
+    assert source == before
+
+
+def test_mutant_skipping_post_transform_validation():
+    """Behavioral mutant: the v1 engine (freeze-per-record, no
+    full-source freeze, no post-transform validation) ACCEPTS the
+    future-record attack - receipt citing the pre-mutation source
+    id over a corrupted target. Counter-test: the real engine is
+    immune."""
+    def mutant_migrate(engine, request, source):
+        staged = {}
+        for key in sorted(source):
+            rec = source[key]
+            frozen = dict(rec)
+            staged[key] = {"variant": frozen["variant"],
+                           "digest": engine._call_target_oracle(
+                               frozen["variant"],
+                               frozen["snapshot_fen"]),
+                           "snapshot_fen": frozen["snapshot_fen"]}
+        return staged
+
+    def make_source():
+        return _v1_state(STARTPOS, KINGS, AFTER_E4)
+
+    source = make_source()
+    before = copy.deepcopy(source)
+    keys = sorted(source)
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _future_record_attack_oracle(source, keys[1], calls))
+    mutant_result = mutant_migrate(engine, _request(source),
+                                   source)
+    # the mutant's target carries the corrupted record / wrong
+    # cardinality - the attack landed
+    assert mutant_result.get(keys[1], {}).get(
+        "snapshot_fen") != before[keys[1]]["snapshot_fen"] or \
+        len(mutant_result) != len(before)
+    # real engine: exact pre-call snapshot derivation
+    source = make_source()
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _future_record_attack_oracle(source, keys[1], calls))
+    receipt = engine.migrate(_request(source), source)
+    assert receipt["state"][keys[1]]["snapshot_fen"] == \
+        before[keys[1]]["snapshot_fen"]
+    assert len(receipt["state"]) == len(before)
+    assert source == before
+
+
+def test_post_transform_validation_catches_identity_drift():
+    """Direct unit: a staged record whose derived identity differs
+    from its retained key is divergent_target."""
+    engine = MigrationEngine(pdv2_oracle)
+    frozen = _v1_state(STARTPOS)
+    key = next(iter(frozen))
+    drifted = {_identity(_node(KINGS)): dict(
+        frozen[key], digest="pdv2:" + "0" * 64)}
+    with pytest.raises(MigrationError) as exc:
+        engine._validate_target_state(drifted, frozen, "store-v2")
+    assert exc.value.failure_class == "divergent_target"
+    wrong_grammar = {key: dict(frozen[key],
+                               digest="pdv1:" + "0" * 64)}
+    with pytest.raises(MigrationError) as exc:
+        engine._validate_target_state(wrong_grammar, frozen,
+                                      "store-v2")
+    assert exc.value.failure_class == "divergent_target"
+    shrunk = {}
+    with pytest.raises(MigrationError) as exc:
+        engine._validate_target_state(shrunk, frozen, "store-v2")
+    assert exc.value.failure_class == "divergent_target"
