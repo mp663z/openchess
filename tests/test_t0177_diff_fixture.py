@@ -69,6 +69,57 @@ ROLLBACK_KEYS = {"name", "kind", "diff", "base", "expect_failure",
 REPAIR_FORMS = {"set_id", "set_section", "replace_diff",
                 "replace_base", "replace_state"}
 
+# -- the closed scenario manifests -------------------------------------------
+# Every fixture section's actual {name: metadata} map must equal
+# its manifest EXACTLY - no missing, substituted, duplicated,
+# renamed, re-kinded or extra rows, and every advertised
+# semantic shape is asserted before execution.
+MDR = "malformed_diff_record"
+CB = "conflicting_base"
+UI = "unknown_identity"
+DT = "divergent_target"
+
+HAPPY_MANIFEST = {
+    "compute-mixed-add-remove-change": ("compute", "mixed"),
+    "apply-mixed-round-trip": ("apply", "mixed"),
+    "compute-add-only": ("compute", "add-only"),
+    "apply-add-only": ("apply", "add-only"),
+    "compute-remove-only": ("compute", "remove-only"),
+    "apply-remove-only": ("apply", "remove-only"),
+    "validate-honest-diff": ("diff-validate", "validate"),
+}
+BOUNDARY_MANIFEST = {
+    "compute-empty-on-equal-states": ("compute", "no-op"),
+    "apply-empty-noop": ("apply", "no-op"),
+    "compute-change-only": ("compute", "change-only"),
+    "compute-remove-all-to-empty": ("compute", "remove-all"),
+    "apply-to-empty-base": ("apply", "empty-base"),
+}
+MALFORMED_MANIFEST = {
+    "diff-missing-section": (MDR, "set_section"),
+    "diff-bad-id-grammar": (MDR, "set_id"),
+    "diff-section-not-mapping": (MDR, "set_section"),
+    "diff-added-record-bad-digest": (MDR, "set_section"),
+    "diff-changed-witness-equal-sides": (MDR, "set_section"),
+    "diff-section-overlap": (MDR, "set_section"),
+    "diff-nonempty-equal-ids": (MDR, "set_id"),
+    "diff-empty-unequal-ids": (DT, "set_id"),
+    "apply-conflicting-base-id": (CB, "replace_base"),
+    "apply-added-identity-already-present": (CB, "replace_diff"),
+    "apply-removed-identity-unknown": (UI, "replace_diff"),
+    "apply-removed-content-mismatch": (CB, "set_section"),
+    "apply-divergent-target-id": (DT, "set_id"),
+    "compute-state-not-mapping": (MDR, "replace_state"),
+}
+ROLLBACK_MANIFEST = {
+    "rejected-conflicting-base-then-valid-apply": CB,
+    "rejected-divergent-target-then-valid-apply": DT,
+}
+MANIFESTS = {"happy": HAPPY_MANIFEST,
+             "boundary": BOUNDARY_MANIFEST,
+             "malformed": MALFORMED_MANIFEST,
+             "rollback": ROLLBACK_MANIFEST}
+
 
 def _names(section):
     return [case["name"] for case in CASES[section]]
@@ -205,6 +256,44 @@ def _validate_repair(case):
         _validate_state_shape(form["state"], case["name"])
 
 
+def _case_diff(case):
+    """The diff a case advertises: expect for compute, diff for
+    apply."""
+    return case["expect"] if case["kind"] == "compute" \
+        else case["diff"]
+
+
+def _assert_scenario(case, scenario):
+    """The advertised semantic shape is REALLY present - a
+    scenario tag can never be satisfied by a substituted row."""
+    name = case["name"]
+    diff = _case_diff(case)
+    nonempty = [sec for sec in ("added", "removed", "changed")
+                if diff[sec]]
+    if scenario == "mixed":
+        assert nonempty == ["added", "removed", "changed"], name
+    elif scenario == "add-only":
+        assert nonempty == ["added"], name
+    elif scenario == "remove-only":
+        assert nonempty == ["removed"], name
+    elif scenario == "change-only":
+        assert nonempty == ["changed"], name
+    elif scenario == "no-op":
+        assert nonempty == [], name
+        assert diff["base_id"] == diff["target_id"], name
+    elif scenario == "remove-all":
+        assert nonempty == ["removed"], name
+        assert case["target"] == {}, name
+        assert set(diff["removed"]) == set(case["base"]), name
+    elif scenario == "empty-base":
+        assert case["base"] == {}, name
+        assert nonempty == ["added"], name
+    elif scenario == "validate":
+        assert case["kind"] == "diff-validate", name
+    else:  # pragma: no cover - manifest typo guard
+        raise AssertionError(f"unknown scenario {scenario!r}")
+
+
 def _validate_structure(cases):
     assert set(cases) == TOP_KEYS
     # the fixture-format version is pinned exactly: an int equal
@@ -222,6 +311,28 @@ def _validate_structure(cases):
         names = [case["name"] for case in cases[section]]
         assert len(names) == len(set(names)), (
             f"{section} names must be unique")
+        # CLOSED SCENARIO MANIFEST: the section's actual
+        # {name: metadata} map must equal the manifest EXACTLY -
+        # a missing, substituted, duplicated, renamed,
+        # re-kinded or extra row fails HERE, before execution.
+        manifest = MANIFESTS[section]
+        assert set(names) == set(manifest), (
+            f"{section} scenario set drifted: "
+            f"missing={set(manifest) - set(names)} "
+            f"extra={set(names) - set(manifest)}")
+        for case in cases[section]:
+            if section in ("happy", "boundary"):
+                kind, scenario = manifest[case["name"]]
+                assert case["kind"] == kind, case["name"]
+                _assert_scenario(case, scenario)
+            elif section == "malformed":
+                failure, repair_form = manifest[case["name"]]
+                assert case["expect_failure"] == failure, case["name"]
+                assert set(case["minimal_repair"]) == {repair_form}, (
+                    case["name"])
+            else:
+                assert case["expect_failure"] == manifest[case["name"]], (
+                    case["name"])
         for case in cases[section]:
             if section == "rollback":
                 assert case["kind"] == "rollback-apply", \
@@ -566,3 +677,129 @@ def test_rollback():
         _run_apply({"diff": case["then_diff"],
                     "base": case["then_base"],
                     "expect_target": case["expect_target"]})
+
+
+# -- v2: closed scenario coverage ---------------------------------------------
+
+
+def test_dispatch_sections_match_manifest():
+    """Every iterated or parametrized section dispatches EXACTLY
+    the manifest's scenario names - a late, replaced or renamed
+    row cannot evade or sneak into execution."""
+    for section, manifest in MANIFESTS.items():
+        assert set(_names(section)) == set(manifest), section
+
+
+def _section_mutations():
+    """Structural mutations over EVERY section - each must fail
+    _validate_structure before any execution."""
+    out = []
+    for section in MANIFESTS:
+        # delete a row
+        out.append((f"{section}-delete-row", section,
+                    lambda m, s=section: m[s].pop(0)))
+        # rename a row
+        def rename(m, s=section):
+            row = copy.deepcopy(m[s][0])
+            row["name"] = row["name"] + "-renamed"
+            m[s][0] = row
+        out.append((f"{section}-rename-row", section, rename))
+        # add an extra row
+        def add_row(m, s=section):
+            row = copy.deepcopy(m[s][0])
+            row["name"] = "extra-row-witness"
+            m[s].append(row)
+        out.append((f"{section}-add-row", section, add_row))
+        # substitute: replace a row with a renamed copy of
+        # ANOTHER valid row in the same section
+        def substitute(m, s=section):
+            row = copy.deepcopy(m[s][1])
+            row["name"] = m[s][0]["name"]
+            m[s][0] = row
+        out.append((f"{section}-substitute-row", section,
+                    substitute))
+        # move a row across sections
+        def move(m, s=section):
+            other = ({"happy", "boundary", "malformed",
+                      "rollback"} - {s}).pop()
+            row = copy.deepcopy(m[other][0])
+            m[s][0] = row
+        out.append((f"{section}-moved-row", section, move))
+    # swap kind metadata between two happy rows
+    def swap_kind(m):
+        m["happy"][0]["kind"], m["happy"][1]["kind"] = \
+            m["happy"][1]["kind"], m["happy"][0]["kind"]
+    out.append(("happy-swap-kind", "happy", swap_kind))
+    # swap failure classes between two malformed rows of
+    # DIFFERENT classes
+    def swap_failure(m):
+        m["malformed"][0]["expect_failure"], \
+            m["malformed"][7]["expect_failure"] = \
+            m["malformed"][7]["expect_failure"], \
+            m["malformed"][0]["expect_failure"]
+    out.append(("malformed-swap-failure", "malformed",
+                swap_failure))
+    # swap repair forms between two malformed rows
+    def swap_repair(m):
+        m["malformed"][0]["minimal_repair"], \
+            m["malformed"][1]["minimal_repair"] = \
+            m["malformed"][1]["minimal_repair"], \
+            m["malformed"][0]["minimal_repair"]
+    out.append(("malformed-swap-repair", "malformed",
+                swap_repair))
+    # swap rollback rejection classes
+    def swap_rollback(m):
+        m["rollback"][0]["expect_failure"], \
+            m["rollback"][1]["expect_failure"] = \
+            m["rollback"][1]["expect_failure"], \
+            m["rollback"][0]["expect_failure"]
+    out.append(("rollback-swap-failure", "rollback",
+                swap_rollback))
+    return out
+
+
+def test_section_mutations_fail_structure():
+    for label, _section, mutate in _section_mutations():
+        m = copy.deepcopy(CASES)
+        mutate(m)
+        try:
+            _validate_structure(m)
+        except AssertionError:
+            continue
+        raise AssertionError(f"mutation {label!r} passed")
+
+
+def test_mutant_happy_boundary_scenario_substitution():
+    """The verifier's replay: every happy row replaced by a
+    uniquely-named VALID add-only copy, every boundary row by a
+    VALID no-op copy - must fail structure validation BEFORE
+    execution."""
+    m = copy.deepcopy(CASES)
+    add_only = copy.deepcopy(_case("happy", "compute-add-only"))
+    noop = copy.deepcopy(
+        _case("boundary", "compute-empty-on-equal-states"))
+    m["happy"] = [dict(copy.deepcopy(add_only),
+                       name=f"add-only-copy-{i}")
+                  for i in range(len(HAPPY_MANIFEST))]
+    m["boundary"] = [dict(copy.deepcopy(noop),
+                          name=f"noop-copy-{i}")
+                     for i in range(len(BOUNDARY_MANIFEST))]
+    with pytest.raises(AssertionError):
+        _validate_structure(m)
+
+
+def test_mutant_intra_failure_class_malformed_substitution():
+    """Malformed rows substituted WITHIN one failure class (all
+    four classes still represented) must fail the manifest -
+    class-set coverage alone is not coverage."""
+    m = copy.deepcopy(CASES)
+    donor = copy.deepcopy(_case("malformed",
+                                "diff-bad-id-grammar"))
+    for i, case in enumerate(m["malformed"]):
+        if case["expect_failure"] == \
+                donor["expect_failure"] and \
+                case["name"] != donor["name"]:
+            m["malformed"][i] = dict(copy.deepcopy(donor),
+                                     name=case["name"])
+    with pytest.raises(AssertionError):
+        _validate_structure(m)
