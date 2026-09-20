@@ -3736,10 +3736,11 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "claimed",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent"
   },
   {
    "id": "T0178",
@@ -4080,11 +4081,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "3313cb8e6a44cd759fbbc35c7c6b3b2dad10e551",
+   "evidence_manifest": "evidence/T0194.md"
   },
   {
    "id": "T0195",
