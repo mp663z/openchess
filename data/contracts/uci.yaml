@@ -211,7 +211,7 @@ contract:
   setoption_semantics:
     registry: declared-options-by-normalized-name-from-handshake
     name_matching: ascii-case-insensitive-preserve-declared-spelling
-    normalization: ascii-lowercase-comparison-key
+    normalization: ascii-only-a-z-to-a-z-every-other-code-point-unchanged
     undeclared_name_maps_to: malformed_line
     domain_violation_maps_to: malformed_line
     duplicate_declaration_maps_to: malformed_line
@@ -227,8 +227,11 @@ contract:
     rule: >-
       setoption is defined against the handshake's option
       declarations: the session persists a structured registry of
-      declared options keyed by the ASCII-lowercase normalization
-      of the declared name (the original spelling is preserved in
+      declared options keyed by the ASCII-ONLY normalization of the
+      declared name (exactly A-Z map to a-z; every other Unicode
+      code point is unchanged - no Unicode case folding, no
+      casefold, no locale or normalization transforms, so U+212A
+      KELVIN SIGN never aliases ASCII k) (the original spelling is preserved in
       the entry for canonical emission and display), and every
       later setoption is validated against it. Per the UCI spec,
       option names and values are case-insensitive and may contain

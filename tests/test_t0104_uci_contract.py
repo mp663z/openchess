@@ -80,6 +80,16 @@ class UciError(Exception):
         self.subclass = subclass
 
 
+def _ascii_lower(text):
+    """The contract's ASCII-ONLY case normalization: A-Z map to a-z,
+    EVERY other Unicode code point is unchanged. Never str.lower(),
+    casefold(), locale transforms, or Unicode normalization - those
+    silently alias non-ASCII (U+212A KELVIN SIGN -> k) and create
+    semantic collisions the contract forbids."""
+    return "".join(chr(ord(ch) + 32) if "A" <= ch <= "Z" else ch
+                   for ch in text)
+
+
 def _fail(contract, failure_class):
     raise UciError(failure_class,
                    contract["failure_mapping"][failure_class]["error"])
@@ -630,7 +640,7 @@ class Session:
         assert self.setoption_spec["name_matching"] == (
             "ascii-case-insensitive-preserve-declared-spelling")
         assert self.setoption_spec["normalization"] == (
-            "ascii-lowercase-comparison-key")
+            "ascii-only-a-z-to-a-z-every-other-code-point-unchanged")
         assert self.setoption_spec["repeat_setoption"] == (
             "allowed-validation-idempotent")
         self.state = life["initial"]
@@ -708,7 +718,7 @@ class Session:
         assert sem["duplicate_declaration_maps_to"] == "malformed_line"
         assert sem["duplicate_normalization_collision"] == (
             "rejected-as-duplicate")
-        key = resp["name"].lower()
+        key = _ascii_lower(resp["name"])
         if key in self.options:
             _fail(c, "malformed_line")
         self.options[key] = {
@@ -727,7 +737,7 @@ class Session:
         rules = sem["type_rules"]
         # UCI: option names and values are case-insensitive; the
         # registry key is the ASCII-lowercase normalization.
-        decl = self.options.get(cmd["name"].lower())
+        decl = self.options.get(_ascii_lower(cmd["name"]))
         if decl is None:
             assert sem["undeclared_name_maps_to"] == "malformed_line"
             _fail(c, "malformed_line")
@@ -738,7 +748,8 @@ class Session:
             assert rules["check"] == (
                 "value-marker-required-true-or-false-ascii-case-"
                 "insensitive")
-            if value is None or value.lower() not in ("true", "false"):
+            if (value is None
+                    or _ascii_lower(value) not in ("true", "false")):
                 _fail(c, "malformed_line")
         elif otype == "spin":
             assert rules["spin"] == (
@@ -751,8 +762,8 @@ class Session:
             assert rules["combo"] == (
                 "value-marker-required-one-declared-full-var-string-"
                 "ascii-case-insensitive")
-            if (value is None or value.lower() not in
-                    [var.lower() for var in decl["var"]]):
+            if (value is None or _ascii_lower(value) not in
+                    [_ascii_lower(var) for var in decl["var"]]):
                 _fail(c, "malformed_line")
         elif otype == "button":
             assert rules["button"] == "no-value-marker-permitted"
@@ -2953,3 +2964,96 @@ def test_setoption_semantics_mutations_fail_lint():
         except ContractError:
             continue
         raise AssertionError(f"setoption mutant {i} passed the lint")
+
+
+# -- v15: ASCII-only normalization, never Unicode folding ----------------
+
+KELVIN_K = "K"  # non-ASCII letter that Unicode folds to ASCII k
+
+
+def test_ascii_only_normalization_helper():
+    """The comparator maps exactly A-Z to a-z and leaves every other
+    code point unchanged; it is not str.lower/casefold."""
+    assert _ascii_lower("Threads XYZ-0123_ x") == "threads xyz-0123_ x"
+    assert _ascii_lower("") == ""
+    assert _ascii_lower(KELVIN_K + "nights") != "knights"
+    assert (KELVIN_K + "nights").lower() == "knights"  # Python folds
+    assert _ascii_lower(KELVIN_K) == KELVIN_K
+
+
+def test_nonascii_names_do_not_alias_ascii():
+    """U+212A KELVIN SIGN is NOT ASCII k: a declared Kelvin name is
+    not resolved by the ASCII spelling, a Kelvin combo var is not
+    matched by the ASCII var, and both spellings coexist in the
+    registry without collision."""
+    decl_kelvin = ("option name " + KELVIN_K + "nights type spin "
+                   "default 1 min 1 max 10")
+    decl_ascii = "option name knights type check default true"
+    s = _session([("gui", "uci"), ("engine", "id name S"),
+                  ("engine", decl_kelvin), ("engine", decl_ascii),
+                  ("engine", "uciok")])
+    # both coexist: the Kelvin name did not collide with the ASCII
+    # one at declaration time
+    assert len(s.options) == 2
+    baseline = _full_state(s)
+    # ASCII spelling does not resolve the Kelvin declaration
+    with pytest.raises(UciError) as exc:
+        s.feed_gui("setoption name knights value 2")
+    assert exc.value.failure_class == "malformed_line"
+    assert _full_state(s) == baseline
+    # ...even though the ASCII name itself is declared: knights is a
+    # check option, and 2 is not a check value - the lookup resolved
+    # to the ASCII entry, never the Kelvin one
+    s.feed_gui("setoption name knights value true")
+    s.feed_gui("setoption name KNIGHTS value FALSE")
+    s.feed_gui("setoption name " + KELVIN_K + "nights value 5")
+    assert _full_state(s) == baseline
+
+
+def test_nonascii_combo_var_does_not_alias_ascii():
+    """A combo var with a non-ASCII letter matches only itself under
+    ASCII-only folding."""
+    s = _session([("gui", "uci"), ("engine", "id name S"),
+                  ("engine", "option name Style type combo var "
+                   + KELVIN_K + "ing var Pawn"),
+                  ("engine", "uciok")])
+    baseline = _full_state(s)
+    s.feed_gui("setoption name Style value " + KELVIN_K + "ing")
+    with pytest.raises(UciError) as exc:
+        s.feed_gui("setoption name Style value king")
+    assert exc.value.failure_class == "malformed_line"
+    assert _full_state(s) == baseline
+
+
+def test_comparator_mutants_unicode_fold_and_identity():
+    """Replacing the ASCII-only helper with Unicode folding launders
+    the non-ASCII aliases; replacing it with identity matching
+    breaks ASCII case variants - the comparator, not prose, carries
+    the normalization."""
+    import tests.test_t0104_uci_contract as this_module
+
+    original = this_module._ascii_lower
+    try:
+        # mutant: Unicode lowercasing (what str.lower would do)
+        this_module._ascii_lower = str.lower
+        s = _session([("gui", "uci"), ("engine", "id name S"),
+                      ("engine", "option name " + KELVIN_K
+                       + "nights type spin default 1 min 1 max 10"),
+                      ("engine", "uciok")])
+        s.feed_gui("setoption name knights value 2")   # laundered
+        # mutant: casefold
+        this_module._ascii_lower = str.casefold
+        s = _session([("gui", "uci"), ("engine", "id name S"),
+                      ("engine", "option name " + KELVIN_K
+                       + "nights type spin default 1 min 1 max 10"),
+                      ("engine", "uciok")])
+        s.feed_gui("setoption name knights value 2")   # laundered
+        # mutant: identity matching (no folding at all)
+        this_module._ascii_lower = lambda text: text
+        s = _session(FIVE_DECLS)
+        baseline = _full_state(s)
+        with pytest.raises(UciError):
+            s.feed_gui("setoption name THREADS value 4")
+        assert _full_state(s) == baseline
+    finally:
+        this_module._ascii_lower = original

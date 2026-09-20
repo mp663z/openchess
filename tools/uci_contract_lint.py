@@ -411,7 +411,8 @@ ALLOWED_POSITION_VALIDATION = set(POSITION_VALIDATION) | {"rule"}
 SETOPTION_SEMANTICS = {
     "registry": "declared-options-by-normalized-name-from-handshake",
     "name_matching": "ascii-case-insensitive-preserve-declared-spelling",
-    "normalization": "ascii-lowercase-comparison-key",
+    "normalization":
+        "ascii-only-a-z-to-a-z-every-other-code-point-unchanged",
     "undeclared_name_maps_to": "malformed_line",
     "domain_violation_maps_to": "malformed_line",
     "duplicate_declaration_maps_to": "malformed_line",
