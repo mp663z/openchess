@@ -132,19 +132,26 @@ def _validate_state(state):
             _fail("malformed_conflict_record")
         if not isinstance(rec, dict):
             _fail("malformed_conflict_record")
+        # Field set and EXACT built-in-string guards BEFORE any
+        # sibling machinery: the linked FEN parser is not total
+        # over non-string input, so arbitrary field values must
+        # be rejected HERE - never handed across the boundary.
+        if set(rec.keys()) != set(_NDOCS[0]["record"]["fields"]):
+            _fail("malformed_conflict_record")
+        if type(rec["variant"]) is not str or \
+                type(rec["snapshot_fen"]) is not str or \
+                type(rec["digest"]) is not str:
+            _fail("malformed_conflict_record")
         try:
             derived = _make_record(*_NDOCS, digest_fen,
-                                   rec.get("variant"),
-                                   rec.get("snapshot_fen"))
+                                   rec["variant"],
+                                   rec["snapshot_fen"])
         except NodeError:
-            _fail("malformed_conflict_record")
-        if set(rec.keys()) != set(derived.keys()):
             _fail("malformed_conflict_record")
         if rec["variant"] != derived["variant"] or \
                 rec["snapshot_fen"] != derived["snapshot_fen"]:
             _fail("malformed_conflict_record")
-        if type(rec["digest"]) is not str or \
-                _DIGEST_RE.fullmatch(rec["digest"]) is None:
+        if _DIGEST_RE.fullmatch(rec["digest"]) is None:
             _fail("malformed_conflict_record")
         if _identity(rec) != key:
             _fail("malformed_conflict_record")
@@ -668,3 +675,56 @@ def test_mutants_never_silent_subset():
                        "base_check", "guarantees", "failures",
                        "errors", "properties", "versioning",
                        "links"}
+
+
+# -- v3: per-field Cartesian totality over record field values ----------------
+
+HOSTILE_FIELD_VALUES = [None, True, 0, 1.5, [], {}, ""]
+
+
+@pytest.mark.parametrize("field", ["variant", "snapshot_fen",
+                                   "digest"])
+@pytest.mark.parametrize("value", HOSTILE_FIELD_VALUES,
+                         ids=lambda v: type(v).__name__
+                         if not isinstance(v, str) else "empty-str")
+@pytest.mark.parametrize("slot", ["base", "left", "right"])
+def test_total_over_hostile_record_field_values(field, value,
+                                                slot):
+    """Every arbitrary record field value maps to
+    malformed_conflict_record - never a raw sibling exception."""
+    det = ConflictDetector()
+    rec = dict(_node(KINGS))
+    rec[field] = value
+    hostile = {_identity(_node(KINGS)): rec}
+    args = {"base": _state(_node(STARTPOS)),
+            "left": _state(_node(KINGS, K1)),
+            "right": _state(_node(KINGS, K2))}
+    args[slot] = hostile
+    before = copy.deepcopy(args)
+    with pytest.raises(ConflictError_) as exc:
+        det.detect(args["base"], args["left"], args["right"])
+    assert exc.value.failure_class == "malformed_conflict_record"
+    assert exc.value.code == FAILURE_MAPPING[
+        "malformed_conflict_record"]
+    assert exc.value.code in ERROR_ENUM
+    assert args == before
+
+
+@pytest.mark.parametrize("field", ["variant", "snapshot_fen",
+                                   "digest"])
+@pytest.mark.parametrize("slot", ["base", "left", "right"])
+def test_total_over_missing_record_fields(field, slot):
+    det = ConflictDetector()
+    rec = _node(KINGS)
+    hostile = {_identity(_node(KINGS)):
+               {k: v for k, v in rec.items() if k != field}}
+    args = {"base": _state(_node(STARTPOS)),
+            "left": _state(_node(KINGS, K1)),
+            "right": _state(_node(KINGS, K2))}
+    args[slot] = hostile
+    before = copy.deepcopy(args)
+    with pytest.raises(ConflictError_) as exc:
+        det.detect(args["base"], args["left"], args["right"])
+    assert exc.value.failure_class == "malformed_conflict_record"
+    assert exc.value.code in ERROR_ENUM
+    assert args == before
