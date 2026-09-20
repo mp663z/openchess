@@ -598,11 +598,14 @@ class Session:
         life = contract["lifecycle"]
         assert life["model"] == "bidirectional-session-state-machine"
         self.transitions = life["transitions"]
+        self.readiness_spec = life["readiness"]
+        assert self.readiness_spec["model"] == "orthogonal-pending-flag"
         self.state = life["initial"]
         self.position_flag = False
+        self.readiness = False
 
     def snapshot(self):
-        return (self.state, self.position_flag)
+        return (self.state, self.position_flag, self.readiness)
 
     def _step(self, direction, event, ponder=False):
         c = self.c
@@ -617,12 +620,31 @@ class Session:
             target = "pondering" if ponder else "searching"
         self.state = target
 
+    def _isready(self):
+        c = self.c
+        r = self.readiness_spec
+        # Orthogonal flag: valid from every live post-uciok state,
+        # rejected while already pending (never queued).
+        if self.state not in r["set_from_states"] or self.readiness:
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        self.readiness = True  # underlying state untouched
+
+    def _readyok(self):
+        c = self.c
+        if not self.readiness:
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        self.readiness = False  # clears ONLY the flag
+
     def feed_gui(self, line):
         c = self.c
         life = c["lifecycle"]
         cmd = parse_gui(c, line)  # malformed/unknown raise first
         kw = cmd["command"]
-        if kw == "go" and self.state == "ready" and not                 self.position_flag:
+        if kw == "isready":
+            self._isready()
+            return cmd
+        if kw == "go" and self.state == "ready" and not \
+                self.position_flag:
             _fail(c, life["unlisted_pair"])  # go_requires
         self._step("gui", kw,
                    ponder=(kw == "go" and cmd["parameters"].get("ponder")
@@ -636,6 +658,9 @@ class Session:
     def feed_engine(self, line):
         c = self.c
         resp = parse_engine(c, line)  # malformed/unknown raise first
+        if resp["response"] == "readyok":
+            self._readyok()
+            return resp
         self._step("engine", resp["response"])
         return resp
 
@@ -871,7 +896,7 @@ HAPPY_TRACE = [
     ("gui", "debug on", "ready"),
     ("gui", "ucinewgame", "ready"),
     ("gui", "position startpos", "ready"),
-    ("gui", "isready", "readiness_pending"),
+    ("gui", "isready", "ready"),
     ("engine", "readyok", "ready"),
     ("gui", "go depth 10", "searching"),
     ("engine", "info depth 5 score cp 30", "searching"),
@@ -1145,7 +1170,8 @@ PROTOCOL_VIOLATIONS = [
     (SEARCHING, "gui", "position startpos"),
     (SEARCHING, "gui", "setoption name X value 1"),
     (SEARCHING, "gui", "ucinewgame"),
-    (SEARCHING, "gui", "isready"),
+    # isready during searching is LEGAL (orthogonal flag); covered by
+    # test_readiness_during_normal_search.
     (SEARCHING, "gui", "ponderhit"),        # not a pondered search
     (SEARCHING, "engine", "readyok"),
     (STOPPED, "gui", "stop"),               # already stop-requested
@@ -1154,10 +1180,9 @@ PROTOCOL_VIOLATIONS = [
     (STOPPED, "gui", "ponderhit"),          # search was not pondered
     (PONDERING, "gui", "go depth 6"),
     (PONDERING + [("gui", "stop")], "gui", "stop"),
-    (READINESS, "gui", "position startpos"),  # readyok must resolve
-    (READINESS, "gui", "isready"),
-    (READINESS, "gui", "go depth 5"),
-    (READINESS, "engine", "bestmove e2e4"),
+    (READINESS, "gui", "isready"),          # second isready: never queued
+    (READINESS, "engine", "bestmove e2e4"),  # no search outstanding
+    (SEARCHING + [("gui", "isready")], "gui", "isready"),
     (AFTER_QUIT, "gui", "isready"),         # nothing after quit
     (AFTER_QUIT, "gui", "quit"),
     (AFTER_QUIT, "engine", "uciok"),
@@ -1175,6 +1200,83 @@ def test_protocol_state_rejected(prefix, direction, final):
         _feed(s, direction, final)
     assert exc.value.failure_class == "protocol_state"
     assert exc.value.code == "illegal_state"
+
+
+def test_readiness_during_normal_search():
+    # isready/readyok while calculating: the flag moves, the search
+    # stays outstanding until bestmove.
+    doc = _doc()["contract"]
+    s = Session(doc)
+    for d, line in SEARCHING:
+        _feed(s, d, line)
+    s.feed_gui("isready")
+    assert s.snapshot() == ("searching", True, True)
+    s.feed_engine("info depth 7")           # search unaffected
+    assert s.state == "searching"
+    with pytest.raises(UciError):           # still outstanding
+        s.feed_gui("go depth 3")
+    s.feed_engine("readyok")
+    assert s.snapshot() == ("searching", True, False)
+    with pytest.raises(UciError):           # still outstanding
+        s.feed_gui("position startpos")
+    s.feed_engine("bestmove e2e4")
+    assert s.snapshot() == ("ready", True, False)
+
+
+def test_readiness_during_ponder_search():
+    doc = _doc()["contract"]
+    s = Session(doc)
+    for d, line in PONDERING:
+        _feed(s, d, line)
+    s.feed_gui("isready")
+    assert s.snapshot() == ("pondering", True, True)
+    s.feed_gui("ponderhit")                 # converts, flag preserved
+    assert s.snapshot() == ("searching", True, True)
+    s.feed_engine("readyok")
+    assert s.snapshot() == ("searching", True, False)
+    s.feed_engine("bestmove d2d4")
+    assert s.state == "ready"
+
+
+def test_readiness_after_stop_requested():
+    doc = _doc()["contract"]
+    s = Session(doc)
+    for d, line in STOPPED:
+        _feed(s, d, line)
+    s.feed_gui("isready")
+    assert s.snapshot() == ("stop_requested", True, True)
+    s.feed_engine("readyok")
+    assert s.snapshot() == ("stop_requested", True, False)
+    # stop-requested survived the whole exchange: bestmove still due
+    s.feed_engine("bestmove e2e4")
+    assert s.state == "ready"
+
+
+def test_readiness_during_ponder_stop_requested():
+    doc = _doc()["contract"]
+    s = Session(doc)
+    for d, line in PONDERING + [("gui", "stop")]:
+        _feed(s, d, line)
+    assert s.state == "ponder_stop_requested"
+    s.feed_gui("isready")
+    assert s.snapshot() == ("ponder_stop_requested", True, True)
+    s.feed_engine("readyok")
+    assert s.snapshot() == ("ponder_stop_requested", True, False)
+    s.feed_gui("ponderhit")
+    assert s.state == "stop_requested"
+
+
+def test_readyok_without_pending_rejected_everywhere():
+    doc = _doc()["contract"]
+    for prefix in (HANDSHAKE, SEARCHING, STOPPED, PONDERING):
+        s = Session(doc)
+        for d, line in prefix:
+            _feed(s, d, line)
+        before = s.snapshot()
+        with pytest.raises(UciError) as exc:
+            s.feed_engine("readyok")
+        assert exc.value.failure_class == "protocol_state"
+        assert s.snapshot() == before
 
 
 def test_stop_requests_but_never_clears_search():
@@ -1330,9 +1432,28 @@ def _mutants():
     add("uciok gate removed", ["contract", "lifecycle", "transitions",
                                "awaiting_uciok", "gui"],
         {"position": "ready", "quit": "terminated"})
-    add("readyok gate removed", ["contract", "lifecycle", "transitions",
-                                 "readiness_pending", "gui"],
-        {"position": "ready", "quit": "terminated"})
+    add("readiness model drift", ["contract", "lifecycle", "readiness",
+                                  "model"], "top-level-state")
+    add("second isready queued", ["contract", "lifecycle", "readiness",
+                                  "second_isready"], "queued")
+    add("isready from awaiting", ["contract", "lifecycle", "readiness",
+                                  "set_from_states"],
+        ["awaiting_uciok", "ready", "searching", "pondering",
+         "stop_requested", "ponder_stop_requested"])
+    add("readiness cleared by stop", ["contract", "lifecycle",
+                                      "readiness", "cleared_by"],
+        "readyok-or-stop")
+    add("flag touches state", ["contract", "lifecycle", "readiness",
+                               "state_preservation"],
+        "readyok-returns-to-ready")
+    add("isready in state table", ["contract", "lifecycle",
+                                   "transitions", "ready", "gui",
+                                   "isready"], "ready")
+    add("readiness_pending state back", ["contract", "lifecycle",
+                                         "states"],
+        ["pre_uci", "awaiting_uciok", "ready", "readiness_pending",
+         "searching", "pondering", "stop_requested",
+         "ponder_stop_requested", "terminated"])
     add("ponderhit free", ["contract", "lifecycle", "transitions",
                            "searching", "gui"],
         {"stop": "stop_requested", "ponderhit": "searching",

@@ -164,10 +164,20 @@ POSITION_VALIDATION = {
     "subclass_preservation": "fen-failure-class-preserved-as-subclass",
 }
 LIFECYCLE_STATES = [
-    "pre_uci", "awaiting_uciok", "ready", "readiness_pending",
-    "searching", "pondering", "stop_requested",
-    "ponder_stop_requested", "terminated",
+    "pre_uci", "awaiting_uciok", "ready", "searching", "pondering",
+    "stop_requested", "ponder_stop_requested", "terminated",
 ]
+LIFECYCLE_READINESS = {
+    "model": "orthogonal-pending-flag",
+    "set_by": "isready",
+    "set_from_states": ["ready", "searching", "pondering",
+                        "stop_requested", "ponder_stop_requested"],
+    "cleared_by": "readyok-only",
+    "readyok_requires": "flag-set",
+    "second_isready": "rejected-while-flag-set-never-queued",
+    "state_preservation": "flag-changes-never-touch-underlying-state",
+}
+LIVE_POST_UCIOK = set(LIFECYCLE_READINESS["set_from_states"])
 LIFECYCLE_META = {
     "model": "bidirectional-session-state-machine",
     "initial": "pre_uci",
@@ -185,14 +195,12 @@ LIFECYCLE_TRANSITIONS = {
     "awaiting_uciok": {"gui": {"quit": "terminated"},
                        "engine": {"id": "awaiting_uciok",
                                   "uciok": "ready"}},
-    "ready": {"gui": {"debug": "ready", "isready": "readiness_pending",
-                      "setoption": "ready", "register": "ready",
-                      "ucinewgame": "ready", "position": "ready",
-                      "go": SEARCH_START, "quit": "terminated"},
+    "ready": {"gui": {"debug": "ready", "setoption": "ready",
+                      "register": "ready", "ucinewgame": "ready",
+                      "position": "ready", "go": SEARCH_START,
+                      "quit": "terminated"},
               "engine": {"copyprotection": "ready",
                          "registration": "ready"}},
-    "readiness_pending": {"gui": {"quit": "terminated"},
-                          "engine": {"readyok": "ready"}},
     "searching": {"gui": {"stop": "stop_requested",
                           "quit": "terminated"},
                   "engine": {"info": "searching",
@@ -271,7 +279,8 @@ ALLOWED_OPTION_MARKERS = set(OPTION_MARKERS) | {"rule"}
 ALLOWED_OPTION_TYPES = set(OPTION_TYPES) | {"rule"}
 ALLOWED_POSITION_VALIDATION = set(POSITION_VALIDATION) | {"rule"}
 ALLOWED_LIFECYCLE = (set(LIFECYCLE_META)
-                     | {"states", "transitions", "rule"})
+                     | {"states", "transitions", "readiness", "rule"})
+ALLOWED_READINESS = set(LIFECYCLE_READINESS) | {"rule"}
 ALLOWED_RESOLUTION = set(RESOLUTION_FAILURES) | {"rule"}
 ALLOWED_ERRORS = {"closed_enum", "shape"}
 ALLOWED_SERIALIZATION = {"canonical", "roundtrip", "rule"}
@@ -487,6 +496,20 @@ def lint(doc: dict, root: Path | None = None) -> None:
                       " state")
     _need(LIFECYCLE_META["unlisted_pair"] in FAILURE_CLASSES,
           "lifecycle.unlisted_pair must name a declared failure class")
+    for state, pair in transitions.items():
+        for direction, mapping in pair.items():
+            for event in mapping:
+                _need(event not in ("isready", "readyok"),
+                      f"lifecycle.transitions.{state}.{direction}: "
+                      f"{event} belongs to the orthogonal readiness "
+                      "flag, never the state table")
+    readiness = _mapping(life.get("readiness"), "lifecycle.readiness")
+    _keys(readiness, ALLOWED_READINESS, "lifecycle.readiness")
+    for key, value in LIFECYCLE_READINESS.items():
+        _exact(readiness.get(key), value, f"lifecycle.readiness.{key}")
+    _need(set(readiness["set_from_states"]) <= states,
+          "lifecycle.readiness.set_from_states must be declared states")
+    _text(readiness.get("rule"), "lifecycle.readiness.rule")
     _text(life.get("rule"), "lifecycle.rule")
 
     res = _mapping(contract.get("resolution_failures"),
