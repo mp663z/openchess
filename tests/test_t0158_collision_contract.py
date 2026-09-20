@@ -307,6 +307,24 @@ class CollisionProbe:
                     for field in _RECORD_FIELDS):
             _fail(cc, "malformed_collision_record")
 
+    def _validate_record_semantics(self, rec):
+        """ORACLE-INDEPENDENT semantic validation (phase one):
+        the linked table's own semantic rules - known variant,
+        pinned digest format, FEN grammar, canonical snapshot with
+        identity EP value and normalized clocks - with digest
+        consistency EXCLUDED (the receiver oracle alone owns
+        cross-oracle consistency; the real digest is never
+        precomputed). Every rejection maps to
+        malformed_collision_record with ZERO oracle calls:
+        receiver behavior can never launder the failure class of
+        a semantically malformed record."""
+        nc, vc, dc, epc, fc = _NODE_DOCS
+        try:
+            _validate_node_record(nc, vc, dc, epc, fc, dict(rec),
+                                  lambda v, f, _d=rec["digest"]: _d)
+        except NodeError:
+            _fail(self.cc, "malformed_collision_record")
+
     def merge(self, other):
         """ATOMIC: every incoming EXACT stored record is validated
         against the RECEIVER's oracle and linked docs (a stored
@@ -324,6 +342,10 @@ class CollisionProbe:
             # KeyError/AttributeError can never escape the closed
             # failure enum at this boundary.
             self._validate_record_shape(self.cc, rec)
+            # PHASE ONE: oracle-independent semantic validation -
+            # a semantically malformed record fails closed HERE
+            # and never reaches the receiver oracle.
+            self._validate_record_semantics(rec)
             # SINGLE EVALUATION: the receiver oracle is invoked
             # EXACTLY ONCE per incoming record, at the boundary;
             # the retained exact built-in key validates the source
@@ -1167,6 +1189,9 @@ def _mutants():
     add("shape_first dropped", ["contract", "properties",
                                 "shape_first"],
         "oracle-called-before-shape-validation")
+    add("semantic_first dropped", ["contract", "properties",
+                                   "semantic_first"],
+        "semantics-checked-after-oracle")
     return out
 
 
@@ -1366,6 +1391,130 @@ def test_mutant_dereference_before_shape_validation():
     bad = {k: v for k, v in good.items() if k != "snapshot_fen"}
     with pytest.raises(KeyError):
         mutant_merge(_probe(constant_oracle), _raw_source([bad]))
+    oracle, calls = _counting_oracle()
+    real = _probe(oracle)
+    before = (copy.deepcopy(real.buckets),
+              copy.deepcopy(real.identity_index))
+    with pytest.raises(CollisionError) as exc:
+        real.merge(_raw_source([bad]))
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert calls["n"] == 0
+    assert (real.buckets, real.identity_index) == before
+
+
+# -- v7: oracle-independent semantic phase one -------------------------------
+
+
+def _semantic_bad_records():
+    """Well-typed, exact-string records that are SEMANTICALLY
+    malformed under the linked table's own rules."""
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    good = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                        "standard", STARTPOS)
+    return [
+        ("unknown-variant", dict(good, variant="c960")),
+        ("bad-fen", dict(good, snapshot_fen="garbage w - - 0 1")),
+        ("noncanonical-clocks",
+         dict(good, snapshot_fen=STARTPOS.replace(" 0 1", " 7 42"))),
+        ("nonidentity-ep",
+         dict(good, snapshot_fen=STARTPOS.replace(" - 0 1",
+                                                  " e3 0 1"))),
+        ("malformed-digest", dict(good, digest="bad")),
+    ]
+
+
+SEMANTIC_BAD = _semantic_bad_records()
+
+
+def _side_effect_oracle(log):
+    def oracle(variant, fen):
+        log.append((variant, fen))
+        return constant_oracle(variant, fen)
+    return oracle
+
+
+@pytest.mark.parametrize("name,bad", SEMANTIC_BAD,
+                         ids=[n for n, _ in SEMANTIC_BAD])
+def test_semantic_phase_one_raising_oracle(name, bad):
+    """Against a RAISING receiver oracle a semantically malformed
+    record still fails as malformed_collision_record - the
+    oracle's behavior never launders the failure class."""
+    dest = _probe(raising_oracle(1))
+    before = (copy.deepcopy(dest.buckets),
+              copy.deepcopy(dest.identity_index))
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(_raw_source([bad]))
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert exc.value.code == FAILURE_MAPPING[
+        "malformed_collision_record"]
+    assert exc.value.code in ERROR_ENUM
+    assert (dest.buckets, dest.identity_index) == before
+
+
+@pytest.mark.parametrize("name,bad", SEMANTIC_BAD,
+                         ids=[n for n, _ in SEMANTIC_BAD])
+def test_semantic_phase_one_counting_oracle(name, bad):
+    """Against a counting receiver oracle a semantically malformed
+    record consumes ZERO oracle calls; a valid staged prefix
+    before it still rolls back bit-identical."""
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    oracle, calls = _counting_oracle()
+    good = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                        "standard", AFTER_E4)
+    dest = _probe(oracle)
+    before = (copy.deepcopy(dest.buckets),
+              copy.deepcopy(dest.identity_index))
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(_raw_source([good, bad]))
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert calls["n"] == 1  # the valid prefix only
+    assert (dest.buckets, dest.identity_index) == before
+
+
+@pytest.mark.parametrize("name,bad", SEMANTIC_BAD,
+                         ids=[n for n, _ in SEMANTIC_BAD])
+def test_semantic_phase_one_side_effect_oracle(name, bad):
+    """Against a side-effecting receiver oracle a semantically
+    malformed record triggers NO side effect - the oracle is
+    never invoked for it."""
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    log = []
+    oracle = _side_effect_oracle(log)
+    good = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                        "standard", AFTER_E4)
+    dest = _probe(oracle)
+    before = (copy.deepcopy(dest.buckets),
+              copy.deepcopy(dest.identity_index))
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(_raw_source([good, bad]))
+    assert exc.value.failure_class == "malformed_collision_record"
+    assert len(log) == 1  # the valid prefix only
+    assert (dest.buckets, dest.identity_index) == before
+
+
+def test_mutant_semantics_after_oracle_launders_failure_class():
+    """Behavioral mutant: shallow shape-first with semantic
+    validation moved AFTER the oracle - a malformed FEN against a
+    raising oracle is laundered into accelerator_inconsistent.
+    Pinned to prove phase one is load-bearing. Counter-test: the
+    real merge rejects malformed_collision_record with ZERO
+    calls."""
+    def mutant_merge(dest, other):
+        for rec in other.records():
+            dest._validate_record_shape(dest.cc, rec)
+            key = dest._call_oracle(rec["variant"],
+                                    rec["snapshot_fen"])
+            dest._validate_record_semantics(rec)  # too late
+            dest._staged_insert(rec, dest._identity(rec), key)
+        return dest
+
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    good = _make_record(nc, vc, dc, epc, fc, constant_oracle,
+                        "standard", STARTPOS)
+    bad = dict(good, snapshot_fen="garbage w - - 0 1")
+    with pytest.raises(CollisionError) as exc:
+        mutant_merge(_probe(raising_oracle(1)), _raw_source([bad]))
+    assert exc.value.failure_class == "accelerator_inconsistent"
     oracle, calls = _counting_oracle()
     real = _probe(oracle)
     before = (copy.deepcopy(real.buckets),

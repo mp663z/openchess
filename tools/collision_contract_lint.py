@@ -146,6 +146,9 @@ PROPERTIES = {
     "shape_first":
         "incoming-merge-record-shape-validated-before-any-field-"
         "dereference-or-oracle-call",
+    "semantic_first":
+        "oracle-independent-semantic-validation-before-receiver-"
+        "oracle-zero-calls-for-malformed-records",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",
