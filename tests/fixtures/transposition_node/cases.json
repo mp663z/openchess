@@ -156,13 +156,12 @@
    "name": "fen-impossible-two-white-kings",
    "kind": "node-insert",
    "variant": "standard",
-   "input_fen": "4K3/8/8/8/8/8/8/4K3 w - - 0 1",
-   "defect": "two-white-kings",
+   "input_fen": "4k3/8/8/8/8/8/8/K6K w - - 0 1",
+   "defect": "two-white-kings-with-black-king-present",
    "expect_failure": "malformed_position",
    "minimal_repair": {
-    "set": {
-     "input_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
-    }
+    "find": "K6K",
+    "replace": "7K"
    }
   },
   {

@@ -63,7 +63,7 @@ KIND_KEYS = {
 }
 TRANSPOSITION_ONE = {"expect_record"}      # exactly one node expected
 TRANSPOSITION_MANY = {"expect_records"}    # distinct nodes expected
-REPAIR_KEYS = {"set", "remove"}
+REPAIR_KEYS = {"set", "remove", "find", "replace"}
 RECORD_FIELDS = {"variant", "digest", "snapshot_fen"}
 
 SECTION_KINDS = {
@@ -92,6 +92,15 @@ def _repaired(case):
     assert set(rep) <= REPAIR_KEYS
     out = {k: copy.deepcopy(v) for k, v in case.items()
            if k not in ("defect", "expect_failure", "minimal_repair")}
+    if "find" in rep:
+        # span-local text repair on the input FEN: the find span is
+        # unique, everything outside it byte-identical
+        assert case["kind"] == "node-insert"
+        text = case["input_fen"]
+        assert text.count(rep["find"]) == 1, (
+            f"{case['name']}: repair find not unique")
+        out["input_fen"] = text.replace(rep["find"], rep["replace"])
+        return out
     target_key = "record" if case["kind"] == "record-validate" else None
     for key in rep.get("remove", []):
         if target_key:
@@ -284,13 +293,28 @@ def test_malformed(name):
     _exec_repaired(case)
 
 
-def test_malformed_param_ids_match_fixture():
-    """The malformed parametrization can never drift from the
-    fixture: collected parameter IDs equal the fixture malformed
-    name set."""
-    collected = {c["name"] for c in CASES["malformed"]}
-    assert collected == set(_names("malformed"))
-    assert len(collected) == len(CASES["malformed"])
+def test_malformed_param_ids_equal_fixture_names():
+    """Collection guard: test_malformed's parameter IDs are exactly
+    the fixture's malformed-name set - read from the actual
+    parametrize mark, never recomputed from the same expression."""
+    marks = [m for m in test_malformed.pytestmark
+             if m.name == "parametrize"]
+    assert len(marks) == 1
+    assert set(marks[0].args[1]) == set(_names("malformed"))
+
+
+def test_collection_guard_detects_late_fixture_row():
+    """A fixture row appended AFTER decorator collection is caught:
+    the parametrize mark froze at import, so the guard must fail
+    while the row is present."""
+    late = copy.deepcopy(CASES["malformed"][0])
+    late["name"] = "late-row-witness"
+    CASES["malformed"].append(late)
+    try:
+        with pytest.raises(AssertionError):
+            test_malformed_param_ids_equal_fixture_names()
+    finally:
+        CASES["malformed"].pop()
 
 
 def test_injected_valid_malformed_row_fails_rejection():
@@ -304,6 +328,31 @@ def test_injected_valid_malformed_row_fails_rejection():
     validate_record(NC, VC, DC, EC, FC, record)
     with pytest.raises(AssertionError):
         _exec_malformed(valid)
+
+
+def test_extra_white_king_repair_removes_only_one_white_king():
+    """Narrow controls for the two-white-kings case: the repair
+    removes exactly one white king inside its span, adds no black
+    king anywhere, and leaves every other field byte-identical;
+    the span-local repaired position succeeds on its own."""
+    case = _case("malformed", "fen-impossible-two-white-kings")
+    rep = case["minimal_repair"]
+    assert set(rep) == {"find", "replace"}
+    # the span removes exactly one white king, no black king touched
+    assert rep["find"].count("K") - rep["replace"].count("K") == 1
+    assert rep["find"].count("k") == rep["replace"].count("k") == 0
+    # everything outside the span is byte-identical (black king on
+    # e8 and all unrelated fields preserved)
+    text = case["input_fen"]
+    i = text.index(rep["find"])
+    repaired = text.replace(rep["find"], rep["replace"])
+    assert repaired[:i] == text[:i]
+    assert repaired[i + len(rep["replace"]):] == text[i + len(rep["find"]):]
+    assert "k" in repaired.split(" ")[0]  # black king still present
+    # remove-extra-white-only succeeds end to end
+    table = NodeTable(DOCS)
+    record = table.insert(case["variant"], repaired)
+    validate_record(NC, VC, DC, EC, FC, record)
 
 
 def test_rollback():
