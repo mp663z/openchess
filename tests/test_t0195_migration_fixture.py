@@ -89,6 +89,81 @@ ROLLBACK_KEYS = {"name", "kind", "oracle", "request", "source",
 REPAIR_FORMS = {"set_request_field", "replace_request",
                 "replace_source", "set_oracle"}
 
+# -- the closed scenario manifests -------------------------------------------
+# Every fixture section's actual {name: metadata} map must equal
+# its manifest EXACTLY - no missing, substituted, duplicated,
+# renamed or extra rows, and every advertised semantic shape is
+# asserted before execution.
+MMR = "malformed_migration_record"
+UM = "unknown_migration"
+CS = "conflicting_source"
+DVT = "divergent_target"
+
+# happy/boundary: name -> (oracle, source-record cardinality)
+HAPPY_MANIFEST = {
+    "migrate-three-record-source": ("honest", 3),
+    "migrate-single-record-source": ("honest", 1),
+    "migrate-two-record-source": ("honest", 2),
+}
+BOUNDARY_MANIFEST = {
+    "migrate-empty-source": ("honest", 0),
+    "migrate-two-record-source-boundary": ("honest", 2),
+}
+# malformed: name -> (failure class, oracle, repair form,
+# pinned defect description)
+MALFORMED_MANIFEST = {
+    "request-missing-field": (MMR, "honest", "replace_request",
+        "request is missing the to_schema field"),
+    "request-extra-field": (MMR, "honest", "replace_request",
+        "request carries an undeclared extra field"),
+    "request-bad-schema-grammar": (MMR, "honest",
+        "set_request_field",
+        "from_schema fails the schema-id grammar"),
+    "request-unknown-schema": (MMR, "honest",
+        "set_request_field",
+        "from_schema is not a registered schema"),
+    "request-bad-source-id-grammar": (MMR, "honest",
+        "set_request_field",
+        "source_id fails the state-id grammar"),
+    "request-non-str-value": (MMR, "honest", "replace_request",
+        "to_schema is not a string"),
+    "request-noop-unregistered": (UM, "honest",
+        "set_request_field",
+        "a noop migration pair is not registered"),
+    "request-downgrade-unregistered": (UM, "honest",
+        "replace_request",
+        "a downgrade migration pair is not registered"),
+    "source-id-mismatch": (CS, "honest", "set_request_field",
+        "recomputed source id differs from the request's "
+        "source_id"),
+    "source-not-mapping": (MMR, "honest", "replace_source",
+        "the source state is not a mapping"),
+    "source-record-bad-digest": (MMR, "honest",
+        "replace_source",
+        "a source record fails the source-schema digest "
+        "grammar"),
+    "oracle-raises": (DVT, "raising", "set_oracle",
+        "the target oracle raises during evaluation"),
+    "oracle-bad-grammar-output": (DVT, "bad-grammar",
+        "set_oracle",
+        "the target oracle returns text failing the target "
+        "grammar"),
+    "oracle-non-str-output": (DVT, "non-str", "set_oracle",
+        "the target oracle returns a non-string"),
+}
+# rollback: name -> (failure class, initial oracle, follow-up
+# oracle)
+ROLLBACK_MANIFEST = {
+    "rejected-conflicting-source-then-valid-migrate": (
+        CS, "honest", "honest"),
+    "rejected-oracle-raising-then-valid-migrate": (
+        DVT, "raising", "honest"),
+}
+MANIFESTS = {"happy": HAPPY_MANIFEST,
+             "boundary": BOUNDARY_MANIFEST,
+             "malformed": MALFORMED_MANIFEST,
+             "rollback": ROLLBACK_MANIFEST}
+
 
 def _names(section):
     return [case["name"] for case in CASES[section]]
@@ -184,6 +259,16 @@ def _validate_repair(case):
         assert form["oracle"] in ORACLES, case["name"]
 
 
+def _assert_cardinalities(case, n_source):
+    """The advertised source cardinality is REALLY present, and
+    the expected receipt realizes exactly that cardinality -
+    a substituted row can never satisfy the wrong count."""
+    name = case["name"]
+    assert len(case["source"]) == n_source, name
+    state = case["expect"]["state"]
+    assert len(state) == n_source, name
+
+
 def _validate_structure(cases):
     assert set(cases) == TOP_KEYS
     # the fixture-format version is pinned exactly: an int equal
@@ -201,6 +286,36 @@ def _validate_structure(cases):
         names = [case["name"] for case in cases[section]]
         assert len(names) == len(set(names)), (
             f"{section} names must be unique")
+        # CLOSED SCENARIO MANIFEST: the section's actual
+        # {name: metadata} map must equal the manifest EXACTLY -
+        # a missing, substituted, duplicated, renamed or extra
+        # row fails HERE, before execution.
+        manifest = MANIFESTS[section]
+        assert set(names) == set(manifest), (
+            f"{section} scenario set drifted: "
+            f"missing={set(manifest) - set(names)} "
+            f"extra={set(names) - set(manifest)}")
+        for case in cases[section]:
+            want = manifest[case["name"]]
+            if section in ("happy", "boundary"):
+                oracle, n_source = want
+                assert case["oracle"] == oracle, case["name"]
+                _assert_cardinalities(case, n_source)
+            elif section == "malformed":
+                failure, oracle, repair, defect = want
+                assert case["expect_failure"] == failure, (
+                    case["name"])
+                assert case["oracle"] == oracle, case["name"]
+                assert set(case["minimal_repair"]) == {repair}, (
+                    case["name"])
+                assert case["defect"] == defect, case["name"]
+            else:
+                failure, oracle, then_oracle = want
+                assert case["expect_failure"] == failure, (
+                    case["name"])
+                assert case["oracle"] == oracle, case["name"]
+                assert case["then_oracle"] == then_oracle, (
+                    case["name"])
         for case in cases[section]:
             if section == "rollback":
                 assert case["kind"] == "rollback-migrate", \
@@ -399,7 +514,6 @@ def _repair_mutation_cases():
     """Every repair-form mutation the tagged union must reject
     STRUCTURALLY, before any execution."""
     good_req = CASES["happy"][0]["request"]
-    good_src = CASES["happy"][0]["source"]
     return [
         ("empty-repair", {}),
         ("mixed-forms",
@@ -428,18 +542,21 @@ def _repair_mutation_cases():
          {"set_oracle": {"oracle": "honest", "wat": 1}}),
         ("set_oracle-undeclared",
          {"set_oracle": {"oracle": "sneaky"}}),
+        # only a same-form, valid-payload control stays valid:
+        # the scenario manifest pins each malformed row's repair
+        # form, so ANY form swap - even to another valid union
+        # member - must now fail structure validation.
         ("good-forms-still-valid-1",
          {"replace_request": {"request": good_req}}),
-        ("good-forms-still-valid-2",
-         {"replace_source": {"source": good_src}}),
     ]
 
 
 def test_repair_form_mutations_fail_structure():
     """Every repair-form mutation fails _validate_structure
-    before execution (the two good-form controls must PASS -
-    they prove the mutation application itself is not what
-    breaks validation)."""
+    before execution (the same-form good control must PASS -
+    it proves the mutation application itself is not what
+    breaks validation; cross-form swaps are pinned out by the
+    scenario manifest)."""
     for label, rep in _repair_mutation_cases():
         m = copy.deepcopy(CASES)
         m["malformed"][0]["minimal_repair"] = copy.deepcopy(rep)
@@ -477,3 +594,140 @@ def test_rollback():
         assert case["source"] == src_p
         _run_migrate(case["then_oracle"], case["then_request"],
                      case["then_source"], case["expect"])
+
+
+# -- v2: closed scenario coverage ---------------------------------------------
+
+
+def test_dispatch_sections_match_manifest():
+    """Every iterated or parametrized section dispatches EXACTLY
+    the manifest's scenario names - a late, replaced or renamed
+    row cannot evade or sneak into execution."""
+    for section, manifest in MANIFESTS.items():
+        assert set(_names(section)) == set(manifest), section
+
+
+def _pop_first(m, section):
+    m[section].pop(0)
+
+
+def _rename_first(m, section):
+    row = copy.deepcopy(m[section][0])
+    row["name"] = row["name"] + "-renamed"
+    m[section][0] = row
+
+
+def _add_extra(m, section):
+    row = copy.deepcopy(m[section][0])
+    row["name"] = "extra-row-witness"
+    m[section].append(row)
+
+
+def _substitute_first(m, section):
+    row = copy.deepcopy(m[section][1])
+    row["name"] = m[section][0]["name"]
+    m[section][0] = row
+
+
+def _move_row(m, section):
+    other = ({"happy", "boundary", "malformed", "rollback"}
+             - {section})
+    row = copy.deepcopy(m[sorted(other)[0]][0])
+    m[section][0] = row
+
+
+def _swap_failure(m, section):
+    a, b = m["malformed"][0], m["malformed"][6]
+    a["expect_failure"], b["expect_failure"] = (
+        b["expect_failure"], a["expect_failure"])
+
+
+def _swap_oracle(m, section):
+    a, b = m["malformed"][0], m["malformed"][11]
+    a["oracle"], b["oracle"] = b["oracle"], a["oracle"]
+
+
+def _swap_repair(m, section):
+    a, b = m["malformed"][0], m["malformed"][2]
+    a["minimal_repair"], b["minimal_repair"] = (
+        b["minimal_repair"], a["minimal_repair"])
+
+
+def _swap_rollback_oracle(m, section):
+    a, b = m["rollback"][0], m["rollback"][1]
+    a["oracle"], b["oracle"] = b["oracle"], a["oracle"]
+
+
+def _section_mutations():
+    out = []
+    for section in MANIFESTS:
+        out.append((f"{section}-delete-row", _pop_first))
+        out.append((f"{section}-rename-row", _rename_first))
+        out.append((f"{section}-add-row", _add_extra))
+        out.append((f"{section}-substitute-row",
+                    _substitute_first))
+        out.append((f"{section}-moved-row", _move_row))
+    out.append(("malformed-swap-failure", _swap_failure))
+    out.append(("malformed-swap-oracle", _swap_oracle))
+    out.append(("malformed-swap-repair", _swap_repair))
+    out.append(("rollback-swap-oracle", _swap_rollback_oracle))
+    return out
+
+
+def test_section_mutations_fail_structure():
+    for label, mutate in _section_mutations():
+        for section in MANIFESTS:
+            m = copy.deepcopy(CASES)
+            mutate(m, section)
+            try:
+                _validate_structure(m)
+            except AssertionError:
+                continue
+            raise AssertionError(
+                f"mutation {label!r} on {section!r} passed")
+
+
+def test_mutant_whole_section_scenario_substitution():
+    """The verifier's replay: every happy row replaced by a
+    uniquely-named VALID single-record copy, every boundary row
+    by a VALID empty-source copy, every rollback row by a VALID
+    conflicting-source copy - must fail structure validation
+    BEFORE execution."""
+    m = copy.deepcopy(CASES)
+    single = copy.deepcopy(
+        _case("happy", "migrate-single-record-source"))
+    empty = copy.deepcopy(
+        _case("boundary", "migrate-empty-source"))
+    conflict = copy.deepcopy(
+        _case("rollback",
+              "rejected-conflicting-source-then-valid-migrate"))
+    m["happy"] = [dict(copy.deepcopy(single),
+                       name=f"single-copy-{i}")
+                  for i in range(len(HAPPY_MANIFEST))]
+    m["boundary"] = [dict(copy.deepcopy(empty),
+                          name=f"empty-copy-{i}")
+                     for i in range(len(BOUNDARY_MANIFEST))]
+    m["rollback"] = [dict(copy.deepcopy(conflict),
+                          name=f"conflict-copy-{i}")
+                     for i in range(len(ROLLBACK_MANIFEST))]
+    with pytest.raises(AssertionError):
+        _validate_structure(m)
+
+
+def test_mutant_intra_failure_class_malformed_substitution():
+    """Malformed rows substituted WITHIN one failure class (all
+    classes and repair forms still represented) must fail the
+    manifest - the pinned defect and metadata discriminate."""
+    m = copy.deepcopy(CASES)
+    donor = copy.deepcopy(
+        _case("malformed", "request-missing-field"))
+    for i, case in enumerate(m["malformed"]):
+        if (case["expect_failure"] == donor["expect_failure"]
+                and case["oracle"] == donor["oracle"]
+                and set(case["minimal_repair"])
+                == set(donor["minimal_repair"])
+                and case["name"] != donor["name"]):
+            m["malformed"][i] = dict(copy.deepcopy(donor),
+                                     name=case["name"])
+    with pytest.raises(AssertionError):
+        _validate_structure(m)
