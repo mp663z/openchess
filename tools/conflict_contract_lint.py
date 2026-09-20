@@ -51,9 +51,22 @@ COMPATIBILITY = {
         "byte-identical-add-remove-or-change-compatible",
     "everything_else": "incompatible-and-reported",
 }
+IDENTIFIERS = {
+    "state_id": {
+        "kind": "canonical-state-content-digest",
+        "grammar": "^gs1:[0-9a-f]{64}$",
+        "derivation":
+            "sha256-over-canonical-serialization-of-sorted-"
+            "identity-record-map",
+        "source":
+            "derived-from-validated-state-never-caller-supplied",
+    },
+}
 BASE_CHECK = {
-    "distinct_ids": "base-left-right-state-ids-must-be-distinct",
-    "violation": "divergent_base-fail-closed-on-id-collision",
+    "distinct_ids":
+        "derived-base-id-distinct-from-each-derived-side-id",
+    "violation": "divergent_base-fail-closed-on-derived-id-"
+                 "collision",
 }
 GUARANTEES = {
     "determinism": "pure-function-canonical-identity-order",
@@ -65,8 +78,9 @@ GUARANTEES = {
 FAILURE_CLASSES = ["malformed_conflict_record", "divergent_base"]
 FAILURE_TRIGGERS = {
     "malformed_conflict_record":
-        "field-set-grammar-witness-shape-or-kind-violation",
-    "divergent_base": "state-ids-not-distinct",
+        "state-validation-field-set-grammar-witness-shape-or-"
+        "kind-violation",
+    "divergent_base": "base-derived-id-equals-a-side-derived-id",
 }
 FAILURE_MAPPING = {
     "malformed_conflict_record": "malformed_request",
@@ -77,6 +91,9 @@ PROPERTIES = {
     "witnesses_exact": "both-side-exact-change-payloads",
     "atomic": "detection-never-mutates-inputs",
     "canonical_order": "conflicts-ordered-by-canonical-identity",
+    "state_validation":
+        "every-state-validated-through-linked-machinery-before-"
+        "change-derivation",
 }
 VERSIONING = {
     "base_path": "/graph/conflict/v1",
@@ -108,6 +125,7 @@ def lint(path=None):
     check("conflicts_section", CONFLICTS_SECTION,
           cc.get("conflicts_section"))
     check("compatibility", COMPATIBILITY, cc.get("compatibility"))
+    check("identifiers", IDENTIFIERS, cc.get("identifiers"))
     check("base_check", BASE_CHECK, cc.get("base_check"))
     check("guarantees", GUARANTEES, cc.get("guarantees"))
     failures = cc.get("failures") or {}
