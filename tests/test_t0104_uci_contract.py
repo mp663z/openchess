@@ -601,6 +601,12 @@ class Session:
         self.readiness_spec = life["readiness"]
         assert self.readiness_spec["model"] == "orthogonal-pending-flag"
         self.state = life["initial"]
+        # Terminal state derived from the contract: the declared state
+        # whose transition table is empty in both directions.
+        self.terminal = next(
+            st for st in life["states"]
+            if not self.transitions[st]["gui"]
+            and not self.transitions[st]["engine"])
         self.position_flag = False
         self.readiness = False
 
@@ -619,19 +625,28 @@ class Session:
             # is present, searching otherwise.
             target = "pondering" if ponder else "searching"
         self.state = target
+        if self.state == self.terminal:
+            # on_termination: entering terminated clears the flag.
+            self.readiness = False
 
     def _isready(self):
         c = self.c
         r = self.readiness_spec
-        # Orthogonal flag: valid from every live post-uciok state,
-        # rejected while already pending (never queued).
-        if self.state not in r["set_from_states"] or self.readiness:
+        # Liveness gate first: terminated rejects regardless of flag.
+        # Then the orthogonal rule: valid from every live post-uciok
+        # state, rejected while already pending (never queued).
+        if (self.state == self.terminal
+                or self.state not in r["set_from_states"]
+                or self.readiness):
             _fail(c, c["lifecycle"]["unlisted_pair"])
         self.readiness = True  # underlying state untouched
 
     def _readyok(self):
         c = self.c
-        if not self.readiness:
+        # Liveness gate first: terminated rejects regardless of flag,
+        # so a pending readyok can never bypass the empty terminated
+        # transition table.
+        if self.state == self.terminal or not self.readiness:
             _fail(c, c["lifecycle"]["unlisted_pair"])
         self.readiness = False  # clears ONLY the flag
 
@@ -1183,7 +1198,15 @@ PROTOCOL_VIOLATIONS = [
     (READINESS, "gui", "isready"),          # second isready: never queued
     (READINESS, "engine", "bestmove e2e4"),  # no search outstanding
     (SEARCHING + [("gui", "isready")], "gui", "isready"),
+    # Terminal-state liveness gate: a pending readyok can never
+    # bypass the empty terminated transition table (verifier #2 v3
+    # finding, both independent repros).
+    (POSITIONED + [("gui", "isready"), ("gui", "quit")],
+     "engine", "readyok"),
+    (POSITIONED + [("gui", "go infinite"), ("gui", "isready"),
+                   ("gui", "quit")], "engine", "readyok"),
     (AFTER_QUIT, "gui", "isready"),         # nothing after quit
+    (AFTER_QUIT, "engine", "readyok"),
     (AFTER_QUIT, "gui", "quit"),
     (AFTER_QUIT, "engine", "uciok"),
     (AFTER_QUIT, "engine", "info depth 3"),
@@ -1279,6 +1302,31 @@ def test_readyok_without_pending_rejected_everywhere():
         assert s.snapshot() == before
 
 
+def test_readiness_terminal_gate():
+    """Liveness gate: isready/readyok after quit are protocol_state
+    regardless of the flag; quit clears the flag on entry to
+    terminated and no later event observes or mutates it."""
+    doc = _doc()["contract"]
+    for prefix in (POSITIONED,
+                   POSITIONED + [("gui", "go infinite")]):
+        s = Session(doc)
+        for d, line in prefix:
+            _feed(s, d, line)
+        _feed(s, "gui", "isready")
+        assert s.snapshot()[-1] is True  # flag pending pre-quit
+        _feed(s, "gui", "quit")
+        # on_termination: flag cleared on entry to terminated.
+        assert s.snapshot() == (
+            "terminated", s.position_flag, False)
+        before = s.snapshot()
+        for d, line in (("engine", "readyok"), ("gui", "isready")):
+            with pytest.raises(UciError) as exc:
+                _feed(s, d, line)
+            assert exc.value.failure_class == "protocol_state"
+            # bit-identical rollback: the rejection changes nothing.
+            assert s.snapshot() == before
+
+
 def test_stop_requests_but_never_clears_search():
     # stop marks the search stop-requested; ONLY bestmove clears it.
     doc = _doc()["contract"]
@@ -1313,6 +1361,12 @@ def test_rejected_commands_leave_state_bit_identical():
         (AFTER_QUIT,
          [("gui", "isready"), ("gui", "quit"),
           ("engine", "uciok"), ("engine", "bestmove e2e4")]),
+        (POSITIONED + [("gui", "isready"), ("gui", "quit")],
+         [("engine", "readyok"), ("gui", "isready"),
+          ("engine", "bestmove e2e4")]),
+        (POSITIONED + [("gui", "go infinite"), ("gui", "isready"),
+                       ("gui", "quit")],
+         [("engine", "readyok")]),
     ]
     for prefix, rejections in scripts:
         s = Session(doc)
@@ -1443,6 +1497,24 @@ def _mutants():
     add("readiness cleared by stop", ["contract", "lifecycle",
                                       "readiness", "cleared_by"],
         "readyok-or-stop")
+    add("readiness cleared by readyok only", ["contract", "lifecycle",
+                                              "readiness",
+                                              "cleared_by"],
+        "readyok-only")
+    add("liveness gate drift", ["contract", "lifecycle", "readiness",
+                                "liveness_gate"],
+        "terminated-ignores-readiness")
+    add("termination keeps flag", ["contract", "lifecycle",
+                                   "readiness", "on_termination"],
+        "flag-preserved")
+    add("post-termination flag observable", ["contract", "lifecycle",
+                                             "readiness",
+                                             "post_termination_observability"],
+        "flag-readable-after-quit")
+    add("isready from terminated", ["contract", "lifecycle",
+                                    "readiness", "set_from_states"],
+        ["ready", "searching", "pondering", "stop_requested",
+         "ponder_stop_requested", "terminated"])
     add("flag touches state", ["contract", "lifecycle", "readiness",
                                "state_preservation"],
         "readyok-returns-to-ready")

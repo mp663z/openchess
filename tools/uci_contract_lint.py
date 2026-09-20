@@ -172,10 +172,14 @@ LIFECYCLE_READINESS = {
     "set_by": "isready",
     "set_from_states": ["ready", "searching", "pondering",
                         "stop_requested", "ponder_stop_requested"],
-    "cleared_by": "readyok-only",
+    "cleared_by": "readyok-or-termination",
     "readyok_requires": "flag-set",
     "second_isready": "rejected-while-flag-set-never-queued",
     "state_preservation": "flag-changes-never-touch-underlying-state",
+    "liveness_gate": "terminated-rejects-isready-and-readyok",
+    "on_termination": "flag-cleared-on-entry-to-terminated",
+    "post_termination_observability":
+        "no-event-may-observe-or-mutate-flag",
 }
 LIVE_POST_UCIOK = set(LIFECYCLE_READINESS["set_from_states"])
 LIFECYCLE_META = {
@@ -509,6 +513,9 @@ def lint(doc: dict, root: Path | None = None) -> None:
         _exact(readiness.get(key), value, f"lifecycle.readiness.{key}")
     _need(set(readiness["set_from_states"]) <= states,
           "lifecycle.readiness.set_from_states must be declared states")
+    _need("terminated" not in readiness["set_from_states"],
+          "lifecycle.readiness.set_from_states must exclude the "
+          "terminal state (liveness gate)")
     _text(readiness.get("rule"), "lifecycle.readiness.rule")
     _text(life.get("rule"), "lifecycle.rule")
 

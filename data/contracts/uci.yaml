@@ -235,10 +235,13 @@ contract:
       set_by: isready
       set_from_states: [ready, searching, pondering, stop_requested,
         ponder_stop_requested]
-      cleared_by: readyok-only
+      cleared_by: readyok-or-termination
       readyok_requires: flag-set
       second_isready: rejected-while-flag-set-never-queued
       state_preservation: flag-changes-never-touch-underlying-state
+      liveness_gate: terminated-rejects-isready-and-readyok
+      on_termination: flag-cleared-on-entry-to-terminated
+      post_termination_observability: no-event-may-observe-or-mutate-flag
       rule: >-
         Readiness is an ORTHOGONAL pending flag, never a top-level
         state: isready is accepted from every live post-uciok state
@@ -255,6 +258,14 @@ contract:
         the rest - follows the underlying state's transition table
         whether or not the flag is set. The flag never appears in
         the transition table, and isready/readyok never appear there.
+        BOTH readiness handlers are gated on lifecycle liveness:
+        once the underlying state is terminated, isready and
+        readyok are protocol_state regardless of the flag -
+        readiness never bypasses the empty terminated transition
+        table, and the rejection changes nothing (rollback
+        bit-identical). quit clears the flag on entry to
+        terminated; that choice is internal and no later event may
+        observe or mutate the flag.
     rule: >-
       The session is a bidirectional state machine over BOTH GUI
       commands and engine responses. uci moves pre_uci to
