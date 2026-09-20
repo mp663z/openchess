@@ -1,0 +1,600 @@
+# T0104: chess UCI contract (implementation-neutral; the engine worker
+# pool drives Stockfish-compatible engines over THIS dialect per
+# ADR-0001).
+#
+# Source of truth for the Universal Chess Interface dialect the
+# product speaks in both directions: the worker pool's outbound commands and
+# its parsing of engine responses share THESE semantics. ALL normative
+# semantics live in STRUCTURED fields the lint compares exactly -
+# prose is documentation, never the enforcement surface. The dialect
+# is STRICT: an undeclared keyword, a grammar violation, or a command
+# out of lifecycle order is a classified rejection, never a silent
+# ignore or a best-effort interpretation.
+schema_version: 1
+
+contract:
+  id: chess-uci
+  transport:
+    byte_framing:
+      input: byte-stream
+      frame_delimiter: exactly-one-LF-per-frame
+      crlf: malformed
+      bare_cr: malformed
+      unterminated_trailing_bytes: malformed
+      empty_frame: malformed
+      invalid_utf8: malformed
+      one_command_per_frame: true
+      chunking: frames-may-arrive-split-across-arbitrary-read-boundaries
+      rule: >-
+        The wire surface is BYTES. The framing layer consumes a byte
+        stream and yields frames: each frame is exactly one command
+        or response, terminated by exactly one LF. A CR-LF pair, a
+        bare CR anywhere, trailing bytes after the final LF, an
+        empty frame, and bytes that are not valid UTF-8 are all
+        malformed at THIS layer. Bytes may arrive split across
+        arbitrary read boundaries, including inside a multi-byte
+        UTF-8 sequence; the framer buffers until a frame completes
+        and its buffering decisions never depend on chunking. Only
+        the decoded frame text - without its LF - reaches the line
+        grammar layer.
+    line_grammar:
+      token_separator: single-space
+      leading_trailing_whitespace: forbidden
+      empty_line: malformed
+      keyword_case: exact-lowercase
+      rule: >-
+        Within one decoded frame: tokens separated by single spaces,
+        no leading or trailing whitespace, an empty line is
+        malformed, and keywords are exact lowercase - case variants
+        are unknown keywords, never folded.
+  move_encoding:
+    form: from-square-then-to-square-then-optional-promotion-letter
+    square_grammar: exactly-file-char-then-rank-char-per-legal-moves
+    promotion_letters: [q, r, b, n]
+    promotion_letter_case: lowercase
+    castling: king-two-square-move-per-legal-moves
+    none_token: "(none)"
+    rule: >-
+      A UCI move is the long algebraic form: origin square,
+      destination square, and - exactly when promoting - one
+      lowercase promotion letter from the legal-moves contract enum.
+      Castling is the king's two-square move (e.g. e1g1); there is
+      no separate castling token. The literal (none) appears only
+      where a move slot may legitimately be empty (a bestmove when
+      the side to move has no legal move).
+  gui_commands:
+    uci: bare-keyword
+    debug: keyword-then-on-or-off
+    isready: bare-keyword
+    setoption: keyword-name-then-id-then-optional-value
+    register: keyword-then-later-or-name-code-pair
+    ucinewgame: bare-keyword
+    position: keyword-then-startpos-or-fen-then-optional-moves-validated
+    go: keyword-then-zero-or-more-declared-parameters
+    stop: bare-keyword
+    ponderhit: bare-keyword
+    quit: bare-keyword
+    rule: >-
+      The client speaks exactly these commands. Bare-keyword commands
+      carry no arguments. debug takes exactly "on" or "off".
+      setoption is "setoption name <id tokens> [value <value
+      tokens>]" with a nonempty id; the value, when the keyword is
+      present, takes the rest of the line (possibly empty). register
+      is "register later" or "register name <tokens> code <tokens>"
+      with both parts nonempty. position is "position startpos" or
+      "position fen <six FEN fields>", each optionally followed by
+      "moves" and one or more move tokens. go takes declared
+      parameters only, each at most once.
+  go_parameters:
+    searchmoves: {kind: move-list, min: 1, greedy: until-next-declared-parameter-keyword}
+    ponder: {kind: flag}
+    wtime: {kind: nonneg-int}
+    btime: {kind: nonneg-int}
+    winc: {kind: nonneg-int}
+    binc: {kind: nonneg-int}
+    movestogo: {kind: pos-int}
+    depth: {kind: pos-int}
+    nodes: {kind: pos-int}
+    mate: {kind: pos-int}
+    movetime: {kind: pos-int}
+    infinite: {kind: flag}
+    duplicates: forbidden
+    int_grammar: ascii-digits-0-9-only-no-leading-zeros-except-zero-itself
+    rule: >-
+      Each declared go parameter appears at most once in one go
+      command. searchmoves consumes every following move token (at
+      least one) up to the next declared parameter keyword. The
+      integer parameters are ASCII digits only, with leading zeros
+      forbidden except the literal 0; time/clock parameters are
+      non-negative, the count parameters strictly positive. Flags
+      carry no argument.
+  bestmove_semantics:
+    ponder_condition: only-when-primary-move-is-real
+    none_tail: ends-immediately
+    rule: >-
+      The optional ponder move is conditional on a REAL best move,
+      never independent syntax: ponder is permitted only when the
+      primary move is a move, and the none token - valid only when
+      the side to move has no legal move (see move_encoding) -
+      requires the line to end immediately, because a position with
+      no legal move has no predicted reply. "bestmove (none) ponder
+      <move>" is malformed_line.
+  engine_responses:
+    id: keyword-then-name-or-author-then-nonempty-rest
+    uciok: bare-keyword
+    readyok: bare-keyword
+    bestmove: keyword-then-move-or-none-then-optional-ponder-move
+    copyprotection: keyword-then-checking-ok-or-error
+    registration: keyword-then-checking-ok-or-error
+    info: keyword-then-one-or-more-declared-fields
+    option: keyword-name-then-id-then-type-then-type-specific-tail
+    rule: >-
+      The engine speaks exactly these responses. id is "id name
+      <text>" or "id author <text>" with nonempty text. bestmove is
+      "bestmove <move|(none)> [ponder <move>]". copyprotection and
+      registration take exactly one of checking, ok, error. info
+      carries one or more declared fields, each at most once.
+      option declares one engine option; the tail after "type" is
+      owned by the option's type.
+  info_fields:
+    depth: {kind: nonneg-int}
+    seldepth: {kind: nonneg-int}
+    time: {kind: nonneg-int}
+    nodes: {kind: nonneg-int}
+    pv: {kind: move-list, min: 1, greedy: until-next-declared-field-keyword}
+    multipv: {kind: pos-int, min: 1}
+    score: {kind: score, forms: [cp, mate], value_kind: int,
+      bound: {optional: true, values: [lowerbound, upperbound],
+        at_most_once: true, position: immediately-after-value}}
+    currmove: {kind: move}
+    currmovenumber: {kind: pos-int, min: 1}
+    hashfull: {kind: permill-int, min: 0, max: 1000}
+    nps: {kind: nonneg-int}
+    tbhits: {kind: nonneg-int}
+    sbhits: {kind: nonneg-int}
+    cpuload: {kind: permill-int, min: 0, max: 1000}
+    string: {kind: rest-of-line, min: 1}
+    refutation: {kind: move-list, min: 1, greedy: until-next-declared-field-keyword}
+    currline: {kind: currline, optional_cpunr: nonneg-int, then_moves: min-1}
+    duplicates: forbidden
+    int_grammar: ascii-digits-0-9-only-no-leading-zeros-except-zero-itself
+    rule: >-
+      Each declared info field appears at most once in one info
+      response. pv and refutation consume following move tokens up
+      to the next declared field keyword. score is "score cp
+      <integer>" or "score mate <integer>", each optionally
+      followed by exactly one bound qualifier - lowerbound or
+      upperbound, never both, never repeated, never without a
+      score value; a score integer may be negative (leading "-").
+      The counter fields (depth, seldepth, time, nodes, nps,
+      tbhits, sbhits) are non-negative: zero is a valid value for
+      every one of them. multipv and currmovenumber are ONE-BASED
+      ordinals: the first principal variation and the first move
+      are 1, so 0 is malformed. hashfull and cpuload are PERMILL
+      values with inclusive bounds 0 and 1000; 1001 or anything
+      larger is malformed. Every integer field keeps the shared
+      ASCII-digit and no-leading-zero grammar.
+      currline is "currline [<cpunr>] <move>..." with at least one
+      move. string takes the rest of the line and is never empty.
+  option_markers:
+    name_terminator: last-"-type-"-marker-whose-next-token-is-a-declared-type
+    combo_default_span: from-default-marker-until-first-var-marker
+    combo_var_span: from-var-marker-until-next-var-marker-or-end-of-line
+    span_value: rest-of-span-nonempty
+    rule: >-
+      Option names and combo values are STRINGS and may contain
+      spaces; they are delimited by reserved markers, never by
+      single tokens. The option name is every token between the
+      name marker and the LAST " type " marker whose following
+      token is one of the five declared types - so a name may
+      itself contain the token "type". In a combo tail, the default
+      value is every token from the default marker until the first
+      var marker; each var value is every token from its var marker
+      until the next var marker or end of line. Every such span
+      value is nonempty, and a combo default, when present, must
+      exactly equal one complete var string.
+  option_types:
+    check: {tail: [default], default_kind: bool-literal-true-or-false, required: [default]}
+    spin: {tail: [default, min, max], value_kind: int, required: [default, min, max], bounds: min-le-default-le-max}
+    combo: {tail: [default, var-plus], required: [var], value_kind: span-string, default_membership: default-equals-one-complete-var-when-present}
+    button: {tail: [], required: []}
+    string: {tail: [default], default_kind: rest-of-line-may-be-empty, required: []}
+    rule: >-
+      An option response is "option name <name span> type <type>
+      <tail>", with the name span delimited per option_markers.
+      The tail follows the type: check takes "default true|false";
+      spin takes integer "default", "min" and "max" with min <=
+      default <= max; combo takes one or more var spans and an
+      optional default span that must equal one complete var when
+      present; button takes nothing; string takes an optional
+      "default" consuming the rest of the line.
+  setoption_semantics:
+    registry: declared-options-by-normalized-name-from-handshake
+    name_matching: ascii-case-insensitive-preserve-declared-spelling
+    normalization: ascii-only-a-z-to-a-z-every-other-code-point-unchanged
+    undeclared_name_maps_to: malformed_line
+    domain_violation_maps_to: malformed_line
+    duplicate_declaration_maps_to: malformed_line
+    duplicate_normalization_collision: rejected-as-duplicate
+    repeat_setoption: allowed-validation-idempotent
+    state_preservation: valid-setoption-mutates-no-lifecycle-or-orthogonal-state
+    type_rules:
+      check: value-marker-required-true-or-false-ascii-case-insensitive
+      spin: value-marker-required-integer-within-declared-min-max
+      combo: value-marker-required-one-declared-full-var-string-ascii-case-insensitive
+      button: no-value-marker-permitted
+      string: value-marker-optional-free-form-empty-allowed-payload-opaque-no-case-folding
+    rule: >-
+      setoption is defined against the handshake's option
+      declarations: the session persists a structured registry of
+      declared options keyed by the ASCII-ONLY normalization of the
+      declared name (exactly A-Z map to a-z; every other Unicode
+      code point is unchanged - no Unicode case folding, no
+      casefold, no locale or normalization transforms, so U+212A
+      KELVIN SIGN never aliases ASCII k) (the original spelling is preserved in
+      the entry for canonical emission and display), and every
+      later setoption is validated against it. Per the UCI spec,
+      option names and values are case-insensitive and may contain
+      spaces: the name must be a declared name, matched
+      ASCII-case-insensitively; an undeclared name is rejected as
+      malformed_line. A duplicate option declaration during the
+      handshake - including one that collides only under
+      normalization (Threads vs threads) - is rejected as
+      malformed_line. The value must fit the declared type: check
+      requires a value marker with true or false in any ASCII case
+      variant, normalized to the declared semantic value; spin
+      requires an integer within the declared min..max inclusive;
+      combo requires one complete declared var string compared
+      ASCII-case-insensitively with multiword boundaries
+      preserved; button permits no value marker at all; string
+      permits the free-form value semantics of its declaration -
+      the payload is OPAQUE and never case-folded - including the
+      empty value (a trailing value marker with an empty span) and
+      no value marker. Every invalid setoption is rejected as
+      malformed_line with bit-identical rollback of lifecycle,
+      orthogonal state, and the registry; a valid setoption
+      mutates none of them either, so setoption may repeat
+      freely.
+  position_validation:
+    fen_fields: validated-by-linked-fen-contract-parser
+    startpos: resolves-to-linked-variant-registry-standard-start_fen
+    moves_tail: grammar-per-linked-legal-moves-move-encoding
+    fen_malformed_maps_to: malformed_line
+    fen_impossible_maps_to: malformed_line
+    subclass_preservation: fen-failure-class-preserved-as-subclass
+    rule: >-
+      The six fields after "position fen" are joined and validated
+      by the LINKED FEN contract's parser and position rules, never
+      by token counting: a grammatically bad FEN and an impossible
+      position are both rejected, and the FEN contract's own
+      failure class (malformed vs impossible) is preserved as the
+      rejection subclass while both map to malformed_line at this
+      layer. "startpos" resolves to the standard variant's
+      start_fen from the linked variant registry. Move tokens in the
+      optional moves tail are validated against the move grammar
+      derived from the linked legal-moves contract; applying them to
+      the position is the legal-moves runtime's layer, not this
+      one.
+  lifecycle:
+    model: bidirectional-session-state-machine
+    states: [pre_uci, awaiting_uciok, ready, searching, pondering,
+      stop_requested, ponder_stop_requested, terminated]
+    initial: pre_uci
+    position_flag: set-by-position-command-reset-by-uci-or-ucinewgame
+    go_requires: position_flag-set
+    go_ponder_target: pondering-when-ponder-parameter-else-searching
+    ponder_bestmove_gate: gui-release-required-even-on-mate-or-completion
+    transitions:
+      pre_uci: {gui: {uci: awaiting_uciok, quit: terminated}, engine: {}}
+      awaiting_uciok: {gui: {quit: terminated}, engine: {}}
+      ready: {gui: {setoption: ready, ucinewgame: ready, position: ready, go: search-start, quit: terminated}, engine: {}}
+      searching: {gui: {stop: stop_requested, quit: terminated}, engine: {info: searching, bestmove: ready}}
+      pondering: {gui: {ponderhit: searching, stop: ponder_stop_requested, quit: terminated}, engine: {info: pondering}}
+      stop_requested: {gui: {quit: terminated}, engine: {info: stop_requested, bestmove: ready}}
+      ponder_stop_requested: {gui: {ponderhit: stop_requested, quit: terminated}, engine: {info: ponder_stop_requested, bestmove: ready}}
+      terminated: {gui: {}, engine: {}}
+    unlisted_pair: protocol_state
+    debug:
+      model: orthogonal-session-setting
+      values: ["on", "off"]
+      initial: "off"
+      set_by: debug-command
+      accepted_in_states: [ready, searching, pondering,
+        stop_requested, ponder_stop_requested]
+      pre_uciok: rejected-protocol_state
+      state_preservation: debug-never-touches-underlying-state-or-flags
+      rule: >-
+        Debug mode is an ORTHOGONAL session setting, never part of
+        the lifecycle state: the GUI may send debug on or debug off
+        at any time after uciok - including while the engine is
+        thinking - in ready, searching, pondering, stop_requested
+        and ponder_stop_requested, and the command changes ONLY the
+        setting. The underlying lifecycle state, the position flag,
+        any outstanding search and the readiness-pending flag are
+        all preserved; info, stop, ponderhit, readyok and bestmove
+        continue exactly per the unchanged underlying state. Before
+        uciok (pre_uci, awaiting_uciok) and after termination,
+        debug is PINNED as protocol_state - rejected deliberately,
+        never accidentally. The setting never appears in the
+        transition table, and debug never appears there.
+    handshake:
+      model: orthogonal-handshake-progress
+      phases: [awaiting_name, awaiting_author_or_options,
+        awaiting_options]
+      initial: awaiting_name
+      active_in_states: [awaiting_uciok]
+      name_required: exactly-one-id-name-before-any-option-and-uciok
+      author: optional-at-most-one-after-name-before-first-option
+      ordering: name-then-optional-author-then-options-then-uciok
+      uciok_target: ready
+      on_termination: handshake-events-rejected-protocol_state
+      transitions:
+        awaiting_name:
+          id_name: awaiting_author_or_options
+          id_author: rejected-protocol_state
+          option: rejected-protocol_state
+          uciok: rejected-protocol_state
+        awaiting_author_or_options:
+          id_name: rejected-protocol_state
+          id_author: awaiting_options
+          option: awaiting_options
+          uciok: ready
+        awaiting_options:
+          id_name: rejected-protocol_state
+          id_author: rejected-protocol_state
+          option: awaiting_options
+          uciok: ready
+      rule: >-
+        The handshake is STRUCTURED progress, never an unconstrained
+        id self-loop: exactly one id name is REQUIRED before any
+        option declaration and before uciok; id author is OPTIONAL,
+        at most one, accepted only after the name and before the
+        first option (pin: author is intentionally optional, name is
+        required); then zero or more option declarations; then
+        exactly one uciok completes the handshake and moves the
+        lifecycle to ready. A nameless uciok, an author without a
+        preceding name, a duplicate id name, a duplicate id author,
+        any id after the first option declaration, and every
+        handshake event after uciok are REJECTED
+        (protocol_state) with bit-identical rollback. The handshake
+        phase never appears in the lifecycle transition table and
+        id, option and uciok never appear there.
+    copyprotection:
+      model: orthogonal-phase-variable
+      phases: [cp_idle, cp_checking, cp_done]
+      initial: cp_idle
+      accepted_in_states: [ready, searching, pondering,
+        stop_requested, ponder_stop_requested]
+      pre_uciok: rejected-protocol_state
+      on_termination: phase-closed-every-status-rejected
+      state_preservation: phase-changes-never-touch-lifecycle-readiness-debug-registration-or-flags
+      transitions:
+        cp_idle: {checking: cp_checking, ok: rejected-protocol_state,
+          error: rejected-protocol_state}
+        cp_checking: {checking: rejected-protocol_state,
+          ok: cp_done, error: cp_done}
+        cp_done: {checking: rejected-protocol_state,
+          ok: rejected-protocol_state,
+          error: rejected-protocol_state}
+      rule: >-
+        Copy protection is an ORTHOGONAL phase variable, never a
+        lifecycle self-loop: exactly one checking may start the
+        protocol in any live post-uciok state, exactly one terminal
+        ok or error completes it, and nothing may follow. A terminal
+        status without a preceding checking is REJECTED
+        (protocol_state), a second checking while one is pending is
+        REJECTED, and every copyprotection status after completion
+        is REJECTED. The phase never appears in the lifecycle
+        transition table and copyprotection never appears there; the
+        underlying lifecycle state, position flag, outstanding
+        search, readiness flag, debug setting and registration phase
+        are all preserved across every copyprotection event. On
+        entry to terminated the phase is CLOSED: every
+        copyprotection status is protocol_state regardless of phase.
+    registration:
+      model: orthogonal-phase-variable-with-gui-correlation
+      phases: [reg_awaiting_indication, reg_indication_pending,
+        reg_unregistered, reg_attempt_pending, reg_attempt_checking,
+        reg_registered, reg_failed]
+      initial: reg_awaiting_indication
+      accepted_in_states: [ready, searching, pondering,
+        stop_requested, ponder_stop_requested]
+      pre_uciok: rejected-protocol_state
+      on_termination: phase-closed-every-status-and-register-rejected
+      state_preservation: phase-changes-never-touch-lifecycle-readiness-debug-copyprotection-or-flags
+      engine_transitions:
+        reg_awaiting_indication:
+          checking: reg_indication_pending
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+        reg_indication_pending:
+          checking: rejected-protocol_state
+          ok: reg_registered
+          error: reg_unregistered
+        reg_unregistered:
+          checking: reg_indication_pending
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+        reg_attempt_pending:
+          checking: reg_attempt_checking
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+        reg_attempt_checking:
+          checking: rejected-protocol_state
+          ok: reg_registered
+          error: reg_failed
+        reg_registered:
+          checking: rejected-protocol_state
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+        reg_failed:
+          checking: rejected-protocol_state
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+      gui_register_transitions:
+        name_code:
+          reg_unregistered: reg_attempt_pending
+          reg_failed: reg_attempt_pending
+          elsewhere: rejected-protocol_state
+        later:
+          reg_unregistered: reg_unregistered
+          reg_failed: reg_unregistered
+          elsewhere: rejected-protocol_state
+      correlation: register-name-code-opens-exactly-one-checking-then-exactly-one-terminal
+      register_later: defers-without-opening-an-attempt-engine-may-start-one-later-checking-cycle-from-unregistered
+      rule: >-
+        Registration is an ORTHOGONAL phase variable correlated with
+        GUI register commands, never a lifecycle self-loop. The
+        engine's INITIAL indication is one spontaneous checking from
+        reg_awaiting_indication followed by exactly one terminal ok
+        (registered) or error (unregistered); an unsolicited ok or
+        error with no pending checking is REJECTED, and a duplicate
+        checking while one is pending is REJECTED. From
+        reg_unregistered the engine may start ONE later checking
+        cycle on its own (the deferred re-check). A GUI registration
+        attempt - register name <tokens> code <tokens> - is accepted
+        only from reg_unregistered or reg_failed and CORRELATES the
+        next engine response: exactly one registration checking must
+        follow, then exactly one terminal ok (reg_registered) or
+        error (reg_failed); a terminal status before that checking
+        is REJECTED, and any status after the terminal one is
+        REJECTED. register later is accepted only from
+        reg_unregistered or reg_failed, opens NO attempt and leaves
+        the phase at reg_unregistered (registration deferred; the
+        engine's own later checking cycle remains possible).
+        reg_registered is terminal: every registration status and
+        every register command after completion is REJECTED
+        (protocol_state). The phase never appears in the lifecycle
+        transition table and neither registration nor register
+        appears there; the underlying lifecycle state, position
+        flag, outstanding search, readiness flag, debug setting and
+        copyprotection phase are all preserved across every
+        registration and register event. On entry to terminated the
+        phase is CLOSED: every registration status and every
+        register command is protocol_state regardless of phase.
+    readiness:
+      model: orthogonal-pending-flag
+      set_by: isready
+      set_from_states: [ready, searching, pondering, stop_requested,
+        ponder_stop_requested]
+      cleared_by: readyok-or-termination
+      readyok_requires: flag-set
+      second_isready: rejected-while-flag-set-never-queued
+      state_preservation: flag-changes-never-touch-underlying-state
+      liveness_gate: terminated-rejects-isready-and-readyok
+      on_termination: flag-cleared-on-entry-to-terminated
+      post_termination_observability: no-event-may-observe-or-mutate-flag
+      rule: >-
+        Readiness is an ORTHOGONAL pending flag, never a top-level
+        state: isready is accepted from every live post-uciok state
+        - ready, searching, pondering, stop_requested,
+        ponder_stop_requested - and sets the flag WITHOUT changing
+        the underlying state, so the GUI can synchronize while the
+        engine keeps calculating. readyok is valid exactly while the
+        flag is set and clears ONLY the flag: a search stays
+        outstanding until bestmove, stop-requested stays
+        stop-requested, pondered stays pondered. A second isready
+        while the flag is set is REJECTED (protocol_state), never
+        queued; a readyok with no flag set is protocol_state. Every
+        other event - info, stop, ponderhit, bestmove, position and
+        the rest - follows the underlying state's transition table
+        whether or not the flag is set. The flag never appears in
+        the transition table, and isready/readyok never appear there.
+        BOTH readiness handlers are gated on lifecycle liveness:
+        once the underlying state is terminated, isready and
+        readyok are protocol_state regardless of the flag -
+        readiness never bypasses the empty terminated transition
+        table, and the rejection changes nothing (rollback
+        bit-identical). quit clears the flag on entry to
+        terminated; that choice is internal and no later event may
+        observe or mutate the flag.
+    rule: >-
+      The session is a bidirectional state machine over BOTH GUI
+      commands and engine responses. uci moves pre_uci to
+      awaiting_uciok; the handshake there is structured progress
+      (see handshake): exactly one id name is required, then at
+      most one optional id author, then zero or more option
+      declarations, then exactly one uciok. No normal command is
+      accepted before uciok arrives. option declarations are
+      handshake-only: invalid before uci, after uciok, during
+      searches and after termination.
+      go requires the position flag (set by
+      position, reset by uci or ucinewgame) and opens an
+      outstanding search - pondering when the ponder parameter is
+      present, searching otherwise. stop marks the search
+      stop-requested but NEVER clears it: the search remains
+      outstanding until bestmove arrives, so a second stop is a
+      violation and position, setoption, ucinewgame and a
+      second go are violations while any search is outstanding.
+      Readiness is an orthogonal pending flag (see readiness):
+      isready is accepted in every live post-uciok state, including
+      while a search is outstanding, and readyok clears only the
+      flag. Debug mode is likewise an orthogonal session setting
+      (see debug): debug on/off is accepted in every live
+      post-uciok state, including while the engine is thinking,
+      and changes only the setting. Copy protection and
+      registration are likewise orthogonal phase variables (see
+      copyprotection and registration): each is an ordered
+      mini-protocol - one checking, then exactly one terminal ok or
+      error - correlated for registration with GUI register
+      commands, accepted in every live post-uciok state and closed
+      on termination, and neither changes the underlying lifecycle
+      state.
+      ponderhit converts a pondered search to a normal one (and a
+      stop-requested pondered search to a stop-requested normal
+      one). A PONDERING engine NEVER emits bestmove on its own -
+      not when the search completes, not when it finds mate: the
+      ponder_bestmove_gate pins that bestmove leaves pondering only
+      after a GUI release, ponderhit (-> searching) or stop (->
+      ponder_stop_requested); a direct pondering bestmove is
+      protocol_state. Otherwise a predicted opponent move could
+      leak into an unsolicited move and race the GUI's actual move.
+      bestmove clears the outstanding search and returns the
+      session to ready. info is valid only while a search is
+      outstanding. quit terminates the session from any state; any
+      further line in either direction is a violation. Every
+      (state, event) pair not listed in transitions is
+      protocol_state, and a rejected line changes NO state -
+      rollback is bit-identical.
+  resolution_failures:
+    malformed_line: any-token-or-grammar-violation
+    unknown_command: first-token-not-a-declared-keyword
+    protocol_state: declared-command-out-of-lifecycle-order
+    rule: >-
+      Rejection has exactly three classes. A line whose first token
+      is no declared keyword is unknown_command; a declared keyword
+      whose tail violates the grammar is malformed_line; a
+      well-formed command out of lifecycle order is protocol_state.
+      Rejection never falls back to a partial interpretation.
+  failure_classes: [malformed_line, unknown_command, protocol_state]
+  failure_mapping:
+    malformed_line: {trigger: any-token-or-grammar-violation, error: malformed_request}
+    unknown_command: {trigger: first-token-not-a-declared-keyword, error: unknown_command}
+    protocol_state: {trigger: declared-command-out-of-lifecycle-order, error: illegal_state}
+  errors:
+    closed_enum: [malformed_request, unknown_command, illegal_state, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+  serialization:
+    canonical: true
+    roundtrip: parse-of-emit-is-structure-identity
+    rule: >-
+      Every parsed command or response has exactly one canonical
+      line form; emitting a structure yields it, and parsing that
+      line yields the identical structure. The emitter is total over
+      structures the parser accepts.
+  links:
+    legal_moves_contract: data/contracts/legal_moves.yaml
+    fen_contract: data/contracts/fen.yaml
+    variant_contract: data/contracts/variant.yaml
+  versioning:
+    base_path: /uci/v1
+    rule: >-
+      MINOR additions (new optional fields) keep the base path;
+      MAJOR changes (commands, grammar, lifecycle, parameter sets,
+      error enum narrowing) bump it; a consumer must never silently
+      downgrade a document to a lower major version.
