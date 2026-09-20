@@ -65,6 +65,27 @@ pins + fully contract-derived reference + mutation battery.
   once every parent is present; a batch that stops making
   progress surfaces its first stuck record's exact failure.
   Atomic commit; bit-identical rollback.
+
+## Metadata semantics + merge boundary (v2 - verifier #1 remediation)
+
+- Same-content metadata divergence: created_at and label never
+  participate in IDENTITY (the id is content+parents only), but
+  an existing id now accepts ONLY a byte-equal record. Divergent
+  metadata on an existing id fails CLOSED as conflicting_version
+  (pinned trigger: equal-id-unequal-content-or-divergent-
+  metadata-fail-closed) - v1 silently kept the receiver's
+  metadata, so A.merge(B) and B.merge(A) produced different
+  exact stores, breaking commutativity. Direct insert and both
+  merge directions reject identically; rollback bit-identical.
+- Merge boundary totality: PHASE 1 validates every raw incoming
+  record's field set and scalar/container types into a safe
+  staged batch BEFORE any topological inspection (v1 inspected
+  rec["parent_ids"] first - missing parent_ids was a raw
+  KeyError, None/bool/number a raw TypeError). PHASE 2 runs the
+  topological schedule over the safe batch. Merge-boundary
+  Cartesian battery (missing/extra fields, None/bool/number/
+  string/list/mapping per field) pins malformed_version_record
+  with exact code and bit-identical records/root_id.
 - Rollback: rejected insert leaves the version DAG bit-identical.
 - Versioning: /graph/version/v1.
 

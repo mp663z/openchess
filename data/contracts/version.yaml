@@ -61,6 +61,12 @@ contract:
       - conflicting_version
       - root_violation
       - nonmonotonic_version
+    triggers:
+      malformed_version_record: field-set-shape-grammar-or-content-address-violation
+      unknown_parent: parent-id-absent-from-store
+      conflicting_version: equal-id-unequal-content-or-divergent-metadata-fail-closed
+      root_violation: second-root-claim
+      nonmonotonic_version: child-older-than-a-parent
     mapping:
       malformed_version_record: malformed_request
       unknown_parent: unknown_parent
@@ -80,6 +86,7 @@ contract:
       retryable_true_only_for: [internal]
       collision_witness_included_on_conflicting_version: true
   properties:
+    metadata_policy: equal-metadata-required-for-existing-id-divergence-rejected
     dedup: insert-or-return-existing-never-duplicates
     rollback: rejected-insert-leaves-store-bit-identical
     determinism: canonical-view-sorted-by-version-id

@@ -94,6 +94,16 @@ MERGE = {
 FAILURE_CLASSES = ["malformed_version_record", "unknown_parent",
                    "conflicting_version", "root_violation",
                    "nonmonotonic_version"]
+FAILURE_TRIGGERS = {
+    "malformed_version_record":
+        "field-set-shape-grammar-or-content-address-violation",
+    "unknown_parent": "parent-id-absent-from-store",
+    "conflicting_version":
+        "equal-id-unequal-content-or-divergent-metadata-"
+        "fail-closed",
+    "root_violation": "second-root-claim",
+    "nonmonotonic_version": "child-older-than-a-parent",
+}
 FAILURE_MAPPING = {
     "malformed_version_record": "malformed_request",
     "unknown_parent": "unknown_parent",
@@ -105,6 +115,9 @@ ERROR_ENUM = ["malformed_request", "unknown_parent",
               "conflicting_version", "root_violation",
               "nonmonotonic_version", "internal"]
 PROPERTIES = {
+    "metadata_policy":
+        "equal-metadata-required-for-existing-id-divergence-"
+        "rejected",
     "dedup": "insert-or-return-existing-never-duplicates",
     "rollback": "rejected-insert-leaves-store-bit-identical",
     "determinism": "canonical-view-sorted-by-version-id",
@@ -142,6 +155,12 @@ def lint(path=None):
     failures = cc.get("failures") or {}
     check("failures.classes", FAILURE_CLASSES,
           failures.get("classes"))
+    check("failures.triggers", FAILURE_TRIGGERS,
+          failures.get("triggers"))
+    if set(failures.get("triggers", {})) != \
+            set(FAILURE_CLASSES):
+        raise ContractError(
+            "failures: triggers keys must equal declared classes")
     check("failures.mapping", FAILURE_MAPPING,
           failures.get("mapping"))
     if failures.get("closed") is not True:

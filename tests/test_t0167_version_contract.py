@@ -168,13 +168,16 @@ class VersionStore:
         vid = rec["version_id"]
         if vid in self.records:
             existing = self.records[vid]
-            if _content_of(existing) != _content_of(rec):
-                # injected digest collision: fail closed, NEVER
-                # overwrite - the witness names both contents
+            # an existing id accepts ONLY a byte-equal record:
+            # unequal content (injected collision) OR divergent
+            # metadata (created_at/label) both fail closed, NEVER
+            # overwrite and never silently keep one side's
+            # metadata - order-independent by construction
+            if existing != rec:
                 _fail("conflicting_version",
-                      witness={"stored": _content_of(existing),
-                               "incoming": _content_of(rec)})
-            return existing  # dedup: same content, same id
+                      witness={"stored": copy.deepcopy(existing),
+                               "incoming": copy.deepcopy(rec)})
+            return existing  # dedup: byte-equal record, same id
         if not rec["parent_ids"]:
             # root claim
             if self.root_id is not None:
@@ -202,11 +205,33 @@ class VersionStore:
         staged = VersionStore(self.hasher)
         staged.records = copy.deepcopy(self.records)
         staged.root_id = self.root_id
-        # topological order: a record is staged once every parent
-        # is present; a batch that stops making progress surfaces
-        # the exact failure its first stuck record produces
-        pending = [copy.deepcopy(other.records[vid])
-                   for vid in other.canonical_view()]
+        # PHASE 1 - TOTAL batch validation: every incoming raw
+        # record's field set and scalar/container types are
+        # checked into a safe staged batch BEFORE any topological
+        # inspection touches it (lineage, content and grammar
+        # checks still happen per-record in staged insert; this
+        # phase only guarantees inspection safety - no parent
+        # existence required here)
+        batch = []
+        for vid in other.canonical_view():
+            raw = other.records[vid]
+            if not isinstance(raw, dict) or \
+                    set(raw.keys()) != set(_FIELDS):
+                _fail("malformed_version_record")
+            parents = raw["parent_ids"]
+            if not isinstance(parents, list) or \
+                    any(not isinstance(x, str) for x in parents):
+                _fail("malformed_version_record")
+            for scalar in ("version_id", "graph_digest",
+                           "created_at", "label"):
+                if not isinstance(raw[scalar], str):
+                    _fail("malformed_version_record")
+            batch.append(copy.deepcopy(raw))
+        # PHASE 2 - topological order over the SAFE batch: a
+        # record is staged once every parent is present; a batch
+        # that stops making progress surfaces the exact failure
+        # its first stuck record produces
+        pending = batch
         while pending:
             progressed = False
             for rec in list(pending):
@@ -274,16 +299,78 @@ def test_branching_dag_and_multi_parent_merge_version():
     assert len(store.records) == 4
 
 
-def test_content_addressing_dedup_and_label_never_identity():
+def test_content_addressing_dedup_byte_equal_only():
+    """A byte-equal reinsert dedups (same id, same everything).
+    Label and created_at never participate in IDENTITY - the id
+    is unchanged by them - but a DIVERGENT metadata value on an
+    existing id fails CLOSED as conflicting_version: no silent
+    keep of either side's metadata, order-independent."""
     store = VersionStore()
     a = store.insert(store.make_record([], D1, T1, "first"))
     again = store.insert(store.make_record([], D1, T1, "first"))
     assert again is a
-    relabelled = store.insert(store.make_record(
-        [], D1, T1, "renamed label, same content"))
-    assert relabelled is a  # label never participates in identity
-    assert store.records[a["version_id"]]["label"] == "first"
     assert len(store.records) == 1
+    before = copy.deepcopy(store.records)
+    with pytest.raises(VersionError) as exc:
+        store.insert(store.make_record([], D1, T1, "renamed"))
+    assert exc.value.failure_class == "conflicting_version"
+    assert exc.value.code == FAILURE_MAPPING[
+        "conflicting_version"]
+    assert exc.value.code in ERROR_ENUM
+    assert store.records == before
+    assert store.records[a["version_id"]]["label"] == "first"
+
+
+def test_metadata_divergence_rejected_directly_and_both_merges():
+    """A/B pairs with identical parents+digest but divergent label,
+    divergent created_at, and both: same content id BY DESIGN;
+    direct insert AND both merge directions reject identically
+    with bit-identical rollback."""
+    variants = [
+        ("label only", T1, "beta"),
+        ("created_at only", T2, "alpha"),
+        ("both", T2, "beta"),
+    ]
+    for _name, ts, label in variants:
+        store_a = VersionStore()
+        store_b = VersionStore()
+        rec_a = store_a.make_record([], D1, T1, "alpha")
+        rec_b = store_b.make_record([], D1, ts, label)
+        assert rec_a["version_id"] == rec_b["version_id"]
+        store_a.insert(rec_a)
+        store_b.insert(rec_b)
+        with pytest.raises(VersionError) as exc:
+            store_a.insert(rec_b)
+        assert exc.value.failure_class == "conflicting_version"
+        for src, dst in ((store_b, store_a),
+                         (store_a, store_b)):
+            before = copy.deepcopy(dst.records)
+            before_root = dst.root_id
+            with pytest.raises(VersionError) as exc:
+                dst.merge(src)
+            assert exc.value.failure_class ==                 "conflicting_version"
+            assert dst.records == before
+            assert dst.root_id == before_root
+
+
+def test_associativity_across_metadata_variants():
+    """Three stores holding pairwise-divergent metadata for one
+    content id: every merge order rejects conflicting_version -
+    no order-dependent exact store ever forms."""
+    variants = [(T1, "alpha"), (T1, "beta"), (T2, "alpha")]
+    stores = []
+    for ts, label in variants:
+        store = VersionStore()
+        store.insert(store.make_record([], D1, ts, label))
+        stores.append(store)
+    for src, dst in itertools.permutations(stores, 2):
+        before = copy.deepcopy(dst.records)
+        before_root = dst.root_id
+        with pytest.raises(VersionError) as exc:
+            dst.merge(src)
+        assert exc.value.failure_class == "conflicting_version"
+        assert dst.records == before
+        assert dst.root_id == before_root
 
 
 def test_order_insensitive_parents_and_view():
@@ -320,8 +407,8 @@ def test_collision_witness_fail_closed_never_overwrite():
     assert exc.value.failure_class == "conflicting_version"
     assert exc.value.code == FAILURE_MAPPING[
         "conflicting_version"]
-    assert exc.value.witness["stored"][1] == D1
-    assert exc.value.witness["incoming"][1] == D2
+    assert exc.value.witness["stored"]["graph_digest"] == D1
+    assert exc.value.witness["incoming"]["graph_digest"] == D2
     assert store.records == before
     assert store.records[first["version_id"]]["graph_digest"] == D1
 
@@ -520,6 +607,64 @@ def test_merge_atomic_rollback():
     assert exc.value.failure_class in FAILURE_MAPPING
     assert good.records == before
     assert good.root_id == before_root
+
+
+MERGE_CARTESIAN = [None, True, 0, 1.5, "bad\ttab", [], {}]
+
+
+@pytest.mark.parametrize("mutation", MERGE_CARTESIAN)
+@pytest.mark.parametrize(
+    "field", ["version_id", "parent_ids", "graph_digest",
+              "created_at", "label"])
+def test_merge_boundary_cartesian(field, mutation):
+    """Every field x the Cartesian set inside a RAW incoming merge
+    record maps to malformed_version_record with the exact code -
+    no raw KeyError/TypeError escapes the closed surface; the
+    receiver's records and root_id stay bit-identical."""
+    if field == "parent_ids" and mutation == []:
+        pytest.skip("empty parent_ids is the valid root shape")
+    receiver = VersionStore()
+    _chain(receiver, 2)
+    before = copy.deepcopy(receiver.records)
+    before_root = receiver.root_id
+    source = VersionStore()
+    _chain(source, 2)
+    victim = source.canonical_view()[-1]
+    raw = copy.deepcopy(source.records[victim])
+    raw[field] = copy.deepcopy(mutation)
+    source.records[victim] = raw  # tamper behind the store's back
+    with pytest.raises(VersionError) as exc:
+        receiver.merge(source)
+    assert exc.value.failure_class == "malformed_version_record"
+    assert exc.value.code == FAILURE_MAPPING[
+        "malformed_version_record"]
+    assert exc.value.code in ERROR_ENUM
+    assert receiver.records == before
+    assert receiver.root_id == before_root
+
+
+@pytest.mark.parametrize("mode", ["missing", "extra"])
+def test_merge_boundary_field_set(mode):
+    """Missing and extra fields in a raw incoming merge record map
+    to malformed_version_record; receiver bit-identical."""
+    receiver = VersionStore()
+    _chain(receiver, 2)
+    before = copy.deepcopy(receiver.records)
+    before_root = receiver.root_id
+    source = VersionStore()
+    _chain(source, 2)
+    victim = source.canonical_view()[-1]
+    raw = copy.deepcopy(source.records[victim])
+    if mode == "missing":
+        raw.pop("label")
+    else:
+        raw["surprise"] = "field"
+    source.records[victim] = raw
+    with pytest.raises(VersionError) as exc:
+        receiver.merge(source)
+    assert exc.value.failure_class == "malformed_version_record"
+    assert receiver.records == before
+    assert receiver.root_id == before_root
 
 
 def test_rollback_bit_identical_across_failures():
