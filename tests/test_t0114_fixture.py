@@ -91,9 +91,9 @@ def test_fixture_structure():
             kind = case["kind"]
             assert kind in KIND_KEYS, case["name"]
             if section == "malformed":
-                required = (MALFORMED_PARSE_REQUIRED
-                            if kind == "digest-parse"
-                            else MALFORMED_REQUIRED)
+                required = ((MALFORMED_PARSE_REQUIRED
+                             if kind == "digest-parse"
+                             else MALFORMED_REQUIRED) | {"repair"})
             else:
                 required = KIND_KEYS[kind]
             assert required <= set(case.keys()), (
@@ -101,6 +101,17 @@ def test_fixture_structure():
             extra = set(case.keys()) - required
             assert extra <= {"expect_subclass"}, (
                 f"{case['name']}: unexpected keys {extra}")
+            if section == "malformed":
+                repair = case["repair"]
+                if kind == "digest-parse":
+                    assert set(repair.keys()) == {"find", "replace"}
+                    assert case["input_text"].count(
+                        repair["find"]) == 1, case["name"]
+                else:
+                    assert set(repair.keys()) == {"field", "replace"}
+                    assert repair["field"] in ("variant",
+                                               "fen-placement"), (
+                        case["name"])
     assert len(names) == len(set(names)), "case names must be unique"
     for case in CASES["happy"]:
         assert case["kind"] in HAPPY_KINDS, case["name"]
@@ -176,51 +187,52 @@ def test_malformed():
                 "expect_subclass"], case["name"]
 
 
+def _apply_repair(case):
+    """Apply a case's declarative repair and return the repaired
+    input, asserting the repair touches ONLY the declared defect
+    location - no branch may launder multi-defect filler by
+    replacing unrelated fields."""
+    repair = case["repair"]
+    if case["kind"] == "digest-parse":
+        original = case["input_text"]
+        assert original.count(repair["find"]) == 1, case["name"]
+        repaired = original.replace(repair["find"], repair["replace"])
+        assert repaired != original
+        # the two texts differ only inside the replaced span.
+        prefix = original.split(repair["find"])[0]
+        assert repaired.startswith(prefix)
+        suffix = original.split(repair["find"])[1]
+        assert repaired.endswith(suffix)
+        return repaired
+    repaired = dict(case["input"])
+    if repair["field"] == "variant":
+        assert repaired["variant"] != repair["replace"]
+        repaired["variant"] = repair["replace"]
+        assert repaired["fen"] == case["input"]["fen"]
+        return repaired
+    # fen-placement: replace field 0, preserve the other five
+    # fields byte-identically.
+    fields = case["input"]["fen"].split(" ")
+    assert len(fields) == 6, case["name"]
+    assert fields[0] != repair["replace"]
+    repaired_fields = [repair["replace"]] + fields[1:]
+    repaired["fen"] = " ".join(repaired_fields)
+    assert repaired["fen"].split(" ")[1:] == fields[1:]
+    assert repaired["variant"] == case["input"]["variant"]
+    return repaired
+
+
 def test_malformed_discriminating():
-    """Every malformed case names exactly one defect: repairing ONLY
-    that defect makes the case valid, so no second defect hides."""
+    """Every malformed case names exactly one defect: applying its
+    declarative repair - which touches only the declared defect
+    location - makes the case valid, so no second defect hides."""
     for case in CASES["malformed"]:
-        name = case["name"]
-        if name == "digest-uppercase-hex":
-            repaired = case["input_text"].lower()
-            assert repaired != case["input_text"]
-            assert parse_digest(repaired) == repaired
-            continue
-        if name == "digest-short-hex":
-            repaired = case["input_text"] + "e"
-            assert parse_digest(repaired) == repaired
-            continue
-        if name == "digest-unknown-prefix":
-            repaired = DIGEST_PREFIX + case["input_text"].split(":", 1)[1]
-            assert parse_digest(repaired) == repaired
-            continue
-        if name == "digest-trailing-space":
-            repaired = case["input_text"].strip()
-            assert parse_digest(repaired) == repaired
-            continue
-        if name == "position-kingless":
-            # repair: give the position its missing black king.
-            repaired = dict(case["input"])
-            repaired["fen"] = "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
-            assert _digest(repaired) == _case(
-                "kings-only-minimal")["expect_digest"]
-            continue
-        if name == "position-grammar-bad-fen":
-            repaired = dict(case["input"])
-            repaired["fen"] = (
-                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-                " w KQkq - 0 1")
-            assert _digest(repaired) == _case("startpos")[
-                "expect_digest"]
-            continue
-        if name == "variant-unknown":
-            assert case["input"]["variant"] not in VARIANT_IDS
-            repaired = dict(case["input"])
-            repaired["variant"] = "standard"
-            assert _digest(repaired) == _case("startpos")[
-                "expect_digest"]
-            continue
-        raise AssertionError(f"no repair rule for {name}")
+        repaired = _apply_repair(case)
+        if case["kind"] == "digest-parse":
+            assert parse_digest(repaired) == repaired, case["name"]
+        else:
+            # repaired position digests successfully
+            digest_fen(repaired["variant"], repaired["fen"])
 
 
 def test_rollback():

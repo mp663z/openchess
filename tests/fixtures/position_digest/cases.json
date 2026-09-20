@@ -7,19 +7,28 @@
   {
    "name": "startpos",
    "kind": "digest",
-   "input": {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"},
+   "input": {
+    "variant": "standard",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+   },
    "expect_digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe"
   },
   {
    "name": "midgame-after-e4-phantom-target",
    "kind": "digest",
-   "input": {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"},
+   "input": {
+    "variant": "standard",
+    "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+   },
    "expect_digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff"
   },
   {
    "name": "black-to-move-capturable-target",
    "kind": "digest",
-   "input": {"variant": "standard", "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"},
+   "input": {
+    "variant": "standard",
+    "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+   },
    "expect_digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e"
   },
   {
@@ -33,7 +42,10 @@
   {
    "name": "kings-only-minimal",
    "kind": "digest",
-   "input": {"variant": "standard", "fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"},
+   "input": {
+    "variant": "standard",
+    "fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+   },
    "expect_digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b"
   },
   {
@@ -66,7 +78,10 @@
   {
    "name": "white-to-move-capturable-target",
    "kind": "digest",
-   "input": {"variant": "standard", "fen": "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2"},
+   "input": {
+    "variant": "standard",
+    "fen": "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2"
+   },
    "expect_digest": "pdv1:f22a86777f1d82617c29dc8536f14c865d2b806c2bcb635044b072f2bc8eb01d"
   },
   {
@@ -85,51 +100,88 @@
    "kind": "digest-parse",
    "input_text": "pdv1:66157A24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
    "defect": "hex digit 5 is uppercase; canonical form is lowercase only",
-   "expect_failure": "malformed_digest"
+   "expect_failure": "malformed_digest",
+   "repair": {
+    "find": "66157A24",
+    "replace": "66157a24"
+   }
   },
   {
    "name": "digest-short-hex",
    "kind": "digest-parse",
    "input_text": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ff",
    "defect": "63 hex digits instead of 64",
-   "expect_failure": "malformed_digest"
+   "expect_failure": "malformed_digest",
+   "repair": {
+    "find": "a8b88ff",
+    "replace": "a8b88ffe"
+   }
   },
   {
    "name": "digest-unknown-prefix",
    "kind": "digest-parse",
    "input_text": "pdv2:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
    "defect": "prefix pdv2 is not the declared pdv1 version",
-   "expect_failure": "malformed_digest"
+   "expect_failure": "malformed_digest",
+   "repair": {
+    "find": "pdv2:",
+    "replace": "pdv1:"
+   }
   },
   {
    "name": "digest-trailing-space",
    "kind": "digest-parse",
    "input_text": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe ",
    "defect": "trailing whitespace is never part of the text form",
-   "expect_failure": "malformed_digest"
+   "expect_failure": "malformed_digest",
+   "repair": {
+    "find": "ffe ",
+    "replace": "ffe"
+   }
   },
   {
    "name": "position-kingless",
    "kind": "digest",
-   "input": {"variant": "standard", "fen": "8/8/8/8/8/8/8/4K3 w - - 0 1"},
+   "input": {
+    "variant": "standard",
+    "fen": "8/8/8/8/8/8/8/4K3 w - - 0 1"
+   },
    "defect": "the position has no black king",
    "expect_failure": "malformed_position",
-   "expect_subclass": "impossible_position"
+   "expect_subclass": "impossible_position",
+   "repair": {
+    "field": "fen-placement",
+    "replace": "4k3/8/8/8/8/8/8/4K3"
+   }
   },
   {
    "name": "position-grammar-bad-fen",
    "kind": "digest",
-   "input": {"variant": "standard", "fen": "garbage x6 tokens here now bad"},
+   "input": {
+    "variant": "standard",
+    "fen": "garbage w - - 0 1"
+   },
    "defect": "the placement field is not FEN placement grammar",
    "expect_failure": "malformed_position",
-   "expect_subclass": "malformed_fen"
+   "expect_subclass": "malformed_fen",
+   "repair": {
+    "field": "fen-placement",
+    "replace": "4k3/8/8/8/8/8/8/4K3"
+   }
   },
   {
    "name": "variant-unknown",
    "kind": "digest",
-   "input": {"variant": "chess960", "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"},
+   "input": {
+    "variant": "chess960",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+   },
    "defect": "variant id chess960 is not in the linked registry",
-   "expect_failure": "unknown_variant"
+   "expect_failure": "unknown_variant",
+   "repair": {
+    "field": "variant",
+    "replace": "standard"
+   }
   }
  ],
  "rollback": [
@@ -143,8 +195,14 @@
   {
    "name": "rejected-position-leaves-no-trace",
    "kind": "rollback-digest",
-   "reject_input": {"variant": "standard", "fen": "8/8/8/8/8/8/8/4K3 w - - 0 1"},
-   "then_input": {"variant": "standard", "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"},
+   "reject_input": {
+    "variant": "standard",
+    "fen": "8/8/8/8/8/8/8/4K3 w - - 0 1"
+   },
+   "then_input": {
+    "variant": "standard",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+   },
    "expect_digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe"
   }
  ]
