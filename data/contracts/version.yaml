@@ -1,0 +1,98 @@
+contract:
+  id: graph-version
+  role:
+    kind: immutable-versioned-snapshot-reference-over-graph-content
+    serves: trusted-diagnosis-reproducibility
+    scope: graph-content-versions
+    owns: version-record-identity-and-lineage
+    versions: graph-content-never-contract-schemas
+  record:
+    fields: [version_id, parent_ids, graph_digest, created_at, label]
+    exact: true
+    immutability: never-in-place-only-new-versions
+  identity:
+    version_id:
+      addressing: content-addressed-over-parent-ids-and-graph-digest
+      grammar: '^gv1:[0-9a-f]{64}$'
+      total_length: 68
+      prefix: 'gv1:'
+    label: metadata-never-identity
+    graph_digest: content-input-never-record-identity
+  content_addressing:
+    algorithm: sha256-over-canonical-encoding
+    canonical_encoding: 'gv1-content\n+sorted-parent-ids-each-followed-by-\n+graph-digest+\n'
+    dedup: equal-parents-and-graph-digest-yield-equal-version-id
+    collision_policy: equal-id-unequal-content-fails-closed-never-overwrites
+  fields:
+    parent_ids:
+      kind: list-of-version-ids
+      item_grammar: from-identity-version_id-grammar
+      root_only_empty: true
+      order: insignificant-canonicalized-sorted
+    graph_digest:
+      kind: graph-state-content-hash
+      grammar: '^gdv1:[0-9a-f]{64}$'
+      total_length: 68
+      prefix: 'gdv1:'
+    created_at:
+      kind: rfc3339-utc-instant
+      grammar: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+      calendar: gregorian-real-date-with-leap-year-rules
+      leap_seconds: rejected-second-field-must-be-00-59
+      monotonicity: child-created-at-not-before-every-parent
+    label:
+      kind: human-readable-metadata
+      grammar: '^[ -~]{1,120}$'
+  lineage:
+    shape: directed-acyclic-graph-of-version-records
+    root: exactly-one-root-version-with-empty-parent-ids
+    non_root: nonempty-parent-ids-each-existing-in-store
+    parent_existence: fail-closed-on-unknown-parent
+  merge:
+    semantics: insert-or-return-existing
+    commit: atomic-staged-copy
+    idempotent: true
+    commutative: true
+    associative: true
+  failures:
+    classes:
+      - malformed_version_record
+      - unknown_parent
+      - conflicting_version
+      - root_violation
+      - nonmonotonic_version
+    triggers:
+      malformed_version_record: field-set-shape-grammar-or-content-address-violation
+      unknown_parent: parent-id-absent-from-store
+      conflicting_version: equal-id-unequal-content-or-divergent-metadata-fail-closed
+      root_violation: second-root-claim
+      nonmonotonic_version: child-older-than-a-parent
+    mapping:
+      malformed_version_record: malformed_request
+      unknown_parent: unknown_parent
+      conflicting_version: conflicting_version
+      root_violation: root_violation
+      nonmonotonic_version: nonmonotonic_version
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - unknown_parent
+      - conflicting_version
+      - root_violation
+      - nonmonotonic_version
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+      collision_witness_included_on_conflicting_version: true
+  properties:
+    metadata_policy: equal-metadata-required-for-existing-id-divergence-rejected
+    dedup: insert-or-return-existing-never-duplicates
+    rollback: rejected-insert-leaves-store-bit-identical
+    determinism: canonical-view-sorted-by-version-id
+    trust_boundary: injected-digest-collision-surfaced-never-absorbed
+  versioning:
+    base_path: /graph/version/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    variant_contract: data/contracts/variant.yaml
