@@ -37,25 +37,38 @@ SECTIONS = {
     "added": {
         "kind": "map-canonical-identity-to-exact-target-record",
         "meaning": "identity-present-in-target-only",
+        "validation":
+            "value-exact-valid-linked-record-key-equals-derived-"
+            "identity",
     },
     "removed": {
         "kind": "map-canonical-identity-to-exact-base-record",
         "meaning": "identity-present-in-base-only",
+        "validation":
+            "value-exact-valid-linked-record-key-equals-derived-"
+            "identity",
     },
     "changed": {
         "kind": "map-canonical-identity-to-witness-pair",
         "witness": "exact-base-record-and-exact-target-record",
         "meaning": "identity-in-both-with-unequal-exact-content",
+        "validation":
+            "both-records-valid-same-derived-key-base-not-equal-"
+            "target",
     },
 }
-ID_GRAMMAR = "^[a-z0-9][a-z0-9._-]{0,63}$"
+ID_GRAMMAR = "^gs1:[0-9a-f]{64}$"
+_DERIVATION = ("sha256-over-canonical-serialization-of-full-"
+               "identity-record-map")
 IDENTIFIERS = {
-    "base_id": {"kind": "opaque-state-identifier",
-                "grammar": ID_GRAMMAR},
-    "target_id": {"kind": "opaque-state-identifier",
-                  "grammar": ID_GRAMMAR},
+    "base_id": {"kind": "canonical-state-content-digest",
+                "grammar": ID_GRAMMAR, "total_length": 68,
+                "prefix": "gs1:", "derivation": _DERIVATION},
+    "target_id": {"kind": "canonical-state-content-digest",
+                  "grammar": ID_GRAMMAR, "total_length": 68,
+                  "prefix": "gs1:", "derivation": _DERIVATION},
     "distinctness":
-        "base-id-and-target-id-may-be-equal-only-when-diff-empty",
+        "equal-state-ids-imply-equal-states-and-empty-diff",
 }
 GUARANTEES = {
     "completeness":
@@ -68,15 +81,20 @@ GUARANTEES = {
 }
 APPLY = {
     "semantics": "remove-removed-add-added-replace-changed",
-    "base_check": "base-must-match-diff-base-exactly",
+    "base_check":
+        "recomputed-base-state-id-must-equal-diff-base-id-and-"
+        "added-identities-must-be-absent",
     "commit": "atomic-staged-copy",
 }
 FAILURE_CLASSES = ["malformed_diff_record", "conflicting_base",
                    "unknown_identity"]
 FAILURE_TRIGGERS = {
     "malformed_diff_record":
-        "diff-field-shape-grammar-or-reference-violation",
-    "conflicting_base": "apply-base-differs-from-diff-base",
+        "diff-or-state-shape-grammar-identity-or-record-"
+        "violation",
+    "conflicting_base":
+        "recomputed-base-id-differs-or-added-identity-already-"
+        "present",
     "unknown_identity":
         "changed-or-removed-identity-absent-from-base",
 }
@@ -88,6 +106,10 @@ FAILURE_MAPPING = {
 ERROR_ENUM = ["malformed_request", "conflicting_base",
               "unknown_identity", "internal"]
 PROPERTIES = {
+    "total_compute":
+        "hostile-state-inputs-fail-closed-typed-never-raw",
+    "structural_base_check":
+        "whole-base-verified-via-state-digest-before-mutation",
     "no_silent_difference": "completeness-theorem-pinned",
     "rollback": "rejected-apply-leaves-base-bit-identical",
     "canonical_order": "sections-ordered-by-canonical-identity",

@@ -17,21 +17,30 @@ contract:
     added:
       kind: map-canonical-identity-to-exact-target-record
       meaning: identity-present-in-target-only
+      validation: value-exact-valid-linked-record-key-equals-derived-identity
     removed:
       kind: map-canonical-identity-to-exact-base-record
       meaning: identity-present-in-base-only
+      validation: value-exact-valid-linked-record-key-equals-derived-identity
     changed:
       kind: map-canonical-identity-to-witness-pair
       witness: exact-base-record-and-exact-target-record
       meaning: identity-in-both-with-unequal-exact-content
+      validation: both-records-valid-same-derived-key-base-not-equal-target
   identifiers:
     base_id:
-      kind: opaque-state-identifier
-      grammar: '^[a-z0-9][a-z0-9._-]{0,63}$'
+      kind: canonical-state-content-digest
+      grammar: '^gs1:[0-9a-f]{64}$'
+      total_length: 68
+      prefix: 'gs1:'
+      derivation: sha256-over-canonical-serialization-of-full-identity-record-map
     target_id:
-      kind: opaque-state-identifier
-      grammar: '^[a-z0-9][a-z0-9._-]{0,63}$'
-    distinctness: base-id-and-target-id-may-be-equal-only-when-diff-empty
+      kind: canonical-state-content-digest
+      grammar: '^gs1:[0-9a-f]{64}$'
+      total_length: 68
+      prefix: 'gs1:'
+      derivation: sha256-over-canonical-serialization-of-full-identity-record-map
+    distinctness: equal-state-ids-imply-equal-states-and-empty-diff
   guarantees:
     completeness: every-difference-surfaces-empty-iff-equal-records
     determinism: pure-function-of-base-and-target-canonical-order
@@ -39,7 +48,7 @@ contract:
     apply_exactness: apply-diff-to-base-yields-target-exactly
   apply:
     semantics: remove-removed-add-added-replace-changed
-    base_check: base-must-match-diff-base-exactly
+    base_check: recomputed-base-state-id-must-equal-diff-base-id-and-added-identities-must-be-absent
     commit: atomic-staged-copy
   failures:
     classes:
@@ -47,8 +56,8 @@ contract:
       - conflicting_base
       - unknown_identity
     triggers:
-      malformed_diff_record: diff-field-shape-grammar-or-reference-violation
-      conflicting_base: apply-base-differs-from-diff-base
+      malformed_diff_record: diff-or-state-shape-grammar-identity-or-record-violation
+      conflicting_base: recomputed-base-id-differs-or-added-identity-already-present
       unknown_identity: changed-or-removed-identity-absent-from-base
     mapping:
       malformed_diff_record: malformed_request
@@ -64,6 +73,8 @@ contract:
     shape:
       retryable_true_only_for: [internal]
   properties:
+    total_compute: hostile-state-inputs-fail-closed-typed-never-raw
+    structural_base_check: whole-base-verified-via-state-digest-before-mutation
     no_silent_difference: completeness-theorem-pinned
     rollback: rejected-apply-leaves-base-bit-identical
     canonical_order: sections-ordered-by-canonical-identity

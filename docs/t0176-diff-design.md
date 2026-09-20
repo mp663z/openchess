@@ -57,6 +57,31 @@ versions; versions can name the states later).
   (remove a change silently -> completeness theorem catches it).
 - Versioning: /graph/diff/v1.
 
+## v2 decisions (verifier #1 remediation)
+
+- base_id/target_id are no longer opaque: each is a CANONICAL
+  STATE CONTENT DIGEST (gs1: + sha256 over the canonical
+  serialization of the full identity->record map, derived never
+  supplied). The diff therefore carries structural whole-base
+  evidence: apply recomputes the supplied base's id and rejects
+  ANY divergence (extra records, missing unchanged records,
+  tampered unchanged records) as conflicting_base BEFORE
+  mutation; an added identity already present is also rejected.
+- Every section entry is validated through the LINKED node
+  machinery: the value must be an exact valid node record
+  (canonical fields re-derived, exact built-in-str digest in the
+  linked format) whose derived canonical identity EQUALS the map
+  key; changed witnesses: both records valid, same derived key,
+  unequal exact content. Bogus keys, invalid records, identity
+  mismatches and false (equal) changed witnesses are
+  malformed_diff_record. The changed battery uses cross-oracle
+  digest twins (equal identity, unequal accelerator key),
+  proving digests never substitute for identity.
+- compute is TOTAL: base/target must be mappings of string keys
+  to exact valid records with key/identity agreement - hostile
+  containers, keys and values all fail closed as
+  malformed_diff_record, never raw TypeError.
+
 ## Test plan (>=25 mutants)
 
 - Happy: empty diff on equal states; add-only; remove-only;

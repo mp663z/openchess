@@ -1,19 +1,21 @@
-"""T0176: graph diff contract behavior battery.
+"""T0176: graph diff contract behavior battery (v2).
 
-Reference engine FULLY DERIVED from data/contracts/diff.yaml: the
-diff record shape, section semantics, guarantees (completeness,
-determinism, symmetry, apply-exactness) and failure model are read
-from the contract. Identity keys come from the LINKED
-transposition-node machinery (imported, never restated);
-accelerator digests never key a diff. The engine is table-generic:
-the battery exercises it over real node records (add/remove) and
-over annotated node records (a metadata field OUTSIDE identity) to
-exercise changed-witnesses.
+Reference engine FULLY DERIVED from data/contracts/diff.yaml:
+state ids are CANONICAL STATE CONTENT DIGESTS over the full
+identity->record map (structural whole-base evidence); sections
+carry exact valid LINKED node records whose map key EQUALS the
+derived canonical identity; compute is TOTAL over hostile state
+inputs; apply verifies the recomputed base id BEFORE any
+mutation and rejects added identities already present. The
+changed section exercises cross-oracle digest twins (equal
+canonical identity, unequal accelerator key) - proving digests
+never substitute for identity.
 """
 
 from __future__ import annotations
 
 import copy
+import hashlib
 import itertools
 import re
 import sys
@@ -34,6 +36,7 @@ from tests.test_t0122_transposition_node_contract import (  # noqa: E402
     KINGS,
     LEGAL_EP,
     STARTPOS,
+    NodeError,
     _make_record,
     _record_identity,
 )
@@ -52,6 +55,13 @@ _NDOCS = _node_docs()
 _CC = yaml.safe_load(CONTRACT.read_text())["contract"]
 _ID_RE = re.compile(_CC["identifiers"]["base_id"]["grammar"])
 _FIELDS = _CC["record"]["fields"]
+_DIGEST = ROOT / "data/contracts/position_digest.yaml"
+_DIGEST_RE = re.compile(
+    yaml.safe_load(_DIGEST.read_text())["contract"]["digest"]
+    ["format"]["regex"])
+
+K1 = "pdv1:" + "1" * 64
+K2 = "pdv1:" + "2" * 64
 
 
 class DiffError(Exception):
@@ -65,37 +75,80 @@ def _fail(cls):
     raise DiffError(cls, FAILURE_MAPPING[cls])
 
 
-def _node(fen_text, annotation=None):
-    """A real node record (identity-derived digest); annotation is
-    metadata OUTSIDE identity - it makes 'changed' reachable."""
+def _node(fen_text, digest_override=None):
+    """A real node record through the linked machinery; an
+    override swaps only the accelerator digest (a cross-oracle
+    twin: equal canonical identity, unequal key)."""
     rec = _make_record(*_NDOCS, digest_fen, "standard", fen_text)
-    if annotation is not None:
+    if digest_override is not None:
         rec = dict(rec)
-        rec["annotation"] = annotation
+        rec["digest"] = digest_override
     return rec
 
 
 def _identity(record):
-    base = {k: record[k] for k in ("variant", "snapshot_fen",
-                                   "digest")}
-    return repr(_record_identity(*_NDOCS, base))
+    return repr(_record_identity(*_NDOCS, record))
 
 
 def _state(*records):
     return {_identity(r): r for r in records}
 
 
+def _validate_record_key(key, rec):
+    """Every section entry: the value must be an exact valid
+    LINKED node record (canonical fields through the node
+    machinery, exact built-in-str digest in the linked format)
+    whose DERIVED canonical identity equals the map key."""
+    if not isinstance(key, str) or type(key) is not str:
+        _fail("malformed_diff_record")
+    if not isinstance(rec, dict):
+        _fail("malformed_diff_record")
+    try:
+        derived = _make_record(*_NDOCS, digest_fen,
+                               rec.get("variant"),
+                               rec.get("snapshot_fen"))
+    except NodeError:
+        _fail("malformed_diff_record")
+    if set(rec.keys()) != set(derived.keys()):
+        _fail("malformed_diff_record")
+    if rec["variant"] != derived["variant"] or \
+            rec["snapshot_fen"] != derived["snapshot_fen"]:
+        _fail("malformed_diff_record")
+    if type(rec["digest"]) is not str or \
+            _DIGEST_RE.fullmatch(rec["digest"]) is None:
+        _fail("malformed_diff_record")
+    if _identity(rec) != key:
+        _fail("malformed_diff_record")
+
+
+def state_id(state):
+    """The canonical state content digest: sha256 over the
+    canonical serialization of the FULL identity->record map.
+    Derived, never supplied."""
+    parts = []
+    for key in sorted(state):
+        rec = state[key]
+        body = "|".join(f"{field}={rec[field]}"
+                        for field in sorted(rec))
+        parts.append(f"{key}\n{body}\n")
+    return "gs1:" + hashlib.sha256(
+        "".join(parts).encode()).hexdigest()
+
+
 class DiffEngine:
-    """The contract's pinned computation: sections keyed by
-    canonical identity; completeness, determinism, symmetry and
-    apply-exactness by construction; closed failure model."""
+    """The contract's pinned computation: total validation,
+    content-addressed state ids, canonical order, closed failure
+    model, atomic staged apply with structural base check."""
 
-    def __init__(self):
-        self.cc = _CC
+    def _validate_state(self, state):
+        if not isinstance(state, dict):
+            _fail("malformed_diff_record")
+        for key, rec in state.items():
+            _validate_record_key(key, rec)
 
-    def compute(self, base_id, target_id, base, target):
-        self._check_state_id(base_id)
-        self._check_state_id(target_id)
+    def compute(self, base, target):
+        self._validate_state(base)
+        self._validate_state(target)
         added = {k: copy.deepcopy(target[k]) for k in target
                  if k not in base}
         removed = {k: copy.deepcopy(base[k]) for k in base
@@ -104,41 +157,43 @@ class DiffEngine:
                        "target": copy.deepcopy(target[k])}
                    for k in base if k in target
                    and base[k] != target[k]}
-        return {"base_id": base_id, "target_id": target_id,
+        return {"base_id": state_id(base),
+                "target_id": state_id(target),
                 "added": dict(sorted(added.items())),
                 "removed": dict(sorted(removed.items())),
                 "changed": dict(sorted(changed.items()))}
 
-    def _check_state_id(self, value):
-        if not isinstance(value, str) or isinstance(value, bool) \
-                or _ID_RE.fullmatch(value) is None:
-            _fail("malformed_diff_record")
-
     def validate_diff(self, diff):
-        """TOTAL validation: explicit type guards on every field
-        before any sibling machinery."""
+        """TOTAL: explicit guards on every field; every section
+        entry validated through the linked machinery with
+        key/identity agreement; changed witnesses carry unequal
+        exact content under one derived identity."""
         if not isinstance(diff, dict):
             _fail("malformed_diff_record")
         if set(diff.keys()) != set(_FIELDS):
             _fail("malformed_diff_record")
-        self._check_state_id(diff["base_id"])
-        self._check_state_id(diff["target_id"])
+        for field in ("base_id", "target_id"):
+            value = diff[field]
+            if type(value) is not str or \
+                    _ID_RE.fullmatch(value) is None:
+                _fail("malformed_diff_record")
         for section in ("added", "removed"):
             value = diff[section]
-            if not isinstance(value, dict) or any(
-                    not isinstance(k, str) or
-                    not isinstance(v, dict)
-                    for k, v in value.items()):
+            if not isinstance(value, dict):
                 _fail("malformed_diff_record")
+            for key, rec in value.items():
+                _validate_record_key(key, rec)
         changed = diff["changed"]
-        if not isinstance(changed, dict) or any(
-                not isinstance(k, str) or
-                not isinstance(v, dict) or
-                set(v.keys()) != {"base", "target"} or
-                not isinstance(v["base"], dict) or
-                not isinstance(v["target"], dict)
-                for k, v in changed.items()):
+        if not isinstance(changed, dict):
             _fail("malformed_diff_record")
+        for key, witness in changed.items():
+            if not isinstance(witness, dict) or \
+                    set(witness.keys()) != {"base", "target"}:
+                _fail("malformed_diff_record")
+            _validate_record_key(key, witness["base"])
+            _validate_record_key(key, witness["target"])
+            if witness["base"] == witness["target"]:
+                _fail("malformed_diff_record")
         overlap = (set(diff["added"]) & set(diff["removed"])) | \
             (set(diff["added"]) & set(changed)) | \
             (set(diff["removed"]) & set(changed))
@@ -148,13 +203,19 @@ class DiffEngine:
                 diff["added"] or diff["removed"] or changed):
             _fail("malformed_diff_record")
 
-    def apply(self, diff, base_id, base):
-        """ATOMIC staged-copy apply: the base must match the diff's
-        base exactly (id AND every removed/changed-base record);
-        any violation fails closed and commits nothing."""
+    def apply(self, diff, base):
+        """ATOMIC: validate the diff, then verify the WHOLE base
+        structurally - the recomputed base state id must equal the
+        diff's base_id (unchanged records, extras and tampering
+        all move the digest) and every added identity must be
+        absent - BEFORE any mutation."""
         self.validate_diff(diff)
-        if base_id != diff["base_id"]:
+        self._validate_state(base)
+        if state_id(base) != diff["base_id"]:
             _fail("conflicting_base")
+        for key in diff["added"]:
+            if key in base:
+                _fail("conflicting_base")
         staged = copy.deepcopy(base)
         for key, rec in diff["removed"].items():
             if key not in staged:
@@ -182,57 +243,63 @@ def test_lint_clean():
 def test_empty_diff_on_equal_states():
     engine = DiffEngine()
     state = _state(_node(STARTPOS), _node(KINGS))
-    diff = engine.compute("s1", "s1", state, state)
-    assert diff == {"base_id": "s1", "target_id": "s1",
+    diff = engine.compute(state, state)
+    assert diff == {"base_id": state_id(state),
+                    "target_id": state_id(state),
                     "added": {}, "removed": {}, "changed": {}}
+    assert diff["base_id"] == diff["target_id"]
     engine.validate_diff(diff)
-    assert engine.apply(diff, "s1", state) == state
+    assert engine.apply(diff, state) == state
 
 
 def test_add_remove_change_mixed():
     engine = DiffEngine()
-    base = _state(_node(STARTPOS), _node(KINGS), _node(AFTER_E4))
-    target = _state(_node(STARTPOS), _node(KINGS, "annotated"),
+    base = _state(_node(STARTPOS), _node(KINGS, K1),
+                  _node(AFTER_E4))
+    target = _state(_node(STARTPOS), _node(KINGS, K2),
                     _node(LEGAL_EP))
-    diff = engine.compute("s1", "s2", base, target)
+    diff = engine.compute(base, target)
+    assert diff["base_id"] == state_id(base)
+    assert diff["target_id"] == state_id(target)
+    assert diff["base_id"] != diff["target_id"]
     assert list(diff["added"]) == [_identity(_node(LEGAL_EP))]
     assert list(diff["removed"]) == [_identity(_node(AFTER_E4))]
     assert list(diff["changed"]) == [_identity(_node(KINGS))]
     witness = diff["changed"][_identity(_node(KINGS))]
-    assert witness["base"] == _node(KINGS)
-    assert witness["target"] == _node(KINGS, "annotated")
-    assert engine.apply(diff, "s1", base) == target
+    assert witness["base"] == _node(KINGS, K1)
+    assert witness["target"] == _node(KINGS, K2)
+    # the digest twin carries ONE canonical identity - the
+    # accelerator key never substitutes for identity
+    assert _identity(witness["base"]) == _identity(
+        witness["target"])
+    engine.validate_diff(diff)
+    assert engine.apply(diff, base) == target
 
 
 def test_completeness_theorem_permutations():
-    """NO SILENT DIFFERENCE: for every permutation of a mutation
-    set (adds, removals, changes), the diff surfaces EXACTLY that
-    set - and a silently dropped difference is caught by the
-    apply round-trip."""
+    """NO SILENT DIFFERENCE: every permutation of a mutation set
+    surfaces EXACTLY; the apply round-trip catches any silently
+    dropped difference."""
     engine = DiffEngine()
     pool = [_node(STARTPOS), _node(AFTER_E4), _node(KINGS),
             _node(LEGAL_EP)]
     base = _state(*pool)
+    extra = _node("8/8/8/8/8/8/8/K6k w - - 0 1")
     mutations = [
         lambda t: t.pop(_identity(_node(STARTPOS))),
         lambda t: t.pop(_identity(_node(AFTER_E4))),
-        lambda t: t.update({_identity(_node(KINGS, "c")):
-                            _node(KINGS, "c")}),
-        lambda t: t.update({_identity(_node("8/8/8/8/8/8/8/K6k"
-                                            " w - - 0 1")):
-                            _node("8/8/8/8/8/8/8/K6k w - - 0 1")}),
+        lambda t: t.update({_identity(_node(KINGS)):
+                            _node(KINGS, K1)}),
+        lambda t: t.update({_identity(extra): extra}),
     ]
     for count in range(1, len(mutations) + 1):
         for combo in itertools.permutations(mutations, count):
             target = copy.deepcopy(base)
             for mutate in combo:
                 mutate(target)
-            diff = engine.compute("a", "b", base, target)
-            assert engine.apply(diff, "a", base) == target
-            expected = (len(base - target.keys()
-                            if hasattr(base, '-') else [])
-                        or None)
-            del expected
+            diff = engine.compute(base, target)
+            engine.validate_diff(diff)
+            assert engine.apply(diff, base) == target
             surfaced = (len(diff["added"]) + len(diff["removed"])
                         + len(diff["changed"]))
             assert surfaced == count
@@ -240,20 +307,21 @@ def test_completeness_theorem_permutations():
 
 def test_determinism_and_symmetry():
     engine = DiffEngine()
-    base = _state(_node(STARTPOS), _node(KINGS))
-    target = _state(_node(KINGS, "x"), _node(AFTER_E4))
-    d1 = engine.compute("a", "b", base, target)
-    d2 = engine.compute("a", "b", base, target)
-    assert d1 == d2
-    forward = engine.compute("a", "b", base, target)
-    reverse = engine.compute("b", "a", target, base)
+    base = _state(_node(STARTPOS), _node(KINGS, K1))
+    target = _state(_node(KINGS, K2), _node(AFTER_E4))
+    assert engine.compute(base, target) == \
+        engine.compute(base, target)
+    forward = engine.compute(base, target)
+    reverse = engine.compute(target, base)
+    assert reverse["base_id"] == forward["target_id"]
+    assert reverse["target_id"] == forward["base_id"]
     assert reverse["added"] == forward["removed"]
     assert reverse["removed"] == forward["added"]
     for key, witness in forward["changed"].items():
         flipped = reverse["changed"][key]
         assert flipped["base"] == witness["target"]
         assert flipped["target"] == witness["base"]
-    assert engine.apply(reverse, "b", target) == base
+    assert engine.apply(reverse, target) == base
 
 
 def test_apply_round_trip_permutations():
@@ -263,15 +331,181 @@ def test_apply_round_trip_permutations():
     for perm in itertools.permutations(records, 3):
         base = _state(*perm[:2])
         target = _state(perm[1], perm[2])
-        diff = engine.compute("x", "y", base, target)
-        assert engine.apply(diff, "x", base) == target
+        diff = engine.compute(base, target)
+        assert engine.apply(diff, base) == target
+
+
+# -- blocker 1: structural base check ----------------------------------------
+
+
+def test_base_with_extra_unrelated_record_rejected():
+    engine = DiffEngine()
+    base = _state(_node(STARTPOS))
+    target = _state(_node(KINGS))
+    diff = engine.compute(base, target)
+    bloated = _state(_node(STARTPOS), _node(AFTER_E4))
+    before = copy.deepcopy(bloated)
+    with pytest.raises(DiffError) as exc:
+        engine.apply(diff, bloated)
+    assert exc.value.failure_class == "conflicting_base"
+    assert exc.value.code == FAILURE_MAPPING["conflicting_base"]
+    assert exc.value.code in ERROR_ENUM
+    assert bloated == before
+
+
+def test_base_missing_unchanged_record_rejected():
+    engine = DiffEngine()
+    base = _state(_node(STARTPOS), _node(KINGS))
+    target = _state(_node(STARTPOS), _node(AFTER_E4))
+    diff = engine.compute(base, target)
+    shrunk = _state(_node(KINGS))  # STARTPOS silently dropped
+    with pytest.raises(DiffError) as exc:
+        engine.apply(diff, shrunk)
+    assert exc.value.failure_class == "conflicting_base"
+
+
+def test_base_tampered_unchanged_record_rejected():
+    engine = DiffEngine()
+    base = _state(_node(STARTPOS), _node(KINGS))
+    target = _state(_node(STARTPOS), _node(AFTER_E4))
+    diff = engine.compute(base, target)
+    tampered = _state(_node(STARTPOS, K1), _node(KINGS))
+    with pytest.raises(DiffError) as exc:
+        engine.apply(diff, tampered)
+    assert exc.value.failure_class == "conflicting_base"
+
+
+def test_add_only_diff_over_present_identity_rejected():
+    """An add-only diff whose added identity is ALREADY in the
+    base (different content) must never silently overwrite."""
+    engine = DiffEngine()
+    base = _state(_node(STARTPOS))
+    target = _state(_node(STARTPOS), _node(KINGS, K2))
+    diff = engine.compute(base, target)
+    assert set(diff["added"]) == {_identity(_node(KINGS))}
+    occupied = _state(_node(STARTPOS), _node(KINGS, K1))
+    before = copy.deepcopy(occupied)
+    with pytest.raises(DiffError) as exc:
+        engine.apply(diff, occupied)
+    assert exc.value.failure_class == "conflicting_base"
+    assert occupied == before
+
+
+# -- blocker 2: section validation through linked machinery ------------------
 
 
 def _valid_diff():
     engine = DiffEngine()
     base = _state(_node(STARTPOS))
     target = _state(_node(STARTPOS), _node(KINGS))
-    return engine.compute("s1", "s2", base, target)
+    return engine.compute(base, target)
+
+
+BOGUS_SECTION_ENTRIES = [
+    ("bogus key dict value", "added", {"bogus": {"anything": 1}}),
+    ("bogus witness pair", "changed",
+     {"bogus": {"base": {}, "target": {}}}),
+    ("key unrelated to value identity", "added",
+     {"not-the-identity": _node(KINGS)}),
+    ("equal changed witness", "changed",
+     {_identity(_node(KINGS)):
+      {"base": _node(KINGS), "target": _node(KINGS)}}),
+    ("raw noncanonical fen", "added",
+     {_identity(_node(AFTER_E4)):
+      dict(_node(AFTER_E4),
+           snapshot_fen=AFTER_E4.replace(" - ", " e3 "))}),
+    ("bad digest format", "added",
+     {_identity(_node(KINGS)): dict(_node(KINGS),
+                                    digest="not-a-digest")}),
+    ("extra record field", "added",
+     {_identity(_node(KINGS)): dict(_node(KINGS), extra=1)}),
+]
+
+
+@pytest.mark.parametrize("name,section,entries",
+                         BOGUS_SECTION_ENTRIES,
+                         ids=[n for n, _, _ in
+                              BOGUS_SECTION_ENTRIES])
+def test_section_validation_rejects_bogus(name, section,
+                                          entries):
+    engine = DiffEngine()
+    diff = _valid_diff()
+    diff[section] = entries
+    with pytest.raises(DiffError) as exc:
+        engine.validate_diff(diff)
+    assert exc.value.failure_class == "malformed_diff_record"
+    assert exc.value.code == FAILURE_MAPPING[
+        "malformed_diff_record"]
+
+
+def test_digest_accelerator_never_substitutes_identity():
+    """Collision-oriented witness: two records sharing an
+    accelerator key but holding distinct canonical identities are
+    TWO entries; one identity under two accelerator keys is ONE
+    changed witness. Digest equality decides nothing."""
+    engine = DiffEngine()
+    a = dict(_node(STARTPOS), digest=K1)
+    b = dict(_node(KINGS), digest=K1)  # forced shared key
+    base = _state(a)
+    target = _state(b)
+    diff = engine.compute(base, target)
+    # equal digests did NOT merge the distinct identities
+    assert list(diff["removed"]) == [_identity(a)]
+    assert list(diff["added"]) == [_identity(b)]
+    # and the reverse: unequal digests did NOT fork one identity
+    base2 = _state(_node(STARTPOS))
+    target2 = _state(_node(STARTPOS, K2))
+    diff2 = engine.compute(base2, target2)
+    assert diff2["added"] == {} and diff2["removed"] == {}
+    assert list(diff2["changed"]) == [_identity(_node(STARTPOS))]
+
+
+# -- blocker 3: total compute over hostile inputs ----------------------------
+
+HOSTILE_CONTAINERS = [None, True, 0, 1.5, "text", [], ()]
+
+
+@pytest.mark.parametrize("hostile", HOSTILE_CONTAINERS)
+@pytest.mark.parametrize("slot", ["base", "target"])
+def test_compute_total_over_hostile_containers(hostile, slot):
+    engine = DiffEngine()
+    good = _state(_node(STARTPOS))
+    args = {"base": good, "target": good}
+    args[slot] = hostile
+    with pytest.raises(DiffError) as exc:
+        engine.compute(args["base"], args["target"])
+    assert exc.value.failure_class == "malformed_diff_record"
+    assert exc.value.code == FAILURE_MAPPING[
+        "malformed_diff_record"]
+    assert exc.value.code in ERROR_ENUM
+
+
+HOSTILE_ENTRIES = [
+    ("none value", lambda: {"somekey": None}),
+    ("bool value", lambda: {"somekey": True}),
+    ("int value", lambda: {"somekey": 0}),
+    ("str value", lambda: {"somekey": "text"}),
+    ("list value", lambda: {"somekey": []}),
+    ("none key", lambda: {None: _node(STARTPOS)}),
+    ("bool key", lambda: {True: _node(STARTPOS)}),
+    ("int key", lambda: {0: _node(STARTPOS)}),
+    ("key identity mismatch", lambda: {"wrong":
+                                       _node(STARTPOS)}),
+]
+
+
+@pytest.mark.parametrize("name,make", HOSTILE_ENTRIES,
+                         ids=[n for n, _ in HOSTILE_ENTRIES])
+def test_compute_total_over_hostile_entries(name, make):
+    engine = DiffEngine()
+    good = _state(_node(KINGS))
+    for slot in ("base", "target"):
+        args = {"base": good, "target": good}
+        args[slot] = make()
+        with pytest.raises(DiffError) as exc:
+            engine.compute(args["base"], args["target"])
+        assert exc.value.failure_class == \
+            "malformed_diff_record"
 
 
 CARTESIAN = [None, True, 0, 1.5, [], {}, ""]
@@ -319,33 +553,30 @@ def test_diff_specific_malformed(name, mutate):
     assert exc.value.failure_class == "malformed_diff_record"
 
 
-def test_conflicting_base_by_id_and_by_content():
-    engine = DiffEngine()
-    base = _state(_node(STARTPOS))
-    target = _state(_node(KINGS))
-    diff = engine.compute("s1", "s2", base, target)
-    with pytest.raises(DiffError) as exc:
-        engine.apply(diff, "OTHER", base)
-    assert exc.value.failure_class == "conflicting_base"
-    assert exc.value.code == FAILURE_MAPPING["conflicting_base"]
-    assert exc.value.code in ERROR_ENUM
-    # same id, tampered content: the removed record no longer
-    # matches the base's exact record
-    tampered = _state(_node(STARTPOS, "tampered"))
-    with pytest.raises(DiffError) as exc:
-        engine.apply(diff, "s1", tampered)
-    assert exc.value.failure_class == "conflicting_base"
-
-
 def test_unknown_identity_in_base():
     engine = DiffEngine()
     base = _state(_node(STARTPOS))
     target = _state()
-    diff = engine.compute("s1", "s2", base, target)
+    diff = engine.compute(base, target)
+    # a diff hand-consistent with an EMPTY base: removed entries
+    # reference identities absent from it
     with pytest.raises(DiffError) as exc:
-        engine.apply(diff, "s1", _state())
+        engine.apply(diff, _state())
+    assert exc.value.failure_class == "conflicting_base"
+    # unknown_identity: craft a diff whose base matches but whose
+    # removed entry is not in the base (only reachable by
+    # hand-building - a computed diff always matches)
+    crafted = {"base_id": state_id(base),
+               "target_id": state_id(_state()),
+               "added": {},
+               "removed": {_identity(_node(KINGS)):
+                           _node(KINGS)},
+               "changed": {}}
+    with pytest.raises(DiffError) as exc:
+        engine.apply(crafted, base)
     assert exc.value.failure_class == "unknown_identity"
     assert exc.value.code == FAILURE_MAPPING["unknown_identity"]
+    assert exc.value.code in ERROR_ENUM
 
 
 def test_rollback_bit_identical_on_rejected_apply():
@@ -353,20 +584,19 @@ def test_rollback_bit_identical_on_rejected_apply():
     base = _state(_node(STARTPOS), _node(KINGS))
     target = _state(_node(STARTPOS), _node(AFTER_E4),
                     _node(LEGAL_EP))
-    diff = engine.compute("s1", "s2", base, target)
+    diff = engine.compute(base, target)
     before = copy.deepcopy(base)
+    other = _state(_node(STARTPOS))
     with pytest.raises(DiffError):
-        engine.apply(diff, "WRONG", base)
-    tampered = copy.deepcopy(base)
-    tampered[_identity(_node(KINGS))] = _node(KINGS, "x")
+        engine.apply(diff, other)
+    tampered = _state(_node(STARTPOS), _node(KINGS, K1))
     with pytest.raises(DiffError):
-        engine.apply(diff, "s1", tampered)
+        engine.apply(diff, tampered)
     assert base == before
-    # apply is staged: a diff malformed midway commits nothing
-    diff2 = engine.compute("s1", "s3", base, target)
-    diff2["removed"]["ghost-identity"] = {"bogus": True}
+    diff2 = engine.compute(base, target)
+    diff2["removed"]["ghost"] = {"bogus": True}
     with pytest.raises(DiffError):
-        engine.apply(diff2, "s1", base)
+        engine.apply(diff2, base)
     assert base == before
 
 
@@ -400,13 +630,28 @@ def _mutants():
         "restated-here")
     add("added meaning drift", ["contract", "sections", "added",
                                 "meaning"], "present-in-base-only")
+    add("added validation dropped", ["contract", "sections",
+                                     "added", "validation"],
+        "values-unvalidated")
+    add("removed validation dropped", ["contract", "sections",
+                                       "removed", "validation"],
+        "keys-untrusted")
     add("changed witness drift", ["contract", "sections",
                                   "changed", "witness"],
         "target-record-only")
+    add("changed validation dropped", ["contract", "sections",
+                                       "changed", "validation"],
+        "equal-witnesses-allowed")
+    add("id kind drift", ["contract", "identifiers", "base_id",
+                          "kind"], "opaque-state-identifier")
     add("id grammar drift", ["contract", "identifiers",
-                             "base_id", "grammar"], "^.*$")
+                             "base_id", "grammar"],
+        "^[a-z0-9][a-z0-9._-]{0,63}$")
+    add("derivation drift", ["contract", "identifiers",
+                             "base_id", "derivation"], "md5-of-ids")
     add("distinctness drift", ["contract", "identifiers",
-                               "distinctness"], "always-distinct")
+                               "distinctness"],
+        "equal-ids-with-nonempty-diff-allowed")
     add("completeness dropped", ["contract", "guarantees",
                                  "completeness"],
         "best-effort-differences")
@@ -421,7 +666,8 @@ def _mutants():
     add("apply semantics drift", ["contract", "apply",
                                   "semantics"], "add-only")
     add("base check dropped", ["contract", "apply",
-                               "base_check"], "no-base-check")
+                               "base_check"],
+        "touched-records-only")
     add("non-atomic apply", ["contract", "apply", "commit"],
         "record-by-record")
     add("failure class dropped", ["contract", "failures",
@@ -433,7 +679,8 @@ def _mutants():
     add("triggers incomplete", ["contract", "failures",
                                 "triggers"],
         {"malformed_diff_record":
-         "diff-field-shape-grammar-or-reference-violation"})
+         "diff-or-state-shape-grammar-identity-or-record-"
+         "violation"})
     add("conflict mapped away", ["contract", "failures",
                                  "mapping", "conflicting_base"],
         "malformed_request")
@@ -445,6 +692,12 @@ def _mutants():
     add("retryable drift", ["contract", "errors", "shape",
                             "retryable_true_only_for"],
         ["internal", "conflicting_base"])
+    add("total compute dropped", ["contract", "properties",
+                                  "total_compute"],
+        "raw-exceptions-escape")
+    add("structural check dropped", ["contract", "properties",
+                                     "structural_base_check"],
+        "touched-records-only")
     add("silent difference", ["contract", "properties",
                               "no_silent_difference"],
         "silent-drops-allowed")
