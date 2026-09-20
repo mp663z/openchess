@@ -1242,6 +1242,69 @@ def test_phases_rejected_pre_uciok():
         assert s.snapshot() == before
 
 
+def test_handshake_option_declarations():
+    """The handshake is id + any option declarations + uciok: zero,
+    one and many distinct declarations are all accepted in
+    awaiting_uciok, preserve every orthogonal variable, and uciok
+    completes the handshake."""
+    for options in (
+            [],
+            ["option name Threads type spin default 1 min 1 max 1024"],
+            ["option name Threads type spin default 1 min 1 max 1024",
+             "option name Ponder type check default false",
+             "option name Skill Level type spin default 20 min 0 max "
+             "20",
+             "option name Clear Hash type button"]):
+        doc = _doc()["contract"]
+        s = Session(doc)
+        s.feed_gui("uci")
+        assert s.state == "awaiting_uciok"
+        s.feed_engine("id name Stockfish 17")
+        s.feed_engine("id author the Stockfish developers")
+        for line in options:
+            before = s.snapshot()
+            s.feed_engine(line)
+            assert s.state == "awaiting_uciok"
+            # every orthogonal variable preserved bit-identically
+            assert s.snapshot() == before
+        s.feed_engine("uciok")
+        assert s.state == "ready"
+
+
+def test_handshake_option_rejected_outside_handshake():
+    """option declarations are handshake-only: before uci, after
+    uciok, during a search and after termination they are
+    protocol_state with bit-identical rollback."""
+    line = "option name Threads type spin default 1 min 1 max 1024"
+    doc = _doc()["contract"]
+    # before uci
+    s = Session(doc)
+    before = s.snapshot()
+    with pytest.raises(UciError) as exc:
+        s.feed_engine(line)
+    assert exc.value.failure_class == "protocol_state"
+    assert s.snapshot() == before
+    # during the handshake itself the declaration is legal...
+    s.feed_gui("uci")
+    s.feed_engine("option name Hash type spin default 16 min 1 max 512")
+    s.feed_engine("uciok")
+    # ...but after uciok (ready) and during a search it is not
+    for moves in ((), ("position startpos", "go depth 5")):
+        before = s.snapshot()
+        with pytest.raises(UciError) as exc:
+            s.feed_engine(line)
+        assert exc.value.failure_class == "protocol_state"
+        assert s.snapshot() == before
+        for cmd in moves:
+            s.feed_gui(cmd)
+    # after termination
+    s.feed_gui("quit")
+    before = s.snapshot()
+    with pytest.raises(UciError):
+        s.feed_engine(line)
+    assert s.snapshot() == before
+
+
 def test_lifecycle_ucinewgame_resets_position_requirement():
     doc = _doc()["contract"]
     s = Session(doc)
@@ -2061,6 +2124,13 @@ def _mutants():
         {"reg_unregistered": "reg_attempt_pending",
          "reg_failed": "reg_attempt_pending",
          "elsewhere": "reg_attempt_pending"})
+    add("handshake option support dropped",
+        ["contract", "lifecycle", "transitions", "awaiting_uciok",
+         "engine"],
+        {"id": "awaiting_uciok", "uciok": "ready"})
+    add("option allowed post-handshake",
+        ["contract", "lifecycle", "transitions", "ready", "engine"],
+        {"option": "ready"})
     add("post quit commands", ["contract", "lifecycle", "transitions",
                                "terminated", "gui"], {"uci": "ready"})
     add("unlisted pair drift", ["contract", "lifecycle",

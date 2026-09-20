@@ -292,6 +292,7 @@ LIFECYCLE_TRANSITIONS = {
                 "engine": {}},
     "awaiting_uciok": {"gui": {"quit": "terminated"},
                        "engine": {"id": "awaiting_uciok",
+                                  "option": "awaiting_uciok",
                                   "uciok": "ready"}},
     "ready": {"gui": {"setoption": "ready", "ucinewgame": "ready",
                       "position": "ready", "go": SEARCH_START,

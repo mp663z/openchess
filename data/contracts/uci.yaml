@@ -239,7 +239,7 @@ contract:
     ponder_bestmove_gate: gui-release-required-even-on-mate-or-completion
     transitions:
       pre_uci: {gui: {uci: awaiting_uciok, quit: terminated}, engine: {}}
-      awaiting_uciok: {gui: {quit: terminated}, engine: {id: awaiting_uciok, uciok: ready}}
+      awaiting_uciok: {gui: {quit: terminated}, engine: {id: awaiting_uciok, option: awaiting_uciok, uciok: ready}}
       ready: {gui: {setoption: ready, ucinewgame: ready, position: ready, go: search-start, quit: terminated}, engine: {}}
       searching: {gui: {stop: stop_requested, quit: terminated}, engine: {info: searching, bestmove: ready}}
       pondering: {gui: {ponderhit: searching, stop: ponder_stop_requested, quit: terminated}, engine: {info: pondering}}
@@ -422,8 +422,12 @@ contract:
     rule: >-
       The session is a bidirectional state machine over BOTH GUI
       commands and engine responses. uci moves pre_uci to
-      awaiting_uciok; only id and uciok responses are valid there,
-      and no normal command is accepted before uciok arrives.
+      awaiting_uciok; only id, option declarations and uciok are
+      valid engine responses there (the handshake: id and any
+      option declarations, then uciok), and no normal command is
+      accepted before uciok arrives. option declarations are
+      handshake-only: invalid before uci, after uciok, during
+      searches and after termination.
       go requires the position flag (set by
       position, reset by uci or ucinewgame) and opens an
       outstanding search - pondering when the ponder parameter is
