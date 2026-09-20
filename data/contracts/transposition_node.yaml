@@ -1,0 +1,188 @@
+# T0122: chess transposition-node contract (implementation-neutral;
+# the product runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for the graph NODE everywhere in the product: the
+# repertoire graph, the delta engine, diagnosis and sync all share
+# THESE semantics. ALL normative semantics live in STRUCTURED fields
+# the lint compares exactly - prose is documentation, never the
+# enforcement surface.
+#
+# A transposition node is the graph's merge point for position
+# identity: every move-order path that reaches the same position
+# identity reaches the SAME node. The node owns NO identity semantics
+# of its own: identity is the canonical_fields tuple of the linked
+# variant contract, and the position digest of the linked digest
+# contract is the lookup accelerator ONLY. This contract pins what is
+# new: the node record shape, the clock-normalized canonical
+# snapshot, the merge semantics (insert-or-return-existing, and the
+# commutativity/idempotence guarantees that make transposition
+# merging order-free), and the failure classes.
+schema_version: 1
+
+contract:
+  id: chess-transposition-node
+  role:
+    kind: graph-node-over-position-identity
+    transposition: all-paths-to-one-identity-share-one-node
+    annotations_attach: by-node-identity-never-by-path
+    rule: >-
+      The node is the graph's merge point for position identity:
+      EVERY move-order path reaching the same position identity
+      reaches the SAME node, so a transposition never creates a
+      second node and per-node annotations (owned by sibling
+      contracts) attach by node identity, never by the path that
+      first reached it. The node owns no equality semantics of its
+      own: identity is the linked variant contract's
+      canonical_fields tuple, and the linked position-digest
+      contract is the lookup accelerator only - node equality is
+      ALWAYS canonical field comparison, exactly as the digest
+      contract's role pins.
+    links:
+      variant: data/contracts/variant.yaml
+      position_digest: data/contracts/position_digest.yaml
+  identity:
+    source: from-linked-variant-contract-identity-canonical_fields
+    accelerator: from-linked-position-digest-contract-digest
+    equality: canonical-field-comparison-only
+    en_passant_value: from-linked-position-digest-contract-identity
+    excluded: [halfmove_clock, fullmove_number, move_order_path,
+      repertoire_context]
+    rule: >-
+      Node identity is EXACTLY the linked variant contract's
+      canonical_fields tuple in its declared order - the field list
+      is NOT restated here, the lint reads it from the sibling. The
+      position digest is the bucket key and NEVER decides equality
+      or inequality without field comparison (the accelerator-only
+      role inherited from the linked digest contract). The halfmove
+      clock, the fullmove number, the move-order path, and the
+      repertoire context NEVER participate: two positions differing
+      only in one of those are the same node.
+    links:
+      variant: data/contracts/variant.yaml
+      position_digest: data/contracts/position_digest.yaml
+  record:
+    fields: [variant, digest, snapshot_fen]
+    variant_form: registry-id-verbatim
+    variant_id_grammar: from-linked-variant-contract-variants-id_grammar
+    digest_form: from-linked-position-digest-contract-format
+    snapshot_form: canonical-six-field-fen
+    snapshot_clock_normalization: halfmove-0-fullmove-1
+    derived_fields_regenerable: [digest]
+    rule: >-
+      The node record has EXACTLY three fields. variant is the
+      variant registry id verbatim - every registry id is PROVABLY
+      delimiter-free printable ASCII per the linked variant
+      contract's id_grammar, and the lint re-verifies every actual
+      registry id against that grammar. digest is the pdv1 text of
+      the identity tuple per the linked digest contract - a DERIVED
+      field, always regenerable from variant plus the identity
+      fields inside snapshot_fen, never an independent source of
+      truth. snapshot_fen is the canonical six-field FEN of the
+      position per the linked FEN contract, with the two clock
+      fields NORMALIZED to halfmove 0 and fullmove 1: clocks are
+      not identity, so the node stores no clock state, and the
+      normalized placeholder keeps the record deterministic and
+      merge-order-independent - a node's record never depends on
+      which path or which clock values first reached it. Any other
+      field, any missing field, or a digest that disagrees with the
+      identity inside snapshot_fen is a malformed record.
+    links:
+      fen: data/contracts/fen.yaml
+      variant: data/contracts/variant.yaml
+      position_digest: data/contracts/position_digest.yaml
+  merge:
+    insert: insert-or-return-existing
+    idempotent: true
+    commutative: true
+    associative: true
+    same_identity_never_two_nodes: true
+    digest_collision: canonical-field-comparison-separates
+    rejected_insert_changes_nothing: true
+    rule: >-
+      Inserting a position into the node table returns the existing
+      node when the identity tuple already exists and creates one
+      otherwise - never a second node for an existing identity.
+      Merge is IDEMPOTENT (inserting the same identity twice is a
+      no-op), COMMUTATIVE and ASSOCIATIVE (the final node table is
+      the same for any insertion order and grouping, because the
+      record is fully determined by the identity tuple: the digest
+      is derived and the snapshot clocks are normalized). A digest
+      collision - unequal identity tuples sharing a digest - is
+      separated by canonical field comparison, never by
+      first-writer-wins; the two identities are DIFFERENT nodes in
+      one bucket. A rejected insert (any failure class) changes NO
+      existing node and creates none: rollback is bit-identical.
+  failures:
+    classes: [malformed_node_record, malformed_position,
+      unknown_variant]
+    mapping:
+      malformed_node_record: malformed_request
+      malformed_position: malformed_request
+      unknown_variant: unknown_variant
+    closed: true
+    rule: >-
+      Three failure classes, each mapping onto the closed error
+      enum as declared. malformed_node_record: a node record
+      failing the pinned shape - wrong field set, a variant id
+      failing the linked id_grammar, a digest failing the linked
+      format, a snapshot failing the linked FEN contract or the
+      clock normalization, or a digest that disagrees with the
+      identity inside the snapshot. malformed_position: an input
+      position failing any linked contract - a position that
+      cannot exist yields NO node, never a best-effort one.
+      unknown_variant: a variant id absent from the linked variant
+      registry - fail closed, never coerced. No fourth failure
+      class exists.
+  errors:
+    closed_enum: [malformed_request, unknown_variant, internal]
+    shape:
+      error:
+        fields:
+          code: {type: string, required: true}
+          message: {type: string, required: true}
+          retryable: {type: boolean, required: true}
+        additional_fields: forbidden
+      retryable_true_only_for: [internal]
+    rule: >-
+      The error surface is the shared shape: code from the closed
+      enum, message, retryable. retryable is true ONLY for
+      internal; every contract-level rejection is a caller error
+      and never retryable.
+  properties:
+    path_invariance: move-order-path-never-changes-the-node
+    merge_idempotence: reinsert-same-identity-no-op
+    merge_commutativity: insertion-order-never-changes-the-table
+    snapshot_determinism: normalized-clocks-merge-order-independent
+    digest_consistency: record-digest-always-matches-identity
+    accelerator_only: digest-never-decides-equality
+    rollback: rejected-insert-leaves-table-bit-identical
+    rule: >-
+      The node table is a deterministic function of the SET of
+      identity tuples inserted: the move-order path that reached a
+      position never changes its node, reinsertion is a no-op, and
+      insertion order never changes the final table because every
+      record is fully determined by its identity tuple. A record's
+      digest always matches the identity inside its snapshot - the
+      lint and battery cross-check this mechanically. The digest
+      accelerates lookup only. A rejected insert leaves the table
+      bit-identical.
+  links:
+    variant_contract: data/contracts/variant.yaml
+    position_digest_contract: data/contracts/position_digest.yaml
+    fen_contract: data/contracts/fen.yaml
+    en_passant_contract: data/contracts/en_passant.yaml
+    rule: >-
+      The node contract LINKS the variant contract (identity tuple
+      and registry), the position-digest contract (accelerator and
+      its format), the FEN contract (snapshot serialization and
+      validity), and - through the digest contract's identity - the
+      en-passant contract (identity value). The lint parses ALL
+      siblings and compares every linked claim exactly; any sibling
+      grammar change not mirrored here fails the linkage check.
+  versioning:
+    base_path: /graph/transposition-node/v1
+    rule: >-
+      The contract version is in the base path. Any normative
+      change is a NEW version at a new base path; a version never
+      changes in place, so a stored node record is forever
+      decodable by the version its table names.
