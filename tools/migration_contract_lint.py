@@ -87,6 +87,9 @@ ORACLE_BOUNDARY = {
     "frozen_snapshots":
         "entire-source-frozen-before-first-oracle-call-never-re-"
         "read",
+    "request_freeze":
+        "validated-request-frozen-before-first-oracle-call-never-"
+        "re-read-restored-bit-identical",
     "output_validation":
         "exact-built-in-string-pinned-format-or-fail-closed",
 }

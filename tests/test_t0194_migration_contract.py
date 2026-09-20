@@ -207,19 +207,32 @@ class MigrationEngine:
                 set(request.keys()) != {"from_schema", "to_schema",
                                         "source_id"}:
             _fail("malformed_migration_record")
+        # FREEZE THE REQUEST DURING VALIDATION: each field is read
+        # EXACTLY ONCE into a detached plain dict of the validated
+        # exact built-in strings - immediately after total request
+        # validation and registered-step resolution, BEFORE the
+        # first oracle call. Schema lookup, source-id verification,
+        # target validation, migration-id derivation and every
+        # receipt field read ONLY this frozen copy; the caller's
+        # request is never re-read after untrusted code runs.
+        frozen_req = {}
         for field in ("from_schema", "to_schema"):
             value = request[field]
             if type(value) is not str or \
                     _SCHEMA_RE.fullmatch(value) is None or \
                     _schema(value) is None:
                 _fail("malformed_migration_record")
-        if type(request["source_id"]) is not str or \
-                _ID_RE.fullmatch(request["source_id"]) is None:
+            frozen_req[field] = value
+        value = request["source_id"]
+        if type(value) is not str or \
+                _ID_RE.fullmatch(value) is None:
             _fail("malformed_migration_record")
-        step = _step(request["from_schema"], request["to_schema"])
+        frozen_req["source_id"] = value
+        step = _step(frozen_req["from_schema"],
+                     frozen_req["to_schema"])
         if step is None:
             _fail("unknown_migration")
-        source_schema = _schema(request["from_schema"])
+        source_schema = _schema(frozen_req["from_schema"])
         self._validate_state(source_state,
                              source_schema["digest_grammar"])
         # INPUT PRESERVATION snapshot (reference-preserving): the
@@ -228,6 +241,7 @@ class MigrationEngine:
         saved_container = dict(source_state)
         saved_recs = {id(rec): (rec, dict(rec))
                       for rec in source_state.values()}
+        saved_req = dict(frozen_req)
         # FREEZE THE ENTIRE SOURCE: one detached plain-dict
         # snapshot taken BEFORE the first oracle call; every later
         # phase - source-id derivation, iteration, transform -
@@ -236,7 +250,7 @@ class MigrationEngine:
         frozen = {key: dict(rec)
                   for key, rec in source_state.items()}
         try:
-            if state_id(frozen) != request["source_id"]:
+            if state_id(frozen) != frozen_req["source_id"]:
                 _fail("conflicting_source")
             # STAGED transform: ONE oracle call per retained key,
             # retained exact built-in-str result
@@ -255,7 +269,7 @@ class MigrationEngine:
             # identity == retained key - plus exact identity-set
             # and cardinality agreement with the frozen source.
             self._validate_target_state(staged, frozen,
-                                        request["to_schema"])
+                                        frozen_req["to_schema"])
             target_id = state_id(staged)
         finally:
             for rec, content in saved_recs.values():
@@ -263,14 +277,19 @@ class MigrationEngine:
                 rec.update(content)
             source_state.clear()
             source_state.update(saved_container)
+            # the caller's REQUEST is restored bit-identical too -
+            # the oracle may hold an external reference to it
+            request.clear()
+            request.update(saved_req)
         return {
             "migration_id": "mg1:" + hashlib.sha256(
-                f"{request['from_schema']}\n{request['to_schema']}"
-                f"\n{request['source_id']}\n{target_id}".encode()
-            ).hexdigest(),
-            "from_schema": request["from_schema"],
-            "to_schema": request["to_schema"],
-            "source_id": request["source_id"],
+                f"{frozen_req['from_schema']}\n"
+                f"{frozen_req['to_schema']}\n"
+                f"{frozen_req['source_id']}\n"
+                f"{target_id}".encode()).hexdigest(),
+            "from_schema": frozen_req["from_schema"],
+            "to_schema": frozen_req["to_schema"],
+            "source_id": frozen_req["source_id"],
             "target_id": target_id,
             "state": staged,
         }
@@ -612,6 +631,9 @@ def _mutants():
     add("frozen dropped",
         ["contract", "oracle_boundary", "frozen_snapshots"],
         "live-records")
+    add("request freeze dropped",
+        ["contract", "oracle_boundary", "request_freeze"],
+        "live-request-re-read-after-oracle")
     add("post-transform validation dropped",
         ["contract", "semantics", "post_transform_validation"],
         "digest-only")
@@ -849,3 +871,190 @@ def test_post_transform_validation_catches_identity_drift():
     with pytest.raises(MigrationError) as exc:
         engine._validate_target_state(shrunk, frozen, "store-v2")
     assert exc.value.failure_class == "divergent_target"
+
+
+# -- v3: request freeze against request-closing oracles -----------------------
+
+_FORGED_REQUEST_VALUES = {
+    "from_schema": "store-v2",
+    "to_schema": "store-v1",
+    "source_id": "gs1:" + "f" * 64,
+}
+
+
+def _request_mutating_oracle(request, mutation, calls,
+                             raise_on=None):
+    """UNTRUSTED: on call 1, mutates the caller's live REQUEST
+    dict (a single field, a cleared/replaced dict, or a combined
+    request+source attack); optionally raises on a later call."""
+    def oracle(variant, fen):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            if mutation in _FORGED_REQUEST_VALUES:
+                request[mutation] = _FORGED_REQUEST_VALUES[
+                    mutation]
+            elif mutation == "clear":
+                request.clear()
+            elif mutation == "replace":
+                request.clear()
+                request.update({"from_schema": "store-v2",
+                                "to_schema": "store-v2",
+                                "source_id": "gs1:" + "f" * 64})
+        if raise_on is not None and calls["n"] == raise_on:
+            raise ValueError("mutate then explode")
+        return pdv2_oracle(variant, fen)
+    return oracle
+
+
+@pytest.mark.parametrize("field", ["from_schema", "to_schema",
+                                   "source_id"])
+def test_request_field_mutation_during_oracle(field):
+    """An oracle mutating each request field separately on call 1:
+    the SUCCESSFUL migration returns a receipt EXACTLY equal to
+    the honest pre-call migration, and the caller's request and
+    source are restored bit-identical."""
+    source = _v1_state(STARTPOS, KINGS)
+    source_before = copy.deepcopy(source)
+    honest = MigrationEngine(pdv2_oracle).migrate(
+        _request(copy.deepcopy(source)), copy.deepcopy(source))
+    request = _request(source)
+    request_before = dict(request)
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _request_mutating_oracle(request, field, calls))
+    receipt = engine.migrate(request, source)
+    assert receipt == honest
+    assert request == request_before
+    assert source == source_before
+
+
+@pytest.mark.parametrize("mutation", ["clear", "replace"])
+def test_request_cleared_or_replaced_during_oracle(mutation):
+    """An oracle clearing or wholesale replacing the request dict
+    on call 1: the engine stays TOTAL (no raw KeyError - the
+    receipt derives from the frozen request), returns the honest
+    receipt, and restores the caller's request bit-identical."""
+    source = _v1_state(STARTPOS, KINGS)
+    source_before = copy.deepcopy(source)
+    honest = MigrationEngine(pdv2_oracle).migrate(
+        _request(copy.deepcopy(source)), copy.deepcopy(source))
+    request = _request(source)
+    request_before = dict(request)
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _request_mutating_oracle(request, mutation, calls))
+    receipt = engine.migrate(request, source)
+    assert receipt == honest
+    assert request == request_before
+    assert source == source_before
+
+
+def test_request_mutation_combined_with_source_attack():
+    """Combined attack: on call 1 the oracle mutates a request
+    field AND the record scheduled for call 2 AND the live
+    container - the receipt and migrated state remain exactly the
+    honest pre-call derivation, one oracle call per original
+    retained key, request and source restored."""
+    source = _v1_state(STARTPOS, KINGS, AFTER_E4)
+    source_before = copy.deepcopy(source)
+    honest = MigrationEngine(pdv2_oracle).migrate(
+        _request(copy.deepcopy(source)), copy.deepcopy(source))
+    request = _request(source)
+    request_before = dict(request)
+    keys = sorted(source)
+    calls = {"n": 0}
+
+    def oracle(variant, fen):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            request["source_id"] = "gs1:" + "f" * 64
+            source[keys[1]]["snapshot_fen"] = []
+            source["injected"] = {"variant": "standard",
+                                  "digest": "pdv1:" + "9" * 64,
+                                  "snapshot_fen": STARTPOS}
+            del source[keys[0]]
+        return pdv2_oracle(variant, fen)
+
+    receipt = MigrationEngine(oracle).migrate(request, source)
+    assert calls["n"] == 3
+    assert receipt == honest
+    assert request == request_before
+    assert source == source_before
+
+
+def test_request_mutation_then_raise_stays_typed():
+    """An oracle mutating the request on call 1 and RAISING on
+    call 2: typed divergent_target (never a raw escape), request
+    and source restored bit-identical."""
+    source = _v1_state(STARTPOS, KINGS)
+    source_before = copy.deepcopy(source)
+    request = _request(source)
+    request_before = dict(request)
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _request_mutating_oracle(request, "source_id", calls,
+                                 raise_on=2))
+    with pytest.raises(MigrationError) as exc:
+        engine.migrate(request, source)
+    assert exc.value.failure_class == "divergent_target"
+    assert request == request_before
+    assert source == source_before
+
+
+def test_mutant_live_request_reread_after_oracle():
+    """Behavioral mutant: the v2 engine re-read the LIVE request
+    after oracle calls to build the receipt - a forged source_id
+    is accepted into the receipt and a cleared request escapes as
+    a raw KeyError. Counter-test: the real engine derives the
+    receipt only from the frozen request and stays total."""
+    def mutant_migrate(engine, request, source):
+        frozen = {key: dict(rec) for key, rec in source.items()}
+        staged = {}
+        for key in sorted(frozen):
+            rec = frozen[key]
+            staged[key] = {
+                "variant": rec["variant"],
+                "digest": engine._call_target_oracle(
+                    rec["variant"], rec["snapshot_fen"]),
+                "snapshot_fen": rec["snapshot_fen"]}
+        engine._validate_target_state(staged, frozen, "store-v2")
+        target_id = state_id(staged)
+        return {"migration_id": "mg1:" + hashlib.sha256(
+            f"{request['from_schema']}\n{request['to_schema']}"
+            f"\n{request['source_id']}\n{target_id}".encode()
+        ).hexdigest(),
+            "from_schema": request["from_schema"],
+            "to_schema": request["to_schema"],
+            "source_id": request["source_id"],
+            "target_id": target_id,
+            "state": staged}
+
+    # forged source_id lands in the mutant's receipt
+    source = _v1_state(STARTPOS)
+    request = _request(source)
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _request_mutating_oracle(request, "source_id", calls))
+    receipt = mutant_migrate(engine, request, source)
+    assert receipt["source_id"] == "gs1:" + "f" * 64
+    # cleared request escapes the mutant as a raw KeyError
+    source = _v1_state(STARTPOS)
+    request = _request(source)
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _request_mutating_oracle(request, "clear", calls))
+    with pytest.raises(KeyError):
+        mutant_migrate(engine, request, source)
+    # the real engine: honest receipt, restored inputs, total
+    source = _v1_state(STARTPOS)
+    source_before = copy.deepcopy(source)
+    honest = MigrationEngine(pdv2_oracle).migrate(
+        _request(copy.deepcopy(source)), copy.deepcopy(source))
+    request = _request(source)
+    request_before = dict(request)
+    calls = {"n": 0}
+    engine = MigrationEngine(
+        _request_mutating_oracle(request, "clear", calls))
+    assert engine.migrate(request, source) == honest
+    assert request == request_before
+    assert source == source_before
