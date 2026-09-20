@@ -62,6 +62,7 @@ contract:
     field_order: from-linked-variant-contract-identity-canonical_fields
     separator: single-ascii-space
     variant_form: registry-id-verbatim
+    variant_id_grammar: from-linked-variant-contract-variants-id_grammar
     board_form: canonical-fen-placement-serialization
     side_to_move_form: {white: w, black: b}
     castling_form: canonical-fen-castling-serialization
@@ -70,7 +71,11 @@ contract:
     trailing_bytes: forbidden
     rule: >-
       The canonical encoding is the identity tuple serialized as
-      text: the variant registry id verbatim, then the board in the
+      text: the variant registry id verbatim - every registry id is
+      PROVABLY safe here because the linked variant contract's
+      id_grammar restricts ids to delimiter-free printable ASCII,
+      and the lint re-verifies every actual registry id against
+      that grammar - then the board in the
       linked FEN contract's canonical placement serialization, then
       the side to move as its FEN active-color letter, then castling
       rights in the FEN contract's canonical castling serialization
@@ -138,12 +143,19 @@ contract:
     clock_invariance: clocks-never-change-the-digest
     phantom_ep_invariance: uncapturable-target-never-changes-the-digest
     legal_ep_sensitivity: capturable-target-always-changes-the-digest
-    field_sensitivity: every-identity-field-change-changes-the-digest
+    field_sensitivity: identity-field-changes-change-canonical-encoding
     statelessness: pure-function-no-state-no-rollback-surface
     rule: >-
       Digestion is a pure function of the identity tuple: no state,
       no clock, no environment, so there is no rollback surface.
       Two positions whose identity tuples agree - including pairs
       differing only in clocks or only in an uncapturable en-passant
-      target - share a digest. Any change to any identity field,
-      including a capturable en-passant target, changes the digest.
+      target - share a digest; that direction is the deterministic
+      guarantee. The converse is NOT guaranteed: the identity domain
+      is unbounded and the digest is a fixed-size bucket key, so
+      unequal identity tuples may share a digest and ALWAYS require
+      canonical field comparison to separate (the accelerator-only
+      role). What every identity-field change does change is the
+      canonical encoding; the resulting digest change is expected
+      and pinned by test vectors, never asserted as a universal
+      property.

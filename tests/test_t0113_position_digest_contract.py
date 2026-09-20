@@ -216,37 +216,61 @@ def test_legal_ep_sensitivity():
     assert with_target != without
 
 
-def test_side_to_move_sensitivity():
-    a = digest_fen("standard", STARTPOS)
-    b = digest_fen("standard", STARTPOS.replace(" w ", " b "))
-    assert a != b
+def _encodings(variant_id, fen):
+    dc, vc, ec, fc = _docs()
+    position = parse_fen(fc, fen)
+    return encode(dc, vc, ec, fc, variant_id, position)
 
 
-def test_castling_sensitivity():
-    a = digest_fen("standard", STARTPOS)
-    b = digest_fen(
-        "standard", STARTPOS.replace(" KQkq ", " K "))
-    assert a != b
+FIELD_CHANGE_PAIRS = [
+    ("side_to_move", STARTPOS, STARTPOS.replace(" w ", " b ")),
+    ("castling", STARTPOS, STARTPOS.replace(" KQkq ", " K ")),
+    ("placement", STARTPOS,
+     "rnbqkbnr/pppppppp/8/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 1"),
+    ("en_passant_legal", LEGAL_EP, LEGAL_EP.replace(" e3 ", " - ")),
+]
 
 
-def test_placement_sensitivity():
-    a = digest_fen("standard", STARTPOS)
-    b = digest_fen(
-        "standard",
-        "rnbqkbnr/pppppppp/8/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 1")
-    assert a != b
+@pytest.mark.parametrize("field,a_fen,b_fen", FIELD_CHANGE_PAIRS)
+def test_field_change_changes_encoding_and_vector_digest(field,
+                                                         a_fen, b_fen):
+    # The universal claim is on the ENCODING: any identity-field
+    # change changes it. The digest change is vector-pinned evidence
+    # here, not a universal guarantee - unequal tuples may collide
+    # and always fall back to canonical field comparison.
+    enc_a = _encodings("standard", a_fen)
+    enc_b = _encodings("standard", b_fen)
+    assert enc_a != enc_b, field
+    assert digest_fen("standard", a_fen) != digest_fen(
+        "standard", b_fen), field
 
 
 def test_variant_sensitivity_and_unknown_variant():
     dc, vc, ec, fc = _docs()
     position = parse_fen(fc, STARTPOS)
-    a = digest(dc, encode(dc, vc, ec, fc, "standard", position))
-    b = digest(dc, encode(dc, vc, ec, fc, "other", position))
-    assert a != b
+    enc_a = encode(dc, vc, ec, fc, "standard", position)
+    enc_b = encode(dc, vc, ec, fc, "other", position)
+    assert enc_a != enc_b
+    assert digest(dc, enc_a) != digest(dc, enc_b)
     with pytest.raises(DigestError) as err:
         digest_fen("chess960", STARTPOS)
     assert err.value.failure_class == "unknown_variant"
     assert err.value.code == "malformed_request"
+
+
+def test_encoding_witness_every_registered_variant():
+    dc, vc, ec, fc = _docs()
+    fmt = re.compile(dc["digest"]["format"]["regex"])
+    for entry in vc["variants"]["entries"]:
+        vid = entry["id"]
+        position = parse_fen(fc, entry["start_fen"])
+        enc = encode(dc, vc, ec, fc, vid, position)
+        assert enc.isascii(), vid
+        assert enc.count(" ") == 4, (vid, enc)
+        assert enc == enc.strip(), vid
+        text = digest(dc, enc)
+        assert fmt.fullmatch(text) is not None, vid
+        assert emit_digest(text) == text
 
 
 def test_statelessness_repeat_identical():
@@ -378,6 +402,12 @@ def _mutants():
         "best-effort")
     add("property-ep", ["contract", "properties",
                         "phantom_ep_invariance"], "ignored")
+    add("property-sensitivity-universal", ["contract", "properties",
+                                           "field_sensitivity"],
+        "every-identity-field-change-changes-the-digest")
+    add("encoding-variant-grammar-drift", ["contract", "encoding",
+                                           "variant_id_grammar"],
+        "restated-inline-here")
     drop("drop-role", ["contract", "role"])
     drop("drop-parse", ["contract", "parse"])
     drop("drop-excluded", ["contract", "identity", "excluded"])
@@ -474,6 +504,40 @@ def test_linkage_fen_castling_order_drift_fails(tmp_path):
     def mut(text):
         return text.replace("order: KQkq", "order: QKqk")
     root = _tree(tmp_path, {"fen.yaml": mut})
+    with pytest.raises(ContractError):
+        _lint_tree(root)
+
+
+BAD_VARIANT_IDS = [
+    "échecs",
+    "has space",
+    "has\ttab",
+    "new\nline",
+    "ctrl\x01id",
+    "Standard",
+]
+
+
+@pytest.mark.parametrize("bad_id", BAD_VARIANT_IDS)
+def test_linkage_bad_variant_id_fails(tmp_path, bad_id):
+    root = _tree(tmp_path)
+    vpath = root / "data" / "contracts" / "variant.yaml"
+    doc = yaml.safe_load(vpath.read_text())
+    entry = dict(doc["contract"]["variants"]["entries"][0])
+    entry["id"] = bad_id
+    entry["status"] = "experimental"
+    doc["contract"]["variants"]["entries"].append(entry)
+    vpath.write_text(yaml.safe_dump(doc))
+    with pytest.raises(ContractError):
+        _lint_tree(root)
+
+
+def test_linkage_id_grammar_drift_fails(tmp_path):
+    root = _tree(tmp_path)
+    vpath = root / "data" / "contracts" / "variant.yaml"
+    doc = yaml.safe_load(vpath.read_text())
+    doc["contract"]["variants"]["id_grammar"]["pattern"] = "^[a-z]+$"
+    vpath.write_text(yaml.safe_dump(doc))
     with pytest.raises(ContractError):
         _lint_tree(root)
 

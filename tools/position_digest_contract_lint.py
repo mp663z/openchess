@@ -58,6 +58,8 @@ ENCODING = {
     "field_order": "from-linked-variant-contract-identity-canonical_fields",
     "separator": "single-ascii-space",
     "variant_form": "registry-id-verbatim",
+    "variant_id_grammar":
+        "from-linked-variant-contract-variants-id_grammar",
     "board_form": "canonical-fen-placement-serialization",
     "side_to_move_form": {"white": "w", "black": "b"},
     "castling_form": "canonical-fen-castling-serialization",
@@ -102,7 +104,7 @@ PROPERTIES = {
     "legal_ep_sensitivity":
         "capturable-target-always-changes-the-digest",
     "field_sensitivity":
-        "every-identity-field-change-changes-the-digest",
+        "identity-field-changes-change-canonical-encoding",
     "statelessness": "pure-function-no-state-no-rollback-surface",
 }
 PROSE_KEYS = {"rule", "links"}
@@ -233,6 +235,15 @@ def lint(path: Path = CONTRACT, *, variant_path: Path = VARIANT,
                   "en_passant"]:
         raise ContractError(
             f"linkage: variant canonical_fields drift: {fields!r}")
+    id_grammar = variant.get("variants", {}).get("id_grammar", {})
+    _check_exact("linkage variant id_grammar", {
+        k: v for k, v in id_grammar.items() if k != "rule"}, {
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "alphabet": "printable-ascii-only",
+        "whitespace": "forbidden",
+        "control_bytes": "forbidden",
+    })
+    id_pattern = re.compile(id_grammar["pattern"])
     registry = variant.get("variants", {}).get("entries")
     if not isinstance(registry, list) or not registry:
         raise ContractError("linkage: variant registry missing or empty")
@@ -240,10 +251,11 @@ def lint(path: Path = CONTRACT, *, variant_path: Path = VARIANT,
         if not isinstance(entry.get("id"), str) or not entry["id"]:
             raise ContractError(
                 "linkage: variant registry entry without id")
-        if " " in entry["id"]:
+        vid = entry["id"]
+        if id_pattern.fullmatch(vid) is None or not vid.isascii():
             raise ContractError(
-                f"linkage: variant id {entry['id']!r} contains the "
-                "encoding separator")
+                f"linkage: variant id {vid!r} violates the linked "
+                "id_grammar - not safe for the canonical encoding")
 
     ep = _load(en_passant_path)["contract"]
     svi = ep.get("target", {}).get("storage_vs_identity", {})

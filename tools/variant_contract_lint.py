@@ -65,7 +65,7 @@ ALLOWED_TOP = {"schema_version", "contract"}
 ALLOWED_CONTRACT = {"id", "versioning", "identity", "variants", "fen", "errors", "privacy"}
 ALLOWED_VERSIONING = {"base_path", "rule"}
 ALLOWED_IDENTITY = {"canonical_fields", "rule", "hash_rule"}
-ALLOWED_VARIANTS = {"registry_rule", "entries"}
+ALLOWED_VARIANTS = {"registry_rule", "id_grammar", "entries"}
 ALLOWED_ENTRY = {"id", "name", "start_fen", "castling", "status"}
 ALLOWED_FEN = {"grammar", "rule", "failure_classes", "illegal_position_rule"}
 ALLOWED_ERRORS = {"closed_enum", "shape"}
@@ -421,6 +421,30 @@ def lint(doc: object) -> None:
         "fail closed" in vrule and "never coerced" in vrule,
         "variants.registry_rule: unknown ids fail closed, never coerced to standard",
     )
+    id_grammar = _mapping(
+        variants.get("id_grammar"), "variants.id_grammar")
+    _keys(
+        id_grammar,
+        {"pattern", "alphabet", "whitespace", "control_bytes", "rule"},
+        "variants.id_grammar",
+    )
+    _need(
+        id_grammar.get("pattern") == "^[a-z][a-z0-9_-]*$",
+        "variants.id_grammar.pattern: exact variant id pattern drift",
+    )
+    _need(
+        id_grammar.get("alphabet") == "printable-ascii-only",
+        "variants.id_grammar.alphabet: printable ASCII only",
+    )
+    _need(
+        id_grammar.get("whitespace") == "forbidden",
+        "variants.id_grammar.whitespace: forbidden",
+    )
+    _need(
+        id_grammar.get("control_bytes") == "forbidden",
+        "variants.id_grammar.control_bytes: forbidden",
+    )
+    id_pattern = re.compile(id_grammar["pattern"])
     entries = variants.get("entries")
     _need(type(entries) is list and entries, "variants.entries: nonempty list")
     seen: set[str] = set()
@@ -430,6 +454,10 @@ def lint(doc: object) -> None:
         entry = _mapping(entry, where)
         _keys(entry, ALLOWED_ENTRY, where)
         vid = _text(entry.get("id"), f"{where}.id")
+        _need(
+            id_pattern.fullmatch(vid) is not None and vid.isascii(),
+            f"{where}.id: violates variants.id_grammar: {vid!r}",
+        )
         _need(vid not in seen, f"{where}: duplicate variant id {vid!r}")
         seen.add(vid)
         _text(entry.get("name"), f"{where}.name")
