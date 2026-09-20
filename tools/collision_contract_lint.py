@@ -109,7 +109,8 @@ FAILURE_TRIGGERS = {
         "bucket-key-presented-as-record-identity",
     "accelerator_inconsistent":
         "oracle-raised-or-non-exact-string-or-invalid-format-key-"
-        "or-equal-identity-divergent-key",
+        "or-equal-identity-divergent-key-or-reentrant-call-during-"
+        "evaluation",
 }
 FAILURE_MAPPING = {
     "malformed_collision_record": "malformed_request",
@@ -152,6 +153,9 @@ PROPERTIES = {
     "frozen_snapshot":
         "incoming-record-frozen-before-oracle-never-re-read-"
         "after-untrusted-code",
+    "receiver_isolation":
+        "receiver-state-snapshotted-discarded-before-staging-"
+        "restored-on-failure",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",

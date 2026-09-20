@@ -213,6 +213,38 @@ class CollisionProbe:
         self.oracle = oracle
         self.buckets = {}         # accelerator ONLY
         self.identity_index = {}  # canonical identity -> record
+        self._active = False      # non-reentrancy guard
+
+    def _enter(self):
+        """The oracle is arbitrary injected code: a REENTRANT call
+        into the receiver during evaluation is a boundary
+        violation and fails closed."""
+        if self._active:
+            _fail(self.cc, "accelerator_inconsistent")
+        self._active = True
+
+    def _exit(self):
+        self._active = False
+
+    def _snapshot_live(self):
+        """Reference-preserving snapshot: the SAME container and
+        record objects, so restoration never changes stored-record
+        identity."""
+        orig = (self.buckets, self.identity_index)
+        saved_b = {k: list(v) for k, v in self.buckets.items()}
+        saved_i = dict(self.identity_index)
+        return orig, saved_b, saved_i
+
+    def _restore_live(self, orig, saved_b, saved_i):
+        """Restore the EXACT original structures after untrusted
+        code ran: undo attribute replacement AND in-place
+        corruption, keeping the original container and record
+        objects (stored-record identity is observable)."""
+        self.buckets, self.identity_index = orig
+        orig[0].clear()
+        orig[0].update({k: list(v) for k, v in saved_b.items()})
+        orig[1].clear()
+        orig[1].update(saved_i)
 
     def _identity(self, record):
         nc, vc, dc, epc, fc = _NODE_DOCS
@@ -239,15 +271,34 @@ class CollisionProbe:
         return key
 
     def insert(self, variant_id, fen_text):
+        """RECEIVER ISOLATION: the oracle can close over the LIVE
+        receiver and mutate it directly, so the operation
+        snapshots both structures at entry, discards any direct
+        corruption before staging, and restores the exact
+        originals on EVERY failure - a rejected insert leaves the
+        receiver bit-identical even against a hostile receiver-
+        closing oracle."""
         nc, vc, dc, epc, fc = _NODE_DOCS
+        self._enter()
+        orig, saved_b, saved_i = self._snapshot_live()
         try:
-            rec = _make_record(nc, vc, dc, epc, fc,
-                               self._call_oracle,
-                               variant_id, fen_text)
-        except NodeError:
-            _fail(self.cc, "malformed_collision_record")
-        identity = self._identity(rec)
-        return self._staged_insert(rec, identity, rec["digest"])
+            try:
+                rec = _make_record(nc, vc, dc, epc, fc,
+                                   self._call_oracle,
+                                   variant_id, fen_text)
+            except NodeError:
+                _fail(self.cc, "malformed_collision_record")
+            # discard any direct live-receiver corruption by the
+            # untrusted oracle BEFORE staging reads the structures
+            self._restore_live(orig, saved_b, saved_i)
+            identity = self._identity(rec)
+            return self._staged_insert(rec, identity,
+                                       rec["digest"])
+        except CollisionError:
+            self._restore_live(orig, saved_b, saved_i)
+            raise
+        finally:
+            self._exit()
 
     def _staged_insert(self, rec, identity, key):
         """THE single commit path: accepts ONLY a prevalidated
@@ -333,10 +384,13 @@ class CollisionProbe:
         closed, never silently re-bucket), staged into a copy,
         committed only when the whole batch validates."""
         nc, vc, dc, epc, fc = _NODE_DOCS
+        self._enter()
+        orig, saved_b, saved_i = self._snapshot_live()
         staged = CollisionProbe(self.oracle, self.cc)
         staged.buckets = copy.deepcopy(self.buckets)
         staged.identity_index = copy.deepcopy(self.identity_index)
-        for rec in other.records():
+        try:
+          for rec in other.records():
             # SHAPE FIRST: validate the incoming record's shape
             # BEFORE any field dereference or oracle call - a raw
             # KeyError/AttributeError can never escape the closed
@@ -373,6 +427,16 @@ class CollisionProbe:
                 _fail(self.cc, "malformed_collision_record")
             staged._staged_insert(frozen, staged._identity(frozen),
                                   key)
+        except CollisionError:
+            # restore the EXACT originals: direct live-receiver
+            # corruption by receiver-closing oracle code never
+            # survives a rejected merge
+            self._restore_live(orig, saved_b, saved_i)
+            raise
+        finally:
+            self._exit()
+        # SUCCESS: commit ONLY the isolated staged structures -
+        # any direct live-receiver corruption is overwritten
         self.buckets = staged.buckets
         self.identity_index = staged.identity_index
         return self
@@ -1206,6 +1270,9 @@ def _mutants():
     add("frozen_snapshot dropped", ["contract", "properties",
                                     "frozen_snapshot"],
         "live-record-re-read-after-oracle")
+    add("receiver_isolation dropped", ["contract", "properties",
+                                       "receiver_isolation"],
+        "oracle-runs-against-live-state")
     return out
 
 
@@ -1649,3 +1716,150 @@ def test_mutant_validate_live_then_reread_after_oracle():
     real = _probe(oracle)
     real.merge(_raw_source(source_ref))
     assert real.records() == [original]
+
+
+# -- v9: receiver isolation against receiver-closing oracles ------------------
+
+
+def _corrupting_oracle(probe_ref, mutate_on, raise_after, calls):
+    """UNTRUSTED: closes over the LIVE RECEIVER, corrupts both
+    structures on the Nth call, then returns a valid key or
+    raises."""
+    def oracle(variant, fen):
+        calls["n"] += 1
+        if calls["n"] == mutate_on:
+            probe = probe_ref[0]
+            probe.buckets["evil"] = [{"corrupt": True}]
+            probe.identity_index["evil"] = {"corrupt": True}
+            if raise_after:
+                raise ValueError("corrupt and explode")
+        return constant_oracle(variant, fen)
+    return oracle
+
+
+@pytest.mark.parametrize("raise_after", [False, True],
+                         ids=["mutate-then-return",
+                              "mutate-then-raise"])
+def test_receiver_isolation_insert(raise_after):
+    """An oracle corrupting the live receiver directly: on success
+    the corruption is discarded before staging (clean isolated
+    commit); on failure the exact originals are restored."""
+    dest = _probe(constant_oracle)
+    dest.insert("standard", KINGS)
+    pristine = (copy.deepcopy(dest.buckets),
+                copy.deepcopy(dest.identity_index))
+    probe_ref = [dest]
+    calls = {"n": 0}
+    dest.oracle = _corrupting_oracle(probe_ref, 1, raise_after,
+                                     calls)
+    if raise_after:
+        with pytest.raises(CollisionError) as exc:
+            dest.insert("standard", STARTPOS)
+        assert exc.value.failure_class == "accelerator_inconsistent"
+        assert (dest.buckets, dest.identity_index) == pristine
+    else:
+        dest.insert("standard", STARTPOS)
+        assert "evil" not in dest.buckets
+        assert "evil" not in dest.identity_index
+        _assert_one_record_per_identity(dest, 2)
+
+
+@pytest.mark.parametrize("mutate_on", [1, 2],
+                         ids=["first-call", "mid-batch"])
+def test_receiver_isolation_merge(mutate_on):
+    """Same corruption during a merge batch, on the first and a
+    mid-batch oracle call: typed failure, bit-identical receiver
+    (the first staged prefix rolls back AND the direct corruption
+    is restored)."""
+    nc, vc, dc, epc, fc = _NODE_DOCS
+    src = _probe(constant_oracle)
+    src.insert("standard", STARTPOS)
+    src.insert("standard", AFTER_E4)
+    src.insert("standard", KINGS)
+    dest = _probe(constant_oracle)
+    dest.insert("standard", LEGAL_EP)
+    pristine = (copy.deepcopy(dest.buckets),
+                copy.deepcopy(dest.identity_index))
+    probe_ref = [dest]
+    calls = {"n": 0}
+    dest.oracle = _corrupting_oracle(probe_ref, mutate_on, True,
+                                     calls)
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(src)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert (dest.buckets, dest.identity_index) == pristine
+
+
+def test_receiver_isolation_merge_success_discards_corruption():
+    """A corrupt-then-return oracle during merge: the merge
+    commits ONLY the isolated staged structures - direct
+    corruption never reaches the committed receiver."""
+    src = _probe(constant_oracle)
+    src.insert("standard", STARTPOS)
+    dest = _probe(constant_oracle)
+    probe_ref = [dest]
+    calls = {"n": 0}
+    dest.oracle = _corrupting_oracle(probe_ref, 1, False, calls)
+    dest.merge(src)
+    assert "evil" not in dest.buckets
+    assert "evil" not in dest.identity_index
+    _assert_one_record_per_identity(dest, 1)
+
+
+@pytest.mark.parametrize("reentry", ["insert", "merge"])
+def test_reentrant_call_during_evaluation_fails_closed(reentry):
+    """An oracle recursively calling insert/merge on the live
+    receiver hits the non-reentrancy guard: typed
+    accelerator_inconsistent, receiver bit-identical."""
+    dest = _probe(constant_oracle)
+    dest.insert("standard", KINGS)
+    pristine = (copy.deepcopy(dest.buckets),
+                copy.deepcopy(dest.identity_index))
+
+    def oracle(variant, fen):
+        if reentry == "insert":
+            dest.insert("standard", AFTER_E4)
+        else:
+            dest.merge(_probe(constant_oracle))
+        return constant_oracle(variant, fen)
+
+    dest.oracle = oracle
+    with pytest.raises(CollisionError) as exc:
+        dest.insert("standard", STARTPOS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert (dest.buckets, dest.identity_index) == pristine
+
+
+def test_mutant_staged_rollback_but_live_corruption_persists():
+    """Behavioral mutant: the v8 insert rolled back only STAGED
+    writes - direct live-receiver corruption by the oracle
+    persisted past the typed failure. Counter-test: the real
+    insert restores the exact originals."""
+    def mutant_insert(probe, variant_id, fen_text):
+        nc, vc, dc, epc, fc = _NODE_DOCS
+        try:
+            rec = _make_record(nc, vc, dc, epc, fc,
+                               probe._call_oracle,
+                               variant_id, fen_text)
+        except NodeError:
+            _fail(probe.cc, "malformed_collision_record")
+        identity = probe._identity(rec)
+        return probe._staged_insert(rec, identity, rec["digest"])
+
+    dest = _probe(constant_oracle)
+    dest.insert("standard", KINGS)
+    pristine = (copy.deepcopy(dest.buckets),
+                copy.deepcopy(dest.identity_index))
+    probe_ref = [dest]
+    calls = {"n": 0}
+    dest.oracle = _corrupting_oracle(probe_ref, 1, True, calls)
+    with pytest.raises(CollisionError):
+        mutant_insert(dest, "standard", STARTPOS)
+    assert "evil" in dest.identity_index  # corruption persisted
+    dest.oracle = _corrupting_oracle(probe_ref, 1, True, calls)
+    calls["n"] = 0
+    dest.buckets, dest.identity_index = pristine
+    with pytest.raises(CollisionError) as exc:
+        dest.insert("standard", STARTPOS)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert (dest.buckets, dest.identity_index) == pristine
