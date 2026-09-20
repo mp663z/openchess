@@ -37,7 +37,9 @@ from tests.test_t0122_transposition_node_contract import (  # noqa: E402
     validate_record,
 )
 
-FIXTURE_SCHEMA_VERSION = 1
+# v2: minimal_repair is an exact tagged union (span / set /
+# remove), closed forms validated structurally.
+FIXTURE_SCHEMA_VERSION = 2
 FIXTURE = (Path(__file__).parent / "fixtures" / "transposition_node"
            / "cases.json")
 CASES = json.loads(FIXTURE.read_text())
@@ -118,6 +120,50 @@ def _repaired(case):
     return out
 
 
+def _validate_repair(case):
+    """The exact minimal_repair tagged union:
+    - span form: exactly {"find", "replace"}, both strings, find
+      nonempty and unique inside the case's input_fen; node-insert
+      only;
+    - set form: exactly {"set"}, a nonempty mapping whose keys are
+      restricted by kind (variant/input_fen for node-insert; the
+      exact record fields for record-validate) with string values;
+    - remove form: exactly {"remove"}, a nonempty duplicate-free
+      list of string keys, record-validate only, each key present
+      in the record.
+    Mixed forms are forbidden."""
+    rep = case["minimal_repair"]
+    kind = case["kind"]
+    keys = set(rep)
+    if keys == {"find", "replace"}:
+        assert kind == "node-insert", case["name"]
+        assert isinstance(rep["find"], str) and rep["find"], (
+            case["name"])
+        assert isinstance(rep["replace"], str), case["name"]
+        assert case["input_fen"].count(rep["find"]) == 1, (
+            f"{case['name']}: repair find not unique")
+    elif keys == {"set"}:
+        assert isinstance(rep["set"], dict) and rep["set"], (
+            case["name"])
+        allowed = ({"variant", "input_fen"} if kind == "node-insert"
+                   else RECORD_FIELDS)
+        for key, value in rep["set"].items():
+            assert key in allowed, (case["name"], key)
+            assert isinstance(value, str), (case["name"], key)
+    elif keys == {"remove"}:
+        assert kind == "record-validate", case["name"]
+        rem = rep["remove"]
+        assert isinstance(rem, list) and rem, case["name"]
+        assert all(isinstance(key, str) for key in rem), case["name"]
+        assert len(rem) == len(set(rem)), (
+            f"{case['name']}: duplicate remove keys")
+        for key in rem:
+            assert key in case["record"], (case["name"], key)
+    else:
+        raise AssertionError(
+            f"{case['name']}: repair is not exactly one closed form")
+
+
 def _validate_structure(cases):
     assert set(cases) == TOP_KEYS
     # the fixture-format version is pinned exactly: an int equal to
@@ -163,10 +209,10 @@ def _validate_structure(cases):
     record_failures = {c["expect_failure"] for c in cases["malformed"]
                        if c["kind"] == "record-validate"}
     assert record_failures == {"malformed_node_record"}
-    # repairs stay declarative: only set/remove of declared keys
+    # minimal_repair is an EXACT tagged union - one of three
+    # closed forms, never mixed, every nested key and type closed
     for case in cases["malformed"]:
-        assert set(case["minimal_repair"]) <= REPAIR_KEYS
-        assert case["minimal_repair"], case["name"]
+        _validate_repair(case)
 
 
 def test_fixture_structure():
@@ -178,9 +224,9 @@ def test_fixture_schema_version_mutations_fail():
     string, boolean, and missing schema values all fail structure
     validation."""
     for mutate in (
-            lambda m: m.__setitem__("schema", 0),
-            lambda m: m.__setitem__("schema", 2),
-            lambda m: m.__setitem__("schema", "1"),
+            lambda m: m.__setitem__("schema", 1),
+            lambda m: m.__setitem__("schema", 3),
+            lambda m: m.__setitem__("schema", "2"),
             lambda m: m.__setitem__("schema", True),
             lambda m: m.__delitem__("schema")):
         m = copy.deepcopy(CASES)
@@ -328,6 +374,61 @@ def test_injected_valid_malformed_row_fails_rejection():
     validate_record(NC, VC, DC, EC, FC, record)
     with pytest.raises(AssertionError):
         _exec_malformed(valid)
+
+
+def _repair_mutation_cases():
+    """Every malformed repair-form mutation the tagged union must
+    reject STRUCTURALLY, before any execution."""
+    span = {"find": "K6K", "replace": "7K"}
+    setr = {"set": {"variant": "standard"}}
+    remr = {"remove": ["digest"]}
+    # (label, mutated repair, kind of the case it is applied to) -
+    # each mutation targets the kind whose rule it probes
+    return [
+        ("empty-set", {"set": {}}, "node-insert"),
+        ("empty-remove", {"remove": []}, "record-validate"),
+        ("missing-replace", {"find": "x"}, "node-insert"),
+        ("extra-repair-key", dict(span, wat=1), "node-insert"),
+        ("mixed-find-and-set", dict(span, **setr), "node-insert"),
+        ("set-wrong-container", {"set": ["variant"]}, "node-insert"),
+        ("remove-wrong-container", {"remove": "digest"},
+         "record-validate"),
+        ("find-wrong-type", {"find": 1, "replace": "7K"},
+         "node-insert"),
+        ("replace-wrong-type", {"find": "K6K", "replace": 7},
+         "node-insert"),
+        ("set-value-wrong-type", {"set": {"variant": 1}},
+         "node-insert"),
+        ("duplicate-remove-keys", {"remove": ["digest", "digest"]},
+         "record-validate"),
+        ("absent-remove-target", {"remove": ["no_such_field"]},
+         "record-validate"),
+        ("undeclared-set-target", {"set": {"wat": "x"}},
+         "record-validate"),
+        ("undeclared-set-target-insert", {"set": {"wat": "x"}},
+         "node-insert"),
+        ("span-on-record-validate", span, "record-validate"),
+        ("remove-on-node-insert", remr, "node-insert"),
+        ("empty-find", {"find": "", "replace": "7K"}, "node-insert"),
+        ("nonunique-find", {"find": "4", "replace": "5"},
+         "node-insert"),
+    ]
+
+
+def test_repair_form_mutations_fail_structure():
+    """Every repair-form mutation fails _validate_structure before
+    execution (verifier #1 v3)."""
+    for label, rep, kind in _repair_mutation_cases():
+        m = copy.deepcopy(CASES)
+        for case in m["malformed"]:
+            if case["kind"] == kind:
+                case["minimal_repair"] = copy.deepcopy(rep)
+                break
+        try:
+            _validate_structure(m)
+        except AssertionError:
+            continue
+        raise AssertionError(f"repair mutation {label!r} passed")
 
 
 def test_extra_white_king_repair_removes_only_one_white_king():

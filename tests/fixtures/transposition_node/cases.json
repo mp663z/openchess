@@ -1,8 +1,8 @@
 {
- "schema": 1,
+ "schema": 2,
  "contract": "chess-transposition-node",
  "contract_schema_version": 1,
- "notes": "Pinned records/digests/serializations computed from the T0122 contract-derived reference at authoring time. Every malformed case is single-defect: the declarative minimal_repair removes ONLY the targeted violation and the repaired input then succeeds.",
+ "notes": "Pinned records/digests/serializations computed from the T0122 contract-derived reference at authoring time. Every malformed case is single-defect: the declarative minimal_repair removes ONLY the targeted violation and the repaired input then succeeds. Schema v2: minimal_repair is an exact tagged union (span find/replace on node-insert input_fen; set of kind-restricted keys; remove of present record fields), closed forms validated structurally.",
  "happy": [
   {
    "name": "startpos-insert",
