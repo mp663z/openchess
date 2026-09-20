@@ -75,7 +75,7 @@ contract:
     source_id_form: from-linked-import-contract-sources-registry
     game_id_form: import-record-game_id-nonempty-delimiter-free-printable-ascii
     game_id_grammar: from-linked-import-contract-dedup-identity-never-recomputed
-    timestamp_grammar: rfc3339-utc-seconds-Z-suffix-ascii
+    timestamp_grammar: rfc3339-utc-seconds-Z-suffix-ascii-no-leap-second
     set_semantics: order-free-duplicates-collapsed
     rule: >-
       A source entry has EXACTLY three fields. source_id is a
@@ -87,7 +87,13 @@ contract:
       NEVER recomputes or reinterprets it, only pins the storage
       form: nonempty, delimiter-free printable ASCII.
       first_observed_at is an RFC3339 UTC timestamp with seconds
-      precision and a Z suffix, printable ASCII. Entries are a SET:
+      precision and a Z suffix, printable ASCII, validated as an
+      ACTUAL calendar instant: Gregorian calendar rules with
+      leap-year February 29 (divisible by 4, centuries only when
+      divisible by 400), 30/31-day months, hour 00-23, minute
+      00-59. LEAP-SECOND POLICY: this is a pinned NON-LEAP
+      profile - second is 00-59, a :60 leap second is rejected,
+      never normalized. Entries are a SET:
       order never matters and exact duplicates collapse - two
       entries are the same entry iff all three fields compare
       equal.

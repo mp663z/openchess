@@ -44,7 +44,11 @@ which the linked import contract already owns.
   (unknown fails closed). game_id is the import record's stored
   game_id form (free-form per import contract identity rule; pinned
   here as nonempty printable ASCII). first_observed_at is a pinned
-  RFC3339-UTC grammar (ASCII, seconds precision, Z suffix).
+  RFC3339-UTC grammar (ASCII, seconds precision, Z suffix),
+  validated as an ACTUAL calendar instant (Gregorian leap-year
+  February, 30/31-day months); LEAP-SECOND POLICY: pinned
+  NON-LEAP profile - :60 rejected, never normalized (verifier
+  remediation v2).
 - Provenance record: EXACTLY [target_kind, target, sources].
   sources is a NONEMPTY set of source entries (set semantics: order
   free, duplicates collapsed; empty set is malformed - a record
@@ -72,6 +76,12 @@ which the linked import contract already owns.
 - Rollback: a rejected insert or merge leaves the destination table
   bit-identical - over failing batches BOTH merge orders reject
   with identical pre-merge destinations, no valid-prefix residue.
+- Totality: target validation is TOTAL - explicit field-type
+  guards (str/list) run BEFORE any sibling call, so no non-string
+  shape (None, bools, ints, lists, mappings) ever escapes sibling
+  machinery as a raw exception; every such case is
+  malformed_target_identity (verifier remediation v2, Cartesian
+  battery across all three kinds' fields).
 - Versioning: /graph/provenance/v1; normative change = new version.
 
 ## Test plan (>=25 mutants)

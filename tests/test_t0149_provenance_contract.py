@@ -107,23 +107,39 @@ def _registry_ids(ic):
 
 _TS_RE = re.compile(
     "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+_DAYS_IN_MONTH = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+
+def _leap_year(year):
+    """Gregorian leap-year rule: divisible by 4, centuries only when
+    divisible by 400."""
+    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
 
 
 def _valid_timestamp(text):
     """The source_entry section's pinned timestamp grammar: RFC3339
-    UTC, seconds precision, Z suffix, printable ASCII. Structural
-    fullmatch plus the semantic field ranges - ASCII digit classes
-    only, never str.isdigit (Unicode)."""
+    UTC, seconds precision, Z suffix, printable ASCII - validated as
+    an ACTUAL calendar instant: Gregorian calendar rules with
+    leap-year February 29 and 30/31-day months. LEAP-SECOND POLICY:
+    the pinned NON-LEAP profile - second is 00-59, a :60 leap second
+    is rejected, never normalized. ASCII digit classes only, never
+    str.isdigit (Unicode)."""
     if not isinstance(text, str) or not text.isascii():
         return False
     if _TS_RE.fullmatch(text) is None:
         return False
+    year = int(text[0:4])
     month = int(text[5:7])
     day = int(text[8:10])
     hour = int(text[11:13])
     minute = int(text[14:16])
     second = int(text[17:19])
-    return (1 <= month <= 12 and 1 <= day <= 31 and hour <= 23
+    if not 1 <= month <= 12:
+        return False
+    days = _DAYS_IN_MONTH[month - 1]
+    if month == 2 and _leap_year(year):
+        days += 1
+    return (1 <= day <= days and hour <= 23
             and minute <= 59 and second <= 59)
 
 
@@ -181,6 +197,11 @@ def _validate_target(pc, kind, target):
     if kind == NODE_KIND:
         if set(target.keys()) != {"variant", "snapshot_fen"}:
             _fail(pc, "malformed_target_identity")
+        # total: explicit field-type guards BEFORE the sibling
+        # calls - a non-string field never reaches sibling machinery
+        if not isinstance(target["variant"], str) or \
+                not isinstance(target["snapshot_fen"], str):
+            _fail(pc, "malformed_target_identity")
         nc, vc, dc, epc, fc = _node_docs()
         try:
             node_record = {
@@ -197,12 +218,21 @@ def _validate_target(pc, kind, target):
                                   "from_snapshot_fen",
                                   "to_snapshot_fen"}:
             _fail(pc, "malformed_target_identity")
+        if not all(isinstance(target[key], str) for key in (
+                "variant", "move", "from_snapshot_fen",
+                "to_snapshot_fen")):
+            _fail(pc, "malformed_target_identity")
         try:
             _validate_edge_record(*_edge_docs(), dict(target))
         except (EdgeError, TypeError):
             _fail(pc, "malformed_target_identity")
     elif kind == CTX_KIND:
         if set(target.keys()) != {"variant", "path_moves"}:
+            _fail(pc, "malformed_target_identity")
+        if not isinstance(target["variant"], str) or \
+                not isinstance(target["path_moves"], list) or \
+                not all(isinstance(m, str)
+                        for m in target["path_moves"]):
             _fail(pc, "malformed_target_identity")
         oc, vc, lc, nc, reg = _ctx_docs()
         try:
@@ -392,6 +422,13 @@ def test_boundary_single_source_minimum():
     rec = t.insert({"target_kind": NODE_KIND, "target": NODE_TARGET,
                     "sources": [S1]})
     assert len(rec["sources"]) == 1
+    # the sibling-legal EMPTY path is a valid context target - the
+    # failure model never over-rejects
+    ctx = t.insert({"target_kind": CTX_KIND,
+                    "target": {"variant": "standard",
+                               "path_moves": []},
+                    "sources": [S1]})
+    assert ctx["target"]["path_moves"] == []
     before = t.serialize()
     with pytest.raises(ProvenanceError) as exc:
         t.insert({"target_kind": NODE_KIND, "target": NODE_TARGET_2,
@@ -548,6 +585,108 @@ def test_malformed_target_identity_rejected(kind, target):
         "malformed_target_identity"]
     assert exc.value.code in ERROR_ENUM
     assert t.serialize() == before
+
+
+TIMESTAMP_VALID = [
+    "2024-02-29T00:00:00Z",  # leap-year February 29
+    "2000-02-29T12:00:00Z",  # divisible-by-400 century leap
+    "2026-01-31T23:59:59Z",  # 31-day month, max day
+    "2026-04-30T12:00:00Z",  # 30-day month, max day
+    "2026-12-31T23:59:59Z",  # year boundary
+]
+TIMESTAMP_INVALID = [
+    "2026-02-29T00:00:00Z",  # non-leap February 29
+    "2024-02-30T00:00:00Z",  # February 30 even in a leap year
+    "2100-02-29T00:00:00Z",  # century non-leap (not div by 400)
+    "2026-04-31T00:00:00Z",  # 30-day month, day 31
+    "2026-06-31T00:00:00Z",  # June has 30 days
+    "2026-09-01T12:00:60Z",  # :60 leap second: pinned NON-LEAP
+                             # profile rejects, never normalizes
+]
+
+
+def test_timestamp_calendar_boundaries():
+    """first_observed_at is validated as an ACTUAL RFC3339 UTC
+    instant: Gregorian leap-year February, 30/31-day months, and
+    the pinned non-leap-second profile - impossible calendar dates
+    are malformed, never stored."""
+    for text in TIMESTAMP_VALID:
+        entry = dict(S1, first_observed_at=text)
+        rec = _make_record(NODE_KIND, NODE_TARGET, [entry])
+        assert rec["sources"][0]["first_observed_at"] == text
+    t = _table()
+    for text in TIMESTAMP_INVALID:
+        before = t.serialize()
+        entry = dict(S1, first_observed_at=text)
+        with pytest.raises(ProvenanceError) as exc:
+            t.insert({"target_kind": NODE_KIND, "target": NODE_TARGET,
+                      "sources": [entry]})
+        assert exc.value.failure_class == \
+            "malformed_provenance_record", text
+        assert t.serialize() == before, text
+
+
+# Cartesian target-field mutation battery: every non-string (or
+# non-list) shape escapes nowhere - each lands as
+# malformed_target_identity with the pinned code and a bit-identical
+# table, never as a raw sibling exception.
+_BAD_SHAPES = [None, True, 1, [], {}]
+
+
+def _cartesian_cases():
+    cases = []
+
+    def add(kind, target):
+        cases.append((kind, target))
+
+    for bad in _BAD_SHAPES:
+        add(NODE_KIND, {"variant": "standard", "snapshot_fen": bad})
+        add(EDGE_KIND, {"variant": "standard", "move": "e2e4",
+                        "from_snapshot_fen": bad,
+                        "to_snapshot_fen": E2E4_TO})
+        add(EDGE_KIND, {"variant": "standard", "move": "e2e4",
+                        "from_snapshot_fen": STARTPOS,
+                        "to_snapshot_fen": bad})
+        add(EDGE_KIND, {"variant": "standard", "move": bad,
+                        "from_snapshot_fen": STARTPOS,
+                        "to_snapshot_fen": E2E4_TO})
+        add(EDGE_KIND, {"variant": bad, "move": "e2e4",
+                        "from_snapshot_fen": STARTPOS,
+                        "to_snapshot_fen": E2E4_TO})
+        add(NODE_KIND, {"variant": bad, "snapshot_fen": STARTPOS})
+        add(CTX_KIND, {"variant": bad, "path_moves": ["e2e4"]})
+        if not isinstance(bad, list):
+            # [] is NOT a defect here: the sibling context contract
+            # pins the empty path as legal (none-sentinel
+            # resolution) - every other non-list shape fails closed
+            add(CTX_KIND, {"variant": "standard", "path_moves": bad})
+        add(CTX_KIND, {"variant": "standard",
+                       "path_moves": ["e2e4", bad]})
+    return cases
+
+
+def test_cartesian_target_mutation_battery():
+    """Totality: (None, bool, int, list, mapping) across node
+    snapshot_fen and variant, both edge snapshot fields, edge move
+    and variant, and context variant / path_moves / path contents -
+    every case is malformed_target_identity with the pinned code and
+    a bit-identical rollback, never a raw AttributeError."""
+    t = _table()
+    t.insert({"target_kind": NODE_KIND, "target": NODE_TARGET,
+              "sources": [S1]})
+    before = t.serialize()
+    before_keys = copy.deepcopy(t.by_key)
+    for kind, target in _cartesian_cases():
+        with pytest.raises(ProvenanceError) as exc:
+            t.insert({"target_kind": kind, "target": target,
+                      "sources": [S2]})
+        assert exc.value.failure_class == \
+            "malformed_target_identity", (kind, target)
+        assert exc.value.code == FAILURE_MAPPING[
+            "malformed_target_identity"], (kind, target)
+        assert exc.value.code in ERROR_ENUM
+    assert t.serialize() == before
+    assert t.by_key == before_keys
 
 
 def _entry_cases():

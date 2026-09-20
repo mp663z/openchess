@@ -86,7 +86,8 @@ SOURCE_ENTRY = {
         "import-record-game_id-nonempty-delimiter-free-printable-ascii",
     "game_id_grammar":
         "from-linked-import-contract-dedup-identity-never-recomputed",
-    "timestamp_grammar": "rfc3339-utc-seconds-Z-suffix-ascii",
+    "timestamp_grammar":
+        "rfc3339-utc-seconds-Z-suffix-ascii-no-leap-second",
     "set_semantics": "order-free-duplicates-collapsed",
     "links": {
         "import_contract": "data/contracts/import.yaml",
