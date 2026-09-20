@@ -76,6 +76,8 @@ RECORD = {
         "from-linked-variant-contract-variants-id_grammar",
     "digest_form": "from-linked-position-digest-contract-format",
     "snapshot_form": "canonical-six-field-fen",
+    "snapshot_ep_value":
+        "from-linked-position-digest-contract-identity",
     "snapshot_clock_normalization": "halfmove-0-fullmove-1",
     "derived_fields_regenerable": ["digest"],
     "links": {

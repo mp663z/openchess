@@ -66,6 +66,7 @@ contract:
     variant_id_grammar: from-linked-variant-contract-variants-id_grammar
     digest_form: from-linked-position-digest-contract-format
     snapshot_form: canonical-six-field-fen
+    snapshot_ep_value: from-linked-position-digest-contract-identity
     snapshot_clock_normalization: halfmove-0-fullmove-1
     derived_fields_regenerable: [digest]
     rule: >-
@@ -78,9 +79,13 @@ contract:
       field, always regenerable from variant plus the identity
       fields inside snapshot_fen, never an independent source of
       truth. snapshot_fen is the canonical six-field FEN of the
-      position per the linked FEN contract, with the two clock
-      fields NORMALIZED to halfmove 0 and fullmove 1: clocks are
-      not identity, so the node stores no clock state, and the
+      position per the linked FEN contract, with the en-passant
+      field carrying the IDENTITY value (the target square only
+      when a legal capture exists against it, the none sentinel
+      otherwise - exactly the linked digest contract's identity)
+      and the two clock fields NORMALIZED to halfmove 0 and
+      fullmove 1: neither an uncapturable target nor clocks are
+      identity, so the node stores neither, and the
       normalized placeholder keeps the record deterministic and
       merge-order-independent - a node's record never depends on
       which path or which clock values first reached it. Any other
