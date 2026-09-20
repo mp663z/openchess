@@ -48,7 +48,23 @@ pins + fully contract-derived reference + mutation battery.
   a theorem the battery proves (an injected digest collision
   surfaces as conflicting_version, fail closed, never overwrite).
 - Failures: [malformed_version_record, unknown_parent,
-  conflicting_version, root_violation] -> closed enum.
+  conflicting_version, root_violation, nonmonotonic_version]
+  -> closed enum. nonmonotonic_version added beyond the first
+  draft: a child older than a parent is a distinct closed
+  failure, not malformedness. Equal timestamps are allowed
+  (not-before, not strictly-after).
+- created_at: RFC3339 UTC 'Z' only; REAL Gregorian calendar
+  validation (leap-year rules); leap seconds REJECTED (second
+  00-59), pinned and documented.
+- id derivation: a record's version_id MUST equal the store's
+  content address of its own (sorted parents, graph_digest) -
+  callers never invent ids; the battery's injectable hasher
+  forces a total collision to prove conflicting_version fails
+  closed with a witness, never overwrites.
+- Merge: topological staging - a record enters the staged copy
+  once every parent is present; a batch that stops making
+  progress surfaces its first stuck record's exact failure.
+  Atomic commit; bit-identical rollback.
 - Rollback: rejected insert leaves the version DAG bit-identical.
 - Versioning: /graph/version/v1.
 
