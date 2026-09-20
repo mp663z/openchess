@@ -1900,11 +1900,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "6ddf475859a0834cb4a99ebe9696394cec4917d9",
+   "evidence_manifest": "evidence/T0087.md"
   },
   {
    "id": "T0088",
