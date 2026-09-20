@@ -247,14 +247,23 @@ class EdgeTable:
         return rec
 
     def merge(self, other):
-        """Table-to-table merge IS iterated insertion of the exact
-        stored records (snapshots are canonical inputs) - the
-        structural definition that makes associativity a witness,
-        not a claim."""
+        """Table-to-table merge is iterated insertion of the exact
+        stored records (snapshots are canonical inputs) into a
+        STAGED COPY, committed only when the whole union is
+        compatible - the contract's atomic pin: conflicts internal
+        to the source batch or against this table reject the
+        entire merge and leave this table bit-identical, and over
+        conflicting tables both merge orders reject rather than
+        leaving first-writer residue."""
+        staged = EdgeTable(
+            (self.ec, self.vc, self.dc, self.epc, self.fc, self.lc,
+             self.nc), self.digest_fn)
+        staged.buckets = copy.deepcopy(self.buckets)
         for rec in other.records():
-            self.insert(rec["variant"], rec["move"],
-                        rec["from_snapshot_fen"],
-                        rec["to_snapshot_fen"])
+            staged.insert(rec["variant"], rec["move"],
+                          rec["from_snapshot_fen"],
+                          rec["to_snapshot_fen"])
+        self.buckets = staged.buckets
         return self
 
     def records(self):
@@ -387,6 +396,83 @@ def test_merge_algebra():
         assert sum(1 for r in grouped.records()
                    if (r["variant"], r["move"], r["from_snapshot_fen"],
                        r["to_snapshot_fen"]) == canonical) == 1
+
+
+class _Batch:
+    """A merge source that is just a bag of stored records - the
+    contract's merge input type. Built by direct construction, as
+    any deserialized batch could be, it may carry conflicts an
+    EdgeTable could never hold through insert()."""
+
+    def __init__(self, records):
+        self._records = records
+
+    def records(self):
+        return list(self._records)
+
+
+def _edge_record(move, frm, to):
+    return _make_record(*_docs(), digest_fen, "standard", move,
+                        frm, to)
+
+
+def test_conflicting_tables_both_orders_reject():
+    """Commutativity over conflicting tables means BOTH merge
+    orders reject and leave the same pre-merge destinations -
+    never first-writer residue."""
+    a = _table()
+    a.insert("standard", "e1e2", KINGS, KINGS_E1E2_TO)
+    b = _table()
+    b.insert("standard", "e1e2", KINGS, KINGS_ALT_TARGET)
+    a_before, b_before = a.serialize(), b.serialize()
+    a_buckets = copy.deepcopy(a.buckets)
+    b_buckets = copy.deepcopy(b.buckets)
+    with pytest.raises(EdgeError) as exc:
+        a.merge(b)
+    assert exc.value.failure_class == "conflicting_edge"
+    with pytest.raises(EdgeError) as exc:
+        b.merge(a)
+    assert exc.value.failure_class == "conflicting_edge"
+    assert a.serialize() == a_before
+    assert a.buckets == a_buckets
+    assert b.serialize() == b_before
+    assert b.buckets == b_buckets
+
+
+def test_batch_rollback_no_partial_commit():
+    """A merge whose batch first yields a valid unrelated edge and
+    THEN a conflict against the destination commits NOTHING - not
+    even the valid prefix."""
+    t = _table()
+    t.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+    before = t.serialize()
+    before_buckets = copy.deepcopy(t.buckets)
+    batch = _Batch([
+        _edge_record("e1e2", KINGS, KINGS_E1E2_TO),  # unrelated valid
+        _edge_record("e2e4", STARTPOS, KINGS),  # conflicts with stored
+    ])
+    with pytest.raises(EdgeError) as exc:
+        t.merge(batch)
+    assert exc.value.failure_class == "conflicting_edge"
+    assert t.serialize() == before
+    assert t.buckets == before_buckets
+
+
+def test_conflict_internal_to_source_batch_rejected():
+    """A single source batch carrying two records with the same
+    (variant, move, from-identity) but different targets conflicts
+    WITHIN ITSELF: the merge rejects wholesale even against an
+    empty destination."""
+    t = _table()
+    batch = _Batch([
+        _edge_record("e1e2", KINGS, KINGS_E1E2_TO),
+        _edge_record("e1e2", KINGS, KINGS_ALT_TARGET),
+    ])
+    with pytest.raises(EdgeError) as exc:
+        t.merge(batch)
+    assert exc.value.failure_class == "conflicting_edge"
+    assert t.records() == []
+    assert t.buckets == {}
 
 
 def test_identity_follows_sibling_canonical_order():
@@ -646,6 +732,10 @@ def _mutants():
         False)
     add("two edges allowed", ["contract", "merge",
                               "same_edge_never_two_records"], False)
+    add("atomic dropped", ["contract", "merge", "atomic"], False)
+    add("batch conflict partial commit", ["contract", "merge",
+                                          "conflict_in_batch"],
+        "valid-prefix-commits")
     add("conflict tolerated", ["contract", "merge",
                                "conflicting_target"],
         "last-writer-wins")

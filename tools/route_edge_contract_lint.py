@@ -105,11 +105,13 @@ RECORD = {
 }
 MERGE = {
     "insert": "insert-or-return-existing",
+    "atomic": True,
     "idempotent": True,
     "commutative": True,
     "associative": True,
     "same_edge_never_two_records": True,
     "conflicting_target": "rejected-as-conflicting_edge",
+    "conflict_in_batch": "whole-merge-rejected-nothing-committed",
     "rejected_insert_changes_nothing": True,
 }
 FAILURE_CLASSES = ["malformed_edge_record", "malformed_position",

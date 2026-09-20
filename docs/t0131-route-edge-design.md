@@ -52,3 +52,16 @@ declarative repairs + layer classification. rollback: rejected
 insert/validate leaves the edge table bit-identical; conflicting
 edge rejected with no trace. mutants: in-memory flattening of
 determinism/merge tables, lint mutants for every pinned section.
+
+## v2 amendment (verifier #2 round 1): ATOMIC merge
+
+Merge is pinned ATOMIC (structured: merge.atomic true,
+merge.conflict_in_batch whole-merge-rejected-nothing-committed):
+the entire union is preflighted in a staged copy and committed only
+when fully compatible - conflicts internal to the source batch or
+against the destination reject the whole merge and leave the
+destination bit-identical; over conflicting tables BOTH merge
+orders reject (never first-writer residue). Reference implements
+clone-then-adopt; batteries: both-orders-reject,
+batch-valid-prefix-then-conflict rollback, conflict internal to a
+single source batch, plus mutants for the two new pins.

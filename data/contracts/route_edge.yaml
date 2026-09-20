@@ -122,11 +122,13 @@ contract:
       fen: data/contracts/fen.yaml
   merge:
     insert: insert-or-return-existing
+    atomic: true
     idempotent: true
     commutative: true
     associative: true
     same_edge_never_two_records: true
     conflicting_target: rejected-as-conflicting_edge
+    conflict_in_batch: whole-merge-rejected-nothing-committed
     rejected_insert_changes_nothing: true
     rule: >-
       Inserting an edge into the edge table returns the existing
@@ -141,10 +143,16 @@ contract:
       record whose from-node identity and move match an existing
       edge but whose to-node identity differs is REJECTED as
       conflicting_edge, and every rejected insert leaves the table
-      bit-identical. The from-digest-plus-move bucket accelerates
-      lookup only; a bucket collision between unequal identities
-      is separated by canonical field comparison, never by digest
-      alone.
+      bit-identical. A table merge is ATOMIC: the entire union is
+      preflighted before any mutation - conflicts internal to the
+      source batch or against the destination reject the WHOLE
+      merge and leave the destination bit-identical, never a
+      committed valid prefix. Over conflicting tables
+      commutativity means BOTH merge orders reject and leave the
+      same pre-merge destinations, never first-writer residue.
+      The from-digest-plus-move bucket accelerates lookup only;
+      a bucket collision between unequal identities is separated
+      by canonical field comparison, never by digest alone.
   failures:
     classes: [malformed_edge_record, malformed_position,
       unknown_variant, conflicting_edge]
