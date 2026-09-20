@@ -67,24 +67,54 @@ def _fail(contract, cls):
     raise NodeError(cls, contract["failures"]["mapping"][cls])
 
 
-def _identity_tuple(nc, vc, dc, ec, fc, variant_id, position):
-    """The linked variant contract's canonical_fields tuple, each
-    component serialized per the linked contracts - the en-passant
-    component is the IDENTITY value (legal-capture target or none)."""
+def _identity_components(nc, vc, dc, ec, fc, variant_id, position):
+    """Named serializers for the canonical identity components, each
+    derived from the linked contracts: the board is the canonical
+    placement from the linked FEN serializer, castling the canonical
+    rights-or-sentinel, and en-passant the IDENTITY value
+    (legal-capture target or none) from the linked en-passant
+    contract."""
     board, color, rights, ep, half, full = position
     placement = emit_fen(fc, position).split(" ")[0]
-    return (variant_id, placement, color,
-            rights or fc["castling"]["none_sentinel"],
-            _ep_identity(dc, ec, fc, position))
+    return {
+        "variant": variant_id,
+        "board": placement,
+        "side_to_move": color,
+        "castling_rights": rights or fc["castling"]["none_sentinel"],
+        "en_passant": _ep_identity(dc, ec, fc, position),
+    }
 
 
-def _snapshot_fen(nc, fc, identity):
-    """Canonical six-field snapshot: identity components plus the
-    normalized clocks pinned by the record section."""
-    variant_id, placement, color, castling, ep_value = identity
+def _identity_tuple(nc, vc, dc, ec, fc, variant_id, position):
+    """The linked variant contract's canonical_fields tuple, DRIVEN by
+    vc["identity"]["canonical_fields"]: the component serializers must
+    cover exactly the linked field set, and the tuple order is the
+    linked order - no field name or order is restated here."""
+    canonical_fields = vc["identity"]["canonical_fields"]
+    components = _identity_components(
+        nc, vc, dc, ec, fc, variant_id, position)
+    assert set(components) == set(canonical_fields), (
+        "component serializers must cover exactly the linked "
+        "canonical field set")
+    return tuple(components[name] for name in canonical_fields)
+
+
+def _identity_named(vc, identity):
+    """Reconstruct the named mapping from an identity tuple by the
+    linked field names - never positional destructuring."""
+    return dict(zip(vc["identity"]["canonical_fields"], identity,
+                    strict=True))
+
+
+def _snapshot_fen(nc, vc, fc, identity):
+    """Canonical six-field snapshot: identity components read by their
+    linked names plus the normalized clocks pinned by the record
+    section."""
+    named = _identity_named(vc, identity)
     norm = nc["record"]["snapshot_clock_normalization"]
     assert norm == "halfmove-0-fullmove-1"
-    return f"{placement} {color} {castling} {ep_value} 0 1"
+    return (f"{named['board']} {named['side_to_move']} "
+            f"{named['castling_rights']} {named['en_passant']} 0 1")
 
 
 def _make_record(nc, vc, dc, ec, fc, digest_fn, variant_id, fen_text):
@@ -101,7 +131,7 @@ def _make_record(nc, vc, dc, ec, fc, digest_fn, variant_id, fen_text):
     return {
         "variant": variant_id,
         "digest": digest_fn(variant_id, fen_text),
-        "snapshot_fen": _snapshot_fen(nc, fc, identity),
+        "snapshot_fen": _snapshot_fen(nc, vc, fc, identity),
     }
 
 
@@ -267,9 +297,11 @@ def test_merge_algebra():
     """Idempotent, commutative, associative: merge is STRUCTURALLY
     iterated insertion of exact three-field records, so all
     groupings of independently built tables agree."""
+    phantom = AFTER_E4.replace(" e3 ", " - ")  # same identity
     positions = [STARTPOS, AFTER_E4, LEGAL_EP, KINGS,
                  KINGS.replace(" w ", " b "),
-                 STARTPOS.replace(" 0 1", " 7 42")]  # duplicate
+                 STARTPOS.replace(" 0 1", " 7 42"),  # clock duplicate
+                 phantom]  # phantom-EP duplicate, group c (AFTER_E4: a)
     a_positions, b_positions, c_positions = (positions[:2],
                                              positions[2:4],
                                              positions[4:])
@@ -281,7 +313,7 @@ def test_merge_algebra():
     for fen in reversed(positions):
         t2.insert("standard", fen)
     assert t1.serialize() == t2.serialize()
-    assert len(t1.records()) == 5  # the clock variant is a duplicate
+    assert len(t1.records()) == 5  # clock + phantom duplicates fold
 
     def built(fens):
         t = _table()
@@ -304,6 +336,54 @@ def test_merge_algebra():
             t.merge(built(group))
         results.add(tuple(t.serialize()))
     assert len(results) == 1
+    # the phantom pair lives in DIFFERENT independently built groups
+    # (AFTER_E4 in a, its '-' twin in c): both associativity
+    # groupings and every group permutation must still yield exactly
+    # ONE node for their shared identity - alongside the clock
+    # duplicate that STARTPOS/"7 42" already exercises
+    phantom_snapshot = AFTER_E4.replace(" e3 ", " - ")
+    for grouped in (t1, t2, left, right):
+        assert sum(1 for r in grouped.records()
+                   if r["snapshot_fen"] == phantom_snapshot) == 1
+    for order in itertools.permutations(
+            [a_positions, b_positions, c_positions]):
+        t = _table()
+        for group in order:
+            t.merge(built(group))
+        assert sum(1 for r in t.records()
+                   if r["snapshot_fen"] == phantom_snapshot) == 1
+
+
+def test_identity_follows_sibling_canonical_order():
+    """Mutation witness: permuting the sibling variant contract's
+    canonical_fields order IN MEMORY permutes the identity tuple the
+    model builds, while the named snapshot reconstruction still reads
+    the same components by their linked names - the executable model
+    is DRIVEN by the sibling source of truth, not by a restated
+    literal order (the linter separately rejects any drift in the
+    sibling FILE, but the tuple order here follows the data)."""
+    nc, vc, dc, ec, fc = _docs()
+    position = parse_fen(fc, AFTER_E4)
+    base = _identity_tuple(nc, vc, dc, ec, fc, "standard", position)
+    mutated_vc = copy.deepcopy(vc)
+    mutated_vc["identity"]["canonical_fields"] = list(
+        reversed(vc["identity"]["canonical_fields"]))
+    mutated = _identity_tuple(
+        nc, mutated_vc, dc, ec, fc, "standard", position)
+    assert mutated == tuple(reversed(base))
+    # named reconstruction by linked names is order-independent
+    assert _identity_named(mutated_vc, mutated) == _identity_named(
+        vc, base)
+    assert _snapshot_fen(
+        nc, mutated_vc, fc, mutated) == _snapshot_fen(nc, vc, fc, base)
+    # a field-set mismatch between serializers and sibling is
+    # rejected, never silently partial
+    broken_vc = copy.deepcopy(vc)
+    broken_vc["identity"]["canonical_fields"] = (
+        list(vc["identity"]["canonical_fields"]) + ["mystery"])
+    with pytest.raises(AssertionError):
+        _identity_tuple(nc, broken_vc, dc, ec, fc, "standard",
+                        position)
 
 
 def test_records_exact_three_fields_and_rebuild():
