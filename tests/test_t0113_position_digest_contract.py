@@ -27,7 +27,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tests.test_t0086_fen_contract import (  # noqa: E402
-    FenError, _attack, emit_fen, parse_fen)
+    FenError,
+    _attack,
+    emit_fen,
+    parse_fen,
+)
+from tools.variant_contract_lint import ContractError  # noqa: E402
 
 CONTRACT = ROOT / "data" / "contracts" / "position_digest.yaml"
 VARIANT = ROOT / "data" / "contracts" / "variant.yaml"
@@ -308,8 +313,6 @@ def test_rejection_yields_no_partial_output():
 # -- lint mutant battery ------------------------------------------------
 
 def _mutants():
-    base = yaml.safe_load(CONTRACT.read_text())
-    c = base["contract"]
     mutants = []
 
     def add(name, path, value):
@@ -385,16 +388,15 @@ def _mutants():
     doc = yaml.safe_load(CONTRACT.read_text())
     doc["contract"]["digest"]["rogue_key"] = True
     mutants.append(("rogue-digest-key", doc))
-    assert base  # silence lint about unused
     return mutants
 
 
 def test_mutations_fail_lint(tmp_path):
-    from tools.position_digest_contract_lint import lint
+    from tools.position_digest_contract_lint import ContractError, lint
     for name, doc in _mutants():
         mutant = tmp_path / f"{name}.yaml"
         mutant.write_text(yaml.safe_dump(doc))
-        with pytest.raises(Exception):
+        with pytest.raises(ContractError):
             lint(mutant)
 
 
@@ -435,7 +437,7 @@ def test_linkage_variant_field_reorder_fails(tmp_path):
             "[board, variant, side_to_move, castling_rights,\n"
             "      en_passant]")
     root = _tree(tmp_path, {"variant.yaml": mut})
-    with pytest.raises(Exception):
+    with pytest.raises(ContractError):
         _lint_tree(root)
 
 
@@ -446,7 +448,7 @@ def test_linkage_variant_field_drop_fails(tmp_path):
             "      en_passant]",
             "[variant, board, side_to_move, castling_rights]")
     root = _tree(tmp_path, {"variant.yaml": mut})
-    with pytest.raises(Exception):
+    with pytest.raises(ContractError):
         _lint_tree(root)
 
 
@@ -456,7 +458,7 @@ def test_linkage_ep_identity_value_drift_fails(tmp_path):
             "identity_value: target-when-legal-capture-else-none",
             "identity_value: raw-target-always")
     root = _tree(tmp_path, {"en_passant.yaml": mut})
-    with pytest.raises(Exception):
+    with pytest.raises(ContractError):
         _lint_tree(root)
 
 
@@ -464,7 +466,7 @@ def test_linkage_fen_active_color_drift_fails(tmp_path):
     def mut(text):
         return text.replace("values: [w, b]", "values: [W, B]")
     root = _tree(tmp_path, {"fen.yaml": mut})
-    with pytest.raises(Exception):
+    with pytest.raises(ContractError):
         _lint_tree(root)
 
 
@@ -472,12 +474,12 @@ def test_linkage_fen_castling_order_drift_fails(tmp_path):
     def mut(text):
         return text.replace("order: KQkq", "order: QKqk")
     root = _tree(tmp_path, {"fen.yaml": mut})
-    with pytest.raises(Exception):
+    with pytest.raises(ContractError):
         _lint_tree(root)
 
 
 def test_linkage_missing_sibling_fails(tmp_path):
     root = _tree(tmp_path)
     (root / "data" / "contracts" / "en_passant.yaml").unlink()
-    with pytest.raises(Exception):
+    with pytest.raises(ContractError):
         _lint_tree(root)

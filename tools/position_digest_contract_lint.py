@@ -111,6 +111,8 @@ PROSE_KEYS = {"rule", "links"}
 def _load(path: Path) -> dict:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ContractError(f"{path.name}: unreadable: {exc}") from exc
     except yaml.YAMLError as exc:
         raise ContractError(f"{path.name}: invalid YAML: {exc}") from exc
     if not isinstance(data, dict):
@@ -153,6 +155,10 @@ def lint(path: Path = CONTRACT, *, variant_path: Path = VARIANT,
         {"id", "role", "identity", "encoding", "digest", "parse",
          "failures", "properties"})
 
+    for section in ("role", "identity", "encoding", "digest",
+                    "parse", "failures", "properties"):
+        if section not in contract:
+            raise ContractError(f"contract.{section}: missing section")
     role = contract["role"]
     _check_closure("role", role, set(ROLE) | {"rule"})
     _check_exact("role", _strip_prose(role), ROLE)
