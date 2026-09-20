@@ -617,6 +617,11 @@ class Session:
         assert self.readiness_spec["model"] == "orthogonal-pending-flag"
         self.debug_spec = life["debug"]
         assert self.debug_spec["model"] == "orthogonal-session-setting"
+        self.cp_spec = life["copyprotection"]
+        assert self.cp_spec["model"] == "orthogonal-phase-variable"
+        self.reg_spec = life["registration"]
+        assert self.reg_spec["model"] == (
+            "orthogonal-phase-variable-with-gui-correlation")
         self.state = life["initial"]
         # Terminal state derived from the contract: the declared state
         # whose transition table is empty in both directions.
@@ -627,10 +632,12 @@ class Session:
         self.position_flag = False
         self.readiness = False
         self.debug = self.debug_spec["initial"]
+        self.cp_phase = self.cp_spec["initial"]
+        self.reg_phase = self.reg_spec["initial"]
 
     def snapshot(self):
         return (self.state, self.position_flag, self.readiness,
-                self.debug)
+                self.debug, self.cp_phase, self.reg_phase)
 
     def _step(self, direction, event, ponder=False):
         c = self.c
@@ -672,6 +679,51 @@ class Session:
         assert value in self.debug_spec["values"]
         self.debug = value
 
+    def _copyprotection(self, status):
+        c = self.c
+        spec = self.cp_spec
+        # Orthogonal phase variable: liveness gate first (terminated
+        # closes the phase), then the contract's own phase table -
+        # terminal status without checking, duplicate checking and
+        # every status after completion are protocol_state. Changes
+        # ONLY the phase.
+        if self.state not in spec["accepted_in_states"]:
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        target = spec["transitions"][self.cp_phase][status]
+        if target == "rejected-protocol_state":
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        self.cp_phase = target
+
+    def _registration(self, status):
+        c = self.c
+        spec = self.reg_spec
+        # Orthogonal correlated phase variable: liveness gate first,
+        # then the contract's engine transition table - unsolicited
+        # terminal statuses, duplicate checkings and responses after
+        # completion are protocol_state. Changes ONLY the phase.
+        if self.state not in spec["accepted_in_states"]:
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        target = spec["engine_transitions"][self.reg_phase][status]
+        if target == "rejected-protocol_state":
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        self.reg_phase = target
+
+    def _register(self, mode):
+        c = self.c
+        spec = self.reg_spec
+        # GUI correlation: register name/code opens exactly one
+        # correlated attempt (only from unregistered/failed);
+        # register later defers without opening an attempt. Every
+        # other phase rejects (protocol_state). Changes ONLY the
+        # phase - never the lifecycle state.
+        if self.state not in spec["accepted_in_states"]:
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        mapping = spec["gui_register_transitions"][mode]
+        target = mapping.get(self.reg_phase, mapping["elsewhere"])
+        if target == "rejected-protocol_state":
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        self.reg_phase = target
+
     def _readyok(self):
         c = self.c
         # Liveness gate first: terminated rejects regardless of flag,
@@ -692,6 +744,9 @@ class Session:
         if kw == "debug":
             self._debug(cmd["value"])
             return cmd
+        if kw == "register":
+            self._register(cmd["mode"])
+            return cmd
         if kw == "go" and self.state == "ready" and not \
                 self.position_flag:
             _fail(c, life["unlisted_pair"])  # go_requires
@@ -709,6 +764,12 @@ class Session:
         resp = parse_engine(c, line)  # malformed/unknown raise first
         if resp["response"] == "readyok":
             self._readyok()
+            return resp
+        if resp["response"] == "copyprotection":
+            self._copyprotection(resp["state"])
+            return resp
+        if resp["response"] == "registration":
+            self._registration(resp["state"])
             return resp
         self._step("engine", resp["response"])
         return resp
@@ -964,9 +1025,16 @@ HAPPY_TRACE = [
     ("gui", "stop", "ponder_stop_requested"),
     ("gui", "ponderhit", "stop_requested"),
     ("engine", "bestmove e7e5", "ready"),
-    ("gui", "register later", "ready"),
-    ("engine", "registration ok", "ready"),
+    ("engine", "copyprotection checking", "ready"),
     ("engine", "copyprotection ok", "ready"),
+    ("engine", "registration checking", "ready"),
+    ("engine", "registration error", "ready"),   # unregistered
+    ("gui", "register later", "ready"),          # deferred
+    ("engine", "registration checking", "ready"),  # later re-check
+    ("engine", "registration error", "ready"),   # unregistered again
+    ("gui", "register name Stockfish Dev code abc-123", "ready"),
+    ("engine", "registration checking", "ready"),  # correlated
+    ("engine", "registration ok", "ready"),      # registered
     ("gui", "quit", "terminated"),
 ]
 
@@ -982,6 +1050,196 @@ def test_lifecycle_full_session():
         assert s.state == expected_state, (line, s.state)
     assert s.state == "terminated"
     assert s.position_flag is True
+
+
+def _ready_session():
+    doc = _doc()["contract"]
+    s = Session(doc)
+    s.feed_gui("uci")
+    s.feed_engine("uciok")
+    return doc, s
+
+
+def test_copyprotection_ordered_mini_protocol():
+    doc, s = _ready_session()
+    # terminal status without a preceding checking: rejected
+    for bad in ("copyprotection ok", "copyprotection error"):
+        before = s.snapshot()
+        with pytest.raises(UciError) as exc:
+            s.feed_engine(bad)
+        assert exc.value.failure_class == "protocol_state"
+        assert s.snapshot() == before
+        assert s.cp_phase == "cp_idle"
+    # one checking, then exactly one terminal
+    s.feed_engine("copyprotection checking")
+    assert s.cp_phase == "cp_checking"
+    # duplicate checking while pending: rejected
+    before = s.snapshot()
+    with pytest.raises(UciError):
+        s.feed_engine("copyprotection checking")
+    assert s.snapshot() == before
+    s.feed_engine("copyprotection ok")
+    assert s.cp_phase == "cp_done"
+    # every status after completion: rejected
+    for bad in ("copyprotection checking", "copyprotection ok",
+                "copyprotection error"):
+        before = s.snapshot()
+        with pytest.raises(UciError):
+            s.feed_engine(bad)
+        assert s.snapshot() == before
+        assert s.cp_phase == "cp_done"
+
+
+def test_copyprotection_error_completes_once():
+    doc, s = _ready_session()
+    s.feed_engine("copyprotection checking")
+    s.feed_engine("copyprotection error")
+    assert s.cp_phase == "cp_done"
+    with pytest.raises(UciError):
+        s.feed_engine("copyprotection ok")
+
+
+def test_registration_initial_indication_and_attempt_correlation():
+    doc, s = _ready_session()
+    # unsolicited success: rejected (no pending checking)
+    for bad in ("registration ok", "registration error"):
+        before = s.snapshot()
+        with pytest.raises(UciError) as exc:
+            s.feed_engine(bad)
+        assert exc.value.failure_class == "protocol_state"
+        assert s.snapshot() == before
+    # GUI attempt before any indication: rejected
+    before = s.snapshot()
+    with pytest.raises(UciError):
+        s.feed_gui("register name A B code C")
+    assert s.snapshot() == before
+    # initial indication: checking -> error = unregistered
+    s.feed_engine("registration checking")
+    assert s.reg_phase == "reg_indication_pending"
+    before = s.snapshot()
+    with pytest.raises(UciError):
+        s.feed_engine("registration checking")  # duplicate pending
+    assert s.snapshot() == before
+    s.feed_engine("registration error")
+    assert s.reg_phase == "reg_unregistered"
+    # register later: defers, stays unregistered, opens no attempt
+    s.feed_gui("register later")
+    assert s.reg_phase == "reg_unregistered"
+    # a terminal without a NEW checking is still rejected
+    with pytest.raises(UciError):
+        s.feed_engine("registration ok")
+    # GUI attempt correlates exactly one checking then one terminal
+    s.feed_gui("register name Stockfish Dev code abc-123")
+    assert s.reg_phase == "reg_attempt_pending"
+    before = s.snapshot()
+    with pytest.raises(UciError):
+        s.feed_engine("registration ok")  # checking must come first
+    assert s.snapshot() == before
+    s.feed_engine("registration checking")
+    assert s.reg_phase == "reg_attempt_checking"
+    s.feed_engine("registration ok")
+    assert s.reg_phase == "reg_registered"
+    # registered is terminal: statuses and register both rejected
+    for direction, line in (("engine", "registration checking"),
+                            ("engine", "registration ok"),
+                            ("engine", "registration error"),
+                            ("gui", "register later"),
+                            ("gui", "register name A code B")):
+        before = s.snapshot()
+        with pytest.raises(UciError):
+            (s.feed_engine if direction == "engine"
+             else s.feed_gui)(line)
+        assert s.snapshot() == before
+        assert s.reg_phase == "reg_registered"
+
+
+def test_registration_failed_attempt_allows_retry():
+    doc, s = _ready_session()
+    s.feed_engine("registration checking")
+    s.feed_engine("registration error")
+    s.feed_gui("register name A code B")
+    s.feed_engine("registration checking")
+    s.feed_engine("registration error")
+    assert s.reg_phase == "reg_failed"
+    # after failure the engine may not self-start; a new GUI attempt
+    # correlates a fresh cycle
+    with pytest.raises(UciError):
+        s.feed_engine("registration checking")
+    s.feed_gui("register name C code D")
+    assert s.reg_phase == "reg_attempt_pending"
+    s.feed_engine("registration checking")
+    s.feed_engine("registration ok")
+    assert s.reg_phase == "reg_registered"
+
+
+def test_registration_initial_ok_registers():
+    doc, s = _ready_session()
+    s.feed_engine("registration checking")
+    s.feed_engine("registration ok")
+    assert s.reg_phase == "reg_registered"
+    with pytest.raises(UciError):
+        s.feed_gui("register later")
+
+
+def test_phases_orthogonal_to_lifecycle_readiness_debug():
+    """Phase changes never touch the underlying lifecycle state, the
+    position flag, the readiness flag or the debug setting - and run
+    during an outstanding search exactly as in ready."""
+    doc, s = _ready_session()
+    s.feed_gui("debug on")
+    s.feed_gui("position startpos")
+    s.feed_gui("isready")
+    s.feed_gui("go depth 10")
+    assert s.state == "searching"
+    before = s.snapshot()
+    s.feed_engine("copyprotection checking")
+    s.feed_engine("copyprotection ok")
+    s.feed_engine("registration checking")
+    s.feed_engine("registration error")
+    s.feed_gui("register later")
+    after = s.snapshot()
+    # every component except the two phases is bit-identical
+    assert after[:4] == before[:4]
+    assert (s.state, s.readiness, s.debug) == ("searching", True, "on")
+    assert (s.cp_phase, s.reg_phase) == ("cp_done", "reg_unregistered")
+    # the search is still outstanding and completes normally
+    s.feed_engine("bestmove e2e4")
+    assert s.state == "ready"
+
+
+def test_phases_closed_on_termination():
+    doc, s = _ready_session()
+    s.feed_engine("copyprotection checking")
+    s.feed_engine("registration checking")
+    s.feed_gui("quit")
+    assert s.state == "terminated"
+    for direction, line in (("engine", "copyprotection ok"),
+                            ("engine", "copyprotection checking"),
+                            ("engine", "registration ok"),
+                            ("engine", "registration error"),
+                            ("gui", "register later"),
+                            ("gui", "register name A code B")):
+        before = s.snapshot()
+        with pytest.raises(UciError) as exc:
+            (s.feed_engine if direction == "engine"
+             else s.feed_gui)(line)
+        assert exc.value.failure_class == "protocol_state"
+        assert s.snapshot() == before
+
+
+def test_phases_rejected_pre_uciok():
+    doc = _doc()["contract"]
+    s = Session(doc)
+    s.feed_gui("uci")  # awaiting_uciok: post-uci command, pre-uciok
+    for direction, line in (("engine", "copyprotection checking"),
+                            ("engine", "registration checking"),
+                            ("gui", "register later")):
+        before = s.snapshot()
+        with pytest.raises(UciError) as exc:
+            (s.feed_engine if direction == "engine"
+             else s.feed_gui)(line)
+        assert exc.value.failure_class == "protocol_state"
+        assert s.snapshot() == before
 
 
 def test_lifecycle_ucinewgame_resets_position_requirement():
@@ -1287,17 +1545,17 @@ def test_readiness_during_normal_search():
     for d, line in SEARCHING:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("searching", True, True, "off")
+    assert s.snapshot() == ("searching", True, True, "off", "cp_idle", "reg_awaiting_indication")
     s.feed_engine("info depth 7")           # search unaffected
     assert s.state == "searching"
     with pytest.raises(UciError):           # still outstanding
         s.feed_gui("go depth 3")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("searching", True, False, "off")
+    assert s.snapshot() == ("searching", True, False, "off", "cp_idle", "reg_awaiting_indication")
     with pytest.raises(UciError):           # still outstanding
         s.feed_gui("position startpos")
     s.feed_engine("bestmove e2e4")
-    assert s.snapshot() == ("ready", True, False, "off")
+    assert s.snapshot() == ("ready", True, False, "off", "cp_idle", "reg_awaiting_indication")
 
 
 def test_readiness_during_ponder_search():
@@ -1306,11 +1564,11 @@ def test_readiness_during_ponder_search():
     for d, line in PONDERING:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("pondering", True, True, "off")
+    assert s.snapshot() == ("pondering", True, True, "off", "cp_idle", "reg_awaiting_indication")
     s.feed_gui("ponderhit")                 # converts, flag preserved
-    assert s.snapshot() == ("searching", True, True, "off")
+    assert s.snapshot() == ("searching", True, True, "off", "cp_idle", "reg_awaiting_indication")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("searching", True, False, "off")
+    assert s.snapshot() == ("searching", True, False, "off", "cp_idle", "reg_awaiting_indication")
     s.feed_engine("bestmove d2d4")
     assert s.state == "ready"
 
@@ -1321,9 +1579,9 @@ def test_readiness_after_stop_requested():
     for d, line in STOPPED:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("stop_requested", True, True, "off")
+    assert s.snapshot() == ("stop_requested", True, True, "off", "cp_idle", "reg_awaiting_indication")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("stop_requested", True, False, "off")
+    assert s.snapshot() == ("stop_requested", True, False, "off", "cp_idle", "reg_awaiting_indication")
     # stop-requested survived the whole exchange: bestmove still due
     s.feed_engine("bestmove e2e4")
     assert s.state == "ready"
@@ -1336,9 +1594,9 @@ def test_readiness_during_ponder_stop_requested():
         _feed(s, d, line)
     assert s.state == "ponder_stop_requested"
     s.feed_gui("isready")
-    assert s.snapshot() == ("ponder_stop_requested", True, True, "off")
+    assert s.snapshot() == ("ponder_stop_requested", True, True, "off", "cp_idle", "reg_awaiting_indication")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("ponder_stop_requested", True, False, "off")
+    assert s.snapshot() == ("ponder_stop_requested", True, False, "off", "cp_idle", "reg_awaiting_indication")
     s.feed_gui("ponderhit")
     assert s.state == "stop_requested"
 
@@ -1371,7 +1629,8 @@ def test_readiness_terminal_gate():
         _feed(s, "gui", "quit")
         # on_termination: flag cleared on entry to terminated.
         assert s.snapshot() == (
-            "terminated", s.position_flag, False, "off")
+            "terminated", s.position_flag, False, "off",
+            "cp_idle", "reg_awaiting_indication")
         before = s.snapshot()
         for d, line in (("engine", "readyok"), ("gui", "isready")):
             with pytest.raises(UciError) as exc:
@@ -1450,7 +1709,7 @@ def test_debug_orthogonal_setting():
     _feed(s, "engine", "info depth 3")  # info still flows
     _feed(s, "gui", "debug on")
     _feed(s, "engine", "bestmove e2e4")  # bestmove ends the search
-    assert s.snapshot() == ("ready", True, False, "on")
+    assert s.snapshot() == ("ready", True, False, "on", "cp_idle", "reg_awaiting_indication")
     # ponder search: debug, then ponderhit still converts
     s = Session(doc)
     for d, line in PONDERING:
@@ -1458,23 +1717,23 @@ def test_debug_orthogonal_setting():
     toggles(s, ("pondering", True, False))
     _feed(s, "gui", "debug on")
     _feed(s, "gui", "ponderhit")
-    assert s.snapshot() == ("searching", True, False, "on")
+    assert s.snapshot() == ("searching", True, False, "on", "cp_idle", "reg_awaiting_indication")
     # stop-requested: debug, search outstanding until bestmove
     s = Session(doc)
     for d, line in SEARCHING + [("gui", "stop")]:
         _feed(s, d, line)
     toggles(s, ("stop_requested", True, False))
     _feed(s, "engine", "bestmove e2e4")
-    assert s.snapshot() == ("ready", True, False, "off")
+    assert s.snapshot() == ("ready", True, False, "off", "cp_idle", "reg_awaiting_indication")
     # readiness-pending search: debug touches neither flag nor search
     s = Session(doc)
     for d, line in SEARCHING + [("gui", "isready")]:
         _feed(s, d, line)
     toggles(s, ("searching", True, True))
     _feed(s, "engine", "readyok")  # flag still pending, clears it
-    assert s.snapshot() == ("searching", True, False, "off")
+    assert s.snapshot() == ("searching", True, False, "off", "cp_idle", "reg_awaiting_indication")
     _feed(s, "engine", "bestmove e2e4")
-    assert s.snapshot() == ("ready", True, False, "off")
+    assert s.snapshot() == ("ready", True, False, "off", "cp_idle", "reg_awaiting_indication")
 
 
 def test_stop_requests_but_never_clears_search():
@@ -1763,6 +2022,37 @@ def _mutants():
                           "ready", "engine"],
         {"info": "ready", "copyprotection": "ready",
          "registration": "ready"})
+    add("copyprotection terminal without checking",
+        ["contract", "lifecycle", "copyprotection", "transitions",
+         "cp_idle"],
+        {"checking": "cp_checking", "ok": "cp_done",
+         "error": "cp_done"})
+    add("copyprotection completion reopens",
+        ["contract", "lifecycle", "copyprotection", "transitions",
+         "cp_done"],
+        {"checking": "cp_checking", "ok": "cp_done",
+         "error": "cp_done"})
+    add("registration unsolicited success",
+        ["contract", "lifecycle", "registration",
+         "engine_transitions", "reg_awaiting_indication"],
+        {"checking": "reg_indication_pending", "ok": "reg_registered",
+         "error": "reg_unregistered"})
+    add("registration terminal without correlated checking",
+        ["contract", "lifecycle", "registration",
+         "engine_transitions", "reg_attempt_pending"],
+        {"checking": "reg_attempt_checking", "ok": "reg_registered",
+         "error": "reg_failed"})
+    add("registration completion reopens",
+        ["contract", "lifecycle", "registration",
+         "engine_transitions", "reg_registered"],
+        {"checking": "reg_indication_pending",
+         "ok": "reg_registered", "error": "rejected-protocol_state"})
+    add("register accepted anywhere",
+        ["contract", "lifecycle", "registration",
+         "gui_register_transitions", "name_code"],
+        {"reg_unregistered": "reg_attempt_pending",
+         "reg_failed": "reg_attempt_pending",
+         "elsewhere": "reg_attempt_pending"})
     add("post quit commands", ["contract", "lifecycle", "transitions",
                                "terminated", "gui"], {"uci": "ready"})
     add("unlisted pair drift", ["contract", "lifecycle",
@@ -1793,6 +2083,50 @@ def _mutants():
     add("base path drift", ["contract", "versioning", "base_path"],
         "/uci/v0")
     return out
+
+
+def test_phase_flattening_mutants_launder_violations():
+    """If either phase variable is flattened back to self-loops IN
+    MEMORY, the violating traces the real contract rejects become
+    accepted - proving the phase tables, not prose, carry the
+    ordering constraint (the linter separately rejects these
+    mutations in the FILE)."""
+    doc = _doc()["contract"]
+
+    cp_flat = copy.deepcopy(doc)
+    for phase in cp_flat["lifecycle"]["copyprotection"]["transitions"]:
+        cp_flat["lifecycle"]["copyprotection"]["transitions"][phase] = \
+            {"checking": phase, "ok": phase, "error": phase}
+    s = Session(cp_flat)
+    s.feed_gui("uci")
+    s.feed_engine("uciok")
+    s.feed_engine("copyprotection ok")        # no checking: laundered
+    s.feed_engine("copyprotection ok")        # repeat: laundered
+    s.feed_engine("copyprotection error")     # contradict: laundered
+
+    reg_flat = copy.deepcopy(doc)
+    for phase in reg_flat["lifecycle"]["registration"][
+            "engine_transitions"]:
+        reg_flat["lifecycle"]["registration"][
+            "engine_transitions"][phase] = \
+            {"checking": phase, "ok": phase, "error": phase}
+    s = Session(reg_flat)
+    s.feed_gui("uci")
+    s.feed_engine("uciok")
+    s.feed_engine("registration ok")          # unsolicited: laundered
+    s.feed_engine("registration checking")
+    s.feed_engine("registration checking")    # duplicate: laundered
+    s.feed_engine("registration error")
+    s.feed_engine("registration ok")          # after error: laundered
+
+    # the REAL contract rejects every one of those (phase tables
+    # carry the constraint)
+    s = Session(doc)
+    s.feed_gui("uci")
+    s.feed_engine("uciok")
+    for line in ("copyprotection ok", "registration ok"):
+        with pytest.raises(UciError):
+            s.feed_engine(line)
 
 
 def test_mutations_fail_lint():

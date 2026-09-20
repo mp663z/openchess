@@ -240,7 +240,7 @@ contract:
     transitions:
       pre_uci: {gui: {uci: awaiting_uciok, quit: terminated}, engine: {}}
       awaiting_uciok: {gui: {quit: terminated}, engine: {id: awaiting_uciok, uciok: ready}}
-      ready: {gui: {setoption: ready, register: ready, ucinewgame: ready, position: ready, go: search-start, quit: terminated}, engine: {copyprotection: ready, registration: ready}}
+      ready: {gui: {setoption: ready, ucinewgame: ready, position: ready, go: search-start, quit: terminated}, engine: {}}
       searching: {gui: {stop: stop_requested, quit: terminated}, engine: {info: searching, bestmove: ready}}
       pondering: {gui: {ponderhit: searching, stop: ponder_stop_requested, quit: terminated}, engine: {info: pondering}}
       stop_requested: {gui: {quit: terminated}, engine: {info: stop_requested, bestmove: ready}}
@@ -270,6 +270,119 @@ contract:
         debug is PINNED as protocol_state - rejected deliberately,
         never accidentally. The setting never appears in the
         transition table, and debug never appears there.
+    copyprotection:
+      model: orthogonal-phase-variable
+      phases: [cp_idle, cp_checking, cp_done]
+      initial: cp_idle
+      accepted_in_states: [ready, searching, pondering,
+        stop_requested, ponder_stop_requested]
+      pre_uciok: rejected-protocol_state
+      on_termination: phase-closed-every-status-rejected
+      state_preservation: phase-changes-never-touch-lifecycle-readiness-debug-registration-or-flags
+      transitions:
+        cp_idle: {checking: cp_checking, ok: rejected-protocol_state,
+          error: rejected-protocol_state}
+        cp_checking: {checking: rejected-protocol_state,
+          ok: cp_done, error: cp_done}
+        cp_done: {checking: rejected-protocol_state,
+          ok: rejected-protocol_state,
+          error: rejected-protocol_state}
+      rule: >-
+        Copy protection is an ORTHOGONAL phase variable, never a
+        lifecycle self-loop: exactly one checking may start the
+        protocol in any live post-uciok state, exactly one terminal
+        ok or error completes it, and nothing may follow. A terminal
+        status without a preceding checking is REJECTED
+        (protocol_state), a second checking while one is pending is
+        REJECTED, and every copyprotection status after completion
+        is REJECTED. The phase never appears in the lifecycle
+        transition table and copyprotection never appears there; the
+        underlying lifecycle state, position flag, outstanding
+        search, readiness flag, debug setting and registration phase
+        are all preserved across every copyprotection event. On
+        entry to terminated the phase is CLOSED: every
+        copyprotection status is protocol_state regardless of phase.
+    registration:
+      model: orthogonal-phase-variable-with-gui-correlation
+      phases: [reg_awaiting_indication, reg_indication_pending,
+        reg_unregistered, reg_attempt_pending, reg_attempt_checking,
+        reg_registered, reg_failed]
+      initial: reg_awaiting_indication
+      accepted_in_states: [ready, searching, pondering,
+        stop_requested, ponder_stop_requested]
+      pre_uciok: rejected-protocol_state
+      on_termination: phase-closed-every-status-and-register-rejected
+      state_preservation: phase-changes-never-touch-lifecycle-readiness-debug-copyprotection-or-flags
+      engine_transitions:
+        reg_awaiting_indication:
+          checking: reg_indication_pending
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+        reg_indication_pending:
+          checking: rejected-protocol_state
+          ok: reg_registered
+          error: reg_unregistered
+        reg_unregistered:
+          checking: reg_indication_pending
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+        reg_attempt_pending:
+          checking: reg_attempt_checking
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+        reg_attempt_checking:
+          checking: rejected-protocol_state
+          ok: reg_registered
+          error: reg_failed
+        reg_registered:
+          checking: rejected-protocol_state
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+        reg_failed:
+          checking: rejected-protocol_state
+          ok: rejected-protocol_state
+          error: rejected-protocol_state
+      gui_register_transitions:
+        name_code:
+          reg_unregistered: reg_attempt_pending
+          reg_failed: reg_attempt_pending
+          elsewhere: rejected-protocol_state
+        later:
+          reg_unregistered: reg_unregistered
+          reg_failed: reg_unregistered
+          elsewhere: rejected-protocol_state
+      correlation: register-name-code-opens-exactly-one-checking-then-exactly-one-terminal
+      register_later: defers-without-opening-an-attempt-engine-may-start-one-later-checking-cycle-from-unregistered
+      rule: >-
+        Registration is an ORTHOGONAL phase variable correlated with
+        GUI register commands, never a lifecycle self-loop. The
+        engine's INITIAL indication is one spontaneous checking from
+        reg_awaiting_indication followed by exactly one terminal ok
+        (registered) or error (unregistered); an unsolicited ok or
+        error with no pending checking is REJECTED, and a duplicate
+        checking while one is pending is REJECTED. From
+        reg_unregistered the engine may start ONE later checking
+        cycle on its own (the deferred re-check). A GUI registration
+        attempt - register name <tokens> code <tokens> - is accepted
+        only from reg_unregistered or reg_failed and CORRELATES the
+        next engine response: exactly one registration checking must
+        follow, then exactly one terminal ok (reg_registered) or
+        error (reg_failed); a terminal status before that checking
+        is REJECTED, and any status after the terminal one is
+        REJECTED. register later is accepted only from
+        reg_unregistered or reg_failed, opens NO attempt and leaves
+        the phase at reg_unregistered (registration deferred; the
+        engine's own later checking cycle remains possible).
+        reg_registered is terminal: every registration status and
+        every register command after completion is REJECTED
+        (protocol_state). The phase never appears in the lifecycle
+        transition table and neither registration nor register
+        appears there; the underlying lifecycle state, position
+        flag, outstanding search, readiness flag, debug setting and
+        copyprotection phase are all preserved across every
+        registration and register event. On entry to terminated the
+        phase is CLOSED: every registration status and every
+        register command is protocol_state regardless of phase.
     readiness:
       model: orthogonal-pending-flag
       set_by: isready
@@ -325,7 +438,14 @@ contract:
       flag. Debug mode is likewise an orthogonal session setting
       (see debug): debug on/off is accepted in every live
       post-uciok state, including while the engine is thinking,
-      and changes only the setting.
+      and changes only the setting. Copy protection and
+      registration are likewise orthogonal phase variables (see
+      copyprotection and registration): each is an ordered
+      mini-protocol - one checking, then exactly one terminal ok or
+      error - correlated for registration with GUI register
+      commands, accepted in every live post-uciok state and closed
+      on termination, and neither changes the underlying lifecycle
+      state.
       ponderhit converts a pondered search to a normal one (and a
       stop-requested pondered search to a stop-requested normal
       one). A PONDERING engine NEVER emits bestmove on its own -

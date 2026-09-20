@@ -178,6 +178,87 @@ LIFECYCLE_DEBUG = {
     "state_preservation":
         "debug-never-touches-underlying-state-or-flags",
 }
+LIFECYCLE_COPYPROTECTION = {
+    "model": "orthogonal-phase-variable",
+    "phases": ["cp_idle", "cp_checking", "cp_done"],
+    "initial": "cp_idle",
+    "accepted_in_states": ["ready", "searching", "pondering",
+                           "stop_requested", "ponder_stop_requested"],
+    "pre_uciok": "rejected-protocol_state",
+    "on_termination": "phase-closed-every-status-rejected",
+    "state_preservation":
+        "phase-changes-never-touch-lifecycle-readiness-debug-"
+        "registration-or-flags",
+    "transitions": {
+        "cp_idle": {"checking": "cp_checking",
+                    "ok": "rejected-protocol_state",
+                    "error": "rejected-protocol_state"},
+        "cp_checking": {"checking": "rejected-protocol_state",
+                        "ok": "cp_done", "error": "cp_done"},
+        "cp_done": {"checking": "rejected-protocol_state",
+                    "ok": "rejected-protocol_state",
+                    "error": "rejected-protocol_state"},
+    },
+}
+LIFECYCLE_REGISTRATION = {
+    "model": "orthogonal-phase-variable-with-gui-correlation",
+    "phases": ["reg_awaiting_indication", "reg_indication_pending",
+               "reg_unregistered", "reg_attempt_pending",
+               "reg_attempt_checking", "reg_registered", "reg_failed"],
+    "initial": "reg_awaiting_indication",
+    "accepted_in_states": ["ready", "searching", "pondering",
+                           "stop_requested", "ponder_stop_requested"],
+    "pre_uciok": "rejected-protocol_state",
+    "on_termination":
+        "phase-closed-every-status-and-register-rejected",
+    "state_preservation":
+        "phase-changes-never-touch-lifecycle-readiness-debug-"
+        "copyprotection-or-flags",
+    "engine_transitions": {
+        "reg_awaiting_indication": {
+            "checking": "reg_indication_pending",
+            "ok": "rejected-protocol_state",
+            "error": "rejected-protocol_state"},
+        "reg_indication_pending": {
+            "checking": "rejected-protocol_state",
+            "ok": "reg_registered",
+            "error": "reg_unregistered"},
+        "reg_unregistered": {
+            "checking": "reg_indication_pending",
+            "ok": "rejected-protocol_state",
+            "error": "rejected-protocol_state"},
+        "reg_attempt_pending": {
+            "checking": "reg_attempt_checking",
+            "ok": "rejected-protocol_state",
+            "error": "rejected-protocol_state"},
+        "reg_attempt_checking": {
+            "checking": "rejected-protocol_state",
+            "ok": "reg_registered",
+            "error": "reg_failed"},
+        "reg_registered": {
+            "checking": "rejected-protocol_state",
+            "ok": "rejected-protocol_state",
+            "error": "rejected-protocol_state"},
+        "reg_failed": {
+            "checking": "rejected-protocol_state",
+            "ok": "rejected-protocol_state",
+            "error": "rejected-protocol_state"},
+    },
+    "gui_register_transitions": {
+        "name_code": {"reg_unregistered": "reg_attempt_pending",
+                      "reg_failed": "reg_attempt_pending",
+                      "elsewhere": "rejected-protocol_state"},
+        "later": {"reg_unregistered": "reg_unregistered",
+                  "reg_failed": "reg_unregistered",
+                  "elsewhere": "rejected-protocol_state"},
+    },
+    "correlation":
+        "register-name-code-opens-exactly-one-checking-then-exactly-"
+        "one-terminal",
+    "register_later":
+        "defers-without-opening-an-attempt-engine-may-start-one-later-"
+        "checking-cycle-from-unregistered",
+}
 LIFECYCLE_READINESS = {
     "model": "orthogonal-pending-flag",
     "set_by": "isready",
@@ -212,12 +293,10 @@ LIFECYCLE_TRANSITIONS = {
     "awaiting_uciok": {"gui": {"quit": "terminated"},
                        "engine": {"id": "awaiting_uciok",
                                   "uciok": "ready"}},
-    "ready": {"gui": {"setoption": "ready",
-                      "register": "ready", "ucinewgame": "ready",
+    "ready": {"gui": {"setoption": "ready", "ucinewgame": "ready",
                       "position": "ready", "go": SEARCH_START,
                       "quit": "terminated"},
-              "engine": {"copyprotection": "ready",
-                         "registration": "ready"}},
+              "engine": {}},
     "searching": {"gui": {"stop": "stop_requested",
                           "quit": "terminated"},
                   "engine": {"info": "searching",
@@ -301,9 +380,11 @@ ALLOWED_OPTION_TYPES = set(OPTION_TYPES) | {"rule"}
 ALLOWED_POSITION_VALIDATION = set(POSITION_VALIDATION) | {"rule"}
 ALLOWED_LIFECYCLE = (set(LIFECYCLE_META)
                      | {"states", "transitions", "readiness", "debug",
-                        "rule"})
+                        "copyprotection", "registration", "rule"})
 ALLOWED_READINESS = set(LIFECYCLE_READINESS) | {"rule"}
 ALLOWED_DEBUG = set(LIFECYCLE_DEBUG) | {"rule"}
+ALLOWED_COPYPROTECTION = set(LIFECYCLE_COPYPROTECTION) | {"rule"}
+ALLOWED_REGISTRATION = set(LIFECYCLE_REGISTRATION) | {"rule"}
 ALLOWED_RESOLUTION = set(RESOLUTION_FAILURES) | {"rule"}
 ALLOWED_ERRORS = {"closed_enum", "shape"}
 ALLOWED_SERIALIZATION = {"canonical", "roundtrip", "rule"}
@@ -538,6 +619,11 @@ def lint(doc: dict, root: Path | None = None) -> None:
                       f"lifecycle.transitions.{state}.{direction}: "
                       "debug belongs to the orthogonal session "
                       "setting, never the state table")
+                _need(event not in ("copyprotection", "registration",
+                                    "register"),
+                      f"lifecycle.transitions.{state}.{direction}: "
+                      f"{event} belongs to the orthogonal phase "
+                      "variables, never the state table")
     debug = _mapping(life.get("debug"), "lifecycle.debug")
     _keys(debug, ALLOWED_DEBUG, "lifecycle.debug")
     for key, value in LIFECYCLE_DEBUG.items():
@@ -550,6 +636,36 @@ def lint(doc: dict, root: Path | None = None) -> None:
           "lifecycle.debug.accepted_in_states must exclude pre-uciok "
           "and terminal states (pinned rejection)")
     _text(debug.get("rule"), "lifecycle.debug.rule")
+
+    for section, pins, allowed, label in (
+            ("copyprotection", LIFECYCLE_COPYPROTECTION,
+             ALLOWED_COPYPROTECTION, "lifecycle.copyprotection"),
+            ("registration", LIFECYCLE_REGISTRATION,
+             ALLOWED_REGISTRATION, "lifecycle.registration")):
+        spec = _mapping(life.get(section), label)
+        _keys(spec, allowed, label)
+        for key, value in pins.items():
+            _exact(spec.get(key), value, f"{label}.{key}")
+        _need(set(spec["accepted_in_states"]) <= states,
+              f"{label}.accepted_in_states must be declared states")
+        _need(not ({"pre_uci", "awaiting_uciok", "terminated"}
+                   & set(spec["accepted_in_states"])),
+              f"{label}.accepted_in_states must exclude pre-uciok "
+              "and terminal states (pinned rejection)")
+        _need(spec["initial"] in spec["phases"],
+              f"{label}.initial must be a declared phase")
+        tables = [spec["transitions"]] if section == "copyprotection" \
+            else [spec["engine_transitions"]]
+        for table in tables:
+            _need(set(table) == set(spec["phases"]),
+                  f"{label}: every phase needs a transition row")
+            for phase, row in table.items():
+                for status, target in row.items():
+                    _need(target in spec["phases"]
+                          or target == "rejected-protocol_state",
+                          f"{label}.{phase}.{status}: target must be "
+                          "a declared phase or the pinned rejection")
+        _text(spec.get("rule"), f"{label}.rule")
 
     readiness = _mapping(life.get("readiness"), "lifecycle.readiness")
     _keys(readiness, ALLOWED_READINESS, "lifecycle.readiness")
