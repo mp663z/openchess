@@ -112,6 +112,8 @@ MERGE = {
     "same_edge_never_two_records": True,
     "conflicting_target": "rejected-as-conflicting_edge",
     "conflict_in_batch": "whole-merge-rejected-nothing-committed",
+    "source_validation":
+        "exact-stored-records-validated-before-staging",
     "rejected_insert_changes_nothing": True,
 }
 FAILURE_CLASSES = ["malformed_edge_record", "malformed_position",

@@ -260,6 +260,14 @@ class EdgeTable:
              self.nc), self.digest_fn)
         staged.buckets = copy.deepcopy(self.buckets)
         for rec in other.records():
+            # the source mapping is validated AS A RECORD against
+            # the destination's linked docs and digest oracle
+            # (original field set and canonical snapshot text)
+            # before any staging - never laundered through
+            # reconstruction
+            validate_record(self.ec, self.vc, self.dc, self.epc,
+                            self.fc, self.lc, self.nc, rec,
+                            self.digest_fn)
             staged.insert(rec["variant"], rec["move"],
                           rec["from_snapshot_fen"],
                           rec["to_snapshot_fen"])
@@ -671,6 +679,107 @@ def test_collision_separated_by_field_comparison():
     assert len(merged.records()) == 2
 
 
+
+def _bad_source_records():
+    good = _edge_record("e2e4", STARTPOS, AFTER_E4)
+    cases = []
+
+    def add(name, mutate, cls="malformed_edge_record"):
+        rec = copy.deepcopy(good)
+        mutate(rec)
+        cases.append((name, rec, cls))
+
+    add("extra-field", lambda r: r.__setitem__("note", "hidden"))
+    add("missing-field", lambda r: r.pop("move"))
+    add("non-normalized-clocks", lambda r: r.__setitem__(
+        "from_snapshot_fen",
+        r["from_snapshot_fen"].replace(" 0 1", " 7 42")))
+    add("phantom-ep", lambda r: r.__setitem__(
+        "to_snapshot_fen", AFTER_E4))
+    add("malformed-move", lambda r: r.__setitem__("move", "e2e2"))
+    add("unknown-variant", lambda r: r.__setitem__("variant", "c960"),
+        "unknown_variant")
+    add("malformed-fen", lambda r: r.__setitem__(
+        "to_snapshot_fen", "garbage w - - 0 1"))
+    return cases
+
+
+def test_merge_rejects_malformed_source_records():
+    """Batch negatives: each malformed source record rejects the
+    whole merge with the pinned failure class, ALONE and after a
+    valid prefix, leaving the destination bit-identical."""
+    valid = _edge_record("e1d1", KINGS, KINGS_E1D1_TO)
+    for name, rec, cls in _bad_source_records():
+        for label, prefix in (("alone", []), ("after-valid-prefix",
+                                              [valid])):
+            t = _table()
+            t.insert("standard", "e2e4", PAWN_E2, PAWN_E2E4_TO)
+            before = t.serialize()
+            before_buckets = copy.deepcopy(t.buckets)
+            with pytest.raises(EdgeError) as exc:
+                t.merge(_Batch(prefix + [rec]))
+            assert exc.value.failure_class == cls, (name, label)
+            assert t.serialize() == before, (name, label)
+            assert t.buckets == before_buckets, (name, label)
+
+
+def test_mixed_batch_failure_precedence():
+    """Pinned externally observable precedence: the FIRST defect in
+    batch order wins - a conflicting entry surfaces when it precedes
+    the malformed one, and vice versa."""
+    valid = _edge_record("e1d1", KINGS, KINGS_E1D1_TO)
+    conflicting = _edge_record("e2e4", STARTPOS, KINGS)
+    malformed = _edge_record("e2e4", STARTPOS, AFTER_E4)
+    malformed["note"] = "hidden"
+    t = _table()
+    t.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+    before = t.serialize()
+    with pytest.raises(EdgeError) as exc:
+        t.merge(_Batch([valid, conflicting, malformed]))
+    assert exc.value.failure_class == "conflicting_edge"
+    assert t.serialize() == before
+    t2 = _table()
+    t2.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+    with pytest.raises(EdgeError) as exc:
+        t2.merge(_Batch([valid, malformed, conflicting]))
+    assert exc.value.failure_class == "malformed_edge_record"
+    assert t2.serialize() == before
+
+
+def test_mutant_reconstruction_merge_would_launder():
+    """Behavioral mutant: the v2-defect merge shape (rebuild from
+    extracted values without source validation) LAUNDERS a malformed
+    record into a valid one - pinned here so the battery proves the
+    real merge is not that shape. Counter-test: a valid exact record
+    still merges through the real path."""
+    def mutant_merge(self, other):
+        for rec in other.records():
+            self.insert(rec["variant"], rec["move"],
+                        rec["from_snapshot_fen"],
+                        rec["to_snapshot_fen"])
+        return self
+
+    bad = _edge_record("e1e2", KINGS, KINGS_E1E2_TO)
+    bad["note"] = "hidden"  # extra field: must be rejected
+    t = _table()
+    with pytest.raises(EdgeError) as exc:
+        t.merge(_Batch([bad]))
+    assert exc.value.failure_class == "malformed_edge_record"
+    assert t.records() == []
+    # the mutant accepts and silently launders the same record
+    t2 = _table()
+    mutant_merge(t2, _Batch([bad]))
+    assert len(t2.records()) == 1
+    assert set(t2.records()[0].keys()) == {
+        "variant", "move", "from_snapshot_fen", "to_snapshot_fen"}
+    # counter-test: the valid exact record still merges for real
+    t3 = _table()
+    good = _edge_record("e1e2", KINGS, KINGS_E1E2_TO)
+    t3.merge(_Batch([good]))
+    assert len(t3.records()) == 1
+    assert t3.records()[0] == good
+
+
 # -- mutation battery ------------------------------------------------------
 
 
@@ -736,6 +845,9 @@ def _mutants():
     add("batch conflict partial commit", ["contract", "merge",
                                           "conflict_in_batch"],
         "valid-prefix-commits")
+    add("source validation dropped", ["contract", "merge",
+                                      "source_validation"],
+        "rebuild-from-values")
     add("conflict tolerated", ["contract", "merge",
                                "conflicting_target"],
         "last-writer-wins")

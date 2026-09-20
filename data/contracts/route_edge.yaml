@@ -129,6 +129,7 @@ contract:
     same_edge_never_two_records: true
     conflicting_target: rejected-as-conflicting_edge
     conflict_in_batch: whole-merge-rejected-nothing-committed
+    source_validation: exact-stored-records-validated-before-staging
     rejected_insert_changes_nothing: true
     rule: >-
       Inserting an edge into the edge table returns the existing

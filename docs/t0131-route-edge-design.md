@@ -65,3 +65,17 @@ orders reject (never first-writer residue). Reference implements
 clone-then-adopt; batteries: both-orders-reject,
 batch-valid-prefix-then-conflict rollback, conflict internal to a
 single source batch, plus mutants for the two new pins.
+
+## v3 amendment (verifier #2 round 2): merge validates exact source records
+
+Merge now validates each source mapping AS A RECORD with
+validate_record against the destination table's linked docs and
+digest oracle BEFORE staging (new structured pin:
+merge.source_validation exact-stored-records-validated-before-
+staging). A malformed source record - extra/missing field,
+non-normalized clocks, phantom EP, malformed move, unknown variant,
+malformed FEN - rejects the whole merge, alone or after a valid
+prefix, leaving the destination bit-identical. Failure precedence
+pinned: first defect in batch order wins. Behavioral mutant
+(reconstruction-without-validation laundering) pinned with a
+counter-test proving valid exact records still merge.
