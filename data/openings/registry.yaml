@@ -1,0 +1,36 @@
+schema_version: 1
+registry:
+  id: chess-opening-registry
+  code_grammar:
+    pattern: "^[A-E][0-9][0-9]$"
+    alphabet: printable-ascii-only
+    whitespace: forbidden
+    control_bytes: forbidden
+    rule: >-
+      ECO-style code: one volume letter A through E, then exactly
+      two digits. Printable ASCII only; whitespace and control
+      bytes forbidden.
+  none_sentinel: "-"
+  entries:
+    - code: A04
+      name: Zukertort Opening
+      moves: [g1f3]
+    - code: B20
+      name: Sicilian Defense
+      moves: [e2e4, c7c5]
+    - code: B90
+      name: "Sicilian Defense: Najdorf Variation"
+      moves: [e2e4, c7c5, g1f3, d7d6, d2d4, c5d4, f3d4, g8f6, b1c3,
+              a7a6]
+    - code: C20
+      name: King's Pawn Game
+      moves: [e2e4, e7e5]
+    - code: C50
+      name: Italian Game
+      moves: [e2e4, e7e5, g1f3, b8c6, f1c4, f8c5]
+    - code: D20
+      name: Queen's Gambit
+      moves: [d2d4, d7d5, c2c4]
+    - code: D06
+      name: Queen's Gambit Declined
+      moves: [d2d4, d7d5, c2c4, e7e6, g1f3, g8f6]
