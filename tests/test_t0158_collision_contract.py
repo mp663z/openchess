@@ -227,19 +227,32 @@ class CollisionProbe:
         self._active = False
 
     def _snapshot_live(self):
-        """Reference-preserving snapshot: the SAME container and
-        record objects, so restoration never changes stored-record
-        identity."""
+        """DEEP reference-preserving snapshot: the SAME container
+        and record objects, plus the exact CONTENTS of every
+        unique stored record dict (aliases across containers
+        deduped by object id) - restoration never changes
+        stored-record identity, only undoes corruption."""
         orig = (self.buckets, self.identity_index)
         saved_b = {k: list(v) for k, v in self.buckets.items()}
         saved_i = dict(self.identity_index)
-        return orig, saved_b, saved_i
+        saved_recs = {}
+        for rec in list(self.identity_index.values()) + \
+                [r for bucket in self.buckets.values()
+                 for r in bucket]:
+            if id(rec) not in saved_recs:
+                saved_recs[id(rec)] = (rec, dict(rec))
+        return orig, saved_b, saved_i, saved_recs
 
-    def _restore_live(self, orig, saved_b, saved_i):
+    def _restore_live(self, orig, saved_b, saved_i, saved_recs):
         """Restore the EXACT original structures after untrusted
-        code ran: undo attribute replacement AND in-place
-        corruption, keeping the original container and record
-        objects (stored-record identity is observable)."""
+        code ran: every pre-existing stored record object's
+        CONTENTS first (same objects, original field values),
+        then container topology - undoing attribute replacement,
+        in-place container corruption, and in-place record
+        corruption."""
+        for rec, content in saved_recs.values():
+            rec.clear()
+            rec.update(content)
         self.buckets, self.identity_index = orig
         orig[0].clear()
         orig[0].update({k: list(v) for k, v in saved_b.items()})
@@ -280,7 +293,8 @@ class CollisionProbe:
         closing oracle."""
         nc, vc, dc, epc, fc = _NODE_DOCS
         self._enter()
-        orig, saved_b, saved_i = self._snapshot_live()
+        orig, saved_b, saved_i, saved_recs = \
+            self._snapshot_live()
         try:
             try:
                 rec = _make_record(nc, vc, dc, epc, fc,
@@ -290,12 +304,14 @@ class CollisionProbe:
                 _fail(self.cc, "malformed_collision_record")
             # discard any direct live-receiver corruption by the
             # untrusted oracle BEFORE staging reads the structures
-            self._restore_live(orig, saved_b, saved_i)
+            self._restore_live(orig, saved_b, saved_i,
+                                 saved_recs)
             identity = self._identity(rec)
             return self._staged_insert(rec, identity,
                                        rec["digest"])
         except CollisionError:
-            self._restore_live(orig, saved_b, saved_i)
+            self._restore_live(orig, saved_b, saved_i,
+                                 saved_recs)
             raise
         finally:
             self._exit()
@@ -385,7 +401,8 @@ class CollisionProbe:
         committed only when the whole batch validates."""
         nc, vc, dc, epc, fc = _NODE_DOCS
         self._enter()
-        orig, saved_b, saved_i = self._snapshot_live()
+        orig, saved_b, saved_i, saved_recs = \
+            self._snapshot_live()
         staged = CollisionProbe(self.oracle, self.cc)
         staged.buckets = copy.deepcopy(self.buckets)
         staged.identity_index = copy.deepcopy(self.identity_index)
@@ -431,7 +448,8 @@ class CollisionProbe:
             # restore the EXACT originals: direct live-receiver
             # corruption by receiver-closing oracle code never
             # survives a rejected merge
-            self._restore_live(orig, saved_b, saved_i)
+            self._restore_live(orig, saved_b, saved_i,
+                                 saved_recs)
             raise
         finally:
             self._exit()
@@ -1273,6 +1291,9 @@ def _mutants():
     add("receiver_isolation dropped", ["contract", "properties",
                                        "receiver_isolation"],
         "oracle-runs-against-live-state")
+    add("record_content_restoration dropped",
+        ["contract", "properties", "record_content_restoration"],
+        "container-topology-only")
     return out
 
 
@@ -1863,3 +1884,144 @@ def test_mutant_staged_rollback_but_live_corruption_persists():
         dest.insert("standard", STARTPOS)
     assert exc.value.failure_class == "accelerator_inconsistent"
     assert (dest.buckets, dest.identity_index) == pristine
+
+
+# -- v10: record-content restoration against record-closing oracles -----------
+
+
+def _record_corrupting_oracle(stored_ref, field, mutation,
+                              raise_after):
+    """UNTRUSTED: closes over a previously RETURNED/stored record
+    dict and corrupts its CONTENTS in place during the call."""
+    def oracle(variant, fen):
+        rec = stored_ref[0]
+        if mutation == "delete":
+            del rec[field]
+        elif mutation == "hostile":
+            rec[field] = []
+        elif mutation == "valid-substitute":
+            rec[field] = {"variant": "standard",
+                          "snapshot_fen": AFTER_E4,
+                          "digest": K1}[field]
+        elif mutation == "add-field":
+            rec["evil"] = True
+        if raise_after:
+            raise ValueError("corrupt record and explode")
+        return constant_oracle(variant, fen)
+    return oracle
+
+
+@pytest.mark.parametrize("mutation", ["delete", "hostile",
+                                      "valid-substitute",
+                                      "add-field"])
+@pytest.mark.parametrize("field", ["variant", "digest",
+                                   "snapshot_fen"])
+@pytest.mark.parametrize("raise_after", [True, False],
+                         ids=["then-raise", "then-return"])
+def test_record_content_restored_insert(mutation, field,
+                                        raise_after):
+    """An oracle corrupting a stored record's CONTENTS: on
+    rejection the receiver is bit-identical INCLUDING record
+    contents and object identity; on success the corruption is
+    discarded, the existing object keeps its identity and
+    original contents, and the new insertion is clean."""
+    dest = _probe(constant_oracle)
+    stored = dest.insert("standard", KINGS)
+    original_content = dict(stored)
+    dest.oracle = _record_corrupting_oracle([stored], field,
+                                            mutation, raise_after)
+    if raise_after:
+        with pytest.raises(CollisionError) as exc:
+            dest.insert("standard", STARTPOS)
+        assert exc.value.failure_class == \
+            "accelerator_inconsistent"
+        assert dest.records()[0] is stored
+        assert dest.records()[0] == original_content
+        _assert_one_record_per_identity(dest, 1)
+    else:
+        dest.insert("standard", STARTPOS)
+        existing = dest.records()
+        assert stored in existing
+        assert stored == original_content
+        _assert_one_record_per_identity(dest, 2)
+
+
+@pytest.mark.parametrize("mutate_on", [1, 2],
+                         ids=["first-call", "mid-batch"])
+def test_record_content_restored_merge(mutate_on):
+    """Record-content corruption during a merge batch, first and
+    mid-batch: typed failure, bit-identical receiver INCLUDING
+    the stored record's contents and identity."""
+    src = _probe(constant_oracle)
+    src.insert("standard", STARTPOS)
+    src.insert("standard", AFTER_E4)
+    dest = _probe(constant_oracle)
+    stored = dest.insert("standard", KINGS)
+    original_content = dict(stored)
+    calls = {"n": 0}
+
+    def oracle(variant, fen):
+        calls["n"] += 1
+        if calls["n"] == mutate_on:
+            stored["snapshot_fen"] = []
+            raise ValueError("mid-batch record corruption")
+        return constant_oracle(variant, fen)
+
+    dest.oracle = oracle
+    with pytest.raises(CollisionError) as exc:
+        dest.merge(src)
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert dest.records()[0] is stored
+    assert dest.records()[0] == original_content
+    _assert_one_record_per_identity(dest, 1)
+
+
+def test_aliased_record_across_containers_restored_once():
+    """The SAME record object referenced from the identity index
+    AND a bucket list: corruption restores consistently (content
+    snapshot deduped by object id)."""
+    dest = _probe(constant_oracle)
+    stored = dest.insert("standard", KINGS)
+    identity = dest._identity(stored)
+    assert dest.identity_index[identity] is stored
+    assert stored in dest.buckets[stored["digest"]]
+    original_content = dict(stored)
+    dest.oracle = _record_corrupting_oracle([stored], "digest",
+                                            "hostile", True)
+    with pytest.raises(CollisionError):
+        dest.insert("standard", STARTPOS)
+    assert dest.identity_index[identity] is stored
+    assert dest.buckets[original_content["digest"]][0] is stored
+    assert stored == original_content
+
+
+def test_mutant_container_only_restore_leaves_record_corruption():
+    """Behavioral mutant: the v9 restore fixed container topology
+    ONLY - record-content corruption persisted past the typed
+    rejection. Counter-test: the real restore also repairs
+    record contents."""
+    dest = _probe(constant_oracle)
+    stored = dest.insert("standard", KINGS)
+    original_content = dict(stored)
+
+    def mutant_restore(probe, orig, saved_b, saved_i):
+        probe.buckets, probe.identity_index = orig
+        orig[0].clear()
+        orig[0].update({k: list(v)
+                        for k, v in saved_b.items()})
+        orig[1].clear()
+        orig[1].update(saved_i)
+
+    orig = (dest.buckets, dest.identity_index)
+    saved_b = {k: list(v) for k, v in dest.buckets.items()}
+    saved_i = dict(dest.identity_index)
+    stored["snapshot_fen"] = []  # oracle corruption
+    mutant_restore(dest, orig, saved_b, saved_i)
+    assert stored["snapshot_fen"] == []  # corruption persisted
+    # real restore repairs the record contents
+    dest2 = _probe(constant_oracle)
+    stored2 = dest2.insert("standard", KINGS)
+    snap = dest2._snapshot_live()
+    stored2["snapshot_fen"] = []
+    dest2._restore_live(*snap)
+    assert stored2 == original_content

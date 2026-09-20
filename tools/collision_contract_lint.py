@@ -156,6 +156,9 @@ PROPERTIES = {
     "receiver_isolation":
         "receiver-state-snapshotted-discarded-before-staging-"
         "restored-on-failure",
+    "record_content_restoration":
+        "stored-record-contents-snapshotted-restored-identity-"
+        "preserved",
     "rollback": "rejected-insert-leaves-table-bit-identical",
     "trust_boundary":
         "oracle-divergence-fails-closed-no-fork-persists",
