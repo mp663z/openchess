@@ -201,6 +201,8 @@ LIFECYCLE_META = {
     "go_requires": "position_flag-set",
     "go_ponder_target":
         "pondering-when-ponder-parameter-else-searching",
+    "ponder_bestmove_gate":
+        "gui-release-required-even-on-mate-or-completion",
     "unlisted_pair": "protocol_state",
 }
 SEARCH_START = "search-start"
@@ -223,8 +225,7 @@ LIFECYCLE_TRANSITIONS = {
     "pondering": {"gui": {"ponderhit": "searching",
                           "stop": "ponder_stop_requested",
                           "quit": "terminated"},
-                  "engine": {"info": "pondering",
-                             "bestmove": "ready"}},
+                  "engine": {"info": "pondering"}},
     "stop_requested": {"gui": {"quit": "terminated"},
                        "engine": {"info": "stop_requested",
                                   "bestmove": "ready"}},

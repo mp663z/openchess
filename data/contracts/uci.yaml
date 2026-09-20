@@ -220,12 +220,13 @@ contract:
     position_flag: set-by-position-command-reset-by-uci-or-ucinewgame
     go_requires: position_flag-set
     go_ponder_target: pondering-when-ponder-parameter-else-searching
+    ponder_bestmove_gate: gui-release-required-even-on-mate-or-completion
     transitions:
       pre_uci: {gui: {uci: awaiting_uciok, quit: terminated}, engine: {}}
       awaiting_uciok: {gui: {quit: terminated}, engine: {id: awaiting_uciok, uciok: ready}}
       ready: {gui: {setoption: ready, register: ready, ucinewgame: ready, position: ready, go: search-start, quit: terminated}, engine: {copyprotection: ready, registration: ready}}
       searching: {gui: {stop: stop_requested, quit: terminated}, engine: {info: searching, bestmove: ready}}
-      pondering: {gui: {ponderhit: searching, stop: ponder_stop_requested, quit: terminated}, engine: {info: pondering, bestmove: ready}}
+      pondering: {gui: {ponderhit: searching, stop: ponder_stop_requested, quit: terminated}, engine: {info: pondering}}
       stop_requested: {gui: {quit: terminated}, engine: {info: stop_requested, bestmove: ready}}
       ponder_stop_requested: {gui: {ponderhit: stop_requested, quit: terminated}, engine: {info: ponder_stop_requested, bestmove: ready}}
       terminated: {gui: {}, engine: {}}
@@ -311,7 +312,14 @@ contract:
       and changes only the setting.
       ponderhit converts a pondered search to a normal one (and a
       stop-requested pondered search to a stop-requested normal
-      one). bestmove clears the outstanding search and returns the
+      one). A PONDERING engine NEVER emits bestmove on its own -
+      not when the search completes, not when it finds mate: the
+      ponder_bestmove_gate pins that bestmove leaves pondering only
+      after a GUI release, ponderhit (-> searching) or stop (->
+      ponder_stop_requested); a direct pondering bestmove is
+      protocol_state. Otherwise a predicted opponent move could
+      leak into an unsolicited move and race the GUI's actual move.
+      bestmove clears the outstanding search and returns the
       session to ready. info is valid only while a search is
       outstanding. quit terminates the session from any state; any
       further line in either direction is a violation. Every

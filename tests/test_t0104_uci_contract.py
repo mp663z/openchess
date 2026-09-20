@@ -1213,6 +1213,10 @@ PROTOCOL_VIOLATIONS = [
     (STOPPED, "gui", "go depth 6"),
     (STOPPED, "gui", "ponderhit"),          # search was not pondered
     (PONDERING, "gui", "go depth 6"),
+    # ponder_bestmove_gate: a pondering engine never emits bestmove
+    # on its own - not on completion, not on mate; only ponderhit
+    # (-> searching) or stop (-> ponder_stop_requested) releases it.
+    (PONDERING, "engine", "bestmove e2e4 ponder e7e5"),
     (PONDERING + [("gui", "stop")], "gui", "stop"),
     (READINESS, "gui", "isready"),          # second isready: never queued
     (READINESS, "engine", "bestmove e2e4"),  # no search outstanding
@@ -1349,6 +1353,45 @@ def test_readiness_terminal_gate():
             assert s.snapshot() == before
 
 
+def test_ponder_release_paths():
+    """Ponder semantics: the engine cannot exit a ponder search on
+    its own - bestmove from pondering is protocol_state even when
+    the search completed or found mate, with bit-identical
+    rollback. Only ponderhit (-> searching) or stop (->
+    ponder_stop_requested) releases bestmove."""
+    doc = _doc()["contract"]
+    # negative: direct ponder -> bestmove (the verifier repro),
+    # including the mate/completed-search wording of the gate.
+    s = Session(doc)
+    for d, line in PONDERING:
+        _feed(s, d, line)
+    _feed(s, "engine", "info depth 20 score mate 3")
+    before = s.snapshot()
+    with pytest.raises(UciError) as exc:
+        s.feed_engine("bestmove e2e4 ponder e7e5")
+    assert exc.value.failure_class == "protocol_state"
+    assert s.snapshot() == before  # bit-identical rollback
+    # release via ponderhit: bestmove completes normally.
+    _feed(s, "gui", "ponderhit")
+    assert s.state == "searching"
+    _feed(s, "engine", "bestmove e2e4 ponder e7e5")
+    assert s.state == "ready"
+    # release via stop: bestmove completes the stopped search.
+    s = Session(doc)
+    for d, line in PONDERING:
+        _feed(s, d, line)
+    _feed(s, "gui", "stop")
+    assert s.state == "ponder_stop_requested"
+    _feed(s, "engine", "bestmove e7e5")
+    assert s.state == "ready"
+    # info flows freely while pondering (unchanged).
+    s = Session(doc)
+    for d, line in PONDERING:
+        _feed(s, d, line)
+    _feed(s, "engine", "info depth 1")
+    assert s.state == "pondering"
+
+
 def test_debug_orthogonal_setting():
     """debug on/off is accepted in every live post-uciok state -
     including while the engine is thinking - and changes ONLY the
@@ -1448,6 +1491,9 @@ def test_rejected_commands_leave_state_bit_identical():
         (POSITIONED + [("gui", "go infinite"), ("gui", "isready"),
                        ("gui", "quit")],
          [("engine", "readyok")]),
+        (PONDERING,
+         [("engine", "bestmove e2e4 ponder e7e5"),
+          ("engine", "bestmove (none)")]),
     ]
     for prefix, rejections in scripts:
         s = Session(doc)
@@ -1636,6 +1682,25 @@ def _mutants():
         ["pre_uci", "awaiting_uciok", "ready", "readiness_pending",
          "searching", "pondering", "stop_requested",
          "ponder_stop_requested", "terminated"])
+    add("ponder bestmove direct", ["contract", "lifecycle",
+                                   "transitions", "pondering",
+                                   "engine", "bestmove"], "ready")
+    add("searching bestmove dropped", ["contract", "lifecycle",
+                                       "transitions", "searching",
+                                       "engine"], {"info": "searching"})
+    add("stop_requested bestmove dropped", ["contract", "lifecycle",
+                                            "transitions",
+                                            "stop_requested",
+                                            "engine"],
+        {"info": "stop_requested"})
+    add("ponder_stop bestmove dropped", ["contract", "lifecycle",
+                                         "transitions",
+                                         "ponder_stop_requested",
+                                         "engine"],
+        {"info": "ponder_stop_requested"})
+    add("ponder gate drift", ["contract", "lifecycle",
+                              "ponder_bestmove_gate"],
+        "engine-may-exit-ponder-freely")
     add("ponderhit free", ["contract", "lifecycle", "transitions",
                            "searching", "gui"],
         {"stop": "stop_requested", "ponderhit": "searching",
