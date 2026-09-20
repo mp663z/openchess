@@ -30,8 +30,18 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from tests.test_t0086_fen_contract import parse_fen  # noqa: E402
+from tests.test_t0122_transposition_node_contract import (  # noqa: E402
+    _docs as _node_docs,
+)
 from tests.test_t0122_transposition_node_contract import (  # noqa: E402
     _table as _node_table,
+)
+from tools.legal_moves_runtime import (  # noqa: E402
+    apply as _rt_apply,
+)
+from tools.legal_moves_runtime import (  # noqa: E402
+    legal_moves as _rt_legal,
 )
 from tools.opening_context_contract_lint import (  # noqa: E402
     CONTRACT,
@@ -177,11 +187,39 @@ class ContextTable:
         return rec
 
     def merge(self, other):
-        """Table-to-table merge IS iterated insertion of the exact
-        stored records - the structural definition that makes
-        associativity a witness, not a claim."""
+        """Table-to-table merge CONSUMES each exact stored record
+        into a STAGED copy, committed only when the whole batch
+        passes - the contract's atomic pin; the context is never
+        re-derived from the receiver's registry. For an existing
+        key the exact incoming record is compared with the stored
+        record and any context mismatch is a conflicting_context
+        rejection before any mutation; a new key is validated
+        against THIS table's registry (an incoming code unknown
+        under it is unknown_opening_code, a failure separate from
+        same-key conflict). Over conflicting tables both merge
+        orders reject and leave the same pre-merge destinations."""
+        staged = ContextTable((self.oc, self.vc, self.lc, self.nc,
+                               self.reg))
+        staged.map = copy.deepcopy(self.map)
         for rec in other.records():
-            self.insert(rec["variant"], rec["path_moves"])
+            if (not isinstance(rec, dict)
+                    or not isinstance(rec.get("path_moves"), list)
+                    or "variant" not in rec):
+                _fail(self.oc, "malformed_context_record")
+            key = (rec["variant"], tuple(rec["path_moves"]))
+            existing = staged.map.get(key)
+            if existing is not None:
+                if (rec.get("opening_code"), rec.get("opening_name")) != (
+                        existing["opening_code"],
+                        existing["opening_name"]):
+                    _fail(self.oc, "conflicting_context")
+                if rec != existing:
+                    _fail(self.oc, "malformed_context_record")
+                continue
+            validate_record(self.oc, self.vc, self.lc, self.nc,
+                            self.reg, rec)
+            staged.map[key] = copy.deepcopy(rec)
+        self.map = staged.map
         return self
 
     def records(self):
@@ -206,10 +244,6 @@ ITALIAN_PATH = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5"]
 KINGS_PAWN_PATH = ["e2e4", "e7e5"]
 PETROFF_PATH = ["e2e4", "e7e5", "g1f3", "g8f6"]  # still C20 by prefix
 ZUKERTORT_TRANSPOSITION_PATH = ["g1f3", "g8f6", "e2e4", "e7e5"]
-# Both transposition paths reach this ONE canonical node (traced):
-# white e4 + Nf3, black e5 + Nf6, white to move, all rights intact.
-TRANSPOSITION_NODE_FEN = (
-    "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1")
 QG_PATH = ["d2d4", "d7d5", "c2c4"]
 QGD_PATH = ["d2d4", "d7d5", "c2c4", "e7e6", "g1f3", "g8f6"]
 SICILIAN_PATH = ["e2e4", "c7c5"]
@@ -238,27 +272,109 @@ def test_happy_resolve_exact():
     _validate(rec)
 
 
+def _occupied_from_placement(board):
+    """parse_fen's board dict {(x, y): letter} -> runtime occupied
+    mapping {square: side+letter}; (0, 8) is a8."""
+    occupied = {}
+    for (x, y), letter in board.items():
+        side = "w" if letter.isupper() else "b"
+        occupied["abcdefgh"[x] + str(y)] = side + letter.lower()
+    return occupied
+
+
+def _placement_from_occupied(occupied):
+    ranks = []
+    for y in range(8, 0, -1):
+        rank, empty = "", 0
+        for x in "abcdefgh":
+            tok = occupied.get(x + str(y))
+            if tok is None:
+                empty += 1
+            else:
+                if empty:
+                    rank += str(empty)
+                    empty = 0
+                side, letter = tok
+                rank += letter.upper() if side == "w" else letter
+        if empty:
+            rank += str(empty)
+        ranks.append(rank)
+    return "/".join(ranks)
+
+
+_CASTLING_HOMES = {"e1": "KQ", "e8": "kq", "a1": "Q", "h1": "K",
+                   "a8": "q", "h8": "k"}
+
+
+def _apply_path_from_start(vc, fc, path):
+    """INDEPENDENT path application: every long-algebraic move in the
+    path is applied from the linked variant's start_fen through the
+    repo's own legal-moves runtime - a separately implemented legal
+    move/application surface - with castling rights and en-passant
+    targets tracked move-by-move HERE. Every move must be in the
+    runtime's exact legal set. Returns the final FEN text with
+    normalized clocks."""
+    start_fen = {e["id"]: e["start_fen"]
+                 for e in vc["variants"]["entries"]}["standard"]
+    board, color, _rights, _ep, _h, _f = parse_fen(fc, start_fen)
+    state = {"occupied": _occupied_from_placement(board),
+             "side_to_move": color}
+    rights = set("KQkq")
+    ep_target = "-"
+    for text in path:
+        move = {"from_square": text[:2], "to_square": text[2:4]}
+        if len(text) == 5:
+            move["promotion"] = text[4]
+        assert move in _rt_legal(state), f"illegal move {text!r}"
+        piece = state["occupied"][move["from_square"]]
+        state = _rt_apply(state, move)
+        for square in (move["from_square"], move["to_square"]):
+            rights.discard(_CASTLING_HOMES.get(square, ""))
+        rights.discard("")
+        if (piece[1] == "p"
+                and move["from_square"][0] == move["to_square"][0]
+                and abs(int(move["from_square"][1])
+                        - int(move["to_square"][1])) == 2):
+            mid = (int(move["from_square"][1])
+                   + int(move["to_square"][1])) // 2
+            ep_target = move["from_square"][0] + str(mid)
+        else:
+            ep_target = "-"
+        state = {"occupied": state["occupied"],
+                 "side_to_move": ("b" if state["side_to_move"] == "w"
+                                  else "w")}
+    placement = _placement_from_occupied(state["occupied"])
+    rights_text = "".join(r for r in "KQkq" if r in rights) or "-"
+    return (f"{placement} {state['side_to_move']} {rights_text} "
+            f"{ep_target} 0 1")
+
+
 def test_path_attribution_witness():
-    """THE contract witness: PETROFF_PATH and
-    ZUKERTORT_TRANSPOSITION_PATH are different move sequences to ONE
-    canonical transposition node (proven through the T0122 node
-    machinery with clock-mutated FEN texts folding to one record),
-    and they carry DIFFERENT opening contexts - C20 by the e4-e5
-    prefix vs A04 by the 1.Nf3 prefix. Classification follows the
-    PATH, never the collapsed identity."""
+    """THE contract witness, end to end: both headline paths are
+    APPLIED from the linked variant's start_fen through the repo's
+    own legal-moves runtime (every move asserted legal against the
+    exact legal set), the two DERIVED final positions fold to ONE
+    canonical transposition node through the T0122 machinery
+    (clock-mutated text included), and the two paths carry
+    DIFFERENT opening contexts - C20 by the e4-e5 prefix vs A04 by
+    the 1.Nf3 prefix. Classification follows the PATH, never the
+    collapsed identity."""
+    _nc, vc, _dc, _epc, fc = _node_docs()
+    fen_a = _apply_path_from_start(vc, fc, PETROFF_PATH)
+    fen_b = _apply_path_from_start(
+        vc, fc, ZUKERTORT_TRANSPOSITION_PATH)
+    nt = _node_table()
+    n1 = nt.insert("standard", fen_a)
+    # fullmove drift only - the last move was a double push, so a
+    # nonzero halfmove clock would be an impossible position
+    n2 = nt.insert("standard", fen_b.replace(" 0 1", " 0 9"))
+    assert n1 is n2  # one canonical node either way
     t = _table()
     a = t.insert("standard", PETROFF_PATH)
     b = t.insert("standard", ZUKERTORT_TRANSPOSITION_PATH)
     assert a["opening_code"] == "C20"
     assert b["opening_code"] == "A04"
     assert a["opening_code"] != b["opening_code"]
-    # same canonical node either way - clocks mutate freely
-    nt = _node_table()
-    n1 = nt.insert("standard", TRANSPOSITION_NODE_FEN)
-    n2 = nt.insert("standard",
-                   TRANSPOSITION_NODE_FEN.replace(" 0 1", " 4 9"))
-    assert n1 is n2
-    # and the context keys stay distinct - no collapse into identity
     assert (a["variant"], tuple(a["path_moves"])) != (
         b["variant"], tuple(b["path_moves"]))
 
@@ -286,20 +402,49 @@ def test_boundary_empty_and_extension():
     _validate(rec)
 
 
-def test_resolution_determinism_and_prefix_stability():
+def test_resolution_determinism_and_extension_refinement():
+    """Determinism: same input, same context. Extension refinement
+    (the resolution section's structured pin): extending a path
+    resolves either to the SAME entry the shorter path resolved to
+    or to a STRICTLY LONGER registry entry whose move sequence
+    extends the prior entry's sequence - a longer path may refine
+    B20 to B90 but never jumps to a shorter or non-prefix entry,
+    and a classified path never becomes unclassified by extension."""
     oc, vc, lc, nc, reg = _docs()
-    # same input, same context, every time
     assert resolve(oc, reg, "standard", NAJDORF_PATH) == resolve(
         oc, reg, "standard", list(NAJDORF_PATH))
-    # extending a path never changes what a shorter path resolved to
-    base = resolve(oc, reg, "standard", SICILIAN_PATH)
-    for extension in (["g1f3"], ["g1f3", "d7d6"], NAJDORF_PATH[2:]):
-        assert resolve(oc, reg, "standard",
-                       SICILIAN_PATH) == base
-        extended = SICILIAN_PATH + extension
-        longer = resolve(oc, reg, "standard", extended)
-        assert longer == base or longer != base  # resolution is free
-        assert resolve(oc, reg, "standard", SICILIAN_PATH) == base
+    by_code = {e["code"]: e for e in reg["entries"]}
+    extensions = ["g1f3", "d7d6", "b1c3", "a7a6", "c2c4"]
+    for entry in reg["entries"]:
+        prior = resolve(oc, reg, "standard", entry["moves"])
+        assert prior == (entry["code"], entry["name"])
+        for move in extensions:
+            code, _name = resolve(oc, reg, "standard",
+                                  entry["moves"] + [move])
+            assert code != "-", (entry["code"], move)
+            if code == entry["code"]:
+                continue
+            longer = by_code[code]["moves"]
+            assert len(longer) > len(entry["moves"])
+            assert longer[:len(entry["moves"])] == entry["moves"]
+
+
+def test_shorter_key_immutability():
+    """Inserting or resolving extensions NEVER changes an already
+    stored shorter record: it stays byte-identical in the table,
+    and a tampered shorter record is still rejected."""
+    t = _table()
+    t.insert("standard", SICILIAN_PATH)
+    key = ("standard", tuple(SICILIAN_PATH))
+    stored_before = copy.deepcopy(t.map[key])
+    t.insert("standard", NAJDORF_PATH)  # extends the B20 prefix
+    t.insert("standard", ["e2e4", "c7c5", "g1f3"])  # mid extension
+    assert t.map[key] == stored_before
+    assert t.map[key]["opening_code"] == "B20"
+    tampered = copy.deepcopy(t.map[key])
+    tampered["opening_name"] = "French Defense"
+    with pytest.raises(ContextError):
+        _validate(tampered)
 
 
 def test_merge_algebra():
@@ -360,16 +505,110 @@ def test_records_exact_four_fields_and_rebuild():
         _validate(rec)
 
 
+class _Batch:
+    """A merge source that is just a bag of stored records - the
+    contract's merge input type. Built by direct construction, it
+    may carry contradictory records a ContextTable could never
+    hold through insert()."""
+
+    def __init__(self, records):
+        self._records = records
+
+    def records(self):
+        return list(self._records)
+
+
+def _drifted_table(mutate):
+    docs = list(_docs())
+    reg = copy.deepcopy(docs[4])
+    mutate(reg)
+    docs[4] = reg
+    return ContextTable(tuple(docs))
+
+
+def test_conflicting_registry_snapshots_both_orders_reject():
+    """Two tables built from INDEPENDENT registry snapshots with the
+    same key and contradictory stored contexts: both merge orders
+    reject with conflicting_context and each receiver stays
+    bit-identical - never first-writer residue, never silently
+    discarded contradictions."""
+    a = _table()
+    a.insert("standard", PETROFF_PATH)  # C20 / King's Pawn Game
+
+    def drift(reg):
+        for entry in reg["entries"]:
+            if entry["code"] == "C20":
+                entry["code"] = "C21"
+                entry["name"] = "Drifted Name"
+    b = _drifted_table(drift)
+    b.insert("standard", PETROFF_PATH)  # C21 / Drifted Name
+    a_before, b_before = a.serialize(), b.serialize()
+    a_map, b_map = copy.deepcopy(a.map), copy.deepcopy(b.map)
+    with pytest.raises(ContextError) as exc:
+        a.merge(b)
+    assert exc.value.failure_class == "conflicting_context"
+    with pytest.raises(ContextError) as exc:
+        b.merge(a)
+    assert exc.value.failure_class == "conflicting_context"
+    assert a.serialize() == a_before
+    assert a.map == a_map
+    assert b.serialize() == b_before
+    assert b.map == b_map
+
+
+def test_merge_consumes_exact_records():
+    """A non-conflicting exact stored record merges AS STORED - the
+    merge never re-derives context from the receiver's registry -
+    and an incoming code unknown under the receiver's registry is
+    unknown_opening_code, a failure separate from same-key
+    conflict."""
+    a = _table()
+    b = _table()
+    rec = b.insert("standard", SICILIAN_PATH)
+    a.merge(b)
+    key = ("standard", tuple(SICILIAN_PATH))
+    assert a.map[key] == rec
+    assert a.map[key] is not rec  # stored as a copy, never aliased
+
+    def drift(reg):
+        reg["entries"].append({"code": "B99", "name": "Mystery",
+                               "moves": ["a2a3"]})
+    d = _drifted_table(drift)
+    d.insert("standard", ["a2a3"])  # resolves B99 under the drift
+    before = a.serialize()
+    before_map = copy.deepcopy(a.map)
+    with pytest.raises(ContextError) as exc:
+        a.merge(d)
+    assert exc.value.failure_class == "unknown_opening_code"
+    assert a.serialize() == before
+    assert a.map == before_map
+
+
+def test_merge_conflict_internal_to_source_batch_rejected():
+    """A single source batch carrying two records with the same key
+    but contradictory contexts conflicts WITHIN ITSELF: the merge
+    rejects wholesale even against an empty destination."""
+    t = _table()
+    base = _make_record(*_docs(), "standard", KINGS_PAWN_PATH)
+    drifted = copy.deepcopy(base)
+    drifted["opening_code"] = "C21"
+    drifted["opening_name"] = "Drifted"
+    with pytest.raises(ContextError) as exc:
+        t.merge(_Batch([base, drifted]))
+    assert exc.value.failure_class == "conflicting_context"
+    assert t.records() == []
+    assert t.map == {}
+
+
 def test_conflicting_context_rejected_with_rollback():
-    """A record whose context contradicts an existing record for the
-    same key - reachable only under registry drift - is a
-    conflicting_context rejection and changes nothing."""
+    """Same-table drift variant: after a stored record, mutating the
+    table's own registry copy makes a reinsert of the same path
+    resolve differently - a conflicting_context rejection that
+    changes nothing."""
     t = _table()
     t.insert("standard", KINGS_PAWN_PATH)
     before = t.serialize()
     before_map = copy.deepcopy(t.map)
-    # simulate registry drift INSIDE this table's registry copy:
-    # the same path now resolves differently
     for entry in t.reg["entries"]:
         if entry["code"] == "C20":
             entry["name"] = "King Pawn"
@@ -520,9 +759,9 @@ def _mutants():
     add("determinism drift", ["contract", "resolution",
                               "determinism"],
         "last-writer-wins")
-    add("prefix stability drift", ["contract", "resolution",
-                                   "prefix_stability"],
-        "extension-may-reclassify-shorter")
+    add("extension refinement drift", ["contract", "resolution",
+                                       "extension_refinement"],
+        "extension-may-resolve-to-shorter-entry")
     add("record fields drift", ["contract", "record", "fields"],
         ["variant", "path_moves", "opening_code"])
     add("extra record field", ["contract", "record", "fields"],
@@ -535,6 +774,13 @@ def _mutants():
         "node-digest")
     add("insert drift", ["contract", "merge", "insert"],
         "always-create")
+    add("atomic dropped", ["contract", "merge", "atomic"], False)
+    add("merge re-derives records", ["contract", "merge",
+                                     "consumes_records"],
+        "re-derive-under-receiver-registry")
+    add("batch conflict partial commit", ["contract", "merge",
+                                          "conflict_in_batch"],
+        "valid-prefix-commits")
     add("idempotence dropped", ["contract", "merge", "idempotent"],
         False)
     add("commutativity dropped", ["contract", "merge", "commutative"],
@@ -563,6 +809,12 @@ def _mutants():
     add("path attribution drift", ["contract", "properties",
                                    "path_attribution"],
         "node-determines-context")
+    add("extension refinement property drift",
+        ["contract", "properties", "extension_refinement"],
+        "shorter-match-wins")
+    add("shorter key immutability drift",
+        ["contract", "properties", "shorter_key_immutability"],
+        "extensions-may-rewrite-shorter-records")
     add("longest prefix drift", ["contract", "properties",
                                  "longest_prefix"],
         "shortest-match-wins")

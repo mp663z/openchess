@@ -91,8 +91,8 @@ RESOLUTION = {
     "no_match": "none-sentinel",
     "empty_path": "always-unclassified",
     "determinism": "same-variant-plus-path-always-same-context",
-    "prefix_stability":
-        "extending-a-path-never-changes-shorter-resolutions",
+    "extension_refinement":
+        "extension-resolves-to-prior-or-strictly-longer-extending-entry",
 }
 RECORD = {
     "fields": ["variant", "path_moves", "opening_code",
@@ -108,11 +108,15 @@ RECORD = {
 }
 MERGE = {
     "insert": "insert-or-return-existing",
+    "atomic": True,
+    "consumes_records":
+        "exact-stored-records-validated-against-receiver-registry",
     "idempotent": True,
     "commutative": True,
     "associative": True,
     "same_key_never_two_records": True,
     "conflicting_context": "rejected-as-conflicting_context",
+    "conflict_in_batch": "whole-merge-rejected-nothing-committed",
     "rejected_insert_changes_nothing": True,
 }
 FAILURE_CLASSES = ["malformed_context_record", "malformed_path",
@@ -143,8 +147,10 @@ PROPERTIES = {
     "path_attribution":
         "same-node-different-paths-may-carry-different-contexts",
     "longest_prefix": "longest-matching-registry-entry-wins",
-    "prefix_stability":
-        "extending-a-path-never-changes-shorter-resolutions",
+    "extension_refinement":
+        "extension-resolves-to-prior-or-strictly-longer-extending-entry",
+    "shorter_key_immutability":
+        "stored-shorter-records-never-change-under-extensions",
     "resolution_determinism":
         "same-variant-plus-path-always-same-context",
     "merge_idempotence": "reinsert-same-record-no-op",

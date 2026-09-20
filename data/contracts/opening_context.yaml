@@ -59,7 +59,7 @@ contract:
     no_match: none-sentinel
     empty_path: always-unclassified
     determinism: same-variant-plus-path-always-same-context
-    prefix_stability: extending-a-path-never-changes-shorter-resolutions
+    extension_refinement: extension-resolves-to-prior-or-strictly-longer-extending-entry
     rule: >-
       Resolution is a pure function of (registry, variant, path):
       the entry whose ENTIRE move sequence equals a prefix of the
@@ -67,9 +67,13 @@ contract:
       nonempty so an empty path is always unclassified; no match
       yields the none sentinel for both code and name - never an
       error, never a guess. Determinism: the same (variant, path)
-      always resolves to the same context. Prefix stability:
-      extending a path never changes what any shorter path already
-      resolved to.
+      always resolves to the same context. Extension refinement:
+      extending a path resolves either to the SAME entry the
+      shorter path resolved to or to a STRICTLY LONGER registry
+      entry whose move sequence extends the prior entry's sequence
+      (unclassified may become classified) - a longer path may
+      refine B20 to B90 but never jumps to a shorter or non-prefix
+      entry.
   record:
     fields: [variant, path_moves, opening_code, opening_name]
     variant_form: registry-id-verbatim
@@ -88,20 +92,32 @@ contract:
       legal_moves: data/contracts/legal_moves.yaml
   merge:
     insert: insert-or-return-existing
+    atomic: true
+    consumes_records: exact-stored-records-validated-against-receiver-registry
     idempotent: true
     commutative: true
     associative: true
     same_key_never_two_records: true
     conflicting_context: rejected-as-conflicting_context
+    conflict_in_batch: whole-merge-rejected-nothing-committed
     rejected_insert_changes_nothing: true
     rule: >-
       Context maps merge by insertion only:
       insert-or-return-existing. Reinsertion is a no-op, insertion
       order never changes the result, grouping never changes the
-      result, and the same key never holds two records. A record
-      whose resolved context contradicts an existing record for
-      the same key - possible only under registry drift - is
-      rejected as conflicting_context and changes nothing.
+      result, and the same key never holds two records. A merge
+      CONSUMES each exact stored record - it never re-derives the
+      context from the receiver's registry. For an existing key the
+      exact incoming record is compared with the stored record and
+      any context mismatch is a conflicting_context rejection
+      before any mutation; an incoming code unknown under the
+      receiver's registry is unknown_opening_code, a failure
+      separate from same-key conflict. A table merge is ATOMIC:
+      the whole batch is preflighted in a staged copy and committed
+      only when every record passes - a rejected merge leaves the
+      destination bit-identical, never a committed valid prefix,
+      and over conflicting tables both merge orders reject rather
+      than leaving first-writer residue.
   failures:
     classes: [malformed_context_record, malformed_path,
               unknown_variant, unknown_opening_code,
@@ -140,7 +156,8 @@ contract:
   properties:
     path_attribution: same-node-different-paths-may-carry-different-contexts
     longest_prefix: longest-matching-registry-entry-wins
-    prefix_stability: extending-a-path-never-changes-shorter-resolutions
+    extension_refinement: extension-resolves-to-prior-or-strictly-longer-extending-entry
+    shorter_key_immutability: stored-shorter-records-never-change-under-extensions
     resolution_determinism: same-variant-plus-path-always-same-context
     merge_idempotence: reinsert-same-record-no-op
     merge_commutativity: insertion-order-never-changes-the-table
@@ -149,8 +166,10 @@ contract:
       Behavioral pins: context follows the PATH (the same canonical
       node may classify differently by path); longest matching
       registry entry wins; resolution is deterministic and
-      prefix-stable; map merges are idempotent and commutative; a
-      rejected insert leaves the table bit-identical.
+      extension-refining; an already stored shorter record never
+      changes when extensions are inserted or resolved; map merges
+      are idempotent and commutative; a rejected insert leaves the
+      table bit-identical.
   links:
     variant_contract: data/contracts/variant.yaml
     legal_moves_contract: data/contracts/legal_moves.yaml

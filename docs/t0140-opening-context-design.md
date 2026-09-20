@@ -101,3 +101,22 @@ invariants, never specific openings.
 - mutation battery: >=25 mutants, all sections covered.
 - linkage battery: clean copy passes; drift in variant id_grammar
   or legal-moves move_model fails.
+
+## v2 amendment (verifier #1 rounds 1-2): applied witness + exact-record merge + refinement pins
+
+- Headline witness is now END-TO-END: both transposition paths are
+  applied move-by-move from the variant contract's start_fen through
+  tools/legal_moves_runtime (independent application surface), every
+  move asserted legal; the two derived final FENs fold to one T0122
+  node (clock-mutated text included). No hardcoded final position.
+- prefix_stability replaced by two precise pins:
+  extension_refinement (an extension resolves to the same entry or a
+  strictly longer entry whose moves extend the prior entry's) and
+  shorter_key_immutability (stored shorter records never change
+  under extension inserts).
+- Merge now CONSUMES exact stored records (validated against the
+  receiver registry for new keys) instead of re-deriving context;
+  same-key context mismatch = conflicting_context before mutation;
+  unknown code under the receiver registry = unknown_opening_code.
+  Merge is ATOMIC (staged copy, commit on full pass) with
+  conflict_in_batch = whole-merge-rejected-nothing-committed.
