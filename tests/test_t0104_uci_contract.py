@@ -600,6 +600,8 @@ class Session:
         self.transitions = life["transitions"]
         self.readiness_spec = life["readiness"]
         assert self.readiness_spec["model"] == "orthogonal-pending-flag"
+        self.debug_spec = life["debug"]
+        assert self.debug_spec["model"] == "orthogonal-session-setting"
         self.state = life["initial"]
         # Terminal state derived from the contract: the declared state
         # whose transition table is empty in both directions.
@@ -609,9 +611,11 @@ class Session:
             and not self.transitions[st]["engine"])
         self.position_flag = False
         self.readiness = False
+        self.debug = self.debug_spec["initial"]
 
     def snapshot(self):
-        return (self.state, self.position_flag, self.readiness)
+        return (self.state, self.position_flag, self.readiness,
+                self.debug)
 
     def _step(self, direction, event, ponder=False):
         c = self.c
@@ -641,6 +645,18 @@ class Session:
             _fail(c, c["lifecycle"]["unlisted_pair"])
         self.readiness = True  # underlying state untouched
 
+    def _debug(self, value):
+        c = self.c
+        # Orthogonal session setting: accepted in every live
+        # post-uciok state (including while thinking); PINNED as
+        # protocol_state pre-uciok and after termination. Changes
+        # ONLY the setting - state, position flag, outstanding
+        # search and readiness flag are all preserved.
+        if self.state not in self.debug_spec["accepted_in_states"]:
+            _fail(c, c["lifecycle"]["unlisted_pair"])
+        assert value in self.debug_spec["values"]
+        self.debug = value
+
     def _readyok(self):
         c = self.c
         # Liveness gate first: terminated rejects regardless of flag,
@@ -657,6 +673,9 @@ class Session:
         kw = cmd["command"]
         if kw == "isready":
             self._isready()
+            return cmd
+        if kw == "debug":
+            self._debug(cmd["value"])
             return cmd
         if kw == "go" and self.state == "ready" and not \
                 self.position_flag:
@@ -1205,6 +1224,9 @@ PROTOCOL_VIOLATIONS = [
      "engine", "readyok"),
     (POSITIONED + [("gui", "go infinite"), ("gui", "isready"),
                    ("gui", "quit")], "engine", "readyok"),
+    ([], "gui", "debug on"),                # pinned: pre-uci reject
+    ([("gui", "uci")], "gui", "debug off"),  # pinned: pre-uciok reject
+    (AFTER_QUIT, "gui", "debug on"),        # nothing after quit
     (AFTER_QUIT, "gui", "isready"),         # nothing after quit
     (AFTER_QUIT, "engine", "readyok"),
     (AFTER_QUIT, "gui", "quit"),
@@ -1233,17 +1255,17 @@ def test_readiness_during_normal_search():
     for d, line in SEARCHING:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("searching", True, True)
+    assert s.snapshot() == ("searching", True, True, "off")
     s.feed_engine("info depth 7")           # search unaffected
     assert s.state == "searching"
     with pytest.raises(UciError):           # still outstanding
         s.feed_gui("go depth 3")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("searching", True, False)
+    assert s.snapshot() == ("searching", True, False, "off")
     with pytest.raises(UciError):           # still outstanding
         s.feed_gui("position startpos")
     s.feed_engine("bestmove e2e4")
-    assert s.snapshot() == ("ready", True, False)
+    assert s.snapshot() == ("ready", True, False, "off")
 
 
 def test_readiness_during_ponder_search():
@@ -1252,11 +1274,11 @@ def test_readiness_during_ponder_search():
     for d, line in PONDERING:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("pondering", True, True)
+    assert s.snapshot() == ("pondering", True, True, "off")
     s.feed_gui("ponderhit")                 # converts, flag preserved
-    assert s.snapshot() == ("searching", True, True)
+    assert s.snapshot() == ("searching", True, True, "off")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("searching", True, False)
+    assert s.snapshot() == ("searching", True, False, "off")
     s.feed_engine("bestmove d2d4")
     assert s.state == "ready"
 
@@ -1267,9 +1289,9 @@ def test_readiness_after_stop_requested():
     for d, line in STOPPED:
         _feed(s, d, line)
     s.feed_gui("isready")
-    assert s.snapshot() == ("stop_requested", True, True)
+    assert s.snapshot() == ("stop_requested", True, True, "off")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("stop_requested", True, False)
+    assert s.snapshot() == ("stop_requested", True, False, "off")
     # stop-requested survived the whole exchange: bestmove still due
     s.feed_engine("bestmove e2e4")
     assert s.state == "ready"
@@ -1282,9 +1304,9 @@ def test_readiness_during_ponder_stop_requested():
         _feed(s, d, line)
     assert s.state == "ponder_stop_requested"
     s.feed_gui("isready")
-    assert s.snapshot() == ("ponder_stop_requested", True, True)
+    assert s.snapshot() == ("ponder_stop_requested", True, True, "off")
     s.feed_engine("readyok")
-    assert s.snapshot() == ("ponder_stop_requested", True, False)
+    assert s.snapshot() == ("ponder_stop_requested", True, False, "off")
     s.feed_gui("ponderhit")
     assert s.state == "stop_requested"
 
@@ -1313,11 +1335,11 @@ def test_readiness_terminal_gate():
         for d, line in prefix:
             _feed(s, d, line)
         _feed(s, "gui", "isready")
-        assert s.snapshot()[-1] is True  # flag pending pre-quit
+        assert s.readiness is True  # flag pending pre-quit
         _feed(s, "gui", "quit")
         # on_termination: flag cleared on entry to terminated.
         assert s.snapshot() == (
-            "terminated", s.position_flag, False)
+            "terminated", s.position_flag, False, "off")
         before = s.snapshot()
         for d, line in (("engine", "readyok"), ("gui", "isready")):
             with pytest.raises(UciError) as exc:
@@ -1325,6 +1347,63 @@ def test_readiness_terminal_gate():
             assert exc.value.failure_class == "protocol_state"
             # bit-identical rollback: the rejection changes nothing.
             assert s.snapshot() == before
+
+
+def test_debug_orthogonal_setting():
+    """debug on/off is accepted in every live post-uciok state -
+    including while the engine is thinking - and changes ONLY the
+    setting: underlying state, position flag, outstanding search
+    and readiness flag are preserved, and info/stop/ponderhit/
+    readyok/bestmove continue per the unchanged state."""
+    doc = _doc()["contract"]
+
+    def toggles(s, base):
+        assert s.debug == "off"
+        _feed(s, "gui", "debug on")
+        assert s.debug == "on"
+        assert s.snapshot()[:3] == base
+        _feed(s, "gui", "debug off")
+        assert s.debug == "off"
+        assert s.snapshot()[:3] == base
+
+    # ready
+    s = Session(doc)
+    for d, line in POSITIONED:
+        _feed(s, d, line)
+    toggles(s, ("ready", True, False))
+    # normal search: debug mid-calculation, search stays outstanding
+    s = Session(doc)
+    for d, line in SEARCHING:
+        _feed(s, d, line)
+    toggles(s, ("searching", True, False))
+    _feed(s, "engine", "info depth 3")  # info still flows
+    _feed(s, "gui", "debug on")
+    _feed(s, "engine", "bestmove e2e4")  # bestmove ends the search
+    assert s.snapshot() == ("ready", True, False, "on")
+    # ponder search: debug, then ponderhit still converts
+    s = Session(doc)
+    for d, line in PONDERING:
+        _feed(s, d, line)
+    toggles(s, ("pondering", True, False))
+    _feed(s, "gui", "debug on")
+    _feed(s, "gui", "ponderhit")
+    assert s.snapshot() == ("searching", True, False, "on")
+    # stop-requested: debug, search outstanding until bestmove
+    s = Session(doc)
+    for d, line in SEARCHING + [("gui", "stop")]:
+        _feed(s, d, line)
+    toggles(s, ("stop_requested", True, False))
+    _feed(s, "engine", "bestmove e2e4")
+    assert s.snapshot() == ("ready", True, False, "off")
+    # readiness-pending search: debug touches neither flag nor search
+    s = Session(doc)
+    for d, line in SEARCHING + [("gui", "isready")]:
+        _feed(s, d, line)
+    toggles(s, ("searching", True, True))
+    _feed(s, "engine", "readyok")  # flag still pending, clears it
+    assert s.snapshot() == ("searching", True, False, "off")
+    _feed(s, "engine", "bestmove e2e4")
+    assert s.snapshot() == ("ready", True, False, "off")
 
 
 def test_stop_requests_but_never_clears_search():
@@ -1359,8 +1438,10 @@ def test_rejected_commands_leave_state_bit_identical():
           ("engine", "readyok"), ("gui", "position"),
           ("gui", "setoption name"), ("engine", "bestmove e2e4")]),
         (AFTER_QUIT,
-         [("gui", "isready"), ("gui", "quit"),
+         [("gui", "isready"), ("gui", "quit"), ("gui", "debug on"),
           ("engine", "uciok"), ("engine", "bestmove e2e4")]),
+        ([("gui", "uci")],
+         [("gui", "debug on"), ("gui", "isready")]),
         (POSITIONED + [("gui", "isready"), ("gui", "quit")],
          [("engine", "readyok"), ("gui", "isready"),
           ("engine", "bestmove e2e4")]),
@@ -1488,6 +1569,35 @@ def _mutants():
         {"position": "ready", "quit": "terminated"})
     add("readiness model drift", ["contract", "lifecycle", "readiness",
                                   "model"], "top-level-state")
+    add("debug model drift", ["contract", "lifecycle", "debug",
+                              "model"], "lifecycle-state")
+    add("debug acceptance drops searching", ["contract", "lifecycle",
+                                             "debug",
+                                             "accepted_in_states"],
+        ["ready", "pondering", "stop_requested",
+         "ponder_stop_requested"])
+    add("debug acceptance drops pondering", ["contract", "lifecycle",
+                                             "debug",
+                                             "accepted_in_states"],
+        ["ready", "searching", "stop_requested",
+         "ponder_stop_requested"])
+    add("debug acceptance drops stop_requested", ["contract",
+                                                  "lifecycle",
+                                                  "debug",
+                                                  "accepted_in_states"],
+        ["ready", "searching", "pondering", "ponder_stop_requested"])
+    add("debug acceptance drops ponder_stop", ["contract", "lifecycle",
+                                               "debug",
+                                               "accepted_in_states"],
+        ["ready", "searching", "pondering", "stop_requested"])
+    add("debug pre-uciok allowed", ["contract", "lifecycle", "debug",
+                                    "pre_uciok"], "accepted")
+    add("debug returns search to ready", ["contract", "lifecycle",
+                                          "transitions", "searching",
+                                          "gui", "debug"], "ready")
+    add("debug clears readiness", ["contract", "lifecycle", "debug",
+                                   "state_preservation"],
+        "debug-clears-readiness-flag")
     add("second isready queued", ["contract", "lifecycle", "readiness",
                                   "second_isready"], "queued")
     add("isready from awaiting", ["contract", "lifecycle", "readiness",

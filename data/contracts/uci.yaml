@@ -223,13 +223,36 @@ contract:
     transitions:
       pre_uci: {gui: {uci: awaiting_uciok, quit: terminated}, engine: {}}
       awaiting_uciok: {gui: {quit: terminated}, engine: {id: awaiting_uciok, uciok: ready}}
-      ready: {gui: {debug: ready, setoption: ready, register: ready, ucinewgame: ready, position: ready, go: search-start, quit: terminated}, engine: {copyprotection: ready, registration: ready}}
+      ready: {gui: {setoption: ready, register: ready, ucinewgame: ready, position: ready, go: search-start, quit: terminated}, engine: {copyprotection: ready, registration: ready}}
       searching: {gui: {stop: stop_requested, quit: terminated}, engine: {info: searching, bestmove: ready}}
       pondering: {gui: {ponderhit: searching, stop: ponder_stop_requested, quit: terminated}, engine: {info: pondering, bestmove: ready}}
       stop_requested: {gui: {quit: terminated}, engine: {info: stop_requested, bestmove: ready}}
       ponder_stop_requested: {gui: {ponderhit: stop_requested, quit: terminated}, engine: {info: ponder_stop_requested, bestmove: ready}}
       terminated: {gui: {}, engine: {}}
     unlisted_pair: protocol_state
+    debug:
+      model: orthogonal-session-setting
+      values: ["on", "off"]
+      initial: "off"
+      set_by: debug-command
+      accepted_in_states: [ready, searching, pondering,
+        stop_requested, ponder_stop_requested]
+      pre_uciok: rejected-protocol_state
+      state_preservation: debug-never-touches-underlying-state-or-flags
+      rule: >-
+        Debug mode is an ORTHOGONAL session setting, never part of
+        the lifecycle state: the GUI may send debug on or debug off
+        at any time after uciok - including while the engine is
+        thinking - in ready, searching, pondering, stop_requested
+        and ponder_stop_requested, and the command changes ONLY the
+        setting. The underlying lifecycle state, the position flag,
+        any outstanding search and the readiness-pending flag are
+        all preserved; info, stop, ponderhit, readyok and bestmove
+        continue exactly per the unchanged underlying state. Before
+        uciok (pre_uci, awaiting_uciok) and after termination,
+        debug is PINNED as protocol_state - rejected deliberately,
+        never accidentally. The setting never appears in the
+        transition table, and debug never appears there.
     readiness:
       model: orthogonal-pending-flag
       set_by: isready
@@ -282,7 +305,10 @@ contract:
       Readiness is an orthogonal pending flag (see readiness):
       isready is accepted in every live post-uciok state, including
       while a search is outstanding, and readyok clears only the
-      flag.
+      flag. Debug mode is likewise an orthogonal session setting
+      (see debug): debug on/off is accepted in every live
+      post-uciok state, including while the engine is thinking,
+      and changes only the setting.
       ponderhit converts a pondered search to a normal one (and a
       stop-requested pondered search to a stop-requested normal
       one). bestmove clears the outstanding search and returns the

@@ -167,6 +167,17 @@ LIFECYCLE_STATES = [
     "pre_uci", "awaiting_uciok", "ready", "searching", "pondering",
     "stop_requested", "ponder_stop_requested", "terminated",
 ]
+LIFECYCLE_DEBUG = {
+    "model": "orthogonal-session-setting",
+    "values": ["on", "off"],
+    "initial": "off",
+    "set_by": "debug-command",
+    "accepted_in_states": ["ready", "searching", "pondering",
+                           "stop_requested", "ponder_stop_requested"],
+    "pre_uciok": "rejected-protocol_state",
+    "state_preservation":
+        "debug-never-touches-underlying-state-or-flags",
+}
 LIFECYCLE_READINESS = {
     "model": "orthogonal-pending-flag",
     "set_by": "isready",
@@ -199,7 +210,7 @@ LIFECYCLE_TRANSITIONS = {
     "awaiting_uciok": {"gui": {"quit": "terminated"},
                        "engine": {"id": "awaiting_uciok",
                                   "uciok": "ready"}},
-    "ready": {"gui": {"debug": "ready", "setoption": "ready",
+    "ready": {"gui": {"setoption": "ready",
                       "register": "ready", "ucinewgame": "ready",
                       "position": "ready", "go": SEARCH_START,
                       "quit": "terminated"},
@@ -283,8 +294,10 @@ ALLOWED_OPTION_MARKERS = set(OPTION_MARKERS) | {"rule"}
 ALLOWED_OPTION_TYPES = set(OPTION_TYPES) | {"rule"}
 ALLOWED_POSITION_VALIDATION = set(POSITION_VALIDATION) | {"rule"}
 ALLOWED_LIFECYCLE = (set(LIFECYCLE_META)
-                     | {"states", "transitions", "readiness", "rule"})
+                     | {"states", "transitions", "readiness", "debug",
+                        "rule"})
 ALLOWED_READINESS = set(LIFECYCLE_READINESS) | {"rule"}
+ALLOWED_DEBUG = set(LIFECYCLE_DEBUG) | {"rule"}
 ALLOWED_RESOLUTION = set(RESOLUTION_FAILURES) | {"rule"}
 ALLOWED_ERRORS = {"closed_enum", "shape"}
 ALLOWED_SERIALIZATION = {"canonical", "roundtrip", "rule"}
@@ -507,6 +520,23 @@ def lint(doc: dict, root: Path | None = None) -> None:
                       f"lifecycle.transitions.{state}.{direction}: "
                       f"{event} belongs to the orthogonal readiness "
                       "flag, never the state table")
+                _need(event != "debug",
+                      f"lifecycle.transitions.{state}.{direction}: "
+                      "debug belongs to the orthogonal session "
+                      "setting, never the state table")
+    debug = _mapping(life.get("debug"), "lifecycle.debug")
+    _keys(debug, ALLOWED_DEBUG, "lifecycle.debug")
+    for key, value in LIFECYCLE_DEBUG.items():
+        _exact(debug.get(key), value, f"lifecycle.debug.{key}")
+    _need(set(debug["accepted_in_states"]) <= states,
+          "lifecycle.debug.accepted_in_states must be declared "
+          "states")
+    _need(not ({"pre_uci", "awaiting_uciok", "terminated"}
+               & set(debug["accepted_in_states"])),
+          "lifecycle.debug.accepted_in_states must exclude pre-uciok "
+          "and terminal states (pinned rejection)")
+    _text(debug.get("rule"), "lifecycle.debug.rule")
+
     readiness = _mapping(life.get("readiness"), "lifecycle.readiness")
     _keys(readiness, ALLOWED_READINESS, "lifecycle.readiness")
     for key, value in LIFECYCLE_READINESS.items():
