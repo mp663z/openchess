@@ -1,13 +1,23 @@
-"""T0142: permanent red battery for concrete opening-context defects."""
+"""T0142: permanent red battery for opening-context contract defects.
+
+Scope is deliberate: this pre-implementation task executes the T0140 reference
+contract and T0141 fixture as its oracle. Binding the battery to the shipped
+opening-context runtime is owned by T0143's implementation and review.
+"""
 
 from __future__ import annotations
 
 import contextlib
 import copy
 
+from tests.test_t0122_transposition_node_contract import _docs as _node_docs
+from tests.test_t0122_transposition_node_contract import _table as _node_table
 from tests.test_t0140_opening_context_contract import (
+    PETROFF_PATH,
+    ZUKERTORT_TRANSPOSITION_PATH,
     ContextError,
     ContextTable,
+    _apply_path_from_start,
     _docs,
 )
 from tests.test_t0141_opening_context_fixture import CASES
@@ -56,19 +66,24 @@ class PartialCommitOnReject(ContextTable):
 
 
 class NodeIdentityKeyed(ContextTable):
+    """Forbidden mutant: key contexts by a real canonical T0122 node."""
+
+    def __init__(self, docs):
+        super().__init__(docs)
+        self.node_table = _node_table()
+        _nc, self.node_vc, _dc, _epc, self.node_fc = _node_docs()
+        self.by_node = {}
+
     def insert(self, variant_id, path):
-        # Simulate the forbidden design: distinct transposing paths share one
-        # node-derived key, so the second path returns the first context.
-        petroff = ("e2e4", "e7e5", "g1f3", "g8f6")
-        zukertort = ("g1f3", "g8f6", "e2e4", "e7e5")
-        if tuple(path) in {petroff, zukertort}:
-            key = (variant_id, ("transposed-final-position",))
-            if key in self.map:
-                return self.map[key]
-            rec = super().insert(variant_id, path)
-            self.map[key] = rec
-            return rec
-        return super().insert(variant_id, path)
+        fen = _apply_path_from_start(self.node_vc, self.node_fc, path)
+        node = self.node_table.insert(variant_id, fen)
+        node_key = (node["variant"], node["digest"], node["snapshot_fen"])
+        existing = self.by_node.get(node_key)
+        if existing is not None:
+            return existing
+        record = super().insert(variant_id, path)
+        self.by_node[node_key] = record
+        return record
 
 
 def _resolve_probe(table_cls):
@@ -97,12 +112,22 @@ def _rollback_probe(table_cls):
     return False
 
 
+def _transposition_nodes():
+    _nc, vc, _dc, _epc, fc = _node_docs()
+    fen_a = _apply_path_from_start(vc, fc, PETROFF_PATH)
+    fen_b = _apply_path_from_start(vc, fc, ZUKERTORT_TRANSPOSITION_PATH)
+    nodes = _node_table()
+    a = nodes.insert("standard", fen_a)
+    b = nodes.insert("standard", fen_b.replace(" 0 1", " 0 9"))
+    return a, b
+
+
 def _path_identity_probe(table_cls):
-    petroff = ["e2e4", "e7e5", "g1f3", "g8f6"]
-    zukertort = ["g1f3", "g8f6", "e2e4", "e7e5"]
+    node_a, node_b = _transposition_nodes()
+    assert node_a is node_b  # premise is load-bearing and independently real
     table = table_cls(_docs())
-    a = table.insert("standard", petroff)
-    b = table.insert("standard", zukertort)
+    a = table.insert("standard", PETROFF_PATH)
+    b = table.insert("standard", ZUKERTORT_TRANSPOSITION_PATH)
     return a["opening_code"] == "C20" and b["opening_code"] == "A04"
 
 
