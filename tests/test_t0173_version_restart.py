@@ -43,7 +43,8 @@ def _digest(n: int) -> str:
     return "gdv1:" + f"{n:064x}"
 
 
-def _fixture() -> VersionStore:
+def _fixture_records() -> dict:
+    """Return named records so topology never depends on version-ID ordering."""
     s = VersionStore()
     root = s.make_record([], _digest(1), TS, "root")
     s.insert(root)
@@ -53,7 +54,11 @@ def _fixture() -> VersionStore:
     s.insert(right)
     merge = s.make_record([right["version_id"], left["version_id"]], _digest(4), TS, "merge")
     s.insert(merge)
-    return s
+    return {"store": s, "root": root, "left": left, "right": right, "merge": merge}
+
+
+def _fixture() -> VersionStore:
+    return _fixture_records()["store"]
 
 
 def _child(records, append=()):
@@ -81,16 +86,33 @@ def test_fresh_process_restart_is_bit_identical_from_shuffled_snapshot():
 
 
 def test_restart_continuation_matches_uninterrupted_multi_parent_history():
-    base = _fixture()
-    tip = base.canonical_view()[-1]
+    fx = _fixture_records()
+    base = fx["store"]
+    merge = fx["merge"]
+    merge_id = merge["version_id"]
+    assert merge["parent_ids"] == sorted([fx["left"]["version_id"], fx["right"]["version_id"]])
+    assert not any(merge_id in r["parent_ids"] for r in base.records.values())
+    # Regression guard: lexical ID order is not topology and picks root here.
+    lexical_last = base.canonical_view()[-1]
+    assert lexical_last == fx["root"]["version_id"]
+    assert lexical_last != merge_id
+
     additions = [
-        {"parents": [tip], "digest": _digest(5), "created_at": TS, "label": "continued"},
+        {
+            "parents": [merge_id],
+            "digest": _digest(5),
+            "created_at": TS,
+            "label": "continued",
+        },
     ]
     restarted = _child(list(base.records.values()), additions)
     assert restarted["ok"]
     direct = _fixture()
-    r = direct.make_record([tip], _digest(5), TS, "continued")
-    direct.insert(r)
+    continued = direct.make_record([merge_id], _digest(5), TS, "continued")
+    direct.insert(continued)
+    assert continued["parent_ids"] == [merge_id]
+    assert restarted["records"][merge_id] == merge
+    assert restarted["records"][continued["version_id"]]["parent_ids"] == [merge_id]
     assert restarted["records"] == direct.records
     assert restarted["canonical"] == direct.canonical_view()
     assert restarted["root_id"] == direct.root_id
