@@ -50,7 +50,7 @@ def version_id(parent_ids, graph_digest):
 
 
 def _timestamp(v):
-    if not isinstance(v, str) or not _TS.fullmatch(v):
+    if type(v) is not str or not _TS.fullmatch(v):
         return False
     try:
         y, m, d = map(int, (v[:4], v[5:7], v[8:10]))
@@ -89,13 +89,13 @@ class VersionStore:
         if type(r) is not dict or set(r) != FIELDS:
             raise VersionError("malformed_version_record")
         _parents(r["parent_ids"])
-        if not isinstance(r["version_id"], str) or not _ID.fullmatch(r["version_id"]):
+        if type(r["version_id"]) is not str or not _ID.fullmatch(r["version_id"]):
             raise VersionError("malformed_version_record")
-        if not isinstance(r["graph_digest"], str) or not _DIGEST.fullmatch(r["graph_digest"]):
+        if type(r["graph_digest"]) is not str or not _DIGEST.fullmatch(r["graph_digest"]):
             raise VersionError("malformed_version_record")
         if (
             not _timestamp(r["created_at"])
-            or not isinstance(r["label"], str)
+            or type(r["label"]) is not str
             or not _LABEL.fullmatch(r["label"])
         ):
             raise VersionError("malformed_version_record")

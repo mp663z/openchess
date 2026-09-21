@@ -123,3 +123,32 @@ def test_public_boundaries_are_typed_total_over_hostile_containers():
             call()
         assert exc.value.failure_class == "malformed_version_record"
         assert (store.records, store.root_id) == before
+
+
+class QuietStr(str):
+    pass
+
+
+class HostileStr(str):
+    def __eq__(self, other):
+        raise RuntimeError("hostile equality")
+
+    def __hash__(self):
+        raise RuntimeError("hostile hash")
+
+    def __str__(self):
+        raise RuntimeError("hostile string operation")
+
+
+def test_record_scalar_subclasses_are_rejected_before_use_or_persistence():
+    clean = VersionStore().make_record([], D(1), T(1), "root")
+    for field in ("version_id", "graph_digest", "created_at", "label"):
+        for cls in (QuietStr, HostileStr):
+            store = VersionStore()
+            bad = copy.deepcopy(clean)
+            bad[field] = cls(bad[field])
+            with pytest.raises(VersionError) as exc:
+                store.insert(bad)
+            assert exc.value.failure_class == "malformed_version_record"
+            assert store.records == {}
+            assert store.root_id is None
