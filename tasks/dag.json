@@ -3716,11 +3716,13 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "in_progress",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "9943f42e51593d7bf31e3c49f6e12a79bc99ee4c",
+   "evidence_manifest": "evidence/T0175.md"
   },
   {
    "id": "T0176",
