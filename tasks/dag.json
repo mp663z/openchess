@@ -3785,11 +3785,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "in_progress",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "e1fdc310005630e956dbaabd0f8d76c343c05362",
+   "evidence_manifest": "evidence/T0178.md"
   },
   {
    "id": "T0179",
