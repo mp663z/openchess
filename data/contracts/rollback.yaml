@@ -1,0 +1,77 @@
+schema_version: 1
+
+contract:
+  id: store-rollback
+  role:
+    kind: verified-truncation-rollback-over-a-wal-logged-store
+    serves: position-graph-store-durability
+    scope: single-log-rollback-to-a-prior-position
+    owns: rollback-receipt-semantics-and-tail-archival
+    not_scope: state-level-restore-or-multi-log-replication
+  record:
+    fields: [rollback_id, from_head, to_head, truncated_count, archive_token]
+    exact: true
+  identifiers:
+    rollback_id:
+      kind: content-addressed-rollback-receipt-id
+      grammar: ^rbk1:[0-9a-f]{64}$
+      derivation: sha256-over-from-head-to-head-truncated-count-archive-token
+      source: derived-from-validated-rollback-never-caller-supplied
+    head:
+      kind: wal-chain-tip-or-pinned-genesis
+      grammar: ^(wal0:0{64}|wal1:[0-9a-f]{64})$
+      source: derived-from-validated-source-log-never-caller-supplied
+    archive_token:
+      kind: untrusted-archiver-receipt-token
+      grammar: ^arc1:[0-9a-f]{64}$
+      derivation: sha256-over-domain-separated-length-framed-canonical-serialization-of-every-exact-frozen-tail-field
+      source: archiver-output-shape-validated-and-bound-byte-exact-to-the-local-tail-derivation
+  semantics:
+    source_validation: full-linked-wal-validation-before-any-truncation
+    target_resolution: target-sequence-is-an-exact-log-position-or-genesis-zero
+    archival: truncated-tail-archived-exactly-once-before-commit-token-bound-byte-exact-to-canonical-tail-serialization
+    chaining: surviving-prefix-chain-unchanged-to-head-preserved
+    commit: tail-removal-only-after-full-validation-and-archival
+  oracle_boundary:
+    role: tail-archiver-is-untrusted-input
+    single_evaluation: exactly-one-call-per-rollback
+    frozen_snapshots: entire-log-and-request-frozen-before-first-oracle-call-never-re-read-restored-bit-identical
+    output_validation: exact-built-in-string-pinned-grammar-byte-exact-tail-bound-token-or-fail-closed
+  failures:
+    classes:
+      - malformed_rollback_record
+      - unknown_target
+      - corrupt_source
+      - divergent_archive
+    triggers:
+      malformed_rollback_record: request-or-log-grammar-or-type-violation
+      unknown_target: target-sequence-outside-zero-through-log-length
+      corrupt_source: source-log-fails-linked-wal-validation-or-chain-rederivation
+      divergent_archive: archiver-raising-any-baseexception-non-exact-string-bad-grammar-or-tail-divergent-token
+    mapping:
+      malformed_rollback_record: malformed_request
+      unknown_target: unknown_target
+      corrupt_source: corrupt_source
+      divergent_archive: divergent_archive
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - unknown_target
+      - corrupt_source
+      - divergent_archive
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-logs-and-archivers-fail-closed-typed-never-raw
+    atomic: rejected-rollback-leaves-inputs-bit-identical
+    deterministic: same-inputs-same-receipt-and-surviving-prefix
+    rollback: committed-rollback-removes-exactly-the-tail
+  versioning:
+    base_path: /store/rollback/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    wal_contract: data/contracts/wal.yaml
+    backup_contract: data/contracts/backup.yaml
+    restore_contract: data/contracts/restore.yaml
