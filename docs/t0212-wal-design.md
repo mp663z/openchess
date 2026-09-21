@@ -31,8 +31,8 @@ mutation journal they all sit on.
   the head tip (genesis on empty) and the applied count.
 - The payload canonicalizer is UNTRUSTED input (exactly one call
   per entry per operation, frozen log/request snapshots before the
-  first call, exact built-in-str output or fail closed - the
-  collision/migration boundary lessons).
+  first call, exact built-in-str UTF-8-encodable output or fail
+  closed - the collision/migration boundary lessons).
 
 ## Failures (closed)
 - malformed_wal_entry: request/entry/payload/record grammar

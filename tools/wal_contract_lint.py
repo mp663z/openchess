@@ -82,6 +82,9 @@ SEMANTICS = {
         "replay-head-is-the-tip-entry-id-genesis-on-empty",
     "payload_canonicalization":
         "canonical-payload-string-feeds-entry-id-derivation",
+    "canonical_encoding":
+        "canonical-payload-utf8-encodable-for-entry-id-"
+        "derivation",
 }
 ORACLE_BOUNDARY = {
     "role": "payload-canonicalizer-is-untrusted-input",

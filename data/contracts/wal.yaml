@@ -42,6 +42,7 @@ contract:
     replay: fold-registered-ops-in-sequence-order-over-empty-state
     head_verification: replay-head-is-the-tip-entry-id-genesis-on-empty
     payload_canonicalization: canonical-payload-string-feeds-entry-id-derivation
+    canonical_encoding: canonical-payload-utf8-encodable-for-entry-id-derivation
   oracle_boundary:
     role: payload-canonicalizer-is-untrusted-input
     single_evaluation: exactly-one-call-per-entry-per-operation

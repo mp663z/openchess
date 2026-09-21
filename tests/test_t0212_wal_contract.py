@@ -117,6 +117,13 @@ class WalEngine:
             _fail("divergent_canonicalization")
         if type(out) is not str:
             _fail("divergent_canonicalization")
+        # the pinned entry-id serialization is UTF-8: a string
+        # that cannot encode (e.g. lone surrogates) fails closed
+        # HERE, inside the boundary - never as a raw escape later
+        try:
+            out.encode("utf-8")
+        except UnicodeEncodeError:
+            _fail("divergent_canonicalization")
         return out
 
     @staticmethod
@@ -833,8 +840,16 @@ def _hostile_oracles():
     def evil_str(identity, record):
         return EvilStr("canonical")
 
+    def lone_high_surrogate(identity, record):
+        return "\ud800"
+
+    def lone_low_surrogate(identity, record):
+        return "\udfff"
+
     return [("raising", raising), ("bad-type", bad_type),
-            ("bad-none", bad_none), ("evil-str", evil_str)]
+            ("bad-none", bad_none), ("evil-str", evil_str),
+            ("lone-high-surrogate", lone_high_surrogate),
+            ("lone-low-surrogate", lone_low_surrogate)]
 
 
 @pytest.mark.parametrize("name,oracle", _hostile_oracles(),
