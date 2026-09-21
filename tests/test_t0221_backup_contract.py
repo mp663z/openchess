@@ -116,7 +116,18 @@ class BackupEngine:
         return out
 
     @staticmethod
-    def _derive_backup_id(head, sid, count, bundle):
+    def _derive_backup_id(head, sid, count, bundle,
+                          on_unencodable):
+        """THE canonical backup-ID encoding - TOTAL and shared by
+        backup and verify: every string field is UTF-8 validated
+        BEFORE the canonical join, so derivation never leaks a
+        raw UnicodeEncodeError; an unencodable field maps to the
+        caller's pinned failure class."""
+        for value in (head, sid, bundle):
+            try:
+                value.encode("utf-8")
+            except UnicodeEncodeError:
+                _fail(on_unencodable)
         return "bck1:" + hashlib.sha256(
             f"{head}\n{sid}\n{count}\n{bundle}".encode()
         ).hexdigest()
@@ -155,7 +166,11 @@ class BackupEngine:
         receipt = {
             "backup_id": self._derive_backup_id(
                 replayed["head"], replayed["state_id"],
-                replayed["applied"], bundle),
+                replayed["applied"], bundle,
+                # already encodable-checked at the serializer
+                # boundary; the shared guard can only ever fire
+                # on the serializer's own output here
+                "divergent_snapshot"),
             "head": replayed["head"],
             "state_id": replayed["state_id"],
             "entry_count": replayed["applied"],
@@ -165,9 +180,11 @@ class BackupEngine:
 
     def verify(self, receipt):
         """LOCAL and total: exact shape, exact types, pinned
-        grammars, head/count consistency, then recomputed backup
-        id vs stored - divergence fails closed as
-        divergent_backup. NO oracle calls."""
+        grammars, UTF-8 encodability of every field entering the
+        canonical backup-ID encoding, head/count consistency,
+        then recomputed backup id vs stored - divergence fails
+        closed as divergent_backup, an unencodable field as
+        malformed_backup_record. NO oracle calls."""
         if type(receipt) is not dict or \
                 set(receipt.keys()) != set(_FIELDS) | {"bundle"}:
             _fail("malformed_backup_record")
@@ -195,7 +212,10 @@ class BackupEngine:
             _fail("divergent_backup")
         if self._derive_backup_id(receipt["head"],
                                   receipt["state_id"], count,
-                                  receipt["bundle"]) != \
+                                  receipt["bundle"],
+                                  # an unencodable receipt field is
+                                  # a MALFORMED receipt
+                                  "malformed_backup_record") != \
                 receipt["backup_id"]:
             _fail("divergent_backup")
         return {field: receipt[field] for field in _FIELDS}
@@ -499,6 +519,23 @@ def _verify_hostile():
     case("bundle-non-str",
          lambda r: dict(r, bundle=[]),
          "malformed_backup_record")
+    case("bundle-lone-high-surrogate",
+         lambda r: dict(r, bundle="\ud800"),
+         "malformed_backup_record")
+    case("bundle-lone-low-surrogate",
+         lambda r: dict(r, bundle="\udfff"),
+         "malformed_backup_record")
+    case("head-lone-surrogate",
+         lambda r: dict(r, head="wal1:" + "\ud800" + "0" * 63),
+         "malformed_backup_record")
+    case("state-id-lone-surrogate",
+         lambda r: dict(r,
+                        state_id="gs1:" + "\udfff" + "0" * 63),
+         "malformed_backup_record")
+    case("backup-id-lone-surrogate",
+         lambda r: dict(r,
+                        backup_id="bck1:" + "\ud800" + "0" * 63),
+         "malformed_backup_record")
     case("backup-id-tampered",
          lambda r: dict(r, backup_id="bck1:" + "f" * 64),
          "divergent_backup")
@@ -593,7 +630,7 @@ def test_verify_head_count_inconsistency():
     forged = dict(real, entry_count=0)
     forged["backup_id"] = engine._derive_backup_id(
         forged["head"], forged["state_id"], 0,
-        forged["bundle"])
+        forged["bundle"], "divergent_snapshot")
     with pytest.raises(BackupError) as exc:
         engine.verify(forged)
     assert exc.value.failure_class == "divergent_backup"
@@ -601,7 +638,7 @@ def test_verify_head_count_inconsistency():
     forged2 = dict(real, head=GENESIS)
     forged2["backup_id"] = engine._derive_backup_id(
         GENESIS, forged2["state_id"], forged2["entry_count"],
-        forged2["bundle"])
+        forged2["bundle"], "divergent_snapshot")
     with pytest.raises(BackupError) as exc:
         engine.verify(forged2)
     assert exc.value.failure_class == "divergent_backup"
@@ -615,7 +652,7 @@ def test_verify_empty_receipt_forged_state_id():
     forged = dict(empty, state_id="gs1:" + "f" * 64)
     forged["backup_id"] = engine._derive_backup_id(
         forged["head"], forged["state_id"], 0,
-        forged["bundle"])
+        forged["bundle"], "divergent_snapshot")
     with pytest.raises(BackupError) as exc:
         engine.verify(forged)
     assert exc.value.failure_class == "divergent_backup"
@@ -670,7 +707,7 @@ def test_mutant_backup_skipping_source_validation():
         head = log[-1]["entry_id"] if log else GENESIS
         sid = state_id(state)
         return {"backup_id": BackupEngine._derive_backup_id(
-            head, sid, len(log), bundle),
+            head, sid, len(log), bundle, "divergent_snapshot"),
             "head": head, "state_id": sid,
             "entry_count": len(log), "bundle": bundle}
 
@@ -714,7 +751,7 @@ def test_mutant_backup_serializing_live_state():
         bundle = serializer(replayed["state"])  # LIVE mapping
         return {"backup_id": BackupEngine._derive_backup_id(
             replayed["head"], replayed["state_id"],
-            replayed["applied"], bundle),
+            replayed["applied"], bundle, "divergent_snapshot"),
             "head": replayed["head"],
             "state_id": replayed["state_id"],
             "entry_count": replayed["applied"],
@@ -743,6 +780,51 @@ def test_mutant_backup_serializing_live_state():
     assert log2 == before
     assert receipt["entry_count"] == 2
     assert receipt["head"] == log2[-1]["entry_id"]
+
+
+def test_mutant_verify_encoding_without_utf8_guard():
+    """Behavioral mutant: a verify that checks only
+    type(bundle) is str and then derives the backup id leaks a
+    RAW UnicodeEncodeError on an unencodable exact-str receipt
+    field - no failure_class at all. Counter-test: the real
+    verify validates UTF-8 encodability inside the shared
+    canonical derivation and maps the receipt to typed
+    malformed_backup_record, the input bit-identical."""
+    def mutant_verify(receipt):
+        if type(receipt["bundle"]) is not str:
+            _fail("malformed_backup_record")
+        return "bck1:" + hashlib.sha256(
+            f"{receipt['head']}\n{receipt['state_id']}\n"
+            f"{receipt['entry_count']}\n{receipt['bundle']}"
+            .encode()).hexdigest()
+
+    receipt = _engine().backup(_log_of(("put", STARTPOS)))
+    hostile = dict(receipt, bundle="\ud800")
+    with pytest.raises(UnicodeEncodeError):
+        mutant_verify(hostile)  # the mutant leaks raw
+    before = copy.deepcopy(hostile)
+    with pytest.raises(BackupError) as exc:
+        _engine().verify(hostile)
+    assert exc.value.failure_class == "malformed_backup_record"
+    assert exc.value.code == FAILURE_MAPPING[
+        "malformed_backup_record"]
+    assert hostile == before
+
+
+def test_serializer_valid_non_ascii_output_stays_deterministic():
+    """Valid non-ASCII UTF-8 serializer output is NOT rejected:
+    the canonical backup-ID encoding is UTF-8 (never ASCII-
+    restricted), so backup accepts it, derives deterministically
+    and verify passes."""
+    text = "snapshot-\u65e5\u672c\u8a9e-\u2713-caf\u00e9"
+    engine = BackupEngine(lambda state: text)
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    first = engine.backup(copy.deepcopy(log))
+    second = engine.backup(copy.deepcopy(log))
+    assert first["bundle"] == text
+    assert first == second  # deterministic over valid UTF-8
+    verified = _engine().verify(dict(first))
+    assert verified["backup_id"] == first["backup_id"]
 
 
 # -- lint mutants ---------------------------------------------------------------

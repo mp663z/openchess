@@ -80,7 +80,8 @@ FAILURE_CLASSES = ["malformed_backup_record", "corrupt_source",
                    "divergent_snapshot", "divergent_backup"]
 FAILURE_TRIGGERS = {
     "malformed_backup_record":
-        "receipt-grammar-or-source-log-type-violation",
+        "receipt-grammar-type-or-utf8-violation-or-source-log-"
+        "type-violation",
     "corrupt_source":
         "source-log-fails-linked-wal-validation-or-chain-"
         "rederivation",

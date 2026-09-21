@@ -25,13 +25,17 @@ explicitly not scope (restore is its own contract).
   only from the frozen snapshot; the source log is restored
   bit-identical on every exit - backup never mutates it.
 - verify(receipt): LOCAL and total (no oracle): exact shape and
-  types, pinned grammars, head/count consistency (an empty source
+  types, pinned grammars, UTF-8 encodability of every field
+  entering the canonical backup-ID encoding, head/count consistency (an empty source
   pins the genesis head and the empty-state id; a non-empty
   source never pins genesis), then recomputed backup id vs
   stored - divergence fails closed as divergent_backup.
 
 ## Failures (closed)
-- malformed_backup_record: receipt grammar/type violations, or a
+- malformed_backup_record: receipt grammar/type violations, a
+  receipt string field that is not UTF-8 encodable (e.g. a lone
+  surrogate bundle - validated inside the shared canonical
+  backup-ID derivation, never a raw UnicodeEncodeError), or a
   source log that is not a list at all.
 - corrupt_source: the source log fails linked WAL validation or
   chain re-derivation.
