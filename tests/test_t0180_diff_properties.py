@@ -185,6 +185,28 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         'import builtins\nbuiltins.eval("__import__(\'tests.x\')")',
         'from builtins import eval as e\ne("__import__(\'tests.x\')")',
         "import builtins\ngetattr(builtins, '__import__')('tests.x')",
+        "import importlib\nvars(importlib)['import_module']('tests.x')",
+        (
+            "import importlib, operator\n"
+            "operator.attrgetter('import_module')(importlib)('tests.x')"
+        ),
+        "globals()['eval'](chr(95) + 'import')",
+        "import importlib\nimportlib.__getattribute__('import_module')('tests.x')",
+        (
+            "import importlib\n"
+            "object.__getattribute__(importlib, 'import_module')('tests.x')"
+        ),
+        "__builtins__.__dict__['eval']('1')",
+        "globals()['__builtins__'].__dict__['__import__']('tests.x')",
+        (
+            "import importlib, functools, operator\n"
+            "functools.reduce(lambda f,x:f(x), [importlib], "
+            "operator.attrgetter('import_module'))('tests.x')"
+        ),
+        (
+            "import importlib, types\nclass M(types.ModuleType): pass\n"
+            "M.__getattribute__(importlib, 'import_module')('tests.x')"
+        ),
     ]
     for mutant in mutants:
         assert findings(mutant), mutant
