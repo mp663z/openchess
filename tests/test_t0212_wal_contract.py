@@ -128,7 +128,7 @@ class WalEngine:
     def _validate_record(self, record):
         """Exact node record through the linked machinery; returns
         the derived identity string."""
-        if not isinstance(record, dict) or \
+        if type(record) is not dict or \
                 set(record.keys()) != \
                 set(_NDOCS[0]["record"]["fields"]):
             _fail("malformed_wal_entry")
@@ -151,7 +151,7 @@ class WalEngine:
 
     def _validate_payload(self, op, payload):
         spec = _op_spec(op)
-        if not isinstance(payload, dict) or \
+        if type(payload) is not dict or \
                 set(payload.keys()) != set(spec["payload_fields"]):
             _fail("malformed_wal_entry")
         identity = payload["identity"]
@@ -166,7 +166,7 @@ class WalEngine:
         """Phase A - everything decidable WITHOUT the oracle:
         shape, op registration, exact 1-based sequence, id
         grammars, prior-link, payload and record validity."""
-        if not isinstance(entry, dict) or \
+        if type(entry) is not dict or \
                 set(entry.keys()) != set(_FIELDS):
             _fail("malformed_wal_entry")
         if type(entry["op"]) is not str:
@@ -259,9 +259,9 @@ class WalEngine:
         the chain behind the oracle boundary, stage the new entry
         and commit LAST - rejection leaves log and request
         bit-identical."""
-        if not isinstance(log, list):
+        if type(log) is not list:
             _fail("malformed_wal_entry")
-        if not isinstance(request, dict) or \
+        if type(request) is not dict or \
                 set(request.keys()) != {"op", "payload"}:
             _fail("malformed_wal_entry")
         op = request["op"]
@@ -332,7 +332,7 @@ class WalEngine:
         behind the oracle boundary, fold the registered ops in
         sequence order over the empty state - the log is never
         mutated, on success or rejection."""
-        if not isinstance(log, list):
+        if type(log) is not list:
             _fail("malformed_wal_entry")
         self._validate_log_structure(log)
         saved_container, saved_entries = self._snapshot_log(log)
@@ -542,6 +542,120 @@ def test_total_over_hostile_logs(log):
         engine.append(log, {"op": "put",
                             "payload": _payload(STARTPOS)})
     assert exc.value.failure_class == "malformed_wal_entry"
+
+
+# -- hostile container subclasses ---------------------------------------------
+
+
+class _RaisingKeysDict(dict):
+    def keys(self):
+        raise RuntimeError("evil keys")
+
+
+class _RaisingItemsDict(dict):
+    def items(self):
+        raise RuntimeError("evil items")
+
+
+class _RaisingIterList(list):
+    def __iter__(self):
+        raise RuntimeError("evil iter")
+
+
+def test_hostile_container_subclasses_fail_closed_typed():
+    """Attacker-controlled container SUBCLASSES: the engine never
+    invokes their methods - exact built-in type boundaries reject
+    them as malformed_wal_entry, typed, never a raw escape."""
+    engine = _engine()
+    # request: dict subclass whose keys() raises
+    log = _log_of(("put", STARTPOS))
+    before = copy.deepcopy(log)
+    evil_req = _RaisingKeysDict(
+        {"op": "put", "payload": _payload(KINGS)})
+    with pytest.raises(WalError) as exc:
+        engine.append(log, evil_req)
+    assert exc.value.failure_class == "malformed_wal_entry"
+    assert exc.value.code in ERROR_ENUM
+    assert log == before
+    # log: list subclass whose __iter__ raises - append and replay
+    evil_log = _RaisingIterList(
+        _log_of(("put", STARTPOS)))
+    for call in (lambda: engine.replay(evil_log),
+                 lambda: engine.append(
+                     evil_log, {"op": "put",
+                                "payload": _payload(KINGS)})):
+        with pytest.raises(WalError) as exc:
+            call()
+        assert exc.value.failure_class == "malformed_wal_entry"
+    # nested containers: entry, payload, record as raising dict
+    # subclasses - replay and append both reject typed
+    good_entry = _log_of(("put", STARTPOS))[0]
+    nested = [
+        ("entry-keys", _RaisingKeysDict(good_entry)),
+        ("entry-items", _RaisingItemsDict(good_entry)),
+        ("payload-keys", dict(
+            good_entry,
+            payload=_RaisingKeysDict(good_entry["payload"]))),
+        ("record-keys", dict(
+            good_entry,
+            payload=dict(good_entry["payload"],
+                         record=_RaisingKeysDict(
+                             good_entry["payload"]
+                             ["record"])))),
+        ("record-items", dict(
+            good_entry,
+            payload=dict(good_entry["payload"],
+                         record=_RaisingItemsDict(
+                             good_entry["payload"]
+                             ["record"])))),
+    ]
+    for _name, entry in nested:
+        log = [entry]
+        # deepcopy would invoke the hostile methods: snapshot
+        # through the exact built-in constructors instead
+        before = [dict(e) for e in log]
+        for call in (lambda log=log: engine.replay(log),
+                     lambda log=log: engine.append(
+                         log, {"op": "put",
+                               "payload": _payload(KINGS)})):
+            with pytest.raises(WalError) as exc:
+                call()
+            assert exc.value.failure_class == \
+                "malformed_wal_entry", _name
+        assert log == before, _name
+
+
+def test_well_behaved_subclass_containers_rejected():
+    """Even a WELL-BEHAVED subclass (no raising methods) is not
+    the exact built-in type: rejected typed, inputs unchanged."""
+    engine = _engine()
+    # control: exact built-in containers are accepted
+    log = []
+    engine.append(log, {"op": "put",
+                        "payload": _payload(STARTPOS)})
+    assert len(log) == 1
+    before = copy.deepcopy(log)
+
+    class QuietDict(dict):
+        pass
+
+    class QuietList(list):
+        pass
+
+    quiet_log = QuietList(_log_of(("put", STARTPOS)))
+    log_before = copy.deepcopy(quiet_log)
+    with pytest.raises(WalError) as exc:
+        engine.replay(quiet_log)
+    assert exc.value.failure_class == "malformed_wal_entry"
+    assert quiet_log == log_before
+    quiet_req = QuietDict({"op": "put",
+                           "payload": _payload(KINGS)})
+    req_before = copy.deepcopy(quiet_req)
+    with pytest.raises(WalError) as exc:
+        engine.append(log, quiet_req)
+    assert exc.value.failure_class == "malformed_wal_entry"
+    assert quiet_req == req_before
+    assert log == before
 
 
 def _hostile_entries():
