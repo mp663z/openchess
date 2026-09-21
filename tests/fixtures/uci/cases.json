@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "contract": "data/contracts/uci.yaml",
+  "contract_schema_version": 1,
+  "section_manifests": {
+    "happy": ["gui-position", "gui-search", "engine-info", "engine-bestmove"],
+    "boundary": ["promotion-move", "none-bestmove", "split-utf8-frame"],
+    "malformed": ["double-space", "crlf-frame", "bad-promotion", "unknown-command"],
+    "rollback": ["pre-handshake-position", "duplicate-uci"]
+  },
+  "happy": [
+    {"name":"gui-position","scenario_tag":"gui:position-startpos","direction":"gui","line":"position startpos moves e2e4","expect":{"command":"position","setup":"startpos","moves":["e2e4"]}},
+    {"name":"gui-search","scenario_tag":"gui:go-bounds","direction":"gui","line":"go wtime 0 btime 0 depth 1","expect":{"command":"go","parameters":{"wtime":0,"btime":0,"depth":1}}},
+    {"name":"engine-info","scenario_tag":"engine:info-score","direction":"engine","line":"info depth 12 score cp -17","expect":{"response":"info","fields":{"depth":12,"score":{"form":"cp","value":-17}}}},
+    {"name":"engine-bestmove","scenario_tag":"engine:bestmove-ponder","direction":"engine","line":"bestmove e2e4 ponder e7e5","expect":{"response":"bestmove","move":"e2e4","ponder":"e7e5"}}
+  ],
+  "boundary": [
+    {"name":"promotion-move","scenario_tag":"move:promotion","kind":"parse","direction":"engine","line":"bestmove a7a8q","expect":{"response":"bestmove","move":"a7a8q"}},
+    {"name":"none-bestmove","scenario_tag":"move:none-token","kind":"parse","direction":"engine","line":"bestmove (none)","expect":{"response":"bestmove","move":"(none)"}},
+    {"name":"split-utf8-frame","scenario_tag":"framing:utf8-chunk-split","kind":"framing","chunks_hex":["6964206e616d6520c3","a963686563730a"],"expect_frames":["id name échecs"]}
+  ],
+  "malformed": [
+    {"name":"double-space","scenario_tag":"grammar:spacing","kind":"parse","direction":"gui","line":"go  depth 5","repair_line":"go depth 5","expect_failure":"malformed_line"},
+    {"name":"crlf-frame","scenario_tag":"framing:crlf","kind":"framing","chunks_hex":["7563690d0a"],"repair_chunks_hex":["7563690a"],"expect_failure":"malformed_line"},
+    {"name":"bad-promotion","scenario_tag":"move:promotion-domain","kind":"parse","direction":"engine","line":"bestmove a7a8k","repair_line":"bestmove a7a8q","expect_failure":"malformed_line"},
+    {"name":"unknown-command","scenario_tag":"grammar:closed-keyword","kind":"parse","direction":"gui","line":"launch","repair_line":"uci","expect_failure":"unknown_command"}
+  ],
+  "rollback": [
+    {"name":"pre-handshake-position","scenario_tag":"rollback:protocol-state","prefix":[],"direction":"gui","line":"position startpos","expect_failure":"protocol_state"},
+    {"name":"duplicate-uci","scenario_tag":"rollback:duplicate-handshake","prefix":[["gui","uci"]],"direction":"gui","line":"uci","expect_failure":"protocol_state"}
+  ]
+}
