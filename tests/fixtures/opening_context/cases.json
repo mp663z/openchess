@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "contract": "data/contracts/opening_context.yaml",
+  "contract_schema_version": 1,
+  "section_manifests": {
+    "happy": {
+      "sicilian-exact": "37253e0e355bc5ce0daab1f57eb8fe76483fbc8ed3d967983f0a4b5cbc1bc985",
+      "najdorf-longest-prefix": "9811b08fb4d2f6733e4813b60f25b2a394c37da26f6c16b916324a6c5a03db84",
+      "italian-deeper-prefix": "99a6a30be0b58458daf21b2f37b7b0b727979ba57a5ca720de902dd2b990954b"
+    },
+    "boundary": {
+      "empty-unclassified": "c620003fb09c445ac034cbd3b4c6ee077742a1f1f7ee10a4833e46820782b763",
+      "unmatched-unclassified": "9fbe2e977517662222f0002a74f634203f56d322dc99b0c8beb638dd1c86d46a",
+      "extension-stable": "d55287d1009659afe65dba7409dd3462a4d6a8291e755ca9f4ec75360c68a38b"
+    },
+    "malformed": {
+      "unknown-variant": "45170848b1a95a4490b7b295b52d09844076a1153487d39226cd1f8f445b4472",
+      "path-not-list": "0c415a57d7a3b53578d07dcb065d55c6ad7f0ac87d5fd27f2a16d83b1c119fb9",
+      "same-square-move": "e721ea6d42962e56261b061bef8e5aa205361d1640f3efd1fcf248fc6cb18203",
+      "bad-promotion": "da2cbdaacf10115269ddcd9ff59c1b3430e16bec64d31326b6818ba55bef7a88"
+    },
+    "rollback": {
+      "malformed-after-sicilian": "7503ab2e237e82aa7116b4a3d4f434b5d0fb0df5c4bc6787366d0ff5a017e541",
+      "unknown-after-empty": "3eadae0b75accddd742033c882fd8c4ddbe4441cbd46237c0514666167b93bb5"
+    }
+  },
+  "happy": [
+    {
+      "name": "sicilian-exact",
+      "scenario_tag": "resolve:exact",
+      "variant": "standard",
+      "path": [
+        "e2e4",
+        "c7c5"
+      ],
+      "expect_code": "B20",
+      "expect_name": "Sicilian Defense"
+    },
+    {
+      "name": "najdorf-longest-prefix",
+      "scenario_tag": "resolve:longest-prefix",
+      "variant": "standard",
+      "path": [
+        "e2e4",
+        "c7c5",
+        "g1f3",
+        "d7d6",
+        "d2d4",
+        "c5d4",
+        "f3d4",
+        "g8f6",
+        "b1c3",
+        "a7a6"
+      ],
+      "expect_code": "B90",
+      "expect_name": "Sicilian Defense: Najdorf Variation"
+    },
+    {
+      "name": "italian-deeper-prefix",
+      "scenario_tag": "resolve:deeper-prefix",
+      "variant": "standard",
+      "path": [
+        "e2e4",
+        "e7e5",
+        "g1f3",
+        "b8c6",
+        "f1c4",
+        "f8c5"
+      ],
+      "expect_code": "C50",
+      "expect_name": "Italian Game"
+    }
+  ],
+  "boundary": [
+    {
+      "name": "empty-unclassified",
+      "scenario_tag": "boundary:empty",
+      "variant": "standard",
+      "path": [],
+      "expect_code": "-",
+      "expect_name": "-"
+    },
+    {
+      "name": "unmatched-unclassified",
+      "scenario_tag": "boundary:no-prefix",
+      "variant": "standard",
+      "path": [
+        "a2a3"
+      ],
+      "expect_code": "-",
+      "expect_name": "-"
+    },
+    {
+      "name": "extension-stable",
+      "scenario_tag": "boundary:extension",
+      "variant": "standard",
+      "path": [
+        "e2e4",
+        "e7e5",
+        "g1f3",
+        "g8f6"
+      ],
+      "expect_code": "C20",
+      "expect_name": "King's Pawn Game"
+    }
+  ],
+  "malformed": [
+    {
+      "name": "unknown-variant",
+      "scenario_tag": "reject:variant",
+      "variant": "chess960",
+      "path": [
+        "e2e4"
+      ],
+      "expect_failure": "unknown_variant",
+      "repair": {
+        "variant": "standard"
+      }
+    },
+    {
+      "name": "path-not-list",
+      "scenario_tag": "reject:path-type",
+      "variant": "standard",
+      "path": "e2e4",
+      "expect_failure": "malformed_path",
+      "repair": {
+        "path": [
+          "e2e4"
+        ]
+      }
+    },
+    {
+      "name": "same-square-move",
+      "scenario_tag": "reject:same-square",
+      "variant": "standard",
+      "path": [
+        "e2e2"
+      ],
+      "expect_failure": "malformed_path",
+      "repair": {
+        "path": [
+          "e2e4"
+        ]
+      }
+    },
+    {
+      "name": "bad-promotion",
+      "scenario_tag": "reject:promotion",
+      "variant": "standard",
+      "path": [
+        "e7e8k"
+      ],
+      "expect_failure": "malformed_path",
+      "repair": {
+        "path": [
+          "e7e8q"
+        ]
+      }
+    }
+  ],
+  "rollback": [
+    {
+      "name": "malformed-after-sicilian",
+      "scenario_tag": "rollback:malformed",
+      "setup_paths": [
+        [
+          "e2e4",
+          "c7c5"
+        ]
+      ],
+      "variant": "standard",
+      "rejected_path": [
+        "i2e4"
+      ],
+      "expect_failure": "malformed_path",
+      "then_path": [
+        "a2a3"
+      ],
+      "expect_serialized": [
+        [
+          "standard",
+          "a2a3",
+          "-",
+          "-"
+        ],
+        [
+          "standard",
+          "e2e4 c7c5",
+          "B20",
+          "Sicilian Defense"
+        ]
+      ]
+    },
+    {
+      "name": "unknown-after-empty",
+      "scenario_tag": "rollback:unknown-variant",
+      "setup_paths": [],
+      "variant": "chess960",
+      "rejected_path": [
+        "e2e4"
+      ],
+      "expect_failure": "unknown_variant",
+      "then_path": [],
+      "expect_serialized": [
+        [
+          "standard",
+          "",
+          "-",
+          "-"
+        ]
+      ]
+    }
+  ]
+}
