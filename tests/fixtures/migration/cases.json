@@ -1,0 +1,755 @@
+{
+ "boundary": [
+  {
+   "expect": {
+    "from_schema": "store-v1",
+    "migration_id": "mg1:43157b1c012e2dd0272ab0e4c3c172be158c812e87b846ba8283018563b3c4f8",
+    "source_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "state": {},
+    "target_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "to_schema": "store-v2"
+   },
+   "kind": "migrate",
+   "name": "migrate-empty-source",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "to_schema": "store-v2"
+   },
+   "source": {}
+  },
+  {
+   "expect": {
+    "from_schema": "store-v1",
+    "migration_id": "mg1:e02f82fc2b8c3293349d3cb2efb313e66e2ecfa13e253a334e6457c8100f5806",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv2:d3ad9796f3d96516d5c0aaeb2753dff47cb253994cd5b476b95334f28f7209a6",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     },
+     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+      "digest": "pdv2:8fa14e0cdbd23096c8345b18bfadad1f8d46c402f3986c101dbbe66504dbc8f1",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "target_id": "gs1:75a8865beede99faa001e58ef7d7bf692e6880f1e9453956fe102c26b80730a3",
+    "to_schema": "store-v2"
+   },
+   "kind": "migrate",
+   "name": "migrate-two-record-source-boundary",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  }
+ ],
+ "contract": "store-migration",
+ "contract_base_path": "/store/migration/v1",
+ "happy": [
+  {
+   "expect": {
+    "from_schema": "store-v1",
+    "migration_id": "mg1:e4d2f34bd6d28ac300151718dee9c7a96ab6f8c9af3faa2be44fdc71b8df059c",
+    "source_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv2:d3ad9796f3d96516d5c0aaeb2753dff47cb253994cd5b476b95334f28f7209a6",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     },
+     "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+      "digest": "pdv2:01634ebab8aee4037bb79e417c78e9e15f36c28ec9ba9d030b94960add253f09",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      "variant": "standard"
+     },
+     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+      "digest": "pdv2:8fa14e0cdbd23096c8345b18bfadad1f8d46c402f3986c101dbbe66504dbc8f1",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "target_id": "gs1:d56bd89b356b0b6a7b34f2b69717bff38f5dcbe37cbc7d56a793664ef1e5e7f0",
+    "to_schema": "store-v2"
+   },
+   "kind": "migrate",
+   "name": "migrate-three-record-source",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+     "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "expect": {
+    "from_schema": "store-v1",
+    "migration_id": "mg1:877600be6e1dd1c1441d93c674efc649123b560644112a7be4337abaad508376",
+    "source_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+    "state": {
+     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+      "digest": "pdv2:8fa14e0cdbd23096c8345b18bfadad1f8d46c402f3986c101dbbe66504dbc8f1",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "target_id": "gs1:77571111cefd69fc2a9df63c6b4a280e0434a6693a4ca4a4a50f240e4c1c8735",
+    "to_schema": "store-v2"
+   },
+   "kind": "migrate",
+   "name": "migrate-single-record-source",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "expect": {
+    "from_schema": "store-v1",
+    "migration_id": "mg1:3d9426056c8c1ec6d49121cde3e622c306beeef7e9e80cab9122bad6d19b59a1",
+    "source_id": "gs1:bbc5d607d73bc8df6fd5d49aef531eb8698ef89b498d12b572af60f7c46382f9",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv2:d3ad9796f3d96516d5c0aaeb2753dff47cb253994cd5b476b95334f28f7209a6",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     },
+     "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')": {
+      "digest": "pdv2:4398a49e8bd9a46d1eb02e72abd2d83dc6320438867454f25207175f39eb91e4",
+      "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+      "variant": "standard"
+     }
+    },
+    "target_id": "gs1:61b5825d44d14f7aa7b126c46fa231b1702c207d0fab4af091dc75ae63064100",
+    "to_schema": "store-v2"
+   },
+   "kind": "migrate",
+   "name": "migrate-two-record-source",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:bbc5d607d73bc8df6fd5d49aef531eb8698ef89b498d12b572af60f7c46382f9",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')": {
+     "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+     "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+     "variant": "standard"
+    }
+   }
+  }
+ ],
+ "malformed": [
+  {
+   "defect": "request is missing the to_schema field",
+   "expect_failure": "malformed_migration_record",
+   "kind": "migrate",
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "from_schema": "store-v1",
+      "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+      "to_schema": "store-v2"
+     }
+    }
+   },
+   "name": "request-missing-field",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "request carries an undeclared extra field",
+   "expect_failure": "malformed_migration_record",
+   "kind": "migrate",
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "from_schema": "store-v1",
+      "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+      "to_schema": "store-v2"
+     }
+    }
+   },
+   "name": "request-extra-field",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "label": "x",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "from_schema fails the schema-id grammar",
+   "expect_failure": "malformed_migration_record",
+   "kind": "migrate",
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "from_schema",
+     "value": "store-v1"
+    }
+   },
+   "name": "request-bad-schema-grammar",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "from_schema is not a registered schema",
+   "expect_failure": "malformed_migration_record",
+   "kind": "migrate",
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "from_schema",
+     "value": "store-v1"
+    }
+   },
+   "name": "request-unknown-schema",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v9",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "source_id fails the state-id grammar",
+   "expect_failure": "malformed_migration_record",
+   "kind": "migrate",
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "source_id",
+     "value": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+    }
+   },
+   "name": "request-bad-source-id-grammar",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "bad",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "to_schema is not a string",
+   "expect_failure": "malformed_migration_record",
+   "kind": "migrate",
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "from_schema": "store-v1",
+      "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+      "to_schema": "store-v2"
+     }
+    }
+   },
+   "name": "request-non-str-value",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": null
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "a noop migration pair is not registered",
+   "expect_failure": "unknown_migration",
+   "kind": "migrate",
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "to_schema",
+     "value": "store-v2"
+    }
+   },
+   "name": "request-noop-unregistered",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v1"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "a downgrade migration pair is not registered",
+   "expect_failure": "unknown_migration",
+   "kind": "migrate",
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "from_schema": "store-v1",
+      "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+      "to_schema": "store-v2"
+     }
+    }
+   },
+   "name": "request-downgrade-unregistered",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v2",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v1"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "recomputed source id differs from the request's source_id",
+   "expect_failure": "conflicting_source",
+   "kind": "migrate",
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "source_id",
+     "value": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+    }
+   },
+   "name": "source-id-mismatch",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "the source state is not a mapping",
+   "expect_failure": "malformed_migration_record",
+   "kind": "migrate",
+   "minimal_repair": {
+    "replace_source": {
+     "source": {
+      "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      },
+      "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     }
+    }
+   },
+   "name": "source-not-mapping",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "source": []
+  },
+  {
+   "defect": "a source record fails the source-schema digest grammar",
+   "expect_failure": "malformed_migration_record",
+   "kind": "migrate",
+   "minimal_repair": {
+    "replace_source": {
+     "source": {
+      "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      },
+      "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     }
+    }
+   },
+   "name": "source-record-bad-digest",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "bad",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "the target oracle raises during evaluation",
+   "expect_failure": "divergent_target",
+   "kind": "migrate",
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-raises",
+   "oracle": "raising",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "the target oracle returns text failing the target grammar",
+   "expect_failure": "divergent_target",
+   "kind": "migrate",
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-bad-grammar-output",
+   "oracle": "bad-grammar",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:bbc5d607d73bc8df6fd5d49aef531eb8698ef89b498d12b572af60f7c46382f9",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')": {
+     "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+     "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "defect": "the target oracle returns a non-string",
+   "expect_failure": "divergent_target",
+   "kind": "migrate",
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-non-str-output",
+   "oracle": "non-str",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+     "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  }
+ ],
+ "notes": "T0195 migration conformance fixture. Cases execute against the contract-derived reference in tests.test_t0194_migration_contract (itself derived from data/contracts/migration.yaml plus the linked transposition-node, variant, position-digest, en-passant and FEN contracts); pinned states, ids and receipts were computed from that reference at authoring time. Oracle selectors name pinned boundary behaviors (honest/raising/bad-grammar/non-str). Proves fixture/contract CONSISTENCY, not production behavior - the later runtime work must execute these same cases against a separately implemented runtime.",
+ "rollback": [
+  {
+   "expect": {
+    "from_schema": "store-v1",
+    "migration_id": "mg1:e02f82fc2b8c3293349d3cb2efb313e66e2ecfa13e253a334e6457c8100f5806",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv2:d3ad9796f3d96516d5c0aaeb2753dff47cb253994cd5b476b95334f28f7209a6",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     },
+     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+      "digest": "pdv2:8fa14e0cdbd23096c8345b18bfadad1f8d46c402f3986c101dbbe66504dbc8f1",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "target_id": "gs1:75a8865beede99faa001e58ef7d7bf692e6880f1e9453956fe102c26b80730a3",
+    "to_schema": "store-v2"
+   },
+   "expect_failure": "conflicting_source",
+   "kind": "rollback-migrate",
+   "name": "rejected-conflicting-source-then-valid-migrate",
+   "oracle": "honest",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   },
+   "then_oracle": "honest",
+   "then_request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "then_source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "expect": {
+    "from_schema": "store-v1",
+    "migration_id": "mg1:e02f82fc2b8c3293349d3cb2efb313e66e2ecfa13e253a334e6457c8100f5806",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv2:d3ad9796f3d96516d5c0aaeb2753dff47cb253994cd5b476b95334f28f7209a6",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     },
+     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+      "digest": "pdv2:8fa14e0cdbd23096c8345b18bfadad1f8d46c402f3986c101dbbe66504dbc8f1",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "target_id": "gs1:75a8865beede99faa001e58ef7d7bf692e6880f1e9453956fe102c26b80730a3",
+    "to_schema": "store-v2"
+   },
+   "expect_failure": "divergent_target",
+   "kind": "rollback-migrate",
+   "name": "rejected-oracle-raising-then-valid-migrate",
+   "oracle": "raising",
+   "request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   },
+   "then_oracle": "honest",
+   "then_request": {
+    "from_schema": "store-v1",
+    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "to_schema": "store-v2"
+   },
+   "then_source": {
+    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "variant": "standard"
+    }
+   }
+  }
+ ],
+ "schema": 1
+}
