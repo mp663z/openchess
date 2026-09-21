@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
 from tests.test_t0167_version_contract import (  # noqa: E402
     VersionError,
     VersionStore,
+    _real_hasher,
     _valid_timestamp,
 )
 from tools.version_contract_lint import FAILURE_MAPPING  # noqa: E402
@@ -83,16 +84,16 @@ PAYLOAD_DIGESTS = {
         "equal-parent-timestamp": "e8603bc75c4fd7042df7addeee0b45d1553a98e512ab71be751e9beb3461a8ba",  # noqa: E501
         "duplicate-parents-canonicalized": "bd677730fb7eafb6a23237c994c395eb46104b267e9f424da899e9fcc5deea2a",  # noqa: E501
         "leap-day-valid": "22d1a636fd0a7d80403a240b627a61ae06568bcc4376763d878db33547c645c3",
-        "parent-order-canonicalized": "4c48a5716306bc026a6bad3f0e742622ff76c78f4385e811d4ee6e9be2c23421",  # noqa: E501
+        "parent-order-canonicalized": "b92d1cdde7c332478a1604a9c48711713bcf998f9de7641c9bd1270cbf51de2e",  # noqa: E501
     },
     "malformed": {
-        "missing-label": "21deb1cdd98f9f68ba0e082e538b66fefa5fd8a6c2ee24b20ef21f9db5b5ba41",
-        "empty-label": "38afb13af9672d483fbf50834d50b55b6e2d74adfb0d17eac3396d2cbc3190e8",
-        "underived-id": "ce104ccd9cd86a8ed6c50c7e9c520290ea711e80b4a7aaaff1c8feb1525905aa",
-        "unknown-parent": "7d8069329f1ba0a99ab57375af779bda8cce00fae6470b8ed6ee542b7250caa7",
-        "nonmonotonic-version": "d052a2cc744e693d65307bcab8ee521c13893407a043613cc99f2354838bd7f4",
-        "second-root": "ef6633923ed5105f0098c7ece0e0207b78a87ea90436aefc3748b472844bd32b",
-        "metadata-conflict": "5155eabe4a4d9b67f5be0b7539fd536cea4eadb02288063bfd9547d77eff8a5c",
+        "missing-label": "c3cca66d02f28b45d365b0118c6fa2df865dceefb3f61cb63c20f96bc9f00bab",
+        "empty-label": "ef8d54ac499a71da2c4e0cd8cb21f0c6039075758a912266b2afbb096833520c",
+        "underived-id": "cab2a20139a054428e2d68506404fce9e4aa6c6190f6e4da3c5b67e7dcc6c86e",
+        "unknown-parent": "5d54b981043aaf3ccf09dcaf109b95440133a73fcde20f0a96ab6ea6227d4ff1",
+        "nonmonotonic-version": "c7528bbf0cd6c78ba61ebf64772eec42cd411f4cc53cfba6131838890ae0ccbf",
+        "second-root": "3e71e7d5be854d530b2b5a40c479c1f053e50c00b1b4fc09c8a9048162cb3d96",
+        "metadata-conflict": "40fed58e933f1e7e6c4fde8d7487732d06e4b9aa2ebb7ce50d860f52685280eb",
     },
     "rollback": {
         "unknown-parent-then-valid": "f389741555bff866d96974560bdac519922fdebfde4195c5f2f0514745b4bb4e",  # noqa: E501
@@ -150,8 +151,14 @@ def test_boundary():
     dup = rows["duplicate-parents-canonicalized"]["record"]["parent_ids"]
     assert len(dup) > len(set(dup))
     assert _valid_timestamp(rows["leap-day-valid"]["record"]["created_at"])
-    order = rows["parent-order-canonicalized"]["record"]["parent_ids"]
-    assert order == sorted(order)
+    order_row = rows["parent-order-canonicalized"]
+    supplied = order_row["record"]["parent_ids"]
+    assert supplied != sorted(supplied)
+    store = _load(order_row["initial"])
+    stored = store.insert(copy.deepcopy(order_row["record"]))
+    assert stored["parent_ids"] == sorted(supplied)
+    assert stored["parent_ids"] != supplied
+    assert stored["version_id"] == _real_hasher(sorted(supplied), stored["graph_digest"])
 
 
 def test_malformed_and_minimal_repairs():
@@ -163,7 +170,16 @@ def test_malformed_and_minimal_repairs():
         assert exc.value.failure_class == r["expect_failure"]
         assert exc.value.code == FAILURE_MAPPING[r["expect_failure"]]
         assert (s.records, s.root_id) == before
-        _load(r["initial"]).insert(copy.deepcopy(r["repair"]))
+        bad = r["record"]
+        repair = r["repair"]
+        fields = set(bad) | set(repair)
+        changed = {key for key in fields if bad.get(key) != repair.get(key)}
+        assert changed == set(r["defect_fields"])
+        if "version_id" in changed:
+            assert repair["version_id"] == _real_hasher(
+                sorted(set(repair["parent_ids"])), repair["graph_digest"]
+            )
+        _load(r["initial"]).insert(copy.deepcopy(repair))
 
 
 def test_rollback_reject_then_accept():
@@ -184,3 +200,13 @@ def test_every_row_payload_is_unique_within_section():
             payload = {k: v for k, v in row.items() if k != "name"}
             payloads.append(json.dumps(payload, sort_keys=True))
         assert len(payloads) == len(set(payloads)), sec
+
+
+def test_parent_order_row_kills_store_order_mutant():
+    row = _rows("boundary")["parent-order-canonicalized"]
+    supplied = row["record"]["parent_ids"]
+    assert supplied != sorted(supplied)
+    mutant_result = copy.deepcopy(row["record"])
+    mutant_result["parent_ids"] = list(supplied)
+    honest = _load(row["initial"]).insert(copy.deepcopy(row["record"]))
+    assert mutant_result["parent_ids"] != honest["parent_ids"]
