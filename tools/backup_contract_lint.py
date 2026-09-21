@@ -85,7 +85,7 @@ FAILURE_TRIGGERS = {
         "source-log-fails-linked-wal-validation-or-chain-"
         "rederivation",
     "divergent_snapshot":
-        "serializer-raising-or-non-exact-string-output",
+        "serializer-raising-any-baseexception-or-non-exact-string-output",
     "divergent_backup":
         "recomputed-backup-id-divergence-or-head-count-"
         "inconsistency",

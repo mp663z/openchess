@@ -92,11 +92,17 @@ class BackupEngine:
         self._wal = WalEngine(canonical_payload)  # linked, trusted
 
     def _serialize(self, frozen_state):
-        """THE serializer boundary: raising or non-exact-str
-        output fails closed as divergent_snapshot."""
+        """THE serializer boundary: raising ANY BaseException
+        (including KeyboardInterrupt/SystemExit/GeneratorExit) or
+        returning non-exact-str output fails closed as
+        divergent_snapshot."""
         try:
             out = self.serializer(frozen_state)
-        except Exception:
+        except BaseException:
+            # fail closed against the FULL BaseException surface:
+            # KeyboardInterrupt/SystemExit/GeneratorExit from the
+            # untrusted oracle map to the typed failure, never a
+            # raw escape (totality)
             _fail("divergent_snapshot")
         if type(out) is not str:
             _fail("divergent_snapshot")
@@ -346,10 +352,23 @@ def _hostile_serializers():
     def lone_low_surrogate(state):
         return "\udfff"
 
+    def raising_keyboard_interrupt(state):
+        raise KeyboardInterrupt("boom")
+
+    def raising_system_exit(state):
+        raise SystemExit("boom")
+
+    def raising_generator_exit(state):
+        raise GeneratorExit("boom")
+
     return [("raising", raising), ("bad-type", bad_type),
             ("bad-none", bad_none), ("evil-str", evil_str),
             ("lone-high-surrogate", lone_high_surrogate),
-            ("lone-low-surrogate", lone_low_surrogate)]
+            ("lone-low-surrogate", lone_low_surrogate),
+            ("raising-keyboard-interrupt",
+             raising_keyboard_interrupt),
+            ("raising-system-exit", raising_system_exit),
+            ("raising-generator-exit", raising_generator_exit)]
 
 
 @pytest.mark.parametrize("name,serializer", _hostile_serializers(),

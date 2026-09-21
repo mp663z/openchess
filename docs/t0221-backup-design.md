@@ -35,7 +35,7 @@ explicitly not scope (restore is its own contract).
   source log that is not a list at all.
 - corrupt_source: the source log fails linked WAL validation or
   chain re-derivation.
-- divergent_snapshot: serializer raising or returning a
+- divergent_snapshot: serializer raising ANY BaseException (KeyboardInterrupt/SystemExit/GeneratorExit included - the boundary catches BaseException so the untrusted oracle can never escape raw) or returning a
   non-exact-built-in-str.
 - divergent_backup: recomputed backup id differs from the stored
   one, or head/count consistency is violated (even with a

@@ -46,7 +46,7 @@ contract:
     triggers:
       malformed_backup_record: receipt-grammar-or-source-log-type-violation
       corrupt_source: source-log-fails-linked-wal-validation-or-chain-rederivation
-      divergent_snapshot: serializer-raising-or-non-exact-string-output
+      divergent_snapshot: serializer-raising-any-baseexception-or-non-exact-string-output
       divergent_backup: recomputed-backup-id-divergence-or-head-count-inconsistency
     mapping:
       malformed_backup_record: malformed_request
