@@ -6,38 +6,48 @@ import ast
 from pathlib import Path
 
 PROTECTED_PATHS = (Path("tests/test_t0180_diff_properties.py"),)
+_FORBIDDEN_API_NAMES = {"eval", "exec", "__import__", "import_module"}
+_DYNAMIC_MODULES = {"builtins", "importlib"}
 
 
 class DependencyError(Exception):
     pass
 
 
-def _is_importlib_module(node, importlib_aliases):
-    return isinstance(node, ast.Name) and node.id in importlib_aliases
-
-
-def _is_import_module_api(node, importlib_aliases, import_module_aliases):
-    if isinstance(node, ast.Name):
-        return node.id in import_module_aliases
-    return (
-        isinstance(node, ast.Attribute)
-        and node.attr == "import_module"
-        and _is_importlib_module(node.value, importlib_aliases)
-    ) or (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "getattr"
-        and len(node.args) >= 2
-        and _is_importlib_module(node.args[0], importlib_aliases)
-        and isinstance(node.args[1], ast.Constant)
-        and node.args[1].value == "import_module"
-    )
+def _is_forbidden_module_lookup(node, module_aliases):
+    """Return whether an expression references a forbidden dynamic API."""
+    if isinstance(node, ast.Attribute):
+        if node.attr in _FORBIDDEN_API_NAMES:
+            return True
+        return (
+            node.attr == "__dict__"
+            and isinstance(node.value, ast.Name)
+            and node.value.id in module_aliases
+        )
+    if isinstance(node, ast.Call):
+        return (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "getattr"
+            and len(node.args) >= 2
+            and isinstance(node.args[0], ast.Name)
+            and node.args[0].id in module_aliases
+            and isinstance(node.args[1], ast.Constant)
+            and node.args[1].value in _FORBIDDEN_API_NAMES
+        )
+    if isinstance(node, ast.Subscript):
+        key = node.slice
+        return (
+            _is_forbidden_module_lookup(node.value, module_aliases)
+            and isinstance(key, ast.Constant)
+            and key.value in _FORBIDDEN_API_NAMES
+        )
+    return False
 
 
 def findings(source: str):
     tree = ast.parse(source)
-    importlib_aliases = {"importlib"}
-    import_module_aliases = set()
+    module_aliases = set(_DYNAMIC_MODULES)
+    api_aliases = set(_FORBIDDEN_API_NAMES)
     found = []
 
     for node in ast.walk(tree):
@@ -45,49 +55,24 @@ def findings(source: str):
             for alias in node.names:
                 if alias.name == "tests" or alias.name.startswith("tests."):
                     found.append(node)
-                if alias.name == "importlib":
-                    importlib_aliases.add(alias.asname or alias.name)
+                if alias.name in _DYNAMIC_MODULES:
+                    module_aliases.add(alias.asname or alias.name)
         elif isinstance(node, ast.ImportFrom):
             module = node.module or ""
             if module == "tests" or module.startswith("tests."):
                 found.append(node)
-            if module == "importlib":
+            if module in _DYNAMIC_MODULES:
                 for alias in node.names:
-                    if alias.name == "import_module":
-                        import_module_aliases.add(alias.asname or alias.name)
+                    if alias.name in _FORBIDDEN_API_NAMES:
+                        api_aliases.add(alias.asname or alias.name)
+                        found.append(node)
 
-    # Conservatively identify assignments derived from dynamic-import APIs.
-    changed = True
-    while changed:
-        changed = False
-        for node in ast.walk(tree):
-            if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
-                continue
-            value = node.value
-            hazardous = _is_import_module_api(
-                value, importlib_aliases, import_module_aliases
-            ) or (isinstance(value, ast.Name) and value.id in import_module_aliases)
-            if not hazardous:
-                continue
-            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            for target in targets:
-                if isinstance(target, ast.Name) and target.id not in import_module_aliases:
-                    import_module_aliases.add(target.id)
-                    found.append(node)
-                    changed = True
-
+    # Reject references, not just calls. Once a forbidden API cannot be named or
+    # retrieved, lambda, partial, attribute, container, and callable indirection
+    # cannot launder it past this static boundary.
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        fn = node.func
-        is_dynamic_execution = isinstance(fn, ast.Name) and fn.id in {
-            "eval",
-            "exec",
-            "__import__",
-        }
-        if is_dynamic_execution or _is_import_module_api(
-            fn, importlib_aliases, import_module_aliases
-        ):
+        named_api = isinstance(node, ast.Name) and node.id in api_aliases
+        if named_api or _is_forbidden_module_lookup(node, module_aliases):
             found.append(node)
     return found
 

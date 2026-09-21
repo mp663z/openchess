@@ -176,6 +176,15 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         "import importlib\nf = importlib.import_module\nf('tests.x')",
         'eval("__import__(\'tests.x\')")',
         "exec('import tests.x')",
+        "import importlib\n(lambda: importlib.import_module)()('tests.x')",
+        "import importlib\n(lambda f: f('tests.x'))(importlib.import_module)",
+        "import importlib, functools\nfunctools.partial(importlib.import_module, 'tests.x')()",
+        "import importlib\nclass C: pass\nC.loader = importlib.import_module\nC.loader('tests.x')",
+        "import importlib\nimportlib.__dict__['import_module']('tests.x')",
+        "import importlib\nfs=[importlib.import_module]\nfs[0]('tests.x')",
+        'import builtins\nbuiltins.eval("__import__(\'tests.x\')")',
+        'from builtins import eval as e\ne("__import__(\'tests.x\')")',
+        "import builtins\ngetattr(builtins, '__import__')('tests.x')",
     ]
     for mutant in mutants:
         assert findings(mutant), mutant
