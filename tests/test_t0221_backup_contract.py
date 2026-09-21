@@ -115,7 +115,7 @@ class BackupEngine:
         BEFORE the single serializer call; the receipt derives
         only from the frozen snapshot; the log is restored
         bit-identical on every exit."""
-        if not isinstance(log, list):
+        if type(log) is not list:
             _fail("malformed_backup_record")
         try:
             replayed = self._wal.replay(log)
@@ -151,7 +151,7 @@ class BackupEngine:
         grammars, head/count consistency, then recomputed backup
         id vs stored - divergence fails closed as
         divergent_backup. NO oracle calls."""
-        if not isinstance(receipt, dict) or \
+        if type(receipt) is not dict or \
                 set(receipt.keys()) != set(_FIELDS) | {"bundle"}:
             _fail("malformed_backup_record")
         if type(receipt["backup_id"]) is not str or \
@@ -473,6 +473,51 @@ def test_total_over_hostile_receipts(name, mutate, cls, good):
     assert exc.value.code == FAILURE_MAPPING[cls]
     assert exc.value.code in ERROR_ENUM
     assert receipt == before
+
+
+class _RaisingKeysDict(dict):
+    def keys(self):
+        raise RuntimeError("evil keys")
+
+
+class _RaisingIterList(list):
+    def __iter__(self):
+        raise RuntimeError("evil iter")
+
+
+def test_hostile_container_subclasses_fail_closed_typed():
+    """Exact built-in container boundaries: subclassed logs and
+    receipts never get their methods invoked - typed rejection,
+    never a raw escape, for BOTH backup and verify."""
+    engine = _engine()
+    evil_log = _RaisingIterList(_log_of(("put", STARTPOS)))
+    with pytest.raises(BackupError) as exc:
+        engine.backup(evil_log)
+    assert exc.value.failure_class == "malformed_backup_record"
+    assert exc.value.code in ERROR_ENUM
+    good = engine.backup(_log_of(("put", STARTPOS)))
+    evil_receipt = _RaisingKeysDict(good)
+    with pytest.raises(BackupError) as exc:
+        engine.verify(evil_receipt)
+    assert exc.value.failure_class == "malformed_backup_record"
+    assert exc.value.code in ERROR_ENUM
+
+    class QuietList(list):
+        pass
+
+    class QuietDict(dict):
+        pass
+
+    quiet_log = QuietList(_log_of(("put", STARTPOS)))
+    with pytest.raises(BackupError) as exc:
+        engine.backup(quiet_log)
+    assert exc.value.failure_class == "malformed_backup_record"
+    quiet_receipt = QuietDict(good)
+    before = dict(quiet_receipt)
+    with pytest.raises(BackupError) as exc:
+        engine.verify(quiet_receipt)
+    assert exc.value.failure_class == "malformed_backup_record"
+    assert quiet_receipt == before
 
 
 def test_verify_head_count_inconsistency():
