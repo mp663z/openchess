@@ -20,6 +20,9 @@ _ALLOWED_FROM_IMPORTS = {
     "tools.production_test_dependency_lint": {"findings", "lint"},
     "tools.variant_runtime": {"VariantError"},
 }
+_FROM_IMPORT_ATTRIBUTE_SURFACES = {
+    ("graph", "diff"): {"DiffError", "apply", "compute", "state_id"},
+}
 _FORBIDDEN_NAMES = {
     "__builtins__",
     "__import__",
@@ -56,7 +59,7 @@ def _is_dunder(value):
 def findings(source: str):
     tree = ast.parse(source)
     found = []
-    direct_aliases = {}
+    attribute_roots = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -65,22 +68,26 @@ def findings(source: str):
                     found.append(node)
                 else:
                     bound_name = alias.asname or alias.name.split(".", 1)[0]
-                    direct_aliases[bound_name] = allowed_attributes
+                    attribute_roots[bound_name] = allowed_attributes
         elif isinstance(node, ast.ImportFrom):
             module = node.module or ""
             allowed_members = _ALLOWED_FROM_IMPORTS.get(module, set())
-            if any(
-                alias.name == "*"
-                or _is_dunder(alias.name)
-                or alias.name not in allowed_members
-                for alias in node.names
-            ):
-                found.append(node)
+            for alias in node.names:
+                if (
+                    alias.name == "*"
+                    or _is_dunder(alias.name)
+                    or alias.name not in allowed_members
+                ):
+                    found.append(node)
+                    continue
+                surface = _FROM_IMPORT_ATTRIBUTE_SURFACES.get((module, alias.name))
+                if surface is not None:
+                    attribute_roots[alias.asname or alias.name] = surface
         elif (
             isinstance(node, ast.Attribute)
             and isinstance(node.value, ast.Name)
-            and node.value.id in direct_aliases
-            and node.attr not in direct_aliases[node.value.id]
+            and node.value.id in attribute_roots
+            and node.attr not in attribute_roots[node.value.id]
         ):
             found.append(node)
         elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):

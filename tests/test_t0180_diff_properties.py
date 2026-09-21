@@ -222,6 +222,11 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         "import random\nrandom._sys.modules['tests.x']",
         "import pytest\npytest.console_main()",
         "import random as rng\nrng._os.popen('python -c pass')",
+        (
+            "from graph import diff as d\n"
+            "d.re.enum.sys.modules['os'].system('python -c pass')"
+        ),
+        "from graph import diff as d\nd.hashlib.sha256(b'x')",
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

@@ -59,3 +59,26 @@ def test_direct_module_attribute_allowlist_tracks_aliases():
     ]
     for source in forbidden:
         assert findings(source), source
+
+
+def test_from_imported_module_surface_tracks_aliases():
+    from tools.production_test_dependency_lint import findings
+
+    allowed = [
+        "from graph import diff as d\nd.compute({}, {})",
+        "from graph import diff as d\nd.apply({}, {})",
+        "from graph import diff as d\nd.state_id({})",
+        "from graph import diff as d\nerror = d.DiffError",
+    ]
+    for source in allowed:
+        assert findings(source) == [], source
+
+    forbidden = [
+        (
+            "from graph import diff as d\n"
+            "d.re.enum.sys.modules['os'].system('python -c pass')"
+        ),
+        "from graph import diff as d\nd.hashlib.sha256(b'x')",
+    ]
+    for source in forbidden:
+        assert findings(source), source
