@@ -96,3 +96,30 @@ def test_atomic_out_of_order_merge():
     with pytest.raises(VersionError):
         dst.merge(bad)
     assert (dst.records, dst.root_id) == before
+
+
+class RaisingDict(dict):
+    def __deepcopy__(self, memo):
+        raise RuntimeError("hostile deepcopy")
+
+
+class RaisingList(list):
+    def __iter__(self):
+        raise RuntimeError("hostile iteration")
+
+
+def test_public_boundaries_are_typed_total_over_hostile_containers():
+    store = VersionStore()
+    before = (store.records, store.root_id)
+    cases = [
+        lambda: store.insert(RaisingDict()),
+        lambda: store.make_record(RaisingList(), D(1), T(1), "x"),
+        lambda: store.make_record([[]], D(1), T(1), "x"),
+        lambda: version_id(RaisingList(), D(1)),
+        lambda: version_id([[]], D(1)),
+    ]
+    for call in cases:
+        with pytest.raises(VersionError) as exc:
+            call()
+        assert exc.value.failure_class == "malformed_version_record"
+        assert (store.records, store.root_id) == before

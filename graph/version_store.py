@@ -28,10 +28,24 @@ class VersionError(Exception):
         self.witness = witness
 
 
+def _parents(value):
+    if type(value) is not list:
+        raise VersionError("malformed_version_record")
+    try:
+        if any(type(item) is not str or _ID.fullmatch(item) is None for item in value):
+            raise VersionError("malformed_version_record")
+        return sorted(set(value))
+    except VersionError:
+        raise
+    except BaseException as exc:
+        raise VersionError("malformed_version_record") from exc
+
+
 def version_id(parent_ids, graph_digest):
-    body = (
-        "gv1-content\n" + "".join(p + "\n" for p in sorted(set(parent_ids))) + graph_digest + "\n"
-    )
+    parents = _parents(parent_ids)
+    if type(graph_digest) is not str or _DIGEST.fullmatch(graph_digest) is None:
+        raise VersionError("malformed_version_record")
+    body = "gv1-content\n" + "".join(parent + "\n" for parent in parents) + graph_digest + "\n"
     return "gv1:" + hashlib.sha256(body.encode()).hexdigest()
 
 
@@ -60,9 +74,11 @@ class VersionStore:
         return self._root_id
 
     def make_record(self, parent_ids, graph_digest, created_at, label):
-        parents = sorted(set(parent_ids)) if isinstance(parent_ids, list) else parent_ids
+        parents = _parents(parent_ids)
+        if type(created_at) is not str or type(label) is not str:
+            raise VersionError("malformed_version_record")
         return {
-            "version_id": version_id(parents, graph_digest) if isinstance(parents, list) else "",
+            "version_id": version_id(parents, graph_digest),
             "parent_ids": parents,
             "graph_digest": graph_digest,
             "created_at": created_at,
@@ -70,12 +86,9 @@ class VersionStore:
         }
 
     def _validate(self, r):
-        if not isinstance(r, dict) or set(r) != FIELDS:
+        if type(r) is not dict or set(r) != FIELDS:
             raise VersionError("malformed_version_record")
-        if not isinstance(r["parent_ids"], list) or any(
-            not isinstance(x, str) or not _ID.fullmatch(x) for x in r["parent_ids"]
-        ):
-            raise VersionError("malformed_version_record")
+        _parents(r["parent_ids"])
         if not isinstance(r["version_id"], str) or not _ID.fullmatch(r["version_id"]):
             raise VersionError("malformed_version_record")
         if not isinstance(r["graph_digest"], str) or not _DIGEST.fullmatch(r["graph_digest"]):
@@ -90,7 +103,15 @@ class VersionStore:
             raise VersionError("malformed_version_record")
 
     def insert(self, record):
-        r = copy.deepcopy(record)
+        if type(record) is not dict:
+            raise VersionError("malformed_version_record")
+        try:
+            self._validate(record)
+            r = copy.deepcopy(record)
+        except VersionError:
+            raise
+        except BaseException as exc:
+            raise VersionError("malformed_version_record") from exc
         self._validate(r)
         r["parent_ids"] = sorted(set(r["parent_ids"]))
         vid = r["version_id"]
