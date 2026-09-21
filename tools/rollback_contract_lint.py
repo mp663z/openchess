@@ -52,8 +52,11 @@ IDENTIFIERS = {
     "archive_token": {
         "kind": "untrusted-archiver-receipt-token",
         "grammar": "^arc1:[0-9a-f]{64}$",
-        "source": "archiver-output-shape-validated-never-trusted-"
-                  "beyond-shape",
+        "derivation": "sha256-over-domain-separated-length-framed-"
+                      "canonical-serialization-of-every-exact-"
+                      "frozen-tail-field",
+        "source": "archiver-output-shape-validated-and-bound-byte-"
+                  "exact-to-the-local-tail-derivation",
     },
 }
 SEMANTICS = {
@@ -62,7 +65,8 @@ SEMANTICS = {
     "target_resolution":
         "target-sequence-is-an-exact-log-position-or-genesis-zero",
     "archival": "truncated-tail-archived-exactly-once-before-"
-                "commit",
+                "commit-token-bound-byte-exact-to-canonical-tail-"
+                "serialization",
     "chaining": "surviving-prefix-chain-unchanged-to-head-"
                 "preserved",
     "commit": "tail-removal-only-after-full-validation-and-"
@@ -75,7 +79,8 @@ ORACLE_BOUNDARY = {
         "entire-log-and-request-frozen-before-first-oracle-call-"
         "never-re-read-restored-bit-identical",
     "output_validation":
-        "exact-built-in-string-pinned-grammar-or-fail-closed",
+        "exact-built-in-string-pinned-grammar-byte-exact-tail-"
+            "bound-token-or-fail-closed",
 }
 FAILURE_CLASSES = ["malformed_rollback_record", "unknown_target",
                    "corrupt_source", "divergent_archive"]
@@ -88,8 +93,8 @@ FAILURE_TRIGGERS = {
         "source-log-fails-linked-wal-validation-or-chain-"
         "rederivation",
     "divergent_archive":
-        "archiver-raising-any-baseexception-or-non-exact-string-or-bad-grammar-"
-        "token",
+        "archiver-raising-any-baseexception-non-exact-string-bad-"
+        "grammar-or-tail-divergent-token",
 }
 FAILURE_MAPPING = {
     "malformed_rollback_record": "malformed_request",

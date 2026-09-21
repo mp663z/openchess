@@ -22,7 +22,14 @@ explicitly not scope.
   tail archiver (raising, non-exact-str, UTF-8-inencodable or
   wrong-grammar token fails closed as divergent_archive; the
   archiver receives a DETACHED tail copy - mutating its argument
-  is inert); only then does the commit remove exactly the tail.
+  is inert); the returned token must equal the LOCAL
+  deterministic canonical tail serialization BYTE-FOR-BYTE
+  (sha256 over the domain-separated, length-framed serialization
+  of every exact frozen tail field) - an arbitrary valid-shaped
+  token, a token for a different tail, or any stateful variation
+  fails closed as divergent_archive and the destructive commit
+  never happens; only then does the commit remove exactly the
+  tail.
   The surviving prefix chain is unchanged, so to_head stays the
   valid tip; a rejected rollback leaves log and request
   bit-identical.
@@ -33,8 +40,11 @@ explicitly not scope.
 - unknown_target: target sequence outside 0..len(log).
 - corrupt_source: source log fails linked WAL validation or
   chain re-derivation.
-- divergent_archive: archiver raising ANY BaseException (KeyboardInterrupt/SystemExit/GeneratorExit included - the boundary catches BaseException so the untrusted oracle can never escape raw) or returning a
-  non-exact-string or wrong-grammar token.
+- divergent_archive: archiver raising ANY BaseException (KeyboardInterrupt/SystemExit/GeneratorExit included - the boundary catches BaseException so the untrusted oracle can never escape raw), returning a
+  non-exact-string or wrong-grammar token, or returning a token
+  that diverges from the local canonical tail serialization
+  (arbitrary valid-shaped, different-tail, constant or stateful
+  tokens never commit).
 
 ## Properties
 - total over hostile requests/logs/archivers; atomic (rejected

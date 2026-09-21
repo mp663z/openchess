@@ -68,14 +68,24 @@ def _fail(cls):
 
 
 def archive_tail(tail):
-    """The honest tail archiver: one pinned-grammar token per
-    frozen tail."""
-    parts = []
+    """THE pinned canonical tail archive token: sha256 over the
+    DOMAIN-SEPARATED, LENGTH-FRAMED serialization of EVERY exact
+    WAL field of every frozen tail entry, in order -
+    deterministic in the tail and only in the tail. The engine
+    derives this LOCALLY and binds the untrusted archiver's
+    output to it byte-for-byte."""
+    parts = ["arc1"]
     for entry in tail:
-        parts.append(f"{entry['sequence']}\n{entry['op']}\n"
-                     f"{entry['entry_id']}\n")
+        record = entry["payload"]["record"]
+        for field in (entry["sequence"], entry["op"],
+                      entry["entry_id"], entry["prior_entry_id"],
+                      entry["payload"]["identity"],
+                      record["variant"], record["digest"],
+                      record["snapshot_fen"]):
+            text = str(field)
+            parts.append(f"{len(text)}:{text}")
     return "arc1:" + hashlib.sha256(
-        "".join(parts).encode()).hexdigest()
+        "|".join(parts).encode()).hexdigest()
 
 
 class RollbackEngine:
@@ -120,9 +130,10 @@ class RollbackEngine:
 
     def rollback(self, log, request):
         """ATOMIC: exact container boundaries, linked-WAL source
-        validation, frozen request and log, one archiver call,
-        commit LAST - rejection leaves log and request
-        bit-identical."""
+        validation, frozen request and log, one archiver call
+        whose token is bound byte-for-byte to the local canonical
+        tail serialization, commit LAST - rejection leaves log and
+        request bit-identical."""
         if type(log) is not list:
             _fail("malformed_rollback_record")
         if type(request) is not dict or \
@@ -146,6 +157,14 @@ class RollbackEngine:
         try:
             frozen_tail = frozen[target:]
             token = self._archive(frozen_tail)
+            # TAIL-BOUND ARCHIVAL: the untrusted archiver's token
+            # must equal the LOCAL deterministic canonical
+            # serialization of the frozen full tail byte-for-byte.
+            # An arbitrary valid-shaped token, a token for a
+            # different tail, or any stateful variation fails
+            # closed - the destructive commit never happens.
+            if token != archive_tail(frozen_tail):
+                _fail("divergent_archive")
         finally:
             WalEngine._restore_log(log, saved_container,
                                    saved_entries)
@@ -351,11 +370,34 @@ def _hostile_archivers():
     def raising_generator_exit(tail):
         raise GeneratorExit("boom")
 
+    def arbitrary_valid_token(tail):
+        return "arc1:" + "f" * 64
+
+    def constant_zero_token(tail):
+        return "arc1:" + "0" * 64
+
+    def different_tail_token(tail):
+        # a REAL canonical token - for a DIFFERENT tail
+        return archive_tail([dict(tail[0], sequence=9999)]
+                            if tail else
+                            [{"sequence": 1, "op": "put",
+                              "entry_id": "wal1:" + "0" * 64,
+                              "prior_entry_id": GENESIS,
+                              "payload": {
+                                  "identity": "x",
+                                  "record": {"variant": "v",
+                                             "digest": "d",
+                                             "snapshot_fen":
+                                                 "f"}}}])
+
     return [("raising", raising), ("bad-type", bad_type),
             ("bad-grammar", bad_grammar),
             ("wrong-prefix", wrong_prefix),
             ("evil-str", evil_str),
             ("lone-surrogate", lone_surrogate),
+            ("arbitrary-valid-token", arbitrary_valid_token),
+            ("constant-zero-token", constant_zero_token),
+            ("different-tail-token", different_tail_token),
             ("raising-keyboard-interrupt",
              raising_keyboard_interrupt),
             ("raising-system-exit", raising_system_exit),
@@ -379,6 +421,103 @@ def test_hostile_archiver(name, archiver):
     assert exc.value.code in ERROR_ENUM
     assert log == before
     assert req == req_before
+
+
+def test_stateful_alternating_valid_tokens_never_commit():
+    """A stateful archiver alternating between two valid-shaped
+    tokens across byte-identical rollback attempts: EVERY attempt
+    fails closed (no commit, inputs bit-identical) - and the
+    honest archiver on the same inputs produces byte-identical
+    receipts, pinning determinism."""
+    calls = {"n": 0}
+
+    def alternating(tail):
+        calls["n"] += 1
+        return "arc1:" + str(calls["n"] % 2) * 64
+
+    engine = RollbackEngine(alternating)
+    for _ in range(2):
+        log = _log_of(("put", STARTPOS), ("put", KINGS))
+        before = copy.deepcopy(log)
+        req = {"target_sequence": 1}
+        with pytest.raises(RollbackError) as exc:
+            engine.rollback(log, req)
+        assert exc.value.failure_class == "divergent_archive"
+        assert log == before
+        assert req == {"target_sequence": 1}
+    # determinism with the honest archiver: same inputs, same
+    # receipt AND surviving prefix
+    def build():
+        log = _log_of(("put", STARTPOS), ("put", KINGS))
+        receipt = _engine().rollback(log, {"target_sequence": 1})
+        return receipt, log
+    assert build() == build()
+
+
+def test_archive_token_binds_every_exact_tail_field():
+    """The canonical token is a function of EVERY exact WAL field
+    of the frozen tail: payload-only differences, reordered
+    entries and tampered fields all change it; empty and
+    nonempty tails never collide."""
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    frozen = WalEngine._freeze_log(log)
+    tail = frozen[1:]
+    token = archive_tail(tail)
+    # same shape, payload-only difference (same-length fields)
+    other = [dict(tail[0],
+                  payload={"identity": "z" * len(
+                      tail[0]["payload"]["identity"]),
+                           "record": dict(
+                               tail[0]["payload"]["record"])})]
+    assert archive_tail(other) != token
+    # reordered entries change the token
+    two = WalEngine._freeze_log(log)
+    assert archive_tail(two) != archive_tail(
+        list(reversed(two)))
+    # a tampered field changes the token
+    tampered = [dict(tail[0],
+                     payload=dict(
+                         tail[0]["payload"],
+                         record=dict(
+                             tail[0]["payload"]["record"],
+                             snapshot_fen="tampered")))]
+    assert archive_tail(tampered) != token
+    # empty vs nonempty never collides
+    assert archive_tail([]) != token
+    assert archive_tail([]) != archive_tail(two[:1])
+
+
+def test_mutant_grammar_only_archival_validation():
+    """Behavioral mutant: a rollback that validates only the
+    token's grammar (never binding it to the tail) ACCEPTS an
+    arbitrary valid-shaped token and commits the destructive
+    truncation. Counter-test: the real engine binds the token to
+    the local canonical tail serialization byte-for-byte -
+    mismatch fails closed, no commit, inputs bit-identical."""
+    def mutant_rollback(engine, log, request):
+        frozen = WalEngine._freeze_log(log)
+        tail = frozen[request["target_sequence"]:]
+        token = engine.archiver(
+            [dict(entry) for entry in tail])
+        assert type(token) is str and \
+            _TOKEN_RE.fullmatch(token)  # grammar ONLY
+        del log[request["target_sequence"]:]
+        return token
+
+    engine = RollbackEngine(lambda tail: "arc1:" + "f" * 64)
+    mutant_log = _log_of(("put", STARTPOS), ("put", KINGS))
+    assert mutant_rollback(engine, mutant_log,
+                           {"target_sequence": 1}) == \
+        "arc1:" + "f" * 64
+    assert len(mutant_log) == 1  # the mutant DESTROYED the tail
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    before = copy.deepcopy(log)
+    req = {"target_sequence": 1}
+    with pytest.raises(RollbackError) as exc:
+        engine.rollback(log, req)
+    assert exc.value.failure_class == "divergent_archive"
+    assert log == before
+    assert req == {"target_sequence": 1}
 
 
 def test_archiver_mutating_its_tail_argument():
@@ -577,6 +716,13 @@ def _mutants():
         "caller-supplied")
     add("head grammar drift",
         ["contract", "identifiers", "head", "grammar"], "^.*$")
+    add("token derivation dropped",
+        ["contract", "identifiers", "archive_token", "source"],
+        "archiver-output-shape-validated-never-trusted-beyond-"
+        "shape")
+    add("archival binding dropped",
+        ["contract", "semantics", "archival"],
+        "truncated-tail-archived-exactly-once-before-commit")
     add("token grammar drift",
         ["contract", "identifiers", "archive_token", "grammar"],
         "^.*$")
