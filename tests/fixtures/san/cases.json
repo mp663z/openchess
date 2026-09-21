@@ -3,75 +3,256 @@
   "contract": "data/contracts/san.yaml",
   "contract_schema_version": 1,
   "section_manifests": {
-    "happy": ["pawn-quiet", "piece-quiet", "pawn-capture", "promotion"],
-    "boundary": ["minimal-file-disambiguation", "castling-rook-hop-check"],
-    "malformed": ["lowercase-piece", "digit-castle", "ambiguous-rook", "false-check", "overdisambiguated"],
-    "rollback": ["illegal-destination-no-trace", "malformed-token-no-trace"]
+    "happy": {
+      "pawn-quiet": "be1d12ecd48941c2b1c3c323f7fed2911a37a6366712067fd856a2a89e53d1c1",
+      "piece-quiet": "e4a38a98a7d018070dfd32c3e288a31ea2e6b3fabf577d17e95b170736c33222",
+      "pawn-capture": "5312df52abae31de6d16a2d0605e145135bc613689183cef97790ac0218a9cad",
+      "promotion": "a13bf4391c1de73255e4ccda8f1546c8a79e90b69388f4f921f4d58c19039d15"
+    },
+    "boundary": {
+      "minimal-file-disambiguation": "f9231594a60551c92604bdfa43ec504502483407763e7a90a6ff9a7550de6367",
+      "castling-rook-hop-check": "ba9be6c72586d9aa6d8b6f81c4e2768792fd302dbaac74fc8e4654752bc33f2a"
+    },
+    "malformed": {
+      "lowercase-piece": "888ff085b7110d635c53a1ea4128282603d6d5a598a1404cd90b695440c80037",
+      "digit-castle": "a509e0b6dd6bb88a6075a0ce9cfeb119d6126b5ee5d158a76a65d1110493120f",
+      "ambiguous-rook": "ad59e606167f724e3f95f9ed7061e972e881ffe4ebc6a1afba721a11b3e956db",
+      "false-check": "53ec8c54ba34be5eb35573daa95af6e3160c3345433d2f59227ba824f32058c4",
+      "overdisambiguated": "48183d7044c07d49c5779981ebec08228327ada06ad9b72132abfeee8542166c"
+    },
+    "rollback": {
+      "illegal-destination-no-trace": "9bc07081afe3c0cceb6723750e2d8198eaf36f979b457ad818489dc696d7945c",
+      "malformed-token-no-trace": "e85071be4eb6a441c3a325ef5219fa334bca8f974ebea19f7b8f3110d050165a"
+    }
   },
   "happy": [
     {
-      "name": "pawn-quiet", "scenario_tag": "grammar:pawn-quiet", "san": "e4",
-      "state": {"occupied": {"e1": "wk", "e2": "wp", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"},
-      "expect_move": {"from_square": "e2", "to_square": "e4"}
+      "name": "pawn-quiet",
+      "scenario_tag": "grammar:pawn-quiet",
+      "san": "e4",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "e2": "wp",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      },
+      "expect_move": {
+        "from_square": "e2",
+        "to_square": "e4"
+      }
     },
     {
-      "name": "piece-quiet", "scenario_tag": "grammar:piece-quiet", "san": "Nf3",
-      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"},
-      "expect_move": {"from_square": "g1", "to_square": "f3"}
+      "name": "piece-quiet",
+      "scenario_tag": "grammar:piece-quiet",
+      "san": "Nf3",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "g1": "wn",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      },
+      "expect_move": {
+        "from_square": "g1",
+        "to_square": "f3"
+      }
     },
     {
-      "name": "pawn-capture", "scenario_tag": "grammar:pawn-capture", "san": "exd6",
-      "state": {"occupied": {"e1": "wk", "e5": "wp", "d6": "bp", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"},
-      "expect_move": {"from_square": "e5", "to_square": "d6"}
+      "name": "pawn-capture",
+      "scenario_tag": "grammar:pawn-capture",
+      "san": "exd6",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "e5": "wp",
+          "d6": "bp",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      },
+      "expect_move": {
+        "from_square": "e5",
+        "to_square": "d6"
+      }
     },
     {
-      "name": "promotion", "scenario_tag": "grammar:promotion", "san": "a8=Q",
-      "state": {"occupied": {"c1": "wk", "a7": "wp", "h6": "bk"}, "side_to_move": "w", "castling_rights": "-"},
-      "expect_move": {"from_square": "a7", "to_square": "a8", "promotion": "q"}
+      "name": "promotion",
+      "scenario_tag": "grammar:promotion",
+      "san": "a8=Q",
+      "state": {
+        "occupied": {
+          "c1": "wk",
+          "a7": "wp",
+          "h6": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      },
+      "expect_move": {
+        "from_square": "a7",
+        "to_square": "a8",
+        "promotion": "q"
+      }
     }
   ],
   "boundary": [
     {
-      "name": "minimal-file-disambiguation", "scenario_tag": "disambiguation:file-minimal", "san": "Rhd1",
-      "state": {"occupied": {"e2": "wk", "a1": "wr", "h1": "wr", "f8": "bk"}, "side_to_move": "w", "castling_rights": "-"},
-      "expect_move": {"from_square": "h1", "to_square": "d1"}
+      "name": "minimal-file-disambiguation",
+      "scenario_tag": "disambiguation:file-minimal",
+      "san": "Rhd1",
+      "state": {
+        "occupied": {
+          "e2": "wk",
+          "a1": "wr",
+          "h1": "wr",
+          "f8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      },
+      "expect_move": {
+        "from_square": "h1",
+        "to_square": "d1"
+      }
     },
     {
-      "name": "castling-rook-hop-check", "scenario_tag": "castling:atomic-rook-hop-check", "san": "O-O-O+",
-      "state": {"occupied": {"e1": "wk", "a1": "wr", "d8": "bk"}, "side_to_move": "w", "castling_rights": "Q"},
-      "expect_move": {"from_square": "e1", "to_square": "c1"}
+      "name": "castling-rook-hop-check",
+      "scenario_tag": "castling:atomic-rook-hop-check",
+      "san": "O-O-O+",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "a1": "wr",
+          "d8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "Q"
+      },
+      "expect_move": {
+        "from_square": "e1",
+        "to_square": "c1"
+      }
     }
   ],
   "malformed": [
     {
-      "name": "lowercase-piece", "scenario_tag": "token:piece-case", "san": "nf3", "repair_san": "Nf3", "expect_failure": "malformed_san",
-      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+      "name": "lowercase-piece",
+      "scenario_tag": "token:piece-case",
+      "san": "nf3",
+      "repair_san": "Nf3",
+      "expect_failure": "malformed_san",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "g1": "wn",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      }
     },
     {
-      "name": "digit-castle", "scenario_tag": "token:capital-o", "san": "0-0", "repair_san": "O-O", "expect_failure": "malformed_san",
-      "state": {"occupied": {"e1": "wk", "h1": "wr", "e8": "bk"}, "side_to_move": "w", "castling_rights": "K"}
+      "name": "digit-castle",
+      "scenario_tag": "token:capital-o",
+      "san": "0-0",
+      "repair_san": "O-O",
+      "expect_failure": "malformed_san",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "h1": "wr",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "K"
+      }
     },
     {
-      "name": "ambiguous-rook", "scenario_tag": "resolution:ambiguous", "san": "Rd1", "repair_san": "Rhd1", "expect_failure": "ambiguous_san",
-      "state": {"occupied": {"e2": "wk", "a1": "wr", "h1": "wr", "f8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+      "name": "ambiguous-rook",
+      "scenario_tag": "resolution:ambiguous",
+      "san": "Rd1",
+      "repair_san": "Rhd1",
+      "expect_failure": "ambiguous_san",
+      "state": {
+        "occupied": {
+          "e2": "wk",
+          "a1": "wr",
+          "h1": "wr",
+          "f8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      }
     },
     {
-      "name": "false-check", "scenario_tag": "suffix:false-check", "san": "e4+", "repair_san": "e4", "expect_failure": "no_legal_match",
-      "state": {"occupied": {"e1": "wk", "e2": "wp", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+      "name": "false-check",
+      "scenario_tag": "suffix:false-check",
+      "san": "e4+",
+      "repair_san": "e4",
+      "expect_failure": "no_legal_match",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "e2": "wp",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      }
     },
     {
-      "name": "overdisambiguated", "scenario_tag": "disambiguation:noncanonical", "san": "Ngf3", "repair_san": "Nf3", "expect_failure": "malformed_san",
-      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+      "name": "overdisambiguated",
+      "scenario_tag": "disambiguation:noncanonical",
+      "san": "Ngf3",
+      "repair_san": "Nf3",
+      "expect_failure": "malformed_san",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "g1": "wn",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      }
     }
   ],
   "rollback": [
     {
-      "name": "illegal-destination-no-trace", "scenario_tag": "rollback:no-legal-match", "san": "Ne5", "expect_failure": "no_legal_match",
-      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+      "name": "illegal-destination-no-trace",
+      "scenario_tag": "rollback:no-legal-match",
+      "san": "Ne5",
+      "expect_failure": "no_legal_match",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "g1": "wn",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      }
     },
     {
-      "name": "malformed-token-no-trace", "scenario_tag": "rollback:malformed", "san": "Nf3!", "expect_failure": "malformed_san",
-      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+      "name": "malformed-token-no-trace",
+      "scenario_tag": "rollback:malformed",
+      "san": "Nf3!",
+      "expect_failure": "malformed_san",
+      "state": {
+        "occupied": {
+          "e1": "wk",
+          "g1": "wn",
+          "e8": "bk"
+        },
+        "side_to_move": "w",
+        "castling_rights": "-"
+      }
     }
   ]
 }

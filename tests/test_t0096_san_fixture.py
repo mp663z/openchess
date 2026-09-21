@@ -1,7 +1,9 @@
 """T0096: closed, executable SAN conformance fixture."""
+
 from __future__ import annotations
 
 import copy
+import hashlib
 import itertools
 import json
 from pathlib import Path
@@ -17,8 +19,7 @@ CONTRACT = ROOT / "data" / "contracts" / "san.yaml"
 CASES = json.loads(FIXTURE.read_text())
 DOC = yaml.safe_load(CONTRACT.read_text())
 SECTIONS = ("happy", "boundary", "malformed", "rollback")
-TOP_KEYS = {"schema_version", "contract", "contract_schema_version",
-            "section_manifests", *SECTIONS}
+TOP_KEYS = {"schema_version", "contract", "contract_schema_version", "section_manifests", *SECTIONS}
 STATE_KEYS = {"occupied", "side_to_move", "castling_rights"}
 MOVE_KEYS = {"from_square", "to_square", "promotion"}
 COMMON = {"name", "scenario_tag", "san", "state"}
@@ -38,8 +39,8 @@ def _typed_keys(value):
 def _strict_keys(value, expected, where):
     assert type(value) is dict, f"{where}: expected object"
     assert set(value) == expected, (
-        f"{where}: keys {_typed_keys(value)} != "
-        f"{_typed_keys({key: None for key in expected})}")
+        f"{where}: keys {_typed_keys(value)} != {_typed_keys({key: None for key in expected})}"
+    )
 
 
 def _validate_state(state, where):
@@ -84,7 +85,21 @@ def _validate(cases):
             names.append(case["name"])
             all_names.append(case["name"])
             all_tags.append(case["scenario_tag"])
-        assert names == cases["section_manifests"][section]
+        manifest = cases["section_manifests"][section]
+        assert type(manifest) is dict
+        assert set(manifest) == set(names)
+        computed = {
+            case["name"]: hashlib.sha256(
+                json.dumps(
+                    case,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode()
+            ).hexdigest()
+            for case in rows
+        }
+        assert manifest == computed
     assert len(all_names) == len(set(all_names))
     assert len(all_tags) == len(set(all_tags))
 
@@ -97,8 +112,7 @@ def _run_success(case):
 
 def _failure(case, san=None):
     with pytest.raises(SanError) as error:
-        resolve_san(DOC["contract"], case["san"] if san is None else san,
-                    case["state"])
+        resolve_san(DOC["contract"], case["san"] if san is None else san, case["state"])
     return error.value.failure_class
 
 
@@ -110,7 +124,7 @@ def test_fixture_structure_and_contract_pin():
 def test_closed_manifest_detects_reorder_drop_and_extra(section):
     manifest = CASES["section_manifests"][section]
     names = [case["name"] for case in CASES[section]]
-    assert names == manifest
+    assert list(manifest) == names
     assert len(names) == len(set(names))
 
 
@@ -138,18 +152,45 @@ def test_rollback_rejections_are_bit_identical():
 
 
 def test_exhaustive_ordered_pairwise_scenario_substitution_closure():
-    """No scenario tag or payload can stand in for another fixture row."""
-    rows = [case for section in SECTIONS for case in CASES[section]]
-    for target, donor in itertools.permutations(rows, 2):
-        mutant = copy.deepcopy(target)
-        mutant["name"] = donor["name"]
-        mutant["scenario_tag"] = donor["scenario_tag"]
-        target_section = next(section for section in SECTIONS if target in CASES[section])
-        with pytest.raises(AssertionError):
-            _validate({**copy.deepcopy(CASES), target_section: [
-                mutant if row is target else copy.deepcopy(row)
-                for row in CASES[target_section]
-            ]})
+    """Every compatible donor payload is bound to its exact case identity."""
+    for section in SECTIONS:
+        rows = CASES[section]
+        for target_index, donor_index in itertools.permutations(range(len(rows)), 2):
+            target = rows[target_index]
+            donor = rows[donor_index]
+            mutant = copy.deepcopy(CASES)
+            replacement = copy.deepcopy(donor)
+            replacement["name"] = target["name"]
+            replacement["scenario_tag"] = target["scenario_tag"]
+            mutant[section][target_index] = replacement
+            with pytest.raises(AssertionError):
+                _validate(mutant)
+
+
+def test_each_payload_field_and_scenario_tag_is_manifest_bound():
+    for section in SECTIONS:
+        rows = CASES[section]
+        for target_index, donor_index in itertools.permutations(range(len(rows)), 2):
+            shared = (set(rows[target_index]) & set(rows[donor_index])) - {"name"}
+            for field in shared:
+                if rows[target_index][field] == rows[donor_index][field]:
+                    continue
+                mutant = copy.deepcopy(CASES)
+                mutant[section][target_index][field] = copy.deepcopy(rows[donor_index][field])
+                with pytest.raises(AssertionError):
+                    _validate(mutant)
+
+
+def test_manifest_guard_is_non_vacuous_for_executable_substitution():
+    mutant = copy.deepcopy(CASES)
+    target = mutant["happy"][0]
+    donor = copy.deepcopy(mutant["happy"][1])
+    donor["name"] = target["name"]
+    donor["scenario_tag"] = target["scenario_tag"]
+    mutant["happy"][0] = donor
+    _run_success(donor)  # substituted payload is valid on its own
+    with pytest.raises(AssertionError):
+        _validate(mutant)  # only the closed semantic manifest catches it
 
 
 def test_schema_version_and_recursive_shape_mutations_fail():
