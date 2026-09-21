@@ -2490,10 +2490,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent",
+   "done_sha": "1d5f8b89e14f6b27cf5e9da7db6549548d89674c",
+   "evidence_manifest": "evidence/T0115.md"
   },
   {
    "id": "T0116",
@@ -2676,10 +2679,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent",
+   "done_sha": "6ab7639635e841792e6ec87f3a9b7298e4bbc747",
+   "evidence_manifest": "evidence/T0124.md"
   },
   {
    "id": "T0125",
@@ -2862,10 +2868,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent",
+   "done_sha": "81d5eea069d0dca22edf7f9fd7dd3943362fd440",
+   "evidence_manifest": "evidence/T0133.md"
   },
   {
    "id": "T0134",
@@ -3025,10 +3034,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "claimed_by": "task-agent",
+   "done_sha": "bbb7d1c2e5dcef4d02e94a868ab4ffeb3295e301",
+   "evidence_manifest": "evidence/T0141.md"
   },
   {
    "id": "T0142",
