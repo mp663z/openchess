@@ -8,8 +8,12 @@ verification. Restore, incremental and offsite replication are
 explicitly not scope (restore is its own contract).
 
 ## Model
-- Receipt: exact four-field record {backup_id, head, state_id,
-  entry_count} plus the canonical bundle string. head is the
+- Receipt: exact FIVE-field record {backup_id, head, state_id,
+  entry_count, bundle} - the contract's normative record includes
+  bundle (the canonical serialized snapshot: an exact built-in
+  UTF-8-encodable string, validated at the oracle boundary), and
+  backup's output keys and verify's accepted input keys equal
+  that normative field set exactly. head is the
   validated source log's WAL tip (wal1: id, genesis wal0:0...0 on
   an empty log); state_id is the replayed state's gs1: content
   digest (graph-diff semantics); entry_count is the exact applied

@@ -46,6 +46,7 @@ from tools.backup_contract_lint import (  # noqa: E402
     CONTRACT,
     ERROR_ENUM,
     FAILURE_MAPPING,
+    RECORD,
     lint,
 )
 from tools.variant_contract_lint import ContractError  # noqa: E402
@@ -185,8 +186,10 @@ class BackupEngine:
         then recomputed backup id vs stored - divergence fails
         closed as divergent_backup, an unencodable field as
         malformed_backup_record. NO oracle calls."""
+        # EXACT normative shape: the receipt is exactly the
+        # contract's five-field record, bundle included
         if type(receipt) is not dict or \
-                set(receipt.keys()) != set(_FIELDS) | {"bundle"}:
+                set(receipt.keys()) != set(_FIELDS):
             _fail("malformed_backup_record")
         if type(receipt["backup_id"]) is not str or \
                 _BACKUP_RE.fullmatch(receipt["backup_id"]) is None:
@@ -238,7 +241,7 @@ def test_happy_backup_receipt():
                   ("delete", STARTPOS))
     before = copy.deepcopy(log)
     receipt = engine.backup(log)
-    assert set(receipt) == set(_FIELDS) | {"bundle"}
+    assert set(receipt) == set(_FIELDS)  # exact five-field record
     assert _BACKUP_RE.fullmatch(receipt["backup_id"])
     assert receipt["head"] == log[-1]["entry_id"]
     assert receipt["entry_count"] == 3
@@ -259,6 +262,35 @@ def test_empty_log_backup():
     # and it verifies
     assert engine.verify(receipt) == {
         field: receipt[field] for field in _FIELDS}
+
+
+def test_receipt_shape_matches_normative_record_exactly():
+    """LINKAGE: backup's output keys and verify's accepted input
+    keys equal the contract's normative exact record field set -
+    five fields, bundle included, no out-of-band union on either
+    side."""
+    assert list(_CC["record"]["fields"]) == RECORD["fields"]
+    assert _CC["record"]["exact"] is True
+    assert RECORD["exact"] is True
+    assert _CC["record"]["field_definitions"]["bundle"] == \
+        RECORD["field_definitions"]["bundle"]
+    assert RECORD["field_definitions"]["bundle"]["type"] == \
+        "exact-built-in-string-utf8-encodable"
+    engine = _engine()
+    receipt = engine.backup(_log_of(("put", STARTPOS)))
+    assert set(receipt) == set(_FIELDS)  # output keys exact
+    verified = engine.verify(copy.deepcopy(receipt))
+    assert set(verified) == set(_FIELDS)  # verify returns the record
+    # verify rejects exactly-one-missing and exactly-one-extra
+    for key in _FIELDS:
+        incomplete = {k: v for k, v in receipt.items()
+                      if k != key}
+        with pytest.raises(BackupError) as exc:
+            engine.verify(incomplete)
+        assert exc.value.failure_class == "malformed_backup_record"
+    with pytest.raises(BackupError) as exc:
+        engine.verify(dict(receipt, stray=1))
+    assert exc.value.failure_class == "malformed_backup_record"
 
 
 def test_verify_happy_roundtrip():
@@ -850,6 +882,14 @@ def _mutants():
         ["backup_id", "head"])
     add("record exact drift", ["contract", "record", "exact"],
         False)
+    add("record drops bundle (implementation requires it)",
+        ["contract", "record", "fields"],
+        ["backup_id", "head", "state_id", "entry_count"])
+    add("record bundle definition dropped",
+        ["contract", "record", "field_definitions"], {})
+    add("record bundle type drift",
+        ["contract", "record", "field_definitions", "bundle",
+         "type"], "any-string")
     add("backup id grammar drift",
         ["contract", "identifiers", "backup_id", "grammar"],
         "^.*$")

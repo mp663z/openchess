@@ -30,8 +30,17 @@ ROLE = {
     "not_scope": "restore-incremental-or-offsite-replication",
 }
 RECORD = {
-    "fields": ["backup_id", "head", "state_id", "entry_count"],
+    "fields": ["backup_id", "head", "state_id", "entry_count",
+               "bundle"],
     "exact": True,
+    "field_definitions": {
+        "bundle": {
+            "kind": "canonical-serialized-snapshot",
+            "type": "exact-built-in-string-utf8-encodable",
+            "source": "serializer-output-validated-at-the-"
+                      "oracle-boundary",
+        },
+    },
 }
 IDENTIFIERS = {
     "backup_id": {
