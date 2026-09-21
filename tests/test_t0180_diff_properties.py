@@ -172,6 +172,10 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         "from importlib import import_module as load\nload('tests.test_t0176_diff_contract')",
         "__import__('tests.test_t0176_diff_contract')",
         "import importlib\nname = input()\nimportlib.import_module(name)",
+        "import importlib\ngetattr(importlib, 'import_module')('tests.x')",
+        "import importlib\nf = importlib.import_module\nf('tests.x')",
+        'eval("__import__(\'tests.x\')")',
+        "exec('import tests.x')",
     ]
     for mutant in mutants:
         assert findings(mutant), mutant
