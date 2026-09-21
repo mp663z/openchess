@@ -111,8 +111,11 @@ class WalEngine:
     def _canonicalize(self, identity, record):
         """THE canonicalizer boundary: raising or non-exact-str
         output fails closed as divergent_canonicalization."""
+        # DETACHED argument copy: the oracle never sees the
+        # frozen snapshot object that derivation, staging and the
+        # replay fold read - mutating the argument is inert
         try:
-            out = self.canonicalizer(identity, record)
+            out = self.canonicalizer(identity, dict(record))
         except Exception:
             _fail("divergent_canonicalization")
         if type(out) is not str:
@@ -897,6 +900,63 @@ def test_inconsistent_canonicalizer_breaks_replay_chain():
     with pytest.raises(WalError) as exc:
         engine.replay(log)
     assert exc.value.failure_class == "corrupt_chain"
+    assert log == before
+
+
+def test_oracle_mutating_its_record_argument_append():
+    """The oracle computes the honest canonical string, THEN
+    mutates the record argument it was handed (field swap, clear,
+    replace): the committed entry and receipt carry the ORIGINAL
+    validated record, the entry id binds that original, caller
+    inputs are unchanged, exactly one oracle call per entry."""
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    before = copy.deepcopy(log)
+    honest_log = _log_of(("put", STARTPOS), ("put", KINGS),
+                         ("delete", KINGS))
+    calls = {"n": 0}
+
+    def oracle(identity, record):
+        calls["n"] += 1
+        canonical = canonical_payload(identity, record)
+        record["digest"] = "pdv1:" + "f" * 64
+        record["snapshot_fen"] = "garbage"
+        record.clear()
+        return canonical
+
+    req = {"op": "delete", "payload": _payload(KINGS)}
+    req_before = copy.deepcopy(req)
+    receipt = WalEngine(oracle).append(log, req)
+    assert calls["n"] == 3  # 2 entries + 1 new payload
+    assert receipt == honest_log[2]
+    assert log == honest_log  # original records committed
+    assert log[:2] == before
+    assert req == req_before
+    # the chain re-derives cleanly with an honest oracle
+    assert _engine().replay(log)["applied"] == 3
+
+
+def test_oracle_mutating_its_record_argument_replay():
+    """Same argument attack during REPLAY: the folded state
+    carries the original validated records and the log is
+    bit-identical."""
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    before = copy.deepcopy(log)
+    calls = {"n": 0}
+
+    def oracle(identity, record):
+        calls["n"] += 1
+        canonical = canonical_payload(identity, record)
+        record["digest"] = "pdv1:" + "e" * 64
+        record.clear()
+        record["forged"] = True
+        return canonical
+
+    result = WalEngine(oracle).replay(log)
+    assert calls["n"] == 2
+    assert result["state"] == {
+        _identity(_node(STARTPOS)): _node(STARTPOS),
+        _identity(_node(KINGS)): _node(KINGS)}
+    assert result["state_id"] == state_id(result["state"])
     assert log == before
 
 
