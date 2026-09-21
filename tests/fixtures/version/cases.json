@@ -1,0 +1,512 @@
+{
+ "boundary": [
+  {
+   "expect_failure": null,
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "equal-parent-timestamp",
+   "record": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+    "label": "same-time",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+   }
+  },
+  {
+   "expect_failure": null,
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    },
+    {
+     "created_at": "2026-01-02T00:00:00Z",
+     "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+     "label": "v1",
+     "parent_ids": [
+      "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+     ],
+     "version_id": "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+    }
+   ],
+   "name": "duplicate-parents-canonicalized",
+   "record": {
+    "created_at": "2026-01-03T00:00:00Z",
+    "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+    "label": "dup-parent",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d",
+     "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78",
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:2abb67d6bb4a3afdc3a8198d7ca2e41b3522268a5b0c95b29cb1024dd78628ec"
+   }
+  },
+  {
+   "expect_failure": null,
+   "initial": [],
+   "name": "leap-day-valid",
+   "record": {
+    "created_at": "2028-02-29T00:00:00Z",
+    "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+    "label": "leap",
+    "parent_ids": [],
+    "version_id": "gv1:e26d57efc508053f43272fb1363037e487cfc7d01637cacffe498ce10387c315"
+   }
+  },
+  {
+   "expect_failure": null,
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    },
+    {
+     "created_at": "2026-01-02T00:00:00Z",
+     "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+     "label": "v1",
+     "parent_ids": [
+      "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+     ],
+     "version_id": "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+    },
+    {
+     "created_at": "2026-01-03T00:00:00Z",
+     "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+     "label": "v2",
+     "parent_ids": [
+      "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+     ],
+     "version_id": "gv1:202204f62626546bedc78d342090d0ccd7102977da228f2080eec5aff5f1a1f4"
+    }
+   ],
+   "name": "parent-order-canonicalized",
+   "record": {
+    "created_at": "2026-01-04T00:00:00Z",
+    "graph_digest": "gdv1:32446165cd761e8e0386693e3490f6a03e37cda64752498af61e761121b4797f",
+    "label": "ordered",
+    "parent_ids": [
+     "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78",
+     "gv1:202204f62626546bedc78d342090d0ccd7102977da228f2080eec5aff5f1a1f4"
+    ],
+    "version_id": "gv1:17cff13403b493db03f4ee4fca3eeb3f71c1e4392b196e74de17499aade483cb"
+   }
+  }
+ ],
+ "contract": "graph-version",
+ "contract_base_path": "/graph/version/v1",
+ "happy": [
+  {
+   "expect_ids": [
+    "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   ],
+   "initial": [],
+   "name": "insert-root",
+   "record": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "v0",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   }
+  },
+  {
+   "expect_ids": [
+    "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78",
+    "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   ],
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "insert-linear-child",
+   "record": {
+    "created_at": "2026-01-02T00:00:00Z",
+    "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+    "label": "v1",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+   }
+  },
+  {
+   "expect_ids": [
+    "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   ],
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "dedup-byte-equal",
+   "record": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "v0",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   }
+  },
+  {
+   "expect_ids": [
+    "gv1:202204f62626546bedc78d342090d0ccd7102977da228f2080eec5aff5f1a1f4",
+    "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78",
+    "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d",
+    "gv1:78b949f7bddbf3c2bcd7f0c42abf9701975e1305bb38151a2f1e6e335073938c"
+   ],
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    },
+    {
+     "created_at": "2026-01-02T00:00:00Z",
+     "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+     "label": "v1",
+     "parent_ids": [
+      "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+     ],
+     "version_id": "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+    },
+    {
+     "created_at": "2026-01-03T00:00:00Z",
+     "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+     "label": "v2",
+     "parent_ids": [
+      "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+     ],
+     "version_id": "gv1:202204f62626546bedc78d342090d0ccd7102977da228f2080eec5aff5f1a1f4"
+    }
+   ],
+   "name": "insert-four-version-chain",
+   "record": {
+    "created_at": "2026-01-04T00:00:00Z",
+    "graph_digest": "gdv1:32446165cd761e8e0386693e3490f6a03e37cda64752498af61e761121b4797f",
+    "label": "v3",
+    "parent_ids": [
+     "gv1:202204f62626546bedc78d342090d0ccd7102977da228f2080eec5aff5f1a1f4"
+    ],
+    "version_id": "gv1:78b949f7bddbf3c2bcd7f0c42abf9701975e1305bb38151a2f1e6e335073938c"
+   }
+  }
+ ],
+ "malformed": [
+  {
+   "defect_fields": [
+    "label"
+   ],
+   "expect_failure": "malformed_version_record",
+   "initial": [],
+   "name": "missing-label",
+   "record": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   },
+   "repair": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "v0",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   }
+  },
+  {
+   "defect_fields": [
+    "label"
+   ],
+   "expect_failure": "malformed_version_record",
+   "initial": [],
+   "name": "empty-label",
+   "record": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   },
+   "repair": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "v0",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   }
+  },
+  {
+   "defect_fields": [
+    "version_id"
+   ],
+   "expect_failure": "malformed_version_record",
+   "initial": [],
+   "name": "underived-id",
+   "record": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "v0",
+    "parent_ids": [],
+    "version_id": "gv1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+   },
+   "repair": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "v0",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   }
+  },
+  {
+   "defect_fields": [
+    "parent_ids",
+    "version_id"
+   ],
+   "expect_failure": "unknown_parent",
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "unknown-parent",
+   "record": {
+    "created_at": "2026-01-03T00:00:00Z",
+    "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+    "label": "orphan",
+    "parent_ids": [
+     "gv1:67cab40f82efcbc42c7d61c663ba84f26c98119c0a2c3482e6a3018eccd5ef88"
+    ],
+    "version_id": "gv1:0a9429fae63925771f332ac528236428421db7ea51c077f1d5a438be35e36cb0"
+   },
+   "repair": {
+    "created_at": "2026-01-03T00:00:00Z",
+    "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+    "label": "orphan",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:9c7a4ded18a7011363d71a1ec569893ee68a1bd465d0e4e43f6e142530aa42b2"
+   }
+  },
+  {
+   "defect_fields": [
+    "created_at"
+   ],
+   "expect_failure": "nonmonotonic_version",
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "nonmonotonic-version",
+   "record": {
+    "created_at": "2025-12-31T00:00:00Z",
+    "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+    "label": "early",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:9c7a4ded18a7011363d71a1ec569893ee68a1bd465d0e4e43f6e142530aa42b2"
+   },
+   "repair": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+    "label": "early",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:9c7a4ded18a7011363d71a1ec569893ee68a1bd465d0e4e43f6e142530aa42b2"
+   }
+  },
+  {
+   "defect_fields": [
+    "parent_ids",
+    "version_id"
+   ],
+   "expect_failure": "root_violation",
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "second-root",
+   "record": {
+    "created_at": "2026-01-02T00:00:00Z",
+    "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+    "label": "second-root",
+    "parent_ids": [],
+    "version_id": "gv1:8b697fef0af444effd48e1284e8f792e2f286d8d08acb2f4efff3e57422a65b2"
+   },
+   "repair": {
+    "created_at": "2026-01-02T00:00:00Z",
+    "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+    "label": "second-root",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+   }
+  },
+  {
+   "defect_fields": [
+    "label"
+   ],
+   "expect_failure": "conflicting_version",
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "metadata-conflict",
+   "record": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "other",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   },
+   "repair": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "v0",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   }
+  }
+ ],
+ "notes": "Pinned executable cases against T0167 reference store.",
+ "rollback": [
+  {
+   "bad": {
+    "created_at": "2026-01-03T00:00:00Z",
+    "graph_digest": "gdv1:9ba6dc492b44b87ba82f71d743bf5e393b06048aff4054ef41c5c4b31fc929b4",
+    "label": "orphan",
+    "parent_ids": [
+     "gv1:67cab40f82efcbc42c7d61c663ba84f26c98119c0a2c3482e6a3018eccd5ef88"
+    ],
+    "version_id": "gv1:0a9429fae63925771f332ac528236428421db7ea51c077f1d5a438be35e36cb0"
+   },
+   "expect_failure": "unknown_parent",
+   "good": {
+    "created_at": "2026-01-02T00:00:00Z",
+    "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+    "label": "v1",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+   },
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "unknown-parent-then-valid"
+  },
+  {
+   "bad": {
+    "created_at": "2026-01-02T00:00:00Z",
+    "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+    "label": "second-root",
+    "parent_ids": [],
+    "version_id": "gv1:8b697fef0af444effd48e1284e8f792e2f286d8d08acb2f4efff3e57422a65b2"
+   },
+   "expect_failure": "root_violation",
+   "good": {
+    "created_at": "2026-01-02T00:00:00Z",
+    "graph_digest": "gdv1:bce35d2f1e3b634d43d65625767e755be9d812eee6f5726f3f14181ebcc4d48f",
+    "label": "v1",
+    "parent_ids": [
+     "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    ],
+    "version_id": "gv1:32448b4df9158a0bf26535f6c8325428a1b7418badb7d9456c7d33247828ce78"
+   },
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "second-root-then-valid"
+  },
+  {
+   "bad": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "other",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   },
+   "expect_failure": "conflicting_version",
+   "good": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+    "label": "v0",
+    "parent_ids": [],
+    "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+   },
+   "initial": [
+    {
+     "created_at": "2026-01-01T00:00:00Z",
+     "graph_digest": "gdv1:c408cf380631bcc4ea702ba8cd9e45ba82e8566d7ec79d325645ba28f93bb0da",
+     "label": "v0",
+     "parent_ids": [],
+     "version_id": "gv1:50eee913bc6073592844c4a0dc0cfaa1f929c44392b2cb4bc34ea4ea4c55670d"
+    }
+   ],
+   "name": "metadata-conflict-then-dedup"
+  }
+ ],
+ "schema": 1
+}
