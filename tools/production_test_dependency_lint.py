@@ -6,7 +6,12 @@ import ast
 from pathlib import Path
 
 PROTECTED_PATHS = (Path("tests/test_t0180_diff_properties.py"),)
-_ALLOWED_DIRECT_IMPORTS = {"copy", "graph.node", "pytest", "random"}
+_ALLOWED_DIRECT_IMPORTS = {
+    "copy": {"deepcopy"},
+    "graph.node": {"make_record"},
+    "pytest": {"mark", "raises"},
+    "random": {"Random"},
+}
 _ALLOWED_FROM_IMPORTS = {
     "__future__": {"annotations"},
     "graph": {"diff"},
@@ -51,10 +56,16 @@ def _is_dunder(value):
 def findings(source: str):
     tree = ast.parse(source)
     found = []
+    direct_aliases = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            if any(alias.name not in _ALLOWED_DIRECT_IMPORTS for alias in node.names):
-                found.append(node)
+            for alias in node.names:
+                allowed_attributes = _ALLOWED_DIRECT_IMPORTS.get(alias.name)
+                if allowed_attributes is None:
+                    found.append(node)
+                else:
+                    bound_name = alias.asname or alias.name.split(".", 1)[0]
+                    direct_aliases[bound_name] = allowed_attributes
         elif isinstance(node, ast.ImportFrom):
             module = node.module or ""
             allowed_members = _ALLOWED_FROM_IMPORTS.get(module, set())
@@ -65,6 +76,13 @@ def findings(source: str):
                 for alias in node.names
             ):
                 found.append(node)
+        elif (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id in direct_aliases
+            and node.attr not in direct_aliases[node.value.id]
+        ):
+            found.append(node)
         elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
             if any(

@@ -218,6 +218,10 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         "import pytest\npytest.main(['--collect-only', 'tests'])",
         "from pytest import main as run\nrun(['--collect-only', 'tests'])",
         "pytest_plugins = ['tests.x']",
+        "import random\nrandom._os.system('python -c pass')",
+        "import random\nrandom._sys.modules['tests.x']",
+        "import pytest\npytest.console_main()",
+        "import random as rng\nrng._os.popen('python -c pass')",
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

@@ -38,3 +38,24 @@ def test_ordinary_pytest_and_object_monkeypatch_usage_remain_allowed():
     ]
     for source in allowed:
         assert findings(source) == [], source
+
+
+def test_direct_module_attribute_allowlist_tracks_aliases():
+    from tools.production_test_dependency_lint import findings
+
+    allowed = [
+        "import copy as c\nc.deepcopy({})",
+        "import random as rng\nrng.Random(1)",
+        "import pytest as pt\npt.mark.parametrize('x', [1])\npt.raises(ValueError)",
+        "import graph.node as node\nnode.make_record('standard', 'fen')",
+    ]
+    for source in allowed:
+        assert findings(source) == [], source
+
+    forbidden = [
+        "import random\nrandom._os.system('python -c pass')",
+        "import random as rng\nrng._sys.modules['tests.x']",
+        "import pytest\npytest.console_main()",
+    ]
+    for source in forbidden:
+        assert findings(source), source
