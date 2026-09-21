@@ -99,3 +99,54 @@ def test_reference_strict_linked_record_oracle_rejects_sibling_digest():
     with pytest.raises(production.DiffError) as caught:
         production.compute({_key(forged): forged}, {})
     assert caught.value.failure_class == "malformed_diff_record"
+
+
+def test_shipped_position_digest_matches_contract_vectors():
+    from graph.position_digest import digest_fen
+    from tests.test_t0113_position_digest_contract import VECTORS
+
+    for fen, expected in VECTORS.items():
+        assert digest_fen("standard", fen) == expected
+
+
+def test_production_import_has_no_tests_dependency_and_works_without_tests_package():
+    import ast
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    for module in (
+        root / "graph" / "diff.py",
+        root / "graph" / "position_digest.py",
+        root / "graph" / "fen.py",
+    ):
+        tree = ast.parse(module.read_text())
+        assert not any(
+            isinstance(node, (ast.Import, ast.ImportFrom))
+            and (
+                (isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tests"))
+                or (
+                    isinstance(node, ast.Import)
+                    and any(alias.name.startswith("tests") for alias in node.names)
+                )
+            )
+            for node in ast.walk(tree)
+        ), module
+    script = """
+import sys
+sys.modules['tests'] = None
+from graph.diff import compute
+print(compute({}, {}))
+"""
+    run = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(root)},
+        timeout=30,
+    )
+    assert run.returncode == 0, run.stderr
+    assert "'added': {}" in run.stdout

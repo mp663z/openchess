@@ -6,7 +6,7 @@ import copy
 import hashlib
 import re
 
-from tests.test_t0113_position_digest_contract import digest_fen
+from graph.position_digest import digest_fen
 from tools.diff_contract_lint import FAILURE_MAPPING
 from tools.variant_runtime import identity, parse_position
 
