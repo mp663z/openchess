@@ -36,7 +36,11 @@ if str(ROOT) not in sys.path:
 from tests.test_t0194_migration_contract import (  # noqa: E402
     MigrationEngine,
     MigrationError,
+    _identity,
+    _schema,
+    _step,
     pdv2_oracle,
+    state_id,
 )
 from tools.migration_contract_lint import (  # noqa: E402
     CONTRACT,
@@ -110,46 +114,60 @@ BOUNDARY_MANIFEST = {
     "migrate-two-record-source-boundary": ("honest", 2),
 }
 # malformed: name -> (failure class, oracle, repair form,
-# pinned defect description)
+# pinned defect description, CLOSED SCENARIO TAG)
 MALFORMED_MANIFEST = {
     "request-missing-field": (MMR, "honest", "replace_request",
-        "request is missing the to_schema field"),
+        "request is missing the to_schema field",
+        "missing-request-field"),
     "request-extra-field": (MMR, "honest", "replace_request",
-        "request carries an undeclared extra field"),
+        "request carries an undeclared extra field",
+        "extra-request-field"),
     "request-bad-schema-grammar": (MMR, "honest",
         "set_request_field",
-        "from_schema fails the schema-id grammar"),
+        "from_schema fails the schema-id grammar",
+        "bad-schema-grammar"),
     "request-unknown-schema": (MMR, "honest",
         "set_request_field",
-        "from_schema is not a registered schema"),
+        "from_schema is not a registered schema",
+        "unregistered-schema"),
     "request-bad-source-id-grammar": (MMR, "honest",
         "set_request_field",
-        "source_id fails the state-id grammar"),
+        "source_id fails the state-id grammar",
+        "bad-source-id-grammar"),
     "request-non-str-value": (MMR, "honest", "replace_request",
-        "to_schema is not a string"),
+        "to_schema is not a string",
+        "non-str-request-value"),
     "request-noop-unregistered": (UM, "honest",
         "set_request_field",
-        "a noop migration pair is not registered"),
+        "a noop migration pair is not registered",
+        "unregistered-noop-pair"),
     "request-downgrade-unregistered": (UM, "honest",
         "replace_request",
-        "a downgrade migration pair is not registered"),
+        "a downgrade migration pair is not registered",
+        "unregistered-downgrade-pair"),
     "source-id-mismatch": (CS, "honest", "set_request_field",
         "recomputed source id differs from the request's "
-        "source_id"),
+        "source_id",
+        "recomputed-source-id-mismatch"),
     "source-not-mapping": (MMR, "honest", "replace_source",
-        "the source state is not a mapping"),
+        "the source state is not a mapping",
+        "source-not-mapping"),
     "source-record-bad-digest": (MMR, "honest",
         "replace_source",
         "a source record fails the source-schema digest "
-        "grammar"),
+        "grammar",
+        "source-record-bad-digest-grammar"),
     "oracle-raises": (DVT, "raising", "set_oracle",
-        "the target oracle raises during evaluation"),
+        "the target oracle raises during evaluation",
+        "oracle-raises"),
     "oracle-bad-grammar-output": (DVT, "bad-grammar",
         "set_oracle",
         "the target oracle returns text failing the target "
-        "grammar"),
+        "grammar",
+        "oracle-bad-grammar-output"),
     "oracle-non-str-output": (DVT, "non-str", "set_oracle",
-        "the target oracle returns a non-string"),
+        "the target oracle returns a non-string",
+        "oracle-non-str-output"),
 }
 # rollback: name -> (failure class, initial oracle, follow-up
 # oracle)
@@ -259,6 +277,224 @@ def _validate_repair(case):
         assert form["oracle"] in ORACLES, case["name"]
 
 
+# -- v4: closed scenario tags with semantic defect-locus assertions -----------
+# The defect prose stays as documentation, but it is NOT the
+# proof: each malformed row carries a closed machine scenario
+# tag, and _assert_malformed_scenario verifies over the ORIGINAL
+# executable data that (a) the data realizes exactly the defect
+# the tag names, and (b) the minimal repair changes exactly that
+# locus and no other semantic locus. Every check fails CLOSED:
+# an unexpected shape raises AssertionError, never escapes raw.
+
+_ORACLE_TAG_SELECTOR = {"oracle-raises": "raising",
+                        "oracle-bad-grammar-output": "bad-grammar",
+                        "oracle-non-str-output": "non-str"}
+_ORACLE_CARDINALITY = {"oracle-raises": 1,
+                       "oracle-bad-grammar-output": 2,
+                       "oracle-non-str-output": 3}
+
+
+def _registered_schema(schema_id):
+    return type(schema_id) is str and \
+        _SCHEMA_RE.fullmatch(schema_id) is not None and \
+        _schema(schema_id) is not None
+
+
+def _frozen(source):
+    return {key: dict(rec) for key, rec in source.items()}
+
+
+def _engine_succeeds(request, source):
+    """The reference engine accepts the input end to end under
+    the HONEST oracle."""
+    try:
+        MigrationEngine(pdv2_oracle).migrate(
+            copy.deepcopy(request), copy.deepcopy(source))
+    except MigrationError:
+        return False
+    return True
+
+
+def _valid_declared_request(req):
+    """Every declared request field present, an exact string,
+    grammar-valid and registered; the pair a registered step;
+    the source-id grammar-valid."""
+    assert set(req) == REQUEST_FIELDS
+    for field in REQUEST_FIELDS:
+        assert type(req[field]) is str
+    assert _registered_schema(req["from_schema"])
+    assert _registered_schema(req["to_schema"])
+    assert _step(req["from_schema"], req["to_schema"]) is not None
+    assert _SID_RE.fullmatch(req["source_id"]) is not None
+
+
+def _check_malformed_scenario(case, tag):
+    req = case["request"]
+    src = case["source"]
+    name = case["name"]
+    rep = _repaired(case)
+    rep_req = rep["request"]
+    if tag == "missing-request-field":
+        assert set(req) == REQUEST_FIELDS - {"to_schema"}, name
+        assert _registered_schema(req["from_schema"]), name
+        assert type(req["source_id"]) is str and \
+            _SID_RE.fullmatch(req["source_id"]), name
+        # the repair adds EXACTLY the missing field, nothing else
+        assert rep_req == dict(req, to_schema=rep_req["to_schema"]), name
+        assert _registered_schema(rep_req["to_schema"]), name
+        assert _step(req["from_schema"],
+                     rep_req["to_schema"]) is not None, name
+    elif tag == "extra-request-field":
+        extra = set(req) - REQUEST_FIELDS
+        assert len(extra) == 1, name
+        assert set(req) >= REQUEST_FIELDS, name
+        projected = {k: req[k] for k in REQUEST_FIELDS}
+        _valid_declared_request(projected)
+        # the repair removes EXACTLY the extra key, nothing else
+        assert rep_req == projected, name
+    elif tag == "bad-schema-grammar":
+        assert set(req) == REQUEST_FIELDS, name
+        assert type(req["from_schema"]) is str, name
+        assert _SCHEMA_RE.fullmatch(req["from_schema"]) is None, name
+        assert _registered_schema(req["to_schema"]), name
+        assert type(req["source_id"]) is str and \
+            _SID_RE.fullmatch(req["source_id"]), name
+        form = case["minimal_repair"]["set_request_field"]
+        assert form["field"] == "from_schema", name
+        assert _registered_schema(form["value"]), name
+        assert _step(form["value"], req["to_schema"]) is not None, name
+        assert all(rep_req[k] == req[k]
+                   for k in REQUEST_FIELDS - {"from_schema"}), name
+    elif tag == "unregistered-schema":
+        assert set(req) == REQUEST_FIELDS, name
+        assert type(req["from_schema"]) is str and \
+            _SCHEMA_RE.fullmatch(req["from_schema"]), name
+        assert _schema(req["from_schema"]) is None, name
+        assert _registered_schema(req["to_schema"]), name
+        form = case["minimal_repair"]["set_request_field"]
+        assert form["field"] == "from_schema", name
+        assert _registered_schema(form["value"]), name
+        assert _step(form["value"], req["to_schema"]) is not None, name
+    elif tag == "bad-source-id-grammar":
+        assert set(req) == REQUEST_FIELDS, name
+        assert _registered_schema(req["from_schema"]), name
+        assert _registered_schema(req["to_schema"]), name
+        assert _step(req["from_schema"], req["to_schema"]) is not None, name
+        assert type(req["source_id"]) is str, name
+        assert _SID_RE.fullmatch(req["source_id"]) is None, name
+        # the repair is EXACTLY the recomputed source id
+        form = case["minimal_repair"]["set_request_field"]
+        assert form["field"] == "source_id", name
+        assert form["value"] == state_id(_frozen(src)), name
+    elif tag == "non-str-request-value":
+        assert set(req) == REQUEST_FIELDS, name
+        assert type(req["to_schema"]) is not str, name
+        assert _registered_schema(req["from_schema"]), name
+        assert type(req["source_id"]) is str and \
+            _SID_RE.fullmatch(req["source_id"]), name
+        # the repair retypes EXACTLY that field, nothing else
+        assert rep_req == dict(req, to_schema=rep_req["to_schema"]), name
+        assert _registered_schema(rep_req["to_schema"]), name
+        assert _step(req["from_schema"],
+                     rep_req["to_schema"]) is not None, name
+    elif tag == "unregistered-noop-pair":
+        assert set(req) == REQUEST_FIELDS, name
+        assert _registered_schema(req["from_schema"]), name
+        assert _registered_schema(req["to_schema"]), name
+        assert req["from_schema"] == req["to_schema"], name
+        assert _step(req["from_schema"], req["to_schema"]) is None, name
+        assert type(req["source_id"]) is str and \
+            _SID_RE.fullmatch(req["source_id"]), name
+        form = case["minimal_repair"]["set_request_field"]
+        assert form["field"] == "to_schema", name
+        assert _step(req["from_schema"], form["value"]) is not None, name
+        assert all(rep_req[k] == req[k]
+                   for k in REQUEST_FIELDS - {"to_schema"}), name
+    elif tag == "unregistered-downgrade-pair":
+        assert set(req) == REQUEST_FIELDS, name
+        assert _registered_schema(req["from_schema"]), name
+        assert _registered_schema(req["to_schema"]), name
+        assert req["from_schema"] != req["to_schema"], name
+        assert _step(req["from_schema"], req["to_schema"]) is None, name
+        assert _step(req["to_schema"],
+                     req["from_schema"]) is not None, name
+        assert type(req["source_id"]) is str and \
+            _SID_RE.fullmatch(req["source_id"]), name
+        # the repair registers the pair and touches nothing else
+        assert _step(rep_req["from_schema"],
+                     rep_req["to_schema"]) is not None, name
+        assert rep_req["source_id"] == req["source_id"], name
+    elif tag == "recomputed-source-id-mismatch":
+        _valid_declared_request(req)
+        real_id = state_id(_frozen(src))
+        assert req["source_id"] != real_id, name
+        # the id mismatch is the ONLY defect: with the recomputed
+        # id the original input migrates end to end
+        assert _engine_succeeds(dict(req, source_id=real_id), src), name
+        form = case["minimal_repair"]["set_request_field"]
+        assert form["field"] == "source_id", name
+        assert form["value"] == real_id, name
+    elif tag == "source-not-mapping":
+        assert not isinstance(src, dict), name
+        _valid_declared_request(req)
+        rep_src = rep["source"]
+        _validate_state_shape(rep_src, name)
+        assert req["source_id"] == state_id(_frozen(rep_src)), name
+        assert rep_req == req, name
+    elif tag == "source-record-bad-digest-grammar":
+        assert isinstance(src, dict), name
+        _validate_state_shape(src, name)
+        digest_re = re.compile(
+            _schema(req["from_schema"])["digest_grammar"])
+        bad = [key for key, rec in src.items()
+               if digest_re.fullmatch(rec["digest"]) is None]
+        assert len(bad) == 1, name
+        # digest grammar is the ONLY defect: record identities
+        # (key derivations) are intact everywhere
+        for key, rec in src.items():
+            assert _identity(rec) == key, name
+        _valid_declared_request(req)
+        rep_src = rep["source"]
+        assert set(rep_src) == set(src), name
+        for key, rec in src.items():
+            if key == bad[0]:
+                changed = {f for f in RECORD_FIELDS
+                           if rep_src[key][f] != rec[f]}
+                assert changed == {"digest"}, name
+                assert digest_re.fullmatch(
+                    rep_src[key]["digest"]), name
+            else:
+                assert rep_src[key] == rec, name
+        assert rep_req == req, name
+    elif tag in _ORACLE_TAG_SELECTOR:
+        assert case["oracle"] == _ORACLE_TAG_SELECTOR[tag], name
+        _valid_declared_request(req)
+        assert len(src) == _ORACLE_CARDINALITY[tag], name
+        # the payload is fully well-formed: the ONLY defect is
+        # the oracle itself - the honest oracle succeeds
+        assert _engine_succeeds(req, src), name
+        form = case["minimal_repair"]["set_oracle"]
+        assert form["oracle"] == "honest", name
+        assert rep_req == req and rep["source"] == src, name
+    else:
+        raise AssertionError(
+            f"{name}: unknown scenario tag {tag!r}")
+
+
+def _assert_malformed_scenario(case, tag):
+    """Fail-closed wrapper: scenario checks raise AssertionError
+    on EVERY mismatch or unexpected shape - a raw exception is
+    converted, never allowed to escape as itself."""
+    try:
+        _check_malformed_scenario(case, tag)
+    except AssertionError:
+        raise
+    except Exception as exc:
+        raise AssertionError(
+            f"{case.get('name', '?')}: scenario {tag!r} check "
+            f"raised unexpected {type(exc).__name__}") from None
+
+
 def _assert_cardinalities(case, n_source):
     """The advertised source cardinality is REALLY present, and
     the expected receipt realizes exactly that cardinality -
@@ -302,13 +538,17 @@ def _validate_structure(cases):
                 assert case["oracle"] == oracle, case["name"]
                 _assert_cardinalities(case, n_source)
             elif section == "malformed":
-                failure, oracle, repair, defect = want
+                failure, oracle, repair, defect, tag = want
                 assert case["expect_failure"] == failure, (
                     case["name"])
                 assert case["oracle"] == oracle, case["name"]
                 assert set(case["minimal_repair"]) == {repair}, (
                     case["name"])
                 assert case["defect"] == defect, case["name"]
+                # SEMANTIC PIN: the original executable data must
+                # REALIZE the closed scenario tag - the defect
+                # prose alone is never the proof.
+                _assert_malformed_scenario(case, tag)
             else:
                 failure, oracle, then_oracle = want
                 assert case["expect_failure"] == failure, (
@@ -513,7 +753,14 @@ def test_injected_valid_malformed_row_fails_rejection():
 def _repair_mutation_cases():
     """Every repair-form mutation the tagged union must reject
     STRUCTURALLY, before any execution."""
-    good_req = CASES["happy"][0]["request"]
+    # the good control is the row's OWN minimal repair: it
+    # proves the mutation-application machinery itself is not
+    # what breaks validation (any semantically DIFFERENT repair
+    # payload now fails the repair-locus assertions).
+    good_req = copy.deepcopy(
+        CASES["malformed"][0]["minimal_repair"]
+        ["replace_request"]["request"])
+    good_rep = CASES["malformed"][0]["minimal_repair"]
     return [
         ("empty-repair", {}),
         ("mixed-forms",
@@ -547,7 +794,7 @@ def _repair_mutation_cases():
         # form, so ANY form swap - even to another valid union
         # member - must now fail structure validation.
         ("good-forms-still-valid-1",
-         {"replace_request": {"request": good_req}}),
+         copy.deepcopy(good_rep)),
     ]
 
 
@@ -731,3 +978,31 @@ def test_mutant_intra_failure_class_malformed_substitution():
                                      name=case["name"])
     with pytest.raises(AssertionError):
         _validate_structure(m)
+
+
+def test_mutant_payload_substitution_retains_target_label():
+    """The payload-only attack: the donor's EXECUTABLE payload
+    (request + source) under the recipient's COMPLETE manifest
+    label - target name, failure class, oracle, repair form,
+    defect prose AND scenario tag retained - must fail structure
+    validation BEFORE execution, because the payload does not
+    realize the recipient's closed scenario tag. Covers the
+    replayed missing-field -> extra-field pair and every same
+    (class, oracle, repair) pair."""
+    rows = CASES["malformed"]
+    for i, recipient in enumerate(rows):
+        for j, donor in enumerate(rows):
+            if i == j:
+                continue
+            m = copy.deepcopy(CASES)
+            row = copy.deepcopy(recipient)
+            row["request"] = copy.deepcopy(donor["request"])
+            row["source"] = copy.deepcopy(donor["source"])
+            m["malformed"][i] = row
+            try:
+                _validate_structure(m)
+            except AssertionError:
+                continue
+            raise AssertionError(
+                f"payload {donor['name']!r} under label "
+                f"{recipient['name']!r} passed undetected")

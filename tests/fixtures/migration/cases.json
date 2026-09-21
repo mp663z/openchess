@@ -553,15 +553,10 @@
    "oracle": "raising",
    "request": {
     "from_schema": "store-v1",
-    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "source_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
     "to_schema": "store-v2"
    },
    "source": {
-    "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
-     "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
-     "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
-     "variant": "standard"
-    },
     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -582,7 +577,7 @@
    "oracle": "bad-grammar",
    "request": {
     "from_schema": "store-v1",
-    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "source_id": "gs1:bbc5d607d73bc8df6fd5d49aef531eb8698ef89b498d12b572af60f7c46382f9",
     "to_schema": "store-v2"
    },
    "source": {
@@ -591,9 +586,9 @@
      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
      "variant": "standard"
     },
-    "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
-     "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
-     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')": {
+     "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+     "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
      "variant": "standard"
     }
    }
@@ -611,13 +606,18 @@
    "oracle": "non-str",
    "request": {
     "from_schema": "store-v1",
-    "source_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33",
+    "source_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f",
     "to_schema": "store-v2"
    },
    "source": {
     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
      "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "variant": "standard"
+    },
+    "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+     "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+     "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
      "variant": "standard"
     },
     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
