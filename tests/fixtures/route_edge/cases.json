@@ -1,0 +1,592 @@
+{
+ "schema": 1,
+ "contract": "chess-route-edge",
+ "contract_base_path": "/graph/route-edge/v1",
+ "notes": "T0132 route edge conformance fixture - pinned serializations computed from the T0131 contract-derived reference at authoring time.",
+ "happy": [
+  {
+   "name": "insert-single-edge",
+   "kind": "inserts",
+   "inserts": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ]
+  },
+  {
+   "name": "insert-same-edge-twice-returns-existing",
+   "kind": "inserts",
+   "inserts": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ],
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ]
+  },
+  {
+   "name": "insert-two-distinct-edges-one-node",
+   "kind": "inserts",
+   "inserts": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ],
+    [
+     "standard",
+     "e1d1",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/8/3K4 b - - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "e1d1",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/8/3K4 b - - 0 1"
+    ],
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ]
+  },
+  {
+   "name": "merge-disjoint-tables",
+   "kind": "merge",
+   "left": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ],
+   "right": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ],
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ]
+  },
+  {
+   "name": "merge-idempotent-self",
+   "kind": "merge",
+   "left": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ],
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ],
+   "right": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ],
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ],
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ]
+  }
+ ],
+ "boundary": [
+  {
+   "name": "insert-promotion-move-edge",
+   "kind": "inserts",
+   "inserts": [
+    [
+     "standard",
+     "a7a8q",
+     "4k3/P7/8/8/8/8/8/4K3 w - - 0 1",
+     "Q3k3/8/8/8/8/8/8/4K3 b - - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "a7a8q",
+     "4k3/P7/8/8/8/8/8/4K3 w - - 0 1",
+     "Q3k3/8/8/8/8/8/8/4K3 b - - 0 1"
+    ]
+   ]
+  },
+  {
+   "name": "merge-empty-into-nonempty",
+   "kind": "merge",
+   "left": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ],
+   "right": [],
+   "expect_serialized": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ]
+  },
+  {
+   "name": "merge-nonempty-into-empty",
+   "kind": "merge",
+   "left": [],
+   "right": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ]
+  },
+  {
+   "name": "merge-two-empty-tables",
+   "kind": "merge",
+   "left": [],
+   "right": [],
+   "expect_serialized": []
+  }
+ ],
+ "malformed": [
+  {
+   "name": "insert-unknown-variant",
+   "kind": "insert",
+   "variant": "chess960",
+   "move": "e2e4",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "expect_failure": "unknown_variant",
+   "defect": "variant id is grammar-valid but not registered",
+   "minimal_repair": {
+    "set_variant": {
+     "variant": "standard"
+    }
+   }
+  },
+  {
+   "name": "insert-position-cannot-exist",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "e2e4",
+   "from_snapshot_fen": "8/8/8/8/8/8/8/4K3 w - - 0 1",
+   "to_snapshot_fen": "4k3/8/8/8/8/8/4K3/8 b - - 0 1",
+   "expect_failure": "malformed_position",
+   "defect": "from-position has no black king",
+   "minimal_repair": {
+    "set_from_fen": {
+     "from_snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+    }
+   }
+  },
+  {
+   "name": "insert-target-garbage-fen",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "e2e4",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "garbage w - - 0 1",
+   "expect_failure": "malformed_position",
+   "defect": "to-position text is not a FEN",
+   "minimal_repair": {
+    "set_to_fen": {
+     "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    }
+   }
+  },
+  {
+   "name": "insert-move-too-short",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "e2e",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "expect_failure": "malformed_edge_record",
+   "defect": "move text is shorter than long-algebraic",
+   "minimal_repair": {
+    "set_move": {
+     "move": "e2e4"
+    }
+   }
+  },
+  {
+   "name": "insert-move-overlong",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "e2e4q5",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "expect_failure": "malformed_edge_record",
+   "defect": "move text is longer than long-algebraic with promotion",
+   "minimal_repair": {
+    "set_move": {
+     "move": "e2e4"
+    }
+   }
+  },
+  {
+   "name": "insert-move-same-squares",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "e2e2",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "expect_failure": "malformed_edge_record",
+   "defect": "from-square equals to-square",
+   "minimal_repair": {
+    "set_move": {
+     "move": "e2e4"
+    }
+   }
+  },
+  {
+   "name": "insert-move-bad-from-file",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "i2e4",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "expect_failure": "malformed_edge_record",
+   "defect": "from-file is outside a-h",
+   "minimal_repair": {
+    "set_move": {
+     "move": "e2e4"
+    }
+   }
+  },
+  {
+   "name": "insert-move-bad-promotion",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "e2e4k",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "expect_failure": "malformed_edge_record",
+   "defect": "promotion letter is not in the linked enum",
+   "minimal_repair": {
+    "set_move": {
+     "move": "e2e4"
+    }
+   }
+  },
+  {
+   "name": "insert-move-uppercase-from",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "E2e4",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "expect_failure": "malformed_edge_record",
+   "defect": "from-file is uppercase",
+   "minimal_repair": {
+    "set_move": {
+     "move": "e2e4"
+    }
+   }
+  },
+  {
+   "name": "insert-move-trailing-space",
+   "kind": "insert",
+   "variant": "standard",
+   "move": "e2e4 ",
+   "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+   "expect_failure": "malformed_edge_record",
+   "defect": "move text carries trailing whitespace",
+   "minimal_repair": {
+    "set_move": {
+     "move": "e2e4"
+    }
+   }
+  },
+  {
+   "name": "merge-record-extra-field",
+   "kind": "merge",
+   "left": [],
+   "right_records": [
+    {
+     "variant": "standard",
+     "move": "e2e4",
+     "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+     "note": "x"
+    }
+   ],
+   "expect_failure": "malformed_edge_record",
+   "defect": "stored record carries an undeclared extra field",
+   "minimal_repair": {
+    "replace_records": {
+     "records": [
+      {
+       "variant": "standard",
+       "move": "e2e4",
+       "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "merge-record-clocks-not-normalized",
+   "kind": "merge",
+   "left": [],
+   "right_records": [
+    {
+     "variant": "standard",
+     "move": "e2e4",
+     "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 3 9",
+     "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    }
+   ],
+   "expect_failure": "malformed_edge_record",
+   "defect": "stored record snapshot clocks are not normalized",
+   "minimal_repair": {
+    "replace_records": {
+     "records": [
+      {
+       "variant": "standard",
+       "move": "e2e4",
+       "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "insert-conflicting-target",
+   "kind": "insert-with-setup",
+   "setup": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ],
+   "variant": "standard",
+   "move": "e1e2",
+   "from_snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+   "to_snapshot_fen": "8/4k3/8/8/8/8/4K3/8 b - - 0 1",
+   "expect_failure": "conflicting_edge",
+   "defect": "same from-identity plus same move reaches a different target",
+   "minimal_repair": {
+    "set_to_fen": {
+     "to_snapshot_fen": "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    }
+   }
+  },
+  {
+   "name": "merge-batch-internal-conflict",
+   "kind": "merge",
+   "left": [],
+   "right_records": [
+    {
+     "variant": "standard",
+     "move": "e1e2",
+     "from_snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "to_snapshot_fen": "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    },
+    {
+     "variant": "standard",
+     "move": "e1e2",
+     "from_snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "to_snapshot_fen": "8/4k3/8/8/8/8/4K3/8 b - - 0 1"
+    }
+   ],
+   "expect_failure": "conflicting_edge",
+   "defect": "the source batch itself carries two edges with the same from-identity and move but different targets",
+   "minimal_repair": {
+    "replace_records": {
+     "records": [
+      {
+       "variant": "standard",
+       "move": "e1e2",
+       "from_snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "to_snapshot_fen": "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "rollback": [
+  {
+   "name": "rejected-conflicting-insert-then-valid-insert",
+   "kind": "rollback-insert",
+   "setup": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ],
+   "rejected": {
+    "variant": "standard",
+    "move": "e1e2",
+    "from_snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+    "to_snapshot_fen": "8/4k3/8/8/8/8/4K3/8 b - - 0 1"
+   },
+   "expect_failure": "conflicting_edge",
+   "then": [
+    [
+     "standard",
+     "e1d1",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/8/3K4 b - - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "e1d1",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/8/3K4 b - - 0 1"
+    ],
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ]
+  },
+  {
+   "name": "rejected-atomic-merge-then-valid-merge",
+   "kind": "rollback-merge",
+   "setup": [
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ],
+   "rejected_records": [
+    {
+     "variant": "standard",
+     "move": "e1e2",
+     "from_snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "to_snapshot_fen": "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    },
+    {
+     "variant": "standard",
+     "move": "e1e2",
+     "from_snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "to_snapshot_fen": "8/4k3/8/8/8/8/4K3/8 b - - 0 1"
+    }
+   ],
+   "expect_failure": "conflicting_edge",
+   "then_right": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ]
+   ],
+   "expect_serialized": [
+    [
+     "standard",
+     "e1e2",
+     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+     "4k3/8/8/8/8/8/4K3/8 b - - 0 1"
+    ],
+    [
+     "standard",
+     "e2e4",
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    ]
+   ]
+  }
+ ]
+}
