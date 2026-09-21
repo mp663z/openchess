@@ -57,7 +57,6 @@ _FIELDS = _CC["record"]["fields"]
 _ENTRY_RE = re.compile(_CC["identifiers"]["entry_id"]["grammar"])
 _PRIOR_RE = re.compile(_CC["identifiers"]["prior_entry_id"]["grammar"])
 _STATE_RE = re.compile(_CC["identifiers"]["state_id"]["grammar"])
-_DIGEST_RE = re.compile(_NDOCS[2]["digest"]["format"]["regex"])
 _OPS = _CC["registry"]["operations"]
 GENESIS = "wal0:" + "0" * 64
 
@@ -143,11 +142,10 @@ class WalEngine:
                                    record["snapshot_fen"])
         except NodeError:
             _fail("malformed_wal_entry")
-        if record["variant"] != derived["variant"] or \
-                record["snapshot_fen"] != \
-                derived["snapshot_fen"]:
-            _fail("malformed_wal_entry")
-        if _DIGEST_RE.fullmatch(record["digest"]) is None:
+        # EXACT record equality: a well-formed-but-wrong digest
+        # (e.g. swapped from another valid record) is as rejected
+        # as a grammatically invalid one.
+        if record != derived:
             _fail("malformed_wal_entry")
         return _identity(record)
 
@@ -608,6 +606,10 @@ def _hostile_entries():
          lambda log: log[0]["payload"]["record"].__setitem__(
              "digest", "bad"),
          "malformed_wal_entry")
+    case("record-digest-swapped-well-formed",
+         lambda log: log[0]["payload"]["record"].__setitem__(
+             "digest", _node(KINGS)["digest"]),
+         "malformed_wal_entry")
     case("record-tampered-valid-record",
          lambda log: log[0]["payload"].__setitem__(
              "record", _node(AFTER_E4)),
@@ -639,6 +641,36 @@ def test_total_over_hostile_log_entries(name, mutate, cls):
         assert exc.value.code == FAILURE_MAPPING[cls]
         assert exc.value.code in ERROR_ENUM
         assert log == before
+
+
+def test_well_formed_wrong_digest_rejected_append_and_replay():
+    """Adversarial digest substitution: a payload whose record
+    carries ANOTHER valid record's well-formed pdv1: digest
+    (variant, snapshot and identity preserved) is semantically
+    invalid - BOTH append and replay reject it as
+    malformed_wal_entry and leave every input bit-identical."""
+    engine = _engine()
+    forged = _payload(STARTPOS)
+    forged["record"]["digest"] = _node(KINGS)["digest"]
+    assert forged["record"]["digest"].startswith("pdv1:")
+    # append path
+    log = _log_of(("put", KINGS))
+    before = copy.deepcopy(log)
+    forged_before = copy.deepcopy(forged)
+    with pytest.raises(WalError) as exc:
+        engine.append(log, {"op": "put", "payload": forged})
+    assert exc.value.failure_class == "malformed_wal_entry"
+    assert exc.value.code in ERROR_ENUM
+    assert log == before
+    assert forged == forged_before
+    # replay path: same substitution inside a committed entry
+    log = _log_of(("put", STARTPOS))
+    log[0]["payload"]["record"]["digest"] = _node(KINGS)["digest"]
+    before = copy.deepcopy(log)
+    with pytest.raises(WalError) as exc:
+        engine.replay(log)
+    assert exc.value.failure_class == "malformed_wal_entry"
+    assert log == before
 
 
 def test_record_replaced_and_identity_reforged_is_corrupt_chain():
