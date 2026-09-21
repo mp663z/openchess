@@ -211,6 +211,13 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         "from pytest import importorskip as load\nload('tests.x')",
         "import pytest\npytest.MonkeyPatch().setattr('tests.x.y', 1)",
         "import pytest\npytest.MonkeyPatch().delattr('tests.x.y')",
+        (
+            "from tools.variant_runtime import __builtins__ as b\n"
+            "b['_' * 2 + 'import' + '_' * 2]('tests.x')"
+        ),
+        "import pytest\npytest.main(['--collect-only', 'tests'])",
+        "from pytest import main as run\nrun(['--collect-only', 'tests'])",
+        "pytest_plugins = ['tests.x']",
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

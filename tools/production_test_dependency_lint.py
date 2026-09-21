@@ -6,16 +6,14 @@ import ast
 from pathlib import Path
 
 PROTECTED_PATHS = (Path("tests/test_t0180_diff_properties.py"),)
-_ALLOWED_IMPORTS = {
-    "__future__",
-    "copy",
-    "graph",
-    "graph.node",
-    "pathlib",
-    "pytest",
-    "random",
-    "tools.production_test_dependency_lint",
-    "tools.variant_runtime",
+_ALLOWED_DIRECT_IMPORTS = {"copy", "graph.node", "pytest", "random"}
+_ALLOWED_FROM_IMPORTS = {
+    "__future__": {"annotations"},
+    "graph": {"diff"},
+    "graph.node": {"make_record", "record_identity"},
+    "pathlib": {"Path"},
+    "tools.production_test_dependency_lint": {"findings", "lint"},
+    "tools.variant_runtime": {"VariantError"},
 }
 _FORBIDDEN_NAMES = {
     "__builtins__",
@@ -33,6 +31,7 @@ _FORBIDDEN_NAMES = {
 _FORBIDDEN_ATTRIBUTES = {
     "attrgetter",
     "importorskip",
+    "main",
     "compile",
     "eval",
     "exec",
@@ -54,14 +53,24 @@ def findings(source: str):
     found = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            if any(alias.name not in _ALLOWED_IMPORTS for alias in node.names):
+            if any(alias.name not in _ALLOWED_DIRECT_IMPORTS for alias in node.names):
                 found.append(node)
         elif isinstance(node, ast.ImportFrom):
             module = node.module or ""
-            forbidden_pytest_api = module == "pytest" and any(
-                alias.name == "importorskip" for alias in node.names
-            )
-            if module not in _ALLOWED_IMPORTS or forbidden_pytest_api:
+            allowed_members = _ALLOWED_FROM_IMPORTS.get(module, set())
+            if any(
+                alias.name == "*"
+                or _is_dunder(alias.name)
+                or alias.name not in allowed_members
+                for alias in node.names
+            ):
+                found.append(node)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(
+                isinstance(target, ast.Name) and target.id == "pytest_plugins"
+                for target in targets
+            ):
                 found.append(node)
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
             is_dotted_resolution = node.func.attr in {"setattr", "delattr"}
