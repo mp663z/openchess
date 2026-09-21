@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "contract": "data/contracts/san.yaml",
+  "contract_schema_version": 1,
+  "section_manifests": {
+    "happy": ["pawn-quiet", "piece-quiet", "pawn-capture", "promotion"],
+    "boundary": ["minimal-file-disambiguation", "castling-rook-hop-check"],
+    "malformed": ["lowercase-piece", "digit-castle", "ambiguous-rook", "false-check", "overdisambiguated"],
+    "rollback": ["illegal-destination-no-trace", "malformed-token-no-trace"]
+  },
+  "happy": [
+    {
+      "name": "pawn-quiet", "scenario_tag": "grammar:pawn-quiet", "san": "e4",
+      "state": {"occupied": {"e1": "wk", "e2": "wp", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"},
+      "expect_move": {"from_square": "e2", "to_square": "e4"}
+    },
+    {
+      "name": "piece-quiet", "scenario_tag": "grammar:piece-quiet", "san": "Nf3",
+      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"},
+      "expect_move": {"from_square": "g1", "to_square": "f3"}
+    },
+    {
+      "name": "pawn-capture", "scenario_tag": "grammar:pawn-capture", "san": "exd6",
+      "state": {"occupied": {"e1": "wk", "e5": "wp", "d6": "bp", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"},
+      "expect_move": {"from_square": "e5", "to_square": "d6"}
+    },
+    {
+      "name": "promotion", "scenario_tag": "grammar:promotion", "san": "a8=Q",
+      "state": {"occupied": {"c1": "wk", "a7": "wp", "h6": "bk"}, "side_to_move": "w", "castling_rights": "-"},
+      "expect_move": {"from_square": "a7", "to_square": "a8", "promotion": "q"}
+    }
+  ],
+  "boundary": [
+    {
+      "name": "minimal-file-disambiguation", "scenario_tag": "disambiguation:file-minimal", "san": "Rhd1",
+      "state": {"occupied": {"e2": "wk", "a1": "wr", "h1": "wr", "f8": "bk"}, "side_to_move": "w", "castling_rights": "-"},
+      "expect_move": {"from_square": "h1", "to_square": "d1"}
+    },
+    {
+      "name": "castling-rook-hop-check", "scenario_tag": "castling:atomic-rook-hop-check", "san": "O-O-O+",
+      "state": {"occupied": {"e1": "wk", "a1": "wr", "d8": "bk"}, "side_to_move": "w", "castling_rights": "Q"},
+      "expect_move": {"from_square": "e1", "to_square": "c1"}
+    }
+  ],
+  "malformed": [
+    {
+      "name": "lowercase-piece", "scenario_tag": "token:piece-case", "san": "nf3", "repair_san": "Nf3", "expect_failure": "malformed_san",
+      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+    },
+    {
+      "name": "digit-castle", "scenario_tag": "token:capital-o", "san": "0-0", "repair_san": "O-O", "expect_failure": "malformed_san",
+      "state": {"occupied": {"e1": "wk", "h1": "wr", "e8": "bk"}, "side_to_move": "w", "castling_rights": "K"}
+    },
+    {
+      "name": "ambiguous-rook", "scenario_tag": "resolution:ambiguous", "san": "Rd1", "repair_san": "Rhd1", "expect_failure": "ambiguous_san",
+      "state": {"occupied": {"e2": "wk", "a1": "wr", "h1": "wr", "f8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+    },
+    {
+      "name": "false-check", "scenario_tag": "suffix:false-check", "san": "e4+", "repair_san": "e4", "expect_failure": "no_legal_match",
+      "state": {"occupied": {"e1": "wk", "e2": "wp", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+    },
+    {
+      "name": "overdisambiguated", "scenario_tag": "disambiguation:noncanonical", "san": "Ngf3", "repair_san": "Nf3", "expect_failure": "malformed_san",
+      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+    }
+  ],
+  "rollback": [
+    {
+      "name": "illegal-destination-no-trace", "scenario_tag": "rollback:no-legal-match", "san": "Ne5", "expect_failure": "no_legal_match",
+      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+    },
+    {
+      "name": "malformed-token-no-trace", "scenario_tag": "rollback:malformed", "san": "Nf3!", "expect_failure": "malformed_san",
+      "state": {"occupied": {"e1": "wk", "g1": "wn", "e8": "bk"}, "side_to_move": "w", "castling_rights": "-"}
+    }
+  ]
+}
