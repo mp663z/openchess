@@ -152,51 +152,26 @@ def test_process_control_escape_is_not_caught_or_rewritten(monkeypatch):
     assert calls == [("standard", FENS[0])]
 
 
-def _forbidden_tests_imports(source: str):
-    import ast
-
-    tree = ast.parse(source)
-    return [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.Import, ast.ImportFrom))
-        and (
-            (isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tests"))
-            or (
-                isinstance(node, ast.Import)
-                and any(alias.name.startswith("tests") for alias in node.names)
-            )
-        )
-    ]
-
-
-def _forbidden_tests_imports(source: str):
-    import ast
-
-    tree = ast.parse(source)
-    return [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.Import, ast.ImportFrom))
-        and (
-            (isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tests"))
-            or (
-                isinstance(node, ast.Import)
-                and any(alias.name.startswith("tests") for alias in node.names)
-            )
-        )
-    ]
-
-
 def test_property_file_has_no_tests_package_imports():
     from pathlib import Path
 
-    assert _forbidden_tests_imports(Path(__file__).read_text()) == []
+    from tools.production_test_dependency_lint import lint
+
+    lint(Path(__file__))
 
 
-def test_import_guard_detects_nonexecuting_forbidden_import_mutant():
-    mutant = """from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    import tests.bad_fixture
-"""
-    assert len(_forbidden_tests_imports(mutant)) == 1
+def test_repository_dependency_lint_detects_all_import_mutants():
+    from tools.production_test_dependency_lint import findings
+
+    mutants = [
+        "import tests.bad_fixture",
+        "import tests.bad_fixture as fixture",
+        "def f():\n    import tests.bad_fixture",
+        "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    import tests.bad_fixture",
+        "import importlib\nimportlib.import_module('tests.test_t0176_diff_contract')",
+        "from importlib import import_module as load\nload('tests.test_t0176_diff_contract')",
+        "__import__('tests.test_t0176_diff_contract')",
+        "import importlib\nname = input()\nimportlib.import_module(name)",
+    ]
+    for mutant in mutants:
+        assert findings(mutant), mutant
