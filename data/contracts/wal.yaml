@@ -1,0 +1,93 @@
+schema_version: 1
+
+contract:
+  id: store-wal
+  role:
+    kind: write-ahead-log-over-content-addressed-graph-state-mutations
+    serves: position-graph-store-durability
+    scope: single-log-append-and-replay
+    owns: wal-entry-semantics-and-receipt-shape
+    not_scope: snapshots-compaction-or-multi-log-replication
+  record:
+    fields: [entry_id, sequence, op, payload, prior_entry_id]
+    exact: true
+  identifiers:
+    entry_id:
+      kind: content-addressed-wal-entry-id
+      grammar: ^wal1:[0-9a-f]{64}$
+      derivation: sha256-over-sequence-op-canonical-payload-prior-entry-id
+      source: derived-from-validated-entry-never-caller-supplied
+    prior_entry_id:
+      kind: wal-chain-link-or-pinned-genesis
+      grammar: ^(wal0:0{64}|wal1:[0-9a-f]{64})$
+      source: derived-from-log-tip-never-caller-supplied
+    state_id:
+      kind: canonical-state-content-digest
+      grammar: ^gs1:[0-9a-f]{64}$
+      derivation: sha256-over-canonical-serialization-of-sorted-identity-record-map
+      source: derived-from-replayed-state-never-caller-supplied
+  registry:
+    operations:
+      - op: put
+        payload_fields: [identity, record]
+        effect: upsert-identity-to-exact-node-record
+      - op: delete
+        payload_fields: [identity, record]
+        effect: remove-identity-of-exact-record-if-present
+    closure: no-other-operations-registered
+  semantics:
+    sequencing: entry-sequence-is-exactly-its-1-based-log-position
+    chaining: every-entry-pins-the-prior-tip-genesis-pins-wal0-zero
+    append: request-then-full-log-validation-staged-commit-last
+    replay: fold-registered-ops-in-sequence-order-over-empty-state
+    head_verification: replay-head-is-the-tip-entry-id-genesis-on-empty
+    payload_canonicalization: canonical-payload-string-feeds-entry-id-derivation
+    canonical_encoding: canonical-payload-utf8-encodable-for-entry-id-derivation
+  oracle_boundary:
+    role: payload-canonicalizer-is-untrusted-input
+    single_evaluation: exactly-one-call-per-entry-per-operation
+    frozen_snapshots: entire-log-frozen-before-first-oracle-call-never-re-read
+    request_freeze: validated-request-frozen-before-first-oracle-call-never-re-read-restored-bit-identical
+    output_validation: exact-built-in-string-or-fail-closed
+  failures:
+    classes:
+      - malformed_wal_entry
+      - unknown_operation
+      - sequence_conflict
+      - corrupt_chain
+      - divergent_canonicalization
+    triggers:
+      malformed_wal_entry: request-entry-payload-or-record-grammar-violation
+      unknown_operation: op-not-in-the-pinned-registry
+      sequence_conflict: sequence-not-the-exact-1-based-log-position
+      corrupt_chain: prior-link-or-recomputed-entry-id-divergence
+      divergent_canonicalization: canonicalizer-raising-any-baseexception-or-non-exact-string-output
+    mapping:
+      malformed_wal_entry: malformed_request
+      unknown_operation: unknown_operation
+      sequence_conflict: sequence_conflict
+      corrupt_chain: corrupt_chain
+      divergent_canonicalization: divergent_canonicalization
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - unknown_operation
+      - sequence_conflict
+      - corrupt_chain
+      - divergent_canonicalization
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-logs-and-oracles-fail-closed-typed-never-raw
+    atomic: rejected-append-or-replay-leaves-inputs-bit-identical
+    deterministic: same-inputs-same-entry-and-replayed-state
+    rollback: staged-entry-only-commit-after-full-validation
+  versioning:
+    base_path: /store/wal/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    transposition_node_contract: data/contracts/transposition_node.yaml
+    diff_contract: data/contracts/diff.yaml
+    migration_contract: data/contracts/migration.yaml
