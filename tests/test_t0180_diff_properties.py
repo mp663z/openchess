@@ -245,6 +245,15 @@ def test_repository_dependency_lint_detects_all_import_mutants():
             "from pathlib import Path as P\n"
             "P('tests/test_t0176_diff_contract.py').read_bytes()"
         ),
+        "open('tests/test_t0176_diff_contract.py').read()",
+        (
+            "p = 'tests/' + 'test_t0176_diff_contract.py'\n"
+            "open(p, 'rb').read()"
+        ),
+        "reader = open\nreader('tests/x').read()",
+        "input('path')",
+        "breakpoint()",
+        "help(object)",
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

@@ -26,13 +26,17 @@ _FORBIDDEN_NAMES = {
     "__builtins__",
     "__import__",
     "attrgetter",
+    "breakpoint",
     "compile",
     "eval",
     "exec",
     "getattr",
     "globals",
+    "help",
     "import_module",
+    "input",
     "locals",
+    "open",
     "vars",
 }
 _FORBIDDEN_ATTRIBUTES = {
