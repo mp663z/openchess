@@ -207,6 +207,10 @@ def test_repository_dependency_lint_detects_all_import_mutants():
             "import importlib, types\nclass M(types.ModuleType): pass\n"
             "M.__getattribute__(importlib, 'import_module')('tests.x')"
         ),
+        "import pytest\npytest.importorskip('tests.x')",
+        "from pytest import importorskip as load\nload('tests.x')",
+        "import pytest\npytest.MonkeyPatch().setattr('tests.x.y', 1)",
+        "import pytest\npytest.MonkeyPatch().delattr('tests.x.y')",
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

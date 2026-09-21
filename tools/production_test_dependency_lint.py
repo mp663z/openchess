@@ -32,6 +32,7 @@ _FORBIDDEN_NAMES = {
 }
 _FORBIDDEN_ATTRIBUTES = {
     "attrgetter",
+    "importorskip",
     "compile",
     "eval",
     "exec",
@@ -56,7 +57,21 @@ def findings(source: str):
             if any(alias.name not in _ALLOWED_IMPORTS for alias in node.names):
                 found.append(node)
         elif isinstance(node, ast.ImportFrom):
-            if (node.module or "") not in _ALLOWED_IMPORTS:
+            module = node.module or ""
+            forbidden_pytest_api = module == "pytest" and any(
+                alias.name == "importorskip" for alias in node.names
+            )
+            if module not in _ALLOWED_IMPORTS or forbidden_pytest_api:
+                found.append(node)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            is_dotted_resolution = node.func.attr in {"setattr", "delattr"}
+            target = node.args[0] if node.args else None
+            targets_tests = (
+                isinstance(target, ast.Constant)
+                and isinstance(target.value, str)
+                and (target.value == "tests" or target.value.startswith("tests."))
+            )
+            if is_dotted_resolution and targets_tests:
                 found.append(node)
         else:
             forbidden_name = isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES

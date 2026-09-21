@@ -26,3 +26,15 @@ def test_removing_in_file_self_check_does_not_disable_external_enforcement(tmp_p
 
     with pytest.raises(DependencyError, match="forbidden test or dynamic dependency"):
         lint_protected_paths(tmp_path)
+
+
+def test_ordinary_pytest_and_object_monkeypatch_usage_remain_allowed():
+    from tools.production_test_dependency_lint import findings
+
+    allowed = [
+        "import pytest\npytest.mark.parametrize('x', [1])",
+        "import pytest\nwith pytest.raises(ValueError):\n    raise ValueError",
+        "def f(monkeypatch, node):\n    monkeypatch.setattr(node, 'value', 1)",
+    ]
+    for source in allowed:
+        assert findings(source) == [], source
