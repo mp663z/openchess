@@ -88,7 +88,7 @@ FAILURE_TRIGGERS = {
         "source-log-fails-linked-wal-validation-or-chain-"
         "rederivation",
     "divergent_archive":
-        "archiver-raising-or-non-exact-string-or-bad-grammar-"
+        "archiver-raising-any-baseexception-or-non-exact-string-or-bad-grammar-"
         "token",
 }
 FAILURE_MAPPING = {

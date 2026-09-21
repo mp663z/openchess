@@ -33,7 +33,7 @@ explicitly not scope.
 - unknown_target: target sequence outside 0..len(log).
 - corrupt_source: source log fails linked WAL validation or
   chain re-derivation.
-- divergent_archive: archiver raising or returning a
+- divergent_archive: archiver raising ANY BaseException (KeyboardInterrupt/SystemExit/GeneratorExit included - the boundary catches BaseException so the untrusted oracle can never escape raw) or returning a
   non-exact-string or wrong-grammar token.
 
 ## Properties

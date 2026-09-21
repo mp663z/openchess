@@ -88,15 +88,20 @@ class RollbackEngine:
         self.archiver = tail_archiver  # UNTRUSTED
 
     def _archive(self, frozen_tail):
-        """THE archiver boundary: raising, non-exact-str,
-        UTF-8-inencodable or wrong-grammar output fails closed as
-        divergent_archive."""
+        """THE archiver boundary: raising ANY BaseException
+        (including KeyboardInterrupt/SystemExit/GeneratorExit),
+        non-exact-str, UTF-8-inencodable or wrong-grammar output
+        fails closed as divergent_archive."""
         try:
             # DETACHED argument copy: the archiver never sees the
             # frozen snapshot objects - mutating them is inert
             out = self.archiver([dict(entry) for entry in
                                  frozen_tail])
-        except Exception:
+        except BaseException:
+            # fail closed against the FULL BaseException surface:
+            # KeyboardInterrupt/SystemExit/GeneratorExit from the
+            # untrusted oracle map to the typed failure, never a
+            # raw escape (totality)
             _fail("divergent_archive")
         if type(out) is not str or \
                 _TOKEN_RE.fullmatch(out) is None:
@@ -337,11 +342,24 @@ def _hostile_archivers():
     def lone_surrogate(tail):
         return "\ud800"
 
+    def raising_keyboard_interrupt(tail):
+        raise KeyboardInterrupt("boom")
+
+    def raising_system_exit(tail):
+        raise SystemExit("boom")
+
+    def raising_generator_exit(tail):
+        raise GeneratorExit("boom")
+
     return [("raising", raising), ("bad-type", bad_type),
             ("bad-grammar", bad_grammar),
             ("wrong-prefix", wrong_prefix),
             ("evil-str", evil_str),
-            ("lone-surrogate", lone_surrogate)]
+            ("lone-surrogate", lone_surrogate),
+            ("raising-keyboard-interrupt",
+             raising_keyboard_interrupt),
+            ("raising-system-exit", raising_system_exit),
+            ("raising-generator-exit", raising_generator_exit)]
 
 
 @pytest.mark.parametrize("name,archiver", _hostile_archivers(),

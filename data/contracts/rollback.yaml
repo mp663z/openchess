@@ -46,7 +46,7 @@ contract:
       malformed_rollback_record: request-or-log-grammar-or-type-violation
       unknown_target: target-sequence-outside-zero-through-log-length
       corrupt_source: source-log-fails-linked-wal-validation-or-chain-rederivation
-      divergent_archive: archiver-raising-or-non-exact-string-or-bad-grammar-token
+      divergent_archive: archiver-raising-any-baseexception-or-non-exact-string-or-bad-grammar-token
     mapping:
       malformed_rollback_record: malformed_request
       unknown_target: unknown_target
