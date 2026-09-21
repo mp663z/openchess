@@ -254,6 +254,17 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         "input('path')",
         "breakpoint()",
         "help(object)",
+        (
+            "import pytest\n"
+            "with pytest.raises(ValueError) as e:\n    raise ValueError('x')\n"
+            "b = e.tb.tb_frame.f_builtins\n"
+            "b['_' * 2 + 'import' + '_' * 2]('tests.x')"
+        ),
+        "frame.f_globals['loader']",
+        "generator.gi_frame.f_locals",
+        "coroutine.cr_frame.f_builtins",
+        "async_generator.ag_frame.f_globals",
+        "code.co_consts",
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

@@ -49,6 +49,14 @@ _FORBIDDEN_ATTRIBUTES = {
     "import_module",
     "vars",
 }
+_FORBIDDEN_ATTRIBUTE_PREFIXES = (
+    "ag_",
+    "co_",
+    "cr_",
+    "f_",
+    "gi_",
+    "tb_",
+)
 
 
 class DependencyError(Exception):
@@ -123,7 +131,10 @@ def findings(source: str):
         else:
             forbidden_name = isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES
             forbidden_attribute = isinstance(node, ast.Attribute) and (
-                node.attr in _FORBIDDEN_ATTRIBUTES or _is_dunder(node.attr)
+                node.attr in _FORBIDDEN_ATTRIBUTES
+                or _is_dunder(node.attr)
+                or node.attr == "tb"
+                or node.attr.startswith(_FORBIDDEN_ATTRIBUTE_PREFIXES)
             )
             forbidden_key = isinstance(node, ast.Constant) and _is_dunder(node.value)
             if forbidden_name or forbidden_attribute or forbidden_key:
