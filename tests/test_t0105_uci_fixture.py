@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import itertools
 import json
 from pathlib import Path
@@ -89,7 +90,21 @@ def _validate(cases):
                 assert row["expect_failure"] in FAIL
             names.append(row["name"])
             tags.append(row["scenario_tag"])
-        assert [r["name"] for r in rows] == cases["section_manifests"][section]
+        manifest = cases["section_manifests"][section]
+        assert type(manifest) is dict
+        assert set(manifest) == {row["name"] for row in rows}
+        computed = {
+            row["name"]: hashlib.sha256(
+                json.dumps(
+                    row,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode()
+            ).hexdigest()
+            for row in rows
+        }
+        assert manifest == computed
     assert len(names) == len(set(names))
     assert len(tags) == len(set(tags))
 
@@ -114,7 +129,7 @@ def test_fixture_structure():
 
 @pytest.mark.parametrize("section", SECTIONS)
 def test_closed_ordered_manifests(section):
-    assert [r["name"] for r in CASES[section]] == CASES["section_manifests"][section]
+    assert [r["name"] for r in CASES[section]] == list(CASES["section_manifests"][section])
 
 
 def test_happy_executes_and_roundtrips():
@@ -158,15 +173,60 @@ def test_rollback_is_bit_identical():
 
 
 def test_exhaustive_ordered_pairwise_scenario_substitution_closure():
-    rows = [r for sec in SECTIONS for r in CASES[sec]]
-    for target, donor in itertools.permutations(rows, 2):
-        mutant = copy.deepcopy(CASES)
-        sec = next(s for s in SECTIONS if target in CASES[s])
-        idx = CASES[sec].index(target)
-        mutant[sec][idx]["name"] = donor["name"]
-        mutant[sec][idx]["scenario_tag"] = donor["scenario_tag"]
-        with pytest.raises(AssertionError):
-            _validate(mutant)
+    for section in SECTIONS:
+        rows = CASES[section]
+        for target_index, donor_index in itertools.permutations(range(len(rows)), 2):
+            target = rows[target_index]
+            donor = rows[donor_index]
+            mutant = copy.deepcopy(CASES)
+            replacement = copy.deepcopy(donor)
+            replacement["name"] = target["name"]
+            replacement["scenario_tag"] = target["scenario_tag"]
+            mutant[section][target_index] = replacement
+            with pytest.raises(AssertionError):
+                _validate(mutant)
+
+
+def test_each_payload_field_and_scenario_tag_is_manifest_bound():
+    for section in SECTIONS:
+        rows = CASES[section]
+        for target_index, donor_index in itertools.permutations(range(len(rows)), 2):
+            shared = (set(rows[target_index]) & set(rows[donor_index])) - {"name"}
+            for field in shared:
+                if rows[target_index][field] == rows[donor_index][field]:
+                    continue
+                mutant = copy.deepcopy(CASES)
+                mutant[section][target_index][field] = copy.deepcopy(rows[donor_index][field])
+                with pytest.raises(AssertionError):
+                    _validate(mutant)
+
+
+def test_manifest_guard_is_non_vacuous_for_parse_substitution():
+    mutant = copy.deepcopy(CASES)
+    target = mutant["happy"][0]
+    donor = copy.deepcopy(mutant["happy"][1])
+    donor["name"] = target["name"]
+    donor["scenario_tag"] = target["scenario_tag"]
+    mutant["happy"][0] = donor
+    got = _parse(donor)
+    assert got == donor["expect"]
+    assert emit(got) == donor["line"]
+    with pytest.raises(AssertionError):
+        _validate(mutant)
+
+
+def test_manifest_guard_is_non_vacuous_for_frame_substitution():
+    mutant = copy.deepcopy(CASES)
+    donor = copy.deepcopy(mutant["boundary"][2])
+    # Cross-section donor proves a valid framing payload executes; place it
+    # in boundary under another boundary identity so only the digest rejects.
+    boundary_target = mutant["boundary"][0]
+    donor["name"] = boundary_target["name"]
+    donor["scenario_tag"] = boundary_target["scenario_tag"]
+    mutant["boundary"][0] = donor
+    assert _frames(donor["chunks_hex"]) == donor["expect_frames"]
+    with pytest.raises(AssertionError):
+        _validate(mutant)
 
 
 def test_schema_and_recursive_shapes_are_closed():
