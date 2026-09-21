@@ -12,6 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from tools.contract_lint_closure import (  # noqa: E402
+    close_envelope,
+    close_errors,
+    close_failures,
+)
 from tools.variant_contract_lint import ContractError  # noqa: E402
 
 CONTRACT = ROOT / "data/contracts/migration.yaml"
@@ -136,9 +141,9 @@ LINKS = {
 def lint(path=None):
     path = path or CONTRACT
     doc = yaml.safe_load(Path(path).read_text())
-    cc = doc.get("contract")
-    if not isinstance(cc, dict):
-        raise ContractError("migration contract missing")
+    cc = close_envelope(doc, contract_id="store-migration",
+        sections={"errors", "failures", "id", "identifiers", "links", "oracle_boundary",
+            "properties", "record", "registry", "role", "semantics", "versioning",})
 
     def check(name, expected, actual):
         if actual != expected:
@@ -151,7 +156,8 @@ def lint(path=None):
     check("semantics", SEMANTICS, cc.get("semantics"))
     check("oracle_boundary", ORACLE_BOUNDARY,
           cc.get("oracle_boundary"))
-    failures = cc.get("failures") or {}
+    failures = cc["failures"]
+    close_failures(failures)
     check("failures.classes", FAILURE_CLASSES,
           failures.get("classes"))
     check("failures.triggers", FAILURE_TRIGGERS,
@@ -166,7 +172,8 @@ def lint(path=None):
     if set(failures.get("triggers", {})) != set(FAILURE_CLASSES):
         raise ContractError(
             "failures: triggers keys must equal declared classes")
-    errors = cc.get("errors") or {}
+    errors = cc["errors"]
+    close_errors(errors, shape_keys=("retryable_true_only_for",))
     check("errors.closed_enum", ERROR_ENUM,
           errors.get("closed_enum"))
     shape = errors.get("shape") or {}

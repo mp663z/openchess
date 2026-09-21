@@ -12,6 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from tools.contract_lint_closure import (  # noqa: E402
+    close_envelope,
+    close_errors,
+    close_failures,
+)
 from tools.variant_contract_lint import ContractError  # noqa: E402
 
 CONTRACT = ROOT / "data/contracts/diff.yaml"
@@ -143,9 +148,9 @@ LINKS = {
 def lint(path=None):
     path = path or CONTRACT
     doc = yaml.safe_load(Path(path).read_text())
-    cc = doc.get("contract")
-    if not isinstance(cc, dict):
-        raise ContractError("diff contract missing")
+    cc = close_envelope(doc, contract_id="graph-diff",
+        sections={"apply", "errors", "failures", "guarantees", "id", "identifiers",
+            "identity", "links", "properties", "record", "role", "sections", "versioning",})
 
     def check(name, expected, actual):
         if actual != expected:
@@ -158,7 +163,8 @@ def lint(path=None):
     check("identifiers", IDENTIFIERS, cc.get("identifiers"))
     check("guarantees", GUARANTEES, cc.get("guarantees"))
     check("apply", APPLY, cc.get("apply"))
-    failures = cc.get("failures") or {}
+    failures = cc["failures"]
+    close_failures(failures)
     check("failures.classes", FAILURE_CLASSES,
           failures.get("classes"))
     check("failures.triggers", FAILURE_TRIGGERS,
@@ -173,7 +179,8 @@ def lint(path=None):
     if set(failures["triggers"]) != set(failures["classes"]):
         raise ContractError(
             "failures: triggers keys must equal declared classes")
-    errors = cc.get("errors") or {}
+    errors = cc["errors"]
+    close_errors(errors, shape_keys=("retryable_true_only_for",))
     check("errors.closed_enum", ERROR_ENUM,
           errors.get("closed_enum"))
     shape = errors.get("shape") or {}
