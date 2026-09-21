@@ -1,0 +1,581 @@
+{
+  "schema": 1,
+  "contract": "graph-provenance",
+  "contract_schema_version": 1,
+  "notes": "T0150 closed conformance fixture. Every executable case carries a semantic scenario tag. Exact shapes are closed; malformed repairs are a single tagged operation and rollback uses exact before/after records. DAG boundary: T0150 intentionally validates the contract-derived fixture oracle; T0151 proves red against the absent production surface and T0152 ships graph/provenance.py. Production code is forbidden in this fixture task.",
+  "happy": [
+    {
+      "name": "node-unsorted-sources-canonicalize",
+      "scenario": "insert-new-node-target",
+      "kind": "insert",
+      "record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "pgn-file",
+            "game_id": "pgn:local-game-1",
+            "first_observed_at": "2026-09-02T08:30:00Z"
+          },
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          },
+          {
+            "source_id": "pgn-file",
+            "game_id": "pgn:local-game-1",
+            "first_observed_at": "2026-09-02T08:30:00Z"
+          }
+        ]
+      },
+      "payload_sha256": "334bc30673e084598be7e0fbac17ed51025b07f24fb00bce380bf027e2993cb2"
+    },
+    {
+      "name": "edge-single-source",
+      "scenario": "insert-new-edge-target",
+      "kind": "insert",
+      "record": {
+        "target_kind": "route_edge",
+        "target": {
+          "variant": "standard",
+          "move": "e2e4",
+          "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_record": {
+        "target_kind": "route_edge",
+        "target": {
+          "variant": "standard",
+          "move": "e2e4",
+          "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "payload_sha256": "418e60b01f9fbb4cda6d6f7f61bbb9f64883dda91f268ebd86b040a48c68ef94"
+    },
+    {
+      "name": "context-single-source",
+      "scenario": "insert-new-context-target",
+      "kind": "insert",
+      "record": {
+        "target_kind": "opening_context",
+        "target": {
+          "variant": "standard",
+          "path_moves": [
+            "e2e4",
+            "c7c5"
+          ]
+        },
+        "sources": [
+          {
+            "source_id": "cbh-licensed",
+            "game_id": "cbh:base42-game7",
+            "first_observed_at": "2026-09-03T23:59:59Z"
+          }
+        ]
+      },
+      "expect_record": {
+        "target_kind": "opening_context",
+        "target": {
+          "variant": "standard",
+          "path_moves": [
+            "e2e4",
+            "c7c5"
+          ]
+        },
+        "sources": [
+          {
+            "source_id": "cbh-licensed",
+            "game_id": "cbh:base42-game7",
+            "first_observed_at": "2026-09-03T23:59:59Z"
+          }
+        ]
+      },
+      "payload_sha256": "4e37c25f0bda4fd6c4a0107052317d6e3c3843cf46760c80777f504d62ac876e"
+    }
+  ],
+  "boundary": [
+    {
+      "name": "empty-opening-path-is-valid",
+      "scenario": "sibling-legal-empty-path",
+      "kind": "insert",
+      "record": {
+        "target_kind": "opening_context",
+        "target": {
+          "variant": "standard",
+          "path_moves": []
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_source_count": 1,
+      "payload_sha256": "a02d3679684b089cb36c99a62ca3e6f708b6e7006d58c9bcaf43532ea5986aa1"
+    },
+    {
+      "name": "duplicate-sources-collapse",
+      "scenario": "set-deduplication",
+      "kind": "insert",
+      "record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          },
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          },
+          {
+            "source_id": "pgn-file",
+            "game_id": "pgn:local-game-1",
+            "first_observed_at": "2026-09-02T08:30:00Z"
+          }
+        ]
+      },
+      "expect_source_count": 2,
+      "payload_sha256": "9282c64c291c4f99a83907c5500d6d33837b13368ee8e3da56f654cd08cd75e3"
+    },
+    {
+      "name": "same-target-unions-sources",
+      "scenario": "monotone-same-key-union",
+      "kind": "sequence",
+      "records": [
+        {
+          "target_kind": "transposition_node",
+          "target": {
+            "variant": "standard",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "sources": [
+            {
+              "source_id": "lichess-public",
+              "game_id": "lichess:abcdefgh",
+              "first_observed_at": "2026-09-01T12:00:00Z"
+            }
+          ]
+        },
+        {
+          "target_kind": "transposition_node",
+          "target": {
+            "variant": "standard",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "sources": [
+            {
+              "source_id": "pgn-file",
+              "game_id": "pgn:local-game-1",
+              "first_observed_at": "2026-09-02T08:30:00Z"
+            }
+          ]
+        }
+      ],
+      "expect_record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          },
+          {
+            "source_id": "pgn-file",
+            "game_id": "pgn:local-game-1",
+            "first_observed_at": "2026-09-02T08:30:00Z"
+          }
+        ]
+      },
+      "expect_record_count": 1,
+      "payload_sha256": "75e45574144de5080c62f3f38aea0557184d2f50f3c6e2d8838990e4a7772e0d"
+    },
+    {
+      "name": "distinct-targets-stay-distinct",
+      "scenario": "target-identity-separation",
+      "kind": "sequence",
+      "records": [
+        {
+          "target_kind": "transposition_node",
+          "target": {
+            "variant": "standard",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "sources": [
+            {
+              "source_id": "lichess-public",
+              "game_id": "lichess:abcdefgh",
+              "first_observed_at": "2026-09-01T12:00:00Z"
+            }
+          ]
+        },
+        {
+          "target_kind": "transposition_node",
+          "target": {
+            "variant": "standard",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          },
+          "sources": [
+            {
+              "source_id": "lichess-public",
+              "game_id": "lichess:abcdefgh",
+              "first_observed_at": "2026-09-01T12:00:00Z"
+            }
+          ]
+        }
+      ],
+      "expect_record_count": 2,
+      "payload_sha256": "9732465012a28a92cc7c51c8e3e04a04f09f64516a4f997db7b8be7293dc5518"
+    }
+  ],
+  "malformed": [
+    {
+      "name": "unknown-target-kind",
+      "scenario": "closed-target-kind",
+      "kind": "reject",
+      "record": {
+        "target_kind": "san_position",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_failure": "unknown_target_kind",
+      "minimal_repair": {
+        "op": "set",
+        "path": [
+          "target_kind"
+        ],
+        "value": "transposition_node"
+      },
+      "payload_sha256": "e966b1caea2609a4c0ee39452259e798891b8d5834e1c1939afd2072a8fc1603"
+    },
+    {
+      "name": "unknown-source-id",
+      "scenario": "rights-registry-fail-closed",
+      "kind": "reject",
+      "record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "shadow-corpus",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_failure": "unknown_source",
+      "minimal_repair": {
+        "op": "set",
+        "path": [
+          "sources",
+          0,
+          "source_id"
+        ],
+        "value": "lichess-public"
+      },
+      "payload_sha256": "d9d2eff7ecbd61ce38fb62466ff340ad8589545ac958c4f4029c4e4268cf30ae"
+    },
+    {
+      "name": "empty-source-set",
+      "scenario": "sources-nonempty",
+      "kind": "reject",
+      "record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": []
+      },
+      "expect_failure": "malformed_provenance_record",
+      "minimal_repair": {
+        "op": "append",
+        "path": [
+          "sources"
+        ],
+        "value": {
+          "source_id": "lichess-public",
+          "game_id": "lichess:abcdefgh",
+          "first_observed_at": "2026-09-01T12:00:00Z"
+        }
+      },
+      "payload_sha256": "d2047f6722f662913cd0f5e55ebb7560d847386bc4c1d63bea7a85aea23d376e"
+    },
+    {
+      "name": "node-target-invalid-fen",
+      "scenario": "linked-target-validation",
+      "kind": "reject",
+      "record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "garbage w - - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_failure": "malformed_target_identity",
+      "minimal_repair": {
+        "op": "set",
+        "path": [
+          "target",
+          "snapshot_fen"
+        ],
+        "value": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+      },
+      "payload_sha256": "9408b7d23cca311c1e3795cf458832dd568e229d743e7f4007a874026a77573b"
+    },
+    {
+      "name": "source-timestamp-impossible",
+      "scenario": "timestamp-calendar-validation",
+      "kind": "reject",
+      "record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-02-29T00:00:00Z"
+          }
+        ]
+      },
+      "expect_failure": "malformed_provenance_record",
+      "minimal_repair": {
+        "op": "set",
+        "path": [
+          "sources",
+          0,
+          "first_observed_at"
+        ],
+        "value": "2026-09-01T12:00:00Z"
+      },
+      "payload_sha256": "8621ead70477878d8b6fbc97611ae6ed7fb4a0886b067babf483309b87500c85"
+    },
+    {
+      "name": "record-extra-field",
+      "scenario": "record-closed-key-set",
+      "kind": "reject",
+      "record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "pgn-file",
+            "game_id": "pgn:local-game-1",
+            "first_observed_at": "2026-09-02T08:30:00Z"
+          },
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ],
+        "weight": 1
+      },
+      "expect_failure": "malformed_provenance_record",
+      "minimal_repair": {
+        "op": "remove",
+        "path": [
+          "weight"
+        ],
+        "value": null
+      },
+      "payload_sha256": "c9f76f77e628322ea331b7610a58fd8daa55e0817d2c1e286efe75db00225366"
+    }
+  ],
+  "rollback": [
+    {
+      "name": "unknown-source-leaves-existing-table",
+      "scenario": "insert-rollback-unknown-source",
+      "kind": "rollback",
+      "setup": [
+        {
+          "target_kind": "transposition_node",
+          "target": {
+            "variant": "standard",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "sources": [
+            {
+              "source_id": "pgn-file",
+              "game_id": "pgn:local-game-1",
+              "first_observed_at": "2026-09-02T08:30:00Z"
+            },
+            {
+              "source_id": "lichess-public",
+              "game_id": "lichess:abcdefgh",
+              "first_observed_at": "2026-09-01T12:00:00Z"
+            }
+          ]
+        }
+      ],
+      "reject_record": {
+        "target_kind": "route_edge",
+        "target": {
+          "variant": "standard",
+          "move": "e2e4",
+          "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "shadow",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_failure": "unknown_source",
+      "then_record": {
+        "target_kind": "route_edge",
+        "target": {
+          "variant": "standard",
+          "move": "e2e4",
+          "from_snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "to_snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_record_count": 2,
+      "payload_sha256": "169c97d695670af2833204579144bd8862ce1b0bfe2ded8f9798ab356d9d5ea7"
+    },
+    {
+      "name": "bad-target-leaves-existing-table",
+      "scenario": "insert-rollback-malformed-target",
+      "kind": "rollback",
+      "setup": [
+        {
+          "target_kind": "opening_context",
+          "target": {
+            "variant": "standard",
+            "path_moves": [
+              "e2e4",
+              "c7c5"
+            ]
+          },
+          "sources": [
+            {
+              "source_id": "cbh-licensed",
+              "game_id": "cbh:base42-game7",
+              "first_observed_at": "2026-09-03T23:59:59Z"
+            }
+          ]
+        }
+      ],
+      "reject_record": {
+        "target_kind": "opening_context",
+        "target": {
+          "variant": "standard",
+          "path_moves": [
+            "bad"
+          ]
+        },
+        "sources": [
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_failure": "malformed_target_identity",
+      "then_record": {
+        "target_kind": "transposition_node",
+        "target": {
+          "variant": "standard",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "sources": [
+          {
+            "source_id": "pgn-file",
+            "game_id": "pgn:local-game-1",
+            "first_observed_at": "2026-09-02T08:30:00Z"
+          },
+          {
+            "source_id": "lichess-public",
+            "game_id": "lichess:abcdefgh",
+            "first_observed_at": "2026-09-01T12:00:00Z"
+          }
+        ]
+      },
+      "expect_record_count": 2,
+      "payload_sha256": "e20364af84091ca559194fc148024cf284b449e9fe9d4cefc5b14bddbd0d42fa"
+    }
+  ]
+}
