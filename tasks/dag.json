@@ -4830,10 +4830,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "ffa471c2dd0dc9549af898061bc1411214eeebd0",
+   "evidence_manifest": "evidence/T0230.md"
   },
   {
    "id": "T0231",
