@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -65,49 +66,58 @@ BOUNDARY_MANIFEST = {
     "merge-nonempty-into-empty": ("merge", "merge-empty-left"),
     "merge-two-empty-tables": ("merge", "merge-both-empty"),
 }
-# malformed: name -> (failure class, pinned defect, repair form)
+# malformed: name -> (failure class, pinned defect, repair
+# form, scenario tag) - the tag is asserted semantically over
+# the case data, so a same-tuple substituted row can never fill
+# another row's slot.
 MALFORMED_MANIFEST = {
     "insert-unknown-variant": (
         UV, "variant id is grammar-valid but not registered",
-        "set_variant"),
+        "set_variant", "unknown-variant"),
     "insert-position-cannot-exist": (
-        MP, "from-position has no black king", "set_from_fen"),
+        MP, "from-position has no black king", "set_from_fen",
+        "position-cannot-exist"),
     "insert-target-garbage-fen": (
-        MP, "to-position text is not a FEN", "set_to_fen"),
+        MP, "to-position text is not a FEN", "set_to_fen",
+        "garbage-fen"),
     "insert-move-too-short": (
         MER, "move text is shorter than long-algebraic",
-        "set_move"),
+        "set_move", "move-too-short"),
     "insert-move-overlong": (
         MER,
         "move text is longer than long-algebraic with promotion",
-        "set_move"),
+        "set_move", "move-overlong"),
     "insert-move-same-squares": (
-        MER, "from-square equals to-square", "set_move"),
+        MER, "from-square equals to-square", "set_move",
+        "move-same-squares"),
     "insert-move-bad-from-file": (
-        MER, "from-file is outside a-h", "set_move"),
+        MER, "from-file is outside a-h", "set_move",
+        "move-bad-from-file"),
     "insert-move-bad-promotion": (
         MER, "promotion letter is not in the linked enum",
-        "set_move"),
+        "set_move", "move-bad-promotion"),
     "insert-move-uppercase-from": (
-        MER, "from-file is uppercase", "set_move"),
+        MER, "from-file is uppercase", "set_move",
+        "move-uppercase-from"),
     "insert-move-trailing-space": (
-        MER, "move text carries trailing whitespace", "set_move"),
+        MER, "move text carries trailing whitespace", "set_move",
+        "move-trailing-space"),
     "merge-record-extra-field": (
         MER, "stored record carries an undeclared extra field",
-        "replace_records"),
+        "replace_records", "record-extra-field"),
     "merge-record-clocks-not-normalized": (
         MER, "stored record snapshot clocks are not normalized",
-        "replace_records"),
+        "replace_records", "clocks-not-normalized"),
     "insert-conflicting-target": (
         CE,
         "same from-identity plus same move reaches a different "
         "target",
-        "set_to_fen"),
+        "set_to_fen", "conflicting-target"),
     "merge-batch-internal-conflict": (
         CE,
         "the source batch itself carries two edges with the same "
         "from-identity and move but different targets",
-        "replace_records"),
+        "replace_records", "batch-internal-conflict"),
 }
 # rollback: name -> (kind, expected rejection class)
 ROLLBACK_MANIFEST = {
@@ -193,6 +203,68 @@ def _assert_scenario(case, scenario):
         raise AssertionError(f"unknown scenario {scenario!r}")
 
 
+_VARIANT_ID_RE = re.compile(r"^[a-z][a-z0-9_-]*$")
+_REGISTERED_VARIANTS = {"standard"}
+_EDGE_FIELDS = {"variant", "move", "from_snapshot_fen",
+                "to_snapshot_fen"}
+_PROMOTION_LETTERS = {"q", "r", "b", "n"}
+
+
+def _assert_malformed_scenario(case, tag):
+    """The case data REALLY realizes the named defect locus."""
+    name = case["name"]
+    if tag == "unknown-variant":
+        v = case["variant"]
+        assert _VARIANT_ID_RE.fullmatch(v), name
+        assert v not in _REGISTERED_VARIANTS, name
+    elif tag == "position-cannot-exist":
+        board = case["from_snapshot_fen"].split()[0]
+        assert "k" not in board, name
+    elif tag == "garbage-fen":
+        board = case["to_snapshot_fen"].split()[0]
+        assert re.fullmatch(r"[rnbqkpRNBQKP1-8/]+", \
+                            board) is None, name
+    elif tag == "move-too-short":
+        assert len(case["move"]) < 4, name
+    elif tag == "move-overlong":
+        assert len(case["move"]) > 5, name
+    elif tag == "move-same-squares":
+        assert case["move"][:2] == case["move"][2:4], name
+    elif tag == "move-bad-from-file":
+        f = case["move"][0]
+        assert f not in "abcdefgh" and f.islower(), name
+    elif tag == "move-bad-promotion":
+        assert len(case["move"]) == 5, name
+        assert case["move"][4] not in _PROMOTION_LETTERS, name
+    elif tag == "move-uppercase-from":
+        assert case["move"][0].isupper(), name
+    elif tag == "move-trailing-space":
+        assert case["move"] != case["move"].strip(), name
+    elif tag == "record-extra-field":
+        assert any(set(rec) - _EDGE_FIELDS
+                   for rec in case["right_records"]), name
+    elif tag == "clocks-not-normalized":
+        assert any(not rec["from_snapshot_fen"].endswith(" 0 1")
+                   for rec in case["right_records"]), name
+    elif tag == "conflicting-target":
+        assert any(op[0] == case["variant"]
+                   and op[1] == case["move"]
+                   and op[2] == case["from_snapshot_fen"]
+                   and op[3] != case["to_snapshot_fen"]
+                   for op in case["setup"]), name
+    elif tag == "batch-internal-conflict":
+        recs = case["right_records"]
+        assert len(recs) == 2, name
+        a, b = recs
+        assert (a["variant"], a["move"],
+                a["from_snapshot_fen"]) == (
+                    b["variant"], b["move"],
+                    b["from_snapshot_fen"]), name
+        assert a["to_snapshot_fen"] != b["to_snapshot_fen"], name
+    else:  # pragma: no cover - manifest typo guard
+        raise AssertionError(f"unknown scenario {tag!r}")
+
+
 def _validate_structure(cases):
     assert set(cases) == TOP_KEYS
     # the fixture-format version is pinned exactly: an int equal
@@ -225,14 +297,36 @@ def _validate_structure(cases):
                 keys = (HAPPY_INSERT_KEYS if kind == "inserts"
                         else HAPPY_MERGE_KEYS)
                 assert set(case) == keys, case["name"]
-                _assert_scenario(case, scenario)
+                # fail closed: a substituted row lacking the
+                # scenario's expected data shape is a
+                # STRUCTURAL failure, never a raw escape
+                try:
+                    _assert_scenario(case, scenario)
+                except AssertionError:
+                    raise
+                except Exception as exc:
+                    raise AssertionError(
+                        f"{case['name']}: scenario "
+                        f"{scenario!r} not realizable "
+                        f"({exc!r})") from exc
             elif section == "malformed":
-                failure, defect, repair = want
+                failure, defect, repair, tag = want
                 assert case["expect_failure"] == failure, (
                     case["name"])
                 assert case["defect"] == defect, case["name"]
                 assert set(case["minimal_repair"]) == {repair}, (
                     case["name"])
+                # fail closed: a substituted row lacking the
+                # scenario's expected data shape is a
+                # STRUCTURAL failure, never a raw escape
+                try:
+                    _assert_malformed_scenario(case, tag)
+                except AssertionError:
+                    raise
+                except Exception as exc:
+                    raise AssertionError(
+                        f"{case['name']}: scenario {tag!r} not "
+                        f"realizable ({exc!r})") from exc
                 if case["kind"] == "insert":
                     assert set(case) == INSERT_KEYS, case["name"]
                 elif case["kind"] == "insert-with-setup":
@@ -601,3 +695,25 @@ def test_mutant_intra_failure_class_malformed_substitution():
                                      name=case["name"])
     with pytest.raises(AssertionError):
         _validate_structure(m)
+
+
+def test_exhaustive_pairwise_intra_section_substitution():
+    """The standing scan: EVERY ordered donor/recipient pair in
+    EVERY section, donor content under the recipient's name,
+    must fail structure validation."""
+    for section in MANIFESTS:
+        rows = CASES[section]
+        for i, recipient in enumerate(rows):
+            for j, donor in enumerate(rows):
+                if i == j:
+                    continue
+                m = copy.deepcopy(CASES)
+                m[section][i] = dict(copy.deepcopy(donor),
+                                     name=recipient["name"])
+                try:
+                    _validate_structure(m)
+                except AssertionError:
+                    continue
+                raise AssertionError(
+                    f"{section}: {donor['name']!r} substitutes "
+                    f"for {recipient['name']!r} undetected")
