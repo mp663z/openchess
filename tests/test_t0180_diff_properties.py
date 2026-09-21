@@ -153,11 +153,9 @@ def test_process_control_escape_is_not_caught_or_rewritten(monkeypatch):
 
 
 def test_property_file_has_no_tests_package_imports():
-    from pathlib import Path
-
     from tools.production_test_dependency_lint import lint
 
-    lint(Path(__file__))
+    lint(__file__)
 
 
 def test_repository_dependency_lint_detects_all_import_mutants():
@@ -238,6 +236,14 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         (
             "x = 'test_t0176_diff_contract'\n"
             "monkeypatch.setattr(f'tests.{x}.X', 1, raising=False)"
+        ),
+        (
+            "from pathlib import Path\n"
+            "Path('tests/test_t0176_diff_contract.py').read_text()"
+        ),
+        (
+            "from pathlib import Path as P\n"
+            "P('tests/test_t0176_diff_contract.py').read_bytes()"
         ),
     ]
     for mutant in mutants:

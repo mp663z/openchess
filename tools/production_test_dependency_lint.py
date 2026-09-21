@@ -16,7 +16,6 @@ _ALLOWED_FROM_IMPORTS = {
     "__future__": {"annotations"},
     "graph": {"diff"},
     "graph.node": {"make_record", "record_identity"},
-    "pathlib": {"Path"},
     "tools.production_test_dependency_lint": {"findings", "lint"},
     "tools.variant_runtime": {"VariantError"},
 }
@@ -128,10 +127,11 @@ def findings(source: str):
     return found
 
 
-def lint(path: Path):
-    hits = findings(path.read_text())
+def lint(path: str | Path):
+    checked_path = Path(path)
+    hits = findings(checked_path.read_text())
     if hits:
-        raise DependencyError(f"{path}: forbidden test or dynamic dependency")
+        raise DependencyError(f"{checked_path}: forbidden test or dynamic dependency")
 
 
 def lint_protected_paths(root: Path = Path(".")):
