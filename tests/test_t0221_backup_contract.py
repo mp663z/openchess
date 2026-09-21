@@ -138,7 +138,11 @@ class BackupEngine:
         frozen_state = {key: dict(rec)
                         for key, rec in replayed["state"].items()}
         try:
-            bundle = self._serialize(frozen_state)
+            # DETACHED argument copy: the serializer never sees the
+            # frozen snapshot object - mutating the argument is inert
+            bundle = self._serialize(
+                {key: dict(rec)
+                 for key, rec in frozen_state.items()})
         finally:
             WalEngine._restore_log(log, saved_container,
                                    saved_entries)
@@ -402,6 +406,32 @@ def test_serializer_mutating_returned_state_snapshot():
     receipt = BackupEngine(serializer).backup(log)
     assert log == before
     assert _BACKUP_RE.fullmatch(receipt["backup_id"])
+
+
+def test_serializer_mutating_its_state_argument():
+    """The serializer computes the honest bundle, THEN mutates the
+    state argument it was handed (record corruption, injection,
+    clear): the receipt is EXACTLY the honest one, the caller's
+    log is unchanged, and the receipt verifies and restores."""
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    before = copy.deepcopy(log)
+    honest = _engine().backup(copy.deepcopy(log))
+
+    def serializer(state):
+        bundle = serialize_bundle(state)
+        for rec in state.values():
+            rec["digest"] = "pdv1:" + "f" * 64
+        state["injected"] = {"variant": "standard",
+                             "digest": "pdv1:" + "9" * 64,
+                             "snapshot_fen": STARTPOS}
+        state.clear()
+        return bundle
+
+    receipt = BackupEngine(serializer).backup(log)
+    assert receipt == honest
+    assert log == before
+    # the receipt is fully consistent downstream
+    assert _engine().verify(receipt) is not None
 
 
 # -- verify: hostile receipts ---------------------------------------------------
