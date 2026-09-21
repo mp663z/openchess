@@ -32,6 +32,7 @@ repo_areas:
   docs: agpl
   evidence: agpl
   ingest: agpl
+  requirements: agpl
   scope: agpl
   tasks: agpl
   tests: agpl
