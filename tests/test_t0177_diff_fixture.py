@@ -34,8 +34,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tests.test_t0176_diff_contract import (  # noqa: E402
+    _DIGEST_RE,
     DiffEngine,
     DiffError,
+    state_id,
 )
 from tools.diff_contract_lint import (  # noqa: E402
     CONTRACT,
@@ -96,20 +98,33 @@ BOUNDARY_MANIFEST = {
     "apply-to-empty-base": ("apply", "empty-base"),
 }
 MALFORMED_MANIFEST = {
-    "diff-missing-section": (MDR, "set_section"),
-    "diff-bad-id-grammar": (MDR, "set_id"),
-    "diff-section-not-mapping": (MDR, "set_section"),
-    "diff-added-record-bad-digest": (MDR, "set_section"),
-    "diff-changed-witness-equal-sides": (MDR, "set_section"),
-    "diff-section-overlap": (MDR, "set_section"),
-    "diff-nonempty-equal-ids": (MDR, "set_id"),
-    "diff-empty-unequal-ids": (DT, "set_id"),
-    "apply-conflicting-base-id": (CB, "replace_base"),
-    "apply-added-identity-already-present": (CB, "replace_diff"),
-    "apply-removed-identity-unknown": (UI, "replace_diff"),
-    "apply-removed-content-mismatch": (CB, "set_section"),
-    "apply-divergent-target-id": (DT, "set_id"),
-    "compute-state-not-mapping": (MDR, "replace_state"),
+    "diff-missing-section": (MDR, "set_section",
+                             "missing-section"),
+    "diff-bad-id-grammar": (MDR, "set_id", "bad-id-grammar"),
+    "diff-section-not-mapping": (MDR, "set_section",
+                                 "section-non-mapping"),
+    "diff-added-record-bad-digest": (MDR, "set_section",
+                                     "bad-linked-digest"),
+    "diff-changed-witness-equal-sides": (MDR, "set_section",
+                                         "equal-changed-sides"),
+    "diff-section-overlap": (MDR, "set_section",
+                             "cross-section-overlap"),
+    "diff-nonempty-equal-ids": (MDR, "set_id",
+                                "nonempty-equal-ids"),
+    "diff-empty-unequal-ids": (DT, "set_id",
+                               "empty-unequal-ids"),
+    "apply-conflicting-base-id": (CB, "replace_base",
+                                  "base-id-conflict"),
+    "apply-added-identity-already-present": (CB, "replace_diff",
+                                             "added-identity-present"),
+    "apply-removed-identity-unknown": (UI, "replace_diff",
+                                       "removed-identity-absent"),
+    "apply-removed-content-mismatch": (CB, "set_section",
+                                       "removed-content-mismatch"),
+    "apply-divergent-target-id": (DT, "set_id",
+                                  "divergent-target-id"),
+    "compute-state-not-mapping": (MDR, "replace_state",
+                                  "state-non-mapping"),
 }
 ROLLBACK_MANIFEST = {
     "rejected-conflicting-base-then-valid-apply": CB,
@@ -294,6 +309,78 @@ def _assert_scenario(case, scenario):
         raise AssertionError(f"unknown scenario {scenario!r}")
 
 
+def _diff_sections(diff):
+    return (diff["added"], diff["removed"], diff["changed"])
+
+
+def _assert_malformed_scenario(case, tag):
+    """The case data REALLY realizes the named defect locus -
+    a same-tuple substituted row can never satisfy another
+    row's scenario."""
+    name = case["name"]
+    diff = case.get("diff")
+    if tag == "missing-section":
+        missing = [sec for sec in ("added", "removed", "changed")
+                   if sec not in diff]
+        assert len(missing) == 1, name
+    elif tag == "bad-id-grammar":
+        assert _ID_RE.fullmatch(diff["base_id"]) is None or \
+            _ID_RE.fullmatch(diff["target_id"]) is None, name
+    elif tag == "section-non-mapping":
+        assert any(not isinstance(diff[sec], dict)
+                   for sec in ("added", "removed", "changed")), \
+            name
+    elif tag == "bad-linked-digest":
+        assert any(_DIGEST_RE.fullmatch(rec["digest"]) is None
+                   for rec in diff["added"].values()), name
+    elif tag == "equal-changed-sides":
+        assert any(wit["base"] == wit["target"]
+                   for wit in diff["changed"].values()), name
+    elif tag == "cross-section-overlap":
+        added, removed, changed = _diff_sections(diff)
+        assert (set(added) & set(removed)) or \
+            (set(added) & set(changed)) or \
+            (set(removed) & set(changed)), name
+        # ... and ONLY the overlap is wrong: every record digest
+        # is grammar-valid and every changed witness diverges, so
+        # a bad-digest or equal-sides row cannot fill this slot
+        for sec in (added, removed):
+            for rec in sec.values():
+                assert _DIGEST_RE.fullmatch(rec["digest"]), name
+        for wit in changed.values():
+            assert wit["base"] != wit["target"], name
+    elif tag == "nonempty-equal-ids":
+        added, removed, changed = _diff_sections(diff)
+        assert (added or removed or changed), name
+        assert diff["base_id"] == diff["target_id"], name
+    elif tag == "empty-unequal-ids":
+        added, removed, changed = _diff_sections(diff)
+        assert not (added or removed or changed), name
+        assert diff["base_id"] != diff["target_id"], name
+    elif tag == "base-id-conflict":
+        assert state_id(case["base"]) != diff["base_id"], name
+    elif tag == "added-identity-present":
+        assert set(diff["added"]) & set(case["base"]), name
+    elif tag == "removed-identity-absent":
+        assert set(diff["removed"]) - set(case["base"]), name
+    elif tag == "removed-content-mismatch":
+        assert any(case["base"][i] != rec
+                   for i, rec in diff["removed"].items()
+                   if i in case["base"]), name
+    elif tag == "divergent-target-id":
+        staged = {k: v for k, v in case["base"].items()
+                  if k not in diff["removed"]}
+        staged.update(diff["added"])
+        for i, wit in diff["changed"].items():
+            staged[i] = wit["target"]
+        assert state_id(staged) != diff["target_id"], name
+    elif tag == "state-non-mapping":
+        assert not isinstance(case["base"], dict) or \
+            not isinstance(case["target"], dict), name
+    else:  # pragma: no cover - manifest typo guard
+        raise AssertionError(f"unknown scenario {tag!r}")
+
+
 def _validate_structure(cases):
     assert set(cases) == TOP_KEYS
     # the fixture-format version is pinned exactly: an int equal
@@ -326,10 +413,21 @@ def _validate_structure(cases):
                 assert case["kind"] == kind, case["name"]
                 _assert_scenario(case, scenario)
             elif section == "malformed":
-                failure, repair_form = manifest[case["name"]]
+                failure, repair_form, tag = manifest[case["name"]]
                 assert case["expect_failure"] == failure, case["name"]
                 assert set(case["minimal_repair"]) == {repair_form}, (
                     case["name"])
+                # fail closed: a substituted row lacking the
+                # scenario's expected data shape is a STRUCTURAL
+                # failure, never a raw escape
+                try:
+                    _assert_malformed_scenario(case, tag)
+                except AssertionError:
+                    raise
+                except Exception as exc:
+                    raise AssertionError(
+                        f"{case['name']}: scenario {tag!r} not "
+                        f"realizable ({exc!r})") from exc
             else:
                 assert case["expect_failure"] == manifest[case["name"]], (
                     case["name"])
@@ -803,3 +901,28 @@ def test_mutant_intra_failure_class_malformed_substitution():
                                      name=case["name"])
     with pytest.raises(AssertionError):
         _validate_structure(m)
+
+
+def test_exhaustive_pairwise_intra_section_substitution():
+    """The standing scan: EVERY ordered donor/recipient pair in
+    EVERY section, donor content under the recipient's name,
+    must fail structure validation. Subsumes the verifier's
+    same-tuple pairs (diff-missing-section ->
+    diff-section-not-mapping and every other (MDR,set_section)
+    pair): the scenario tags discriminate them."""
+    for section in MANIFESTS:
+        rows = CASES[section]
+        for i, recipient in enumerate(rows):
+            for j, donor in enumerate(rows):
+                if i == j:
+                    continue
+                m = copy.deepcopy(CASES)
+                m[section][i] = dict(copy.deepcopy(donor),
+                                     name=recipient["name"])
+                try:
+                    _validate_structure(m)
+                except AssertionError:
+                    continue
+                raise AssertionError(
+                    f"{section}: {donor['name']!r} substitutes "
+                    f"for {recipient['name']!r} undetected")
