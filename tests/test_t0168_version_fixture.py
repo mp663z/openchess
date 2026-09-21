@@ -82,7 +82,7 @@ PAYLOAD_DIGESTS = {
     },
     "boundary": {
         "equal-parent-timestamp": "e8603bc75c4fd7042df7addeee0b45d1553a98e512ab71be751e9beb3461a8ba",  # noqa: E501
-        "duplicate-parents-canonicalized": "bd677730fb7eafb6a23237c994c395eb46104b267e9f424da899e9fcc5deea2a",  # noqa: E501
+        "duplicate-parents-canonicalized": "af6ba4c874ea306f7939ac3b0185503a7f765a57a05d6d601e300919c73f7e26",  # noqa: E501
         "leap-day-valid": "22d1a636fd0a7d80403a240b627a61ae06568bcc4376763d878db33547c645c3",
         "parent-order-canonicalized": "b92d1cdde7c332478a1604a9c48711713bcf998f9de7641c9bd1270cbf51de2e",  # noqa: E501
     },
@@ -148,8 +148,18 @@ def test_boundary():
     rows = _rows("boundary")
     eq = rows["equal-parent-timestamp"]
     assert eq["record"]["created_at"] == eq["initial"][0]["created_at"]
-    dup = rows["duplicate-parents-canonicalized"]["record"]["parent_ids"]
-    assert len(dup) > len(set(dup))
+    duplicate_row = rows["duplicate-parents-canonicalized"]
+    supplied_dup = copy.deepcopy(duplicate_row["record"]["parent_ids"])
+    assert supplied_dup != sorted(set(supplied_dup))
+    original_row = copy.deepcopy(duplicate_row)
+    dup_store = _load(duplicate_row["initial"])
+    dup_stored = dup_store.insert(copy.deepcopy(duplicate_row["record"]))
+    canonical = sorted(set(supplied_dup))
+    assert dup_stored["parent_ids"] == canonical
+    assert dup_store.records[dup_stored["version_id"]]["parent_ids"] == canonical
+    assert len(canonical) < len(supplied_dup)
+    assert dup_stored["version_id"] == _real_hasher(canonical, dup_stored["graph_digest"])
+    assert duplicate_row == original_row
     assert _valid_timestamp(rows["leap-day-valid"]["record"]["created_at"])
     order_row = rows["parent-order-canonicalized"]
     supplied = order_row["record"]["parent_ids"]
@@ -210,3 +220,15 @@ def test_parent_order_row_kills_store_order_mutant():
     mutant_result["parent_ids"] = list(supplied)
     honest = _load(row["initial"]).insert(copy.deepcopy(row["record"]))
     assert mutant_result["parent_ids"] != honest["parent_ids"]
+
+
+def test_duplicate_parent_row_kills_non_deduplicating_mutants():
+    row = _rows("boundary")["duplicate-parents-canonicalized"]
+    supplied = copy.deepcopy(row["record"]["parent_ids"])
+    canonical = sorted(set(supplied))
+    honest = _load(row["initial"]).insert(copy.deepcopy(row["record"]))
+    for mutant_parents in (list(supplied), sorted(supplied)):
+        mutant = copy.deepcopy(row["record"])
+        mutant["version_id"] = _real_hasher(canonical, mutant["graph_digest"])
+        mutant["parent_ids"] = mutant_parents
+        assert mutant["parent_ids"] != honest["parent_ids"]
