@@ -108,18 +108,24 @@ class _AcceptAll:
 
 
 class _PartialCommit:
+    """Black-box mutant that leaks rejected rows through the public views."""
+
     def __init__(self, real):
         self.real = real
+        self.injected = []
 
     def insert(self, record):
         try:
             return self.real.insert(record)
         except ProvenanceError:
-            self.real.by_key[("injected",)] = copy.deepcopy(record)
+            self.injected.append(copy.deepcopy(record))
             raise
 
+    def records(self):
+        return [*self.real.records(), *copy.deepcopy(self.injected)]
+
     def serialize(self):
-        return self.real.serialize()
+        return json.dumps(self.records(), sort_keys=True, separators=(",", ":"))
 
 
 def test_accept_all_mutant_is_killed_by_every_malformed_case():
