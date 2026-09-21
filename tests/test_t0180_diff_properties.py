@@ -227,6 +227,18 @@ def test_repository_dependency_lint_detects_all_import_mutants():
             "d.re.enum.sys.modules['os'].system('python -c pass')"
         ),
         "from graph import diff as d\nd.hashlib.sha256(b'x')",
+        (
+            "monkeypatch.setattr("
+            "'tests.' + 'test_t0176_diff_contract.X', 1, raising=False)"
+        ),
+        (
+            "monkeypatch.delattr("
+            "'.'.join(['tests','test_t0176_diff_contract','X']), raising=False)"
+        ),
+        (
+            "x = 'test_t0176_diff_contract'\n"
+            "monkeypatch.setattr(f'tests.{x}.X', 1, raising=False)"
+        ),
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

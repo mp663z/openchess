@@ -98,14 +98,24 @@ def findings(source: str):
             ):
                 found.append(node)
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            is_dotted_resolution = node.func.attr in {"setattr", "delattr"}
+            method = node.func.attr
             target = node.args[0] if node.args else None
-            targets_tests = (
-                isinstance(target, ast.Constant)
-                and isinstance(target.value, str)
-                and (target.value == "tests" or target.value.startswith("tests."))
+            # pytest MonkeyPatch object forms carry a separate attribute name:
+            # setattr(object, name, value), delattr(object, name). Their dotted
+            # string forms do not. Unresolved dotted targets fail closed.
+            is_string_form = (method == "setattr" and len(node.args) < 3) or (
+                method == "delattr" and len(node.args) < 2
             )
-            if is_dotted_resolution and targets_tests:
+            literal_target = target.value if isinstance(target, ast.Constant) else None
+            targets_tests = isinstance(literal_target, str) and (
+                literal_target == "tests" or literal_target.startswith("tests.")
+            )
+            unresolved_string_target = is_string_form and not isinstance(
+                literal_target, str
+            )
+            if method in {"setattr", "delattr"} and (
+                targets_tests or unresolved_string_target
+            ):
                 found.append(node)
         else:
             forbidden_name = isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES
