@@ -152,3 +152,41 @@ def test_record_scalar_subclasses_are_rejected_before_use_or_persistence():
             assert exc.value.failure_class == "malformed_version_record"
             assert store.records == {}
             assert store.root_id is None
+
+
+class QuietStore(VersionStore):
+    pass
+
+
+class EvilStore(VersionStore):
+    def canonical_view(self):
+        raise RuntimeError("hostile method")
+
+    @property
+    def records(self):
+        raise RuntimeError("hostile property")
+
+
+def test_merge_rejects_store_subclasses_without_invoking_them():
+    dst = VersionStore()
+    chain(dst, 2)
+    before = copy.deepcopy((dst.records, dst.root_id))
+    for source in (QuietStore(), EvilStore()):
+        with pytest.raises(VersionError) as exc:
+            dst.merge(source)
+        assert exc.value.failure_class == "malformed_version_record"
+        assert (dst.records, dst.root_id) == before
+
+
+def test_corrupted_exact_store_merge_is_typed_and_atomic():
+    dst = VersionStore()
+    chain(dst, 2)
+    before = copy.deepcopy((dst.records, dst.root_id))
+    source = VersionStore()
+    chain(source, 2)
+    victim = sorted(source._records)[-1]
+    source._records[victim]["parent_ids"] = RaisingList()
+    with pytest.raises(VersionError) as exc:
+        dst.merge(source)
+    assert exc.value.failure_class == "malformed_version_record"
+    assert (dst.records, dst.root_id) == before

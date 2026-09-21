@@ -140,12 +140,15 @@ class VersionStore:
         return sorted(self._records)
 
     def merge(self, other):
-        if not isinstance(other, VersionStore):
+        if type(other) is not VersionStore:
             raise VersionError("malformed_version_record")
         staged = VersionStore()
         staged._records = copy.deepcopy(self._records)
         staged._root_id = self._root_id
-        pending = [copy.deepcopy(other._records[k]) for k in other.canonical_view()]
+        try:
+            pending = [copy.deepcopy(other._records[key]) for key in sorted(other._records)]
+        except BaseException as exc:
+            raise VersionError("malformed_version_record") from exc
         for r in pending:
             staged._validate(r)
         while pending:
