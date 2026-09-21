@@ -8,23 +8,23 @@ import random
 import pytest
 
 from graph import diff
-from tests.test_t0113_position_digest_contract import AFTER_E4, LEGAL_EP, STARTPOS, digest_fen
-from tests.test_t0122_transposition_node_contract import (
-    KINGS,
-    _docs,
-    _make_record,
-    _record_identity,
-)
+from graph.node import make_record, record_identity
 
-FENS = [STARTPOS, AFTER_E4, LEGAL_EP, KINGS, "8/8/8/8/8/8/8/K6k w - - 0 1"]
+FENS = [
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+    "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+    "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+    "8/8/8/8/8/8/8/K6k w - - 0 1",
+]
 
 
 def _record(fen):
-    return _make_record(*_docs(), digest_fen, "standard", fen)
+    return make_record("standard", fen)
 
 
 def _key(record):
-    return repr(_record_identity(*_docs(), record))
+    return record_identity(record)
 
 
 def _state(indices):
@@ -63,7 +63,7 @@ def test_noop_exactness_and_id_agreement():
 
 @pytest.mark.parametrize("section", ["added", "removed"])
 def test_section_record_semantic_digest_substitution_rejected(section):
-    a, b = _record(STARTPOS), _record(KINGS)
+    a, b = _record(FENS[0]), _record(FENS[3])
     base, target = ({}, {_key(a): a}) if section == "added" else ({_key(a): a}, {})
     record = diff.compute(base, target)
     record[section][_key(a)]["digest"] = b["digest"]
@@ -80,7 +80,7 @@ def test_whole_base_variations_reject_atomically():
     variants = [
         _state([0]),
         _state([0, 1, 3]),
-        {_key(_record(STARTPOS)): _record(STARTPOS), _key(_record(KINGS)): _record(KINGS)},
+        {_key(_record(FENS[0])): _record(FENS[0]), _key(_record(FENS[3])): _record(FENS[3])},
     ]
     for candidate in variants:
         before = copy.deepcopy(candidate)
@@ -108,3 +108,20 @@ def test_compute_hostile_inputs_total_typed(hostile):
         with pytest.raises(diff.DiffError) as caught:
             diff.compute(*args)
         assert caught.value.failure_class == "malformed_diff_record"
+
+
+def test_property_file_has_no_tests_package_imports():
+    import ast
+    from pathlib import Path
+
+    tree = ast.parse(Path(__file__).read_text())
+    assert not any(
+        isinstance(node, (ast.Import, ast.ImportFrom))
+        and (
+            (isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tests"))
+            or (
+                isinstance(node, ast.Import) and any(a.name.startswith("tests") for a in node.names)
+            )
+        )
+        for node in ast.walk(tree)
+    )
