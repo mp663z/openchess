@@ -8,8 +8,12 @@ Incremental restore and WAL log reconstruction are explicitly
 not scope.
 
 ## Model
-- Receipt: exact three-field record {restore_id, backup_id,
-  state_id} plus the restored state. restore_id is
+- Result: exact FOUR-field record {restore_id, backup_id,
+  state_id, state} - the contract's normative record includes
+  state (an exact built-in dict mapping exact built-in string
+  identities to validated exact node records, pinned in
+  record.field_definitions.state), and restore's output keys
+  equal that normative field set exactly. restore_id is
   content-addressed (rst1: sha256 over backup_id + state_id),
   DERIVED, never caller-supplied.
 - restore(receipt): the receipt verifies through the LINKED

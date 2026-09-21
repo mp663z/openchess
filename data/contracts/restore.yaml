@@ -9,8 +9,13 @@ contract:
     owns: restore-receipt-semantics-and-state-reconstruction
     not_scope: incremental-restore-or-log-reconstruction
   record:
-    fields: [restore_id, backup_id, state_id]
+    fields: [restore_id, backup_id, state_id, state]
     exact: true
+    field_definitions:
+      state:
+        kind: restored-state-snapshot
+        type: exact-built-in-dict-mapping-exact-built-in-string-identities-to-validated-exact-node-records
+        source: parsed-content-validated-record-by-record-with-recomputed-state-id
   identifiers:
     restore_id:
       kind: content-addressed-restore-receipt-id

@@ -51,6 +51,7 @@ from tools.restore_contract_lint import (  # noqa: E402
     CONTRACT,
     ERROR_ENUM,
     FAILURE_MAPPING,
+    RECORD,
     lint,
 )
 from tools.variant_contract_lint import ContractError  # noqa: E402
@@ -198,7 +199,7 @@ def test_happy_restore_roundtrip():
                        ("delete", STARTPOS))
     before = copy.deepcopy(receipt)
     result = engine.restore(receipt)
-    assert set(result) == set(_FIELDS) | {"state"}
+    assert set(result) == set(_FIELDS)  # exact four-field record
     assert _RESTORE_RE.fullmatch(result["restore_id"])
     assert result["backup_id"] == receipt["backup_id"]
     assert result["state_id"] == receipt["state_id"]
@@ -207,6 +208,35 @@ def test_happy_restore_roundtrip():
                                    ("delete", STARTPOS)))
     assert result["state"] == replayed["state"]
     assert receipt == before  # never mutated
+
+
+def test_result_shape_matches_normative_record_exactly():
+    """LINKAGE: restore's output keys equal the contract's
+    normative exact record field set - four fields, state
+    included, no out-of-band union; the state field is the
+    pinned exact built-in mapping."""
+    assert list(_CC["record"]["fields"]) == RECORD["fields"]
+    assert _CC["record"]["exact"] is True
+    assert RECORD["exact"] is True
+    assert _CC["record"]["field_definitions"]["state"] == \
+        RECORD["field_definitions"]["state"]
+    assert RECORD["field_definitions"]["state"]["type"] == \
+        "exact-built-in-dict-mapping-exact-built-in-string-" \
+        "identities-to-validated-exact-node-records"
+    result = _engine().restore(
+        _receipt(("put", STARTPOS), ("put", KINGS)))
+    assert set(result) == set(_FIELDS)  # output keys exact
+    assert len(result) == len(_FIELDS)  # no hidden extra keys
+    # the state field honors its pinned structured definition
+    assert type(result["state"]) is dict
+    assert all(type(key) is str and type(rec) is dict
+               for key, rec in result["state"].items())
+    # consumer probes: a consumer generated from the normative
+    # exact record accepts the engine output, and rejects both
+    # exactly-one-missing and exactly-one-extra shapes
+    for key in _FIELDS:
+        assert set(result) - {key} != set(_FIELDS)
+    assert set(result) | {"stray"} != set(_FIELDS)
 
 
 def test_empty_backup_restore():
@@ -534,6 +564,14 @@ def _mutants():
         ["restore_id"])
     add("record exact drift", ["contract", "record", "exact"],
         False)
+    add("record drops state (implementation returns it)",
+        ["contract", "record", "fields"],
+        ["restore_id", "backup_id", "state_id"])
+    add("record state definition dropped",
+        ["contract", "record", "field_definitions"], {})
+    add("record state type drift",
+        ["contract", "record", "field_definitions", "state",
+         "type"], "any-mapping")
     add("restore id grammar drift",
         ["contract", "identifiers", "restore_id", "grammar"],
         "^.*$")

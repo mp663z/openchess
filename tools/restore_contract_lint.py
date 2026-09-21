@@ -30,8 +30,18 @@ ROLE = {
     "not_scope": "incremental-restore-or-log-reconstruction",
 }
 RECORD = {
-    "fields": ["restore_id", "backup_id", "state_id"],
+    "fields": ["restore_id", "backup_id", "state_id", "state"],
     "exact": True,
+    "field_definitions": {
+        "state": {
+            "kind": "restored-state-snapshot",
+            "type": "exact-built-in-dict-mapping-exact-built-in-"
+                    "string-identities-to-validated-exact-node-"
+                    "records",
+            "source": "parsed-content-validated-record-by-record-"
+                      "with-recomputed-state-id",
+        },
+    },
 }
 IDENTIFIERS = {
     "restore_id": {
