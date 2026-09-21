@@ -120,3 +120,77 @@ def test_records_are_append_only_isolated_and_jsonl_deterministic():
     view[0]["outcome"] = "tampered"
     assert first.records[0]["outcome"] == "accept"
     assert [r["seq"] for r in first.records] == [0, 1]
+
+
+def test_hostile_error_attributes_never_replace_original_error():
+    class Evil(VersionError):
+        def __getattribute__(self, name):
+            if name in {"failure_class", "code", "witness"}:
+                raise KeyboardInterrupt(name)
+            return super().__getattribute__(name)
+
+    sentinel = Evil("malformed_version_record")
+    calls = []
+
+    def fail(record):
+        calls.append(record)
+        raise sentinel
+
+    tracer = VersionTracer(VersionStore(), insert_fn=fail)
+    with pytest.raises(Evil) as caught:
+        tracer.insert({"x": 1})
+    assert caught.value is sentinel and len(calls) == 1
+    rec = tracer.records[-1]
+    assert rec["outcome"] == "reject"
+    assert rec["failure_class"] == {"__opaque__": "attribute-KeyboardInterrupt"}
+
+
+def test_hostile_store_count_does_not_skip_wrapped_operation():
+    class Hostile(dict):
+        def __len__(self):
+            raise SystemExit("len")
+
+    store = VersionStore()
+    store._records = Hostile()
+    sentinel = object()
+    calls = []
+
+    def succeed(record):
+        calls.append(record)
+        return sentinel
+
+    tracer = VersionTracer(store, insert_fn=succeed)
+    assert tracer.insert({}) is sentinel
+    assert len(calls) == 1
+    assert tracer.records[-1]["versions_before"] == {"__opaque__": "records-Hostile"}
+
+
+@pytest.mark.parametrize("kind", ["reject", "crash"])
+def test_partial_mutation_failure_records_post_state_and_preserves_identity(kind):
+    store = VersionStore()
+    sentinel = VersionError("root_violation") if kind == "reject" else RuntimeError("x")
+
+    def mutate(record):
+        store._records["junk"] = {}
+        store._root_id = "junk"
+        raise sentinel
+
+    tracer = VersionTracer(store, insert_fn=mutate)
+    with pytest.raises(type(sentinel)) as caught:
+        tracer.insert({})
+    assert caught.value is sentinel
+    rec = tracer.records[-1]
+    assert rec["root_after"] == "junk" and rec["versions_after"] == 1
+    assert rec["version_delta"] == 1 and rec["rollback_preserved"] is False
+
+
+def test_faulting_trace_container_is_recovered_without_changing_result():
+    class BadList(list):
+        def append(self, value):
+            raise SystemExit("append")
+
+    sentinel = object()
+    tracer = VersionTracer(VersionStore(), insert_fn=lambda record: sentinel)
+    tracer._trace = BadList()
+    assert tracer.insert({}) is sentinel
+    assert tracer.records[-1]["outcome"] == "accept"
