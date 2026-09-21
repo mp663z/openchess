@@ -265,6 +265,18 @@ def test_repository_dependency_lint_detects_all_import_mutants():
         "coroutine.cr_frame.f_builtins",
         "async_generator.ag_frame.f_globals",
         "code.co_consts",
+        (
+            "def test_escape(request):\n"
+            "    request.config.pluginmanager.import_plugin('tests.x')"
+        ),
+        (
+            "def test_escape(pytestconfig):\n"
+            "    pytestconfig.pluginmanager.import_plugin('tests.x')"
+        ),
+        (
+            "def test_escape(pytestconfig):\n"
+            "    pytestconfig.pluginmanager.consider_module('tests.x')"
+        ),
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

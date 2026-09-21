@@ -49,6 +49,7 @@ _FORBIDDEN_ATTRIBUTES = {
     "import_module",
     "vars",
 }
+_ALLOWED_TEST_PARAMETERS = {"fen", "hostile", "monkeypatch", "section", "seed", "variant"}
 _FORBIDDEN_ATTRIBUTE_PREFIXES = (
     "ag_",
     "co_",
@@ -72,7 +73,17 @@ def findings(source: str):
     found = []
     attribute_roots = {}
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith(
+            "test_"
+        ):
+            parameters = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+            if node.args.vararg:
+                parameters.append(node.args.vararg)
+            if node.args.kwarg:
+                parameters.append(node.args.kwarg)
+            if any(parameter.arg not in _ALLOWED_TEST_PARAMETERS for parameter in parameters):
+                found.append(node)
+        elif isinstance(node, ast.Import):
             for alias in node.names:
                 allowed_attributes = _ALLOWED_DIRECT_IMPORTS.get(alias.name)
                 if allowed_attributes is None:
