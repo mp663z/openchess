@@ -5012,10 +5012,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "3d60e5aeea0021c8c2d1617f530ee580840a2a5e",
+   "evidence_manifest": "evidence/T0239.md"
   },
   {
    "id": "T0240",
