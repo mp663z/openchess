@@ -100,6 +100,13 @@ class BackupEngine:
             _fail("divergent_snapshot")
         if type(out) is not str:
             _fail("divergent_snapshot")
+        # the pinned backup-id serialization is UTF-8: a string
+        # that cannot encode (e.g. lone surrogates) fails closed
+        # HERE, inside the boundary - never as a raw escape later
+        try:
+            out.encode("utf-8")
+        except UnicodeEncodeError:
+            _fail("divergent_snapshot")
         return out
 
     @staticmethod
@@ -329,8 +336,16 @@ def _hostile_serializers():
     def evil_str(state):
         return EvilStr("bundle")
 
+    def lone_high_surrogate(state):
+        return "\ud800"
+
+    def lone_low_surrogate(state):
+        return "\udfff"
+
     return [("raising", raising), ("bad-type", bad_type),
-            ("bad-none", bad_none), ("evil-str", evil_str)]
+            ("bad-none", bad_none), ("evil-str", evil_str),
+            ("lone-high-surrogate", lone_high_surrogate),
+            ("lone-low-surrogate", lone_low_surrogate)]
 
 
 @pytest.mark.parametrize("name,serializer", _hostile_serializers(),
