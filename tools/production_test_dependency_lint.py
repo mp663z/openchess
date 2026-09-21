@@ -81,7 +81,14 @@ def findings(source: str):
                 parameters.append(node.args.vararg)
             if node.args.kwarg:
                 parameters.append(node.args.kwarg)
-            if any(parameter.arg not in _ALLOWED_TEST_PARAMETERS for parameter in parameters):
+            invalid_name = any(
+                parameter.arg not in _ALLOWED_TEST_PARAMETERS for parameter in parameters
+            )
+            has_annotation = any(parameter.annotation is not None for parameter in parameters)
+            has_defaults = bool(node.args.defaults) or any(
+                default is not None for default in node.args.kw_defaults
+            )
+            if invalid_name or has_annotation or has_defaults:
                 found.append(node)
         elif isinstance(node, ast.Import):
             for alias in node.names:
@@ -121,6 +128,30 @@ def findings(source: str):
                 found.append(node)
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
             method = node.func.attr
+            is_pytest_mark = (
+                isinstance(node.func.value, ast.Attribute)
+                and isinstance(node.func.value.value, ast.Name)
+                and node.func.value.value.id in attribute_roots
+                and node.func.value.attr == "mark"
+            )
+            indirect = next(
+                (keyword.value for keyword in node.keywords if keyword.arg == "indirect"),
+                None,
+            )
+            param_names = node.args[0] if node.args else None
+            valid_param_names = (
+                isinstance(param_names, ast.Constant)
+                and isinstance(param_names.value, str)
+                and all(
+                    name.strip() in _ALLOWED_TEST_PARAMETERS
+                    for name in param_names.value.split(",")
+                )
+            )
+            if is_pytest_mark and (
+                method != "parametrize" or indirect is not None or not valid_param_names
+            ):
+                found.append(node)
+                continue
             target = node.args[0] if node.args else None
             # pytest MonkeyPatch object forms carry a separate attribute name:
             # setattr(object, name, value), delattr(object, name). Their dotted

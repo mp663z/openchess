@@ -277,6 +277,20 @@ def test_repository_dependency_lint_detects_all_import_mutants():
             "def test_escape(pytestconfig):\n"
             "    pytestconfig.pluginmanager.consider_module('tests.x')"
         ),
+        "import pytest\ndef test_escape(seed=pytest):\n    seed.main(['tests'])",
+        "import random\ndef test_escape(seed=random):\n    seed._os.system('pass')",
+        "from graph import diff\ndef test_escape(seed=diff):\n    seed.re.search('x','x')",
+        "def test_escape(seed: object = 1):\n    pass",
+        "import pytest\n@pytest.mark.usefixtures('request')\ndef test_escape():\n    pass",
+        "import pytest\n@pytest.mark.usefixtures('loader_fixture')\ndef test_escape():\n    pass",
+        (
+            "import pytest\n@pytest.mark.parametrize('seed', [1], indirect=True)\n"
+            "def test_escape(seed):\n    pass"
+        ),
+        (
+            "import pytest\n@pytest.mark.parametrize('request', [1])\n"
+            "def test_escape(seed):\n    pass"
+        ),
     ]
     for mutant in mutants:
         assert findings(mutant), mutant

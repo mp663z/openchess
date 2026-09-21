@@ -32,7 +32,7 @@ def test_ordinary_pytest_and_object_monkeypatch_usage_remain_allowed():
     from tools.production_test_dependency_lint import findings
 
     allowed = [
-        "import pytest\npytest.mark.parametrize('x', [1])",
+        "import pytest\npytest.mark.parametrize('seed', [1])",
         "import pytest\nwith pytest.raises(ValueError):\n    raise ValueError",
         "def f(monkeypatch, node):\n    monkeypatch.setattr(node, 'value', 1)",
     ]
@@ -46,7 +46,7 @@ def test_direct_module_attribute_allowlist_tracks_aliases():
     allowed = [
         "import copy as c\nc.deepcopy({})",
         "import random as rng\nrng.Random(1)",
-        "import pytest as pt\npt.mark.parametrize('x', [1])\npt.raises(ValueError)",
+        "import pytest as pt\npt.mark.parametrize('seed', [1])\npt.raises(ValueError)",
         "import graph.node as node\nnode.make_record('standard', 'fen')",
     ]
     for source in allowed:
