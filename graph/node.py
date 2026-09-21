@@ -3,19 +3,22 @@
 from __future__ import annotations
 
 from graph.position_digest import digest_fen
-from tools.variant_runtime import identity, parse_position
+from tools.variant_runtime import VariantError, identity, parse_position
 
 
 def make_record(variant: str, snapshot_fen: str) -> dict:
-    """Build the exact linked three-field node record from shipped runtimes."""
-    try:
-        position = parse_position(variant, snapshot_fen)
-    except BaseException:
-        parts = snapshot_fen.split(" ")
-        if len(parts) != 6 or parts[3] == "-":
-            raise
-        parts[3] = "-"
-        position = parse_position(variant, " ".join(parts))
+    """Build an exact linked record, failing closed on caller input.
+
+    The supplied semantic FEN fields are never repaired or rewritten. Only the
+    contract-declared non-identity clocks are normalized to ``0 1``.
+    """
+    position = parse_position(variant, snapshot_fen)
+    parts = snapshot_fen.split(" ")
+    if len(parts) == 6 and parts[3] != "-" and parts[4] != "0":
+        raise VariantError(
+            code="malformed_request",
+            message="en-passant snapshot requires zero halfmove clock",
+        )
     projection = identity(position)
     canonical = " ".join(
         (
@@ -27,8 +30,6 @@ def make_record(variant: str, snapshot_fen: str) -> dict:
             "1",
         )
     )
-    # Reparse normalized output, so returned snapshots are exact-valid.
-    parse_position(variant, canonical)
     return {
         "variant": projection["variant"],
         "digest": digest_fen(variant, canonical),

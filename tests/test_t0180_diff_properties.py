@@ -12,7 +12,7 @@ from graph.node import make_record, record_identity
 
 FENS = [
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
     "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
     "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
     "8/8/8/8/8/8/8/K6k w - - 0 1",
@@ -110,18 +110,93 @@ def test_compute_hostile_inputs_total_typed(hostile):
         assert caught.value.failure_class == "malformed_diff_record"
 
 
-def test_property_file_has_no_tests_package_imports():
-    import ast
-    from pathlib import Path
+@pytest.mark.parametrize(
+    "variant,fen",
+    [
+        ("standard", "4k3/8/8/8/8/8/8/4K3 b - e3 0 1"),
+        ("standard", "4k3/8/8/8/4P3/8/8/4K3 w - e3 0 1"),
+        ("standard", "4k3/8/8/8/4P3/4p3/8/4K3 b - e3 0 1"),
+        ("standard", "4k3/8/8/8/3pP3/8/8/4K3 b - e3 7 1"),
+        ("standard", "not a fen"),
+        ("unknown", FENS[0]),
+    ],
+)
+def test_shipped_node_constructor_fails_closed_on_invalid_input(variant, fen):
+    from tools.variant_runtime import VariantError
 
-    tree = ast.parse(Path(__file__).read_text())
-    assert not any(
-        isinstance(node, (ast.Import, ast.ImportFrom))
+    with pytest.raises(VariantError):
+        make_record(variant, fen)
+
+
+def test_node_constructor_only_normalizes_clocks_and_preserves_semantics():
+    supplied = FENS[0].rsplit(" ", 2)[0] + " 17 42"
+    record = make_record("standard", supplied)
+    assert record["snapshot_fen"] == FENS[0]
+    assert record["snapshot_fen"].split()[:4] == supplied.split()[:4]
+
+
+def test_process_control_escape_is_not_caught_or_rewritten(monkeypatch):
+    import graph.node as node
+
+    sentinel = KeyboardInterrupt("stop")
+    calls = []
+
+    def escape(variant, fen):
+        calls.append((variant, fen))
+        raise sentinel
+
+    monkeypatch.setattr(node, "parse_position", escape)
+    with pytest.raises(KeyboardInterrupt) as caught:
+        node.make_record("standard", FENS[0])
+    assert caught.value is sentinel
+    assert calls == [("standard", FENS[0])]
+
+
+def _forbidden_tests_imports(source: str):
+    import ast
+
+    tree = ast.parse(source)
+    return [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Import, ast.ImportFrom))
         and (
             (isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tests"))
             or (
-                isinstance(node, ast.Import) and any(a.name.startswith("tests") for a in node.names)
+                isinstance(node, ast.Import)
+                and any(alias.name.startswith("tests") for alias in node.names)
             )
         )
+    ]
+
+
+def _forbidden_tests_imports(source: str):
+    import ast
+
+    tree = ast.parse(source)
+    return [
+        node
         for node in ast.walk(tree)
-    )
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+        and (
+            (isinstance(node, ast.ImportFrom) and (node.module or "").startswith("tests"))
+            or (
+                isinstance(node, ast.Import)
+                and any(alias.name.startswith("tests") for alias in node.names)
+            )
+        )
+    ]
+
+
+def test_property_file_has_no_tests_package_imports():
+    from pathlib import Path
+
+    assert _forbidden_tests_imports(Path(__file__).read_text()) == []
+
+
+def test_import_guard_detects_nonexecuting_forbidden_import_mutant():
+    mutant = """from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import tests.bad_fixture
+"""
+    assert len(_forbidden_tests_imports(mutant)) == 1
