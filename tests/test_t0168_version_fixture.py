@@ -72,7 +72,7 @@ FAILURES = {
     "metadata-conflict-then-dedup": "conflicting_version",
 }
 
-PAYLOAD_DIGESTS = {  # ruff: noqa: E501
+PAYLOAD_DIGESTS = {
     "happy": {
         "insert-root": "50a9d02654fd286f67221a9b45eb57d7f5b84240fed3579771849885e271947b",
         "insert-linear-child": "14e682b55268933c557c4b062ee66e681c2330d8535149d039451f727f7eedcf",
