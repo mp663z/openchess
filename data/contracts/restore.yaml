@@ -1,0 +1,82 @@
+schema_version: 1
+
+contract:
+  id: store-restore
+  role:
+    kind: verified-restore-of-content-addressed-backup-bundles
+    serves: position-graph-store-durability
+    scope: single-backup-receipt-to-canonical-state
+    owns: restore-receipt-semantics-and-state-reconstruction
+    not_scope: incremental-restore-or-log-reconstruction
+  record:
+    fields: [restore_id, backup_id, state_id, state]
+    exact: true
+    field_definitions:
+      state:
+        kind: restored-state-snapshot
+        type: exact-built-in-dict-mapping-exact-built-in-string-identities-to-validated-exact-node-records
+        source: parsed-content-validated-record-by-record-with-recomputed-state-id
+  identifiers:
+    restore_id:
+      kind: content-addressed-restore-receipt-id
+      grammar: ^rst1:[0-9a-f]{64}$
+      derivation: sha256-over-backup-id-state-id
+      source: derived-from-validated-restore-never-caller-supplied
+    backup_id:
+      kind: linked-backup-receipt-id
+      grammar: ^bck1:[0-9a-f]{64}$
+      source: carried-from-verified-backup-receipt-never-free-form
+    state_id:
+      kind: canonical-state-content-digest
+      grammar: ^gs1:[0-9a-f]{64}$
+      derivation: sha256-over-canonical-serialization-of-sorted-identity-record-map
+      source: derived-from-restored-state-never-caller-supplied
+  semantics:
+    verify_first: full-linked-backup-verification-before-any-parse
+    parse: canonical-bundle-parsed-exactly-once-and-reserialized-byte-identical
+    reconstruction: parsed-state-validated-record-by-record-identity-exact
+    integrity: recomputed-state-id-must-equal-receipt-state-id
+    commit: staged-state-only-input-receipt-never-mutated
+  oracle_boundary:
+    role: bundle-parser-is-untrusted-input
+    single_evaluation: exactly-one-call-per-restore
+    frozen_snapshots: receipt-fields-frozen-before-first-oracle-call-never-re-read-restored-bit-identical
+    output_validation: exact-built-in-mapping-or-fail-closed
+  failures:
+    classes:
+      - malformed_restore_record
+      - unverified_backup
+      - divergent_parse
+      - divergent_state
+    triggers:
+      malformed_restore_record: receipt-grammar-or-type-violation
+      unverified_backup: receipt-fails-linked-backup-verification
+      divergent_parse: parser-raising-any-baseexception-non-exact-mapping-output-or-noncanonical-bundle-bytes
+      divergent_state: parsed-content-invalid-or-state-id-divergence
+    mapping:
+      malformed_restore_record: malformed_request
+      unverified_backup: unverified_backup
+      divergent_parse: divergent_parse
+      divergent_state: divergent_state
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - unverified_backup
+      - divergent_parse
+      - divergent_state
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-receipts-and-parsers-fail-closed-typed-never-raw
+    atomic: rejected-restore-leaves-inputs-bit-identical
+    deterministic: same-receipt-same-restored-state
+    rollback: staged-state-only-commit-after-full-validation
+  versioning:
+    base_path: /store/restore/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    backup_contract: data/contracts/backup.yaml
+    wal_contract: data/contracts/wal.yaml
+    migration_contract: data/contracts/migration.yaml
