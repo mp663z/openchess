@@ -109,14 +109,20 @@ class WalEngine:
         self.canonicalizer = payload_canonicalizer  # UNTRUSTED
 
     def _canonicalize(self, identity, record):
-        """THE canonicalizer boundary: raising or non-exact-str
-        output fails closed as divergent_canonicalization."""
+        """THE canonicalizer boundary: raising ANY BaseException
+        (including KeyboardInterrupt/SystemExit/GeneratorExit) or
+        returning non-exact-str output fails closed as
+        divergent_canonicalization."""
         # DETACHED argument copy: the oracle never sees the
         # frozen snapshot object that derivation, staging and the
         # replay fold read - mutating the argument is inert
         try:
             out = self.canonicalizer(identity, dict(record))
-        except Exception:
+        except BaseException:
+            # fail closed against the FULL BaseException surface:
+            # KeyboardInterrupt/SystemExit/GeneratorExit from the
+            # untrusted oracle map to the typed failure, never a
+            # raw escape (totality)
             _fail("divergent_canonicalization")
         if type(out) is not str:
             _fail("divergent_canonicalization")
@@ -849,10 +855,23 @@ def _hostile_oracles():
     def lone_low_surrogate(identity, record):
         return "\udfff"
 
+    def raising_keyboard_interrupt(identity, record):
+        raise KeyboardInterrupt("boom")
+
+    def raising_system_exit(identity, record):
+        raise SystemExit("boom")
+
+    def raising_generator_exit(identity, record):
+        raise GeneratorExit("boom")
+
     return [("raising", raising), ("bad-type", bad_type),
             ("bad-none", bad_none), ("evil-str", evil_str),
             ("lone-high-surrogate", lone_high_surrogate),
-            ("lone-low-surrogate", lone_low_surrogate)]
+            ("lone-low-surrogate", lone_low_surrogate),
+            ("raising-keyboard-interrupt",
+             raising_keyboard_interrupt),
+            ("raising-system-exit", raising_system_exit),
+            ("raising-generator-exit", raising_generator_exit)]
 
 
 @pytest.mark.parametrize("name,oracle", _hostile_oracles(),

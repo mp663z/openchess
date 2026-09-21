@@ -108,7 +108,7 @@ FAILURE_TRIGGERS = {
     "corrupt_chain":
         "prior-link-or-recomputed-entry-id-divergence",
     "divergent_canonicalization":
-        "canonicalizer-raising-or-non-exact-string-output",
+        "canonicalizer-raising-any-baseexception-or-non-exact-string-output",
 }
 FAILURE_MAPPING = {
     "malformed_wal_entry": "malformed_request",

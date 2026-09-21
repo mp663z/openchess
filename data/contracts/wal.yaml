@@ -61,7 +61,7 @@ contract:
       unknown_operation: op-not-in-the-pinned-registry
       sequence_conflict: sequence-not-the-exact-1-based-log-position
       corrupt_chain: prior-link-or-recomputed-entry-id-divergence
-      divergent_canonicalization: canonicalizer-raising-or-non-exact-string-output
+      divergent_canonicalization: canonicalizer-raising-any-baseexception-or-non-exact-string-output
     mapping:
       malformed_wal_entry: malformed_request
       unknown_operation: unknown_operation

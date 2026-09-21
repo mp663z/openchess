@@ -43,7 +43,7 @@ mutation journal they all sit on.
 - corrupt_chain: prior-link divergence, or stored entry_id
   differing from the recomputed one (tampered records land here
   even with a re-forged identity).
-- divergent_canonicalization: canonicalizer raising or returning
+- divergent_canonicalization: canonicalizer raising ANY BaseException (KeyboardInterrupt/SystemExit/GeneratorExit included - the boundary catches BaseException so the untrusted oracle can never escape raw) or returning
   a non-exact-built-in-str.
 
 ## Properties
