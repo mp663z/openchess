@@ -32,6 +32,7 @@ RECORD = {
     "exact": True,
 }
 OPERATION = {
+    "rule": None,  # prose: key required, value exempt
     "fields": ["kind", "identity", "record"],
     "exact": True,
     "kinds": ["put", "delete"],
@@ -83,24 +84,33 @@ SEMANTICS = {
     "target_verification":
         "recomputed-staged-state-id-is-the-receipt-target-id",
 }
+FAILURES = {
+    "classes": ["malformed_edit_record", "conflicting_base",
+                "unknown_identity"],
+    "triggers": {
+        "malformed_edit_record":
+            "request-operation-grammar-record-or-duplicate-"
+            "identity-violation",
+        "conflicting_base":
+            "recomputed-base-state-id-differs-from-request-base-"
+            "id",
+        "unknown_identity":
+            "delete-targets-an-identity-absent-from-the-base",
+    },
+    "mapping": {
+        "malformed_edit_record": "malformed_request",
+        "conflicting_base": "conflicting_base",
+        "unknown_identity": "unknown_identity",
+    },
+    "closed": True,
+}
+ERRORS = {
+    "closed_enum": ["malformed_request", "conflicting_base",
+                    "unknown_identity", "internal"],
+    "shape": {"retryable_true_only_for": ["internal"]},
+}
 FAILURE_CLASSES = ["malformed_edit_record", "conflicting_base",
                    "unknown_identity"]
-FAILURE_TRIGGERS = {
-    "malformed_edit_record":
-        "request-operation-grammar-record-or-duplicate-identity-"
-        "violation",
-    "conflicting_base":
-        "recomputed-base-state-id-differs-from-request-base-id",
-    "unknown_identity":
-        "delete-targets-an-identity-absent-from-the-base",
-}
-FAILURE_MAPPING = {
-    "malformed_edit_record": "malformed_request",
-    "conflicting_base": "conflicting_base",
-    "unknown_identity": "unknown_identity",
-}
-ERROR_ENUM = ["malformed_request", "conflicting_base",
-              "unknown_identity", "internal"]
 PROPERTIES = {
     "total":
         "hostile-requests-operations-and-states-fail-closed-typed-"
@@ -111,6 +121,8 @@ PROPERTIES = {
         "base-and-request-never-mutated-result-fresh",
     "rollback": "rejected-edit-leaves-base-bit-identical",
 }
+FAILURE_MAPPING = dict(FAILURES["mapping"])
+ERROR_ENUM = list(ERRORS["closed_enum"])
 VERSIONING = {
     "base_path": "/store/atomic-edit/v1",
     "rule": "Clients pin MAJOR. MINOR is additive-only: new optional"
@@ -130,51 +142,69 @@ PROSE_KEYS = {"rule"}
 def lint(path=None):
     path = path or CONTRACT
     doc = yaml.safe_load(Path(path).read_text())
-    cc = doc.get("contract")
+    if not isinstance(doc, dict):
+        raise ContractError("contract document must be a mapping")
+    # the file envelope is CLOSED: exact built-in-integer schema
+    # version, and no undeclared top-level keys
+    if set(doc) != {"schema_version", "contract"}:
+        raise ContractError(
+            f"top level must be exactly "
+            f"{{schema_version, contract}}: {sorted(doc)!r}")
+    if type(doc["schema_version"]) is not int or \
+            doc["schema_version"] != 1:
+        raise ContractError(
+            "schema_version must be exact built-in int 1")
+    cc = doc["contract"]
     if not isinstance(cc, dict):
         raise ContractError("atomic edit contract missing")
+    # the contract section is CLOSED to its declared key set
+    declared = {"id", "role", "record", "operation",
+                "identifiers", "semantics", "failures", "errors",
+                "properties", "versioning", "links"}
+    if set(cc) != declared:
+        raise ContractError(
+            f"contract sections drifted: {sorted(cc)!r}")
+    if cc["id"] != "store-atomic-edit":
+        raise ContractError("contract id drifted")
 
     def check(name, expected, actual):
-        if isinstance(expected, dict) and isinstance(actual, dict):
-            exp = {k: v for k, v in expected.items()
-                   if k not in PROSE_KEYS}
-            act = {k: v for k, v in actual.items()
-                   if k not in PROSE_KEYS}
-            if act != exp:
-                raise ContractError(f"{name} drifted: {actual!r}")
+        """Exact structured comparison with KEY-SET CLOSURE: an
+        undeclared key is as much drift as a changed value.
+        Declared prose keys (value None in the expectation) are
+        required to exist but their text is documentation."""
+        if isinstance(expected, dict):
+            if not isinstance(actual, dict):
+                raise ContractError(
+                    f"{name} must be a mapping: {actual!r}")
+            if set(actual) != set(expected):
+                raise ContractError(
+                    f"{name} keys drifted: "
+                    f"missing={sorted(set(expected) - set(actual))}"
+                    f" extra={sorted(set(actual) - set(expected))}")
+            for key, ev in expected.items():
+                if ev is None and key in PROSE_KEYS:
+                    continue
+                check(f"{name}.{key}", ev, actual[key])
             return
         if actual != expected:
             raise ContractError(f"{name} drifted: {actual!r}")
 
-    check("role", ROLE, cc.get("role"))
-    check("record", RECORD, cc.get("record"))
-    check("operation", OPERATION, cc.get("operation"))
-    check("identifiers", IDENTIFIERS, cc.get("identifiers"))
-    check("semantics", SEMANTICS, cc.get("semantics"))
-    failures = cc.get("failures") or {}
-    check("failures.classes", FAILURE_CLASSES,
-          failures.get("classes"))
-    check("failures.triggers", FAILURE_TRIGGERS,
-          failures.get("triggers"))
-    check("failures.mapping", FAILURE_MAPPING,
-          failures.get("mapping"))
-    if failures.get("closed") is not True:
-        raise ContractError("failure model must be closed")
-    if set(failures.get("mapping", {})) != set(FAILURE_CLASSES):
+    check("role", ROLE, cc["role"])
+    check("record", RECORD, cc["record"])
+    check("operation", OPERATION, cc["operation"])
+    check("identifiers", IDENTIFIERS, cc["identifiers"])
+    check("semantics", SEMANTICS, cc["semantics"])
+    check("failures", FAILURES, cc["failures"])
+    if set(cc["failures"]["mapping"]) != set(FAILURE_CLASSES):
         raise ContractError(
             "failures: mapping keys must equal declared classes")
-    if set(failures.get("triggers", {})) != set(FAILURE_CLASSES):
+    if set(cc["failures"]["triggers"]) != set(FAILURE_CLASSES):
         raise ContractError(
             "failures: triggers keys must equal declared classes")
-    errors = cc.get("errors") or {}
-    check("errors.closed_enum", ERROR_ENUM,
-          errors.get("closed_enum"))
-    shape = errors.get("shape") or {}
-    check("errors.shape.retryable_true_only_for", ["internal"],
-          shape.get("retryable_true_only_for"))
-    check("properties", PROPERTIES, cc.get("properties"))
-    check("versioning", VERSIONING, cc.get("versioning"))
-    check("links", LINKS, cc.get("links"))
+    check("errors", ERRORS, cc["errors"])
+    check("properties", PROPERTIES, cc["properties"])
+    check("versioning", VERSIONING, cc["versioning"])
+    check("links", LINKS, cc["links"])
     print(f"atomic edit contract lint ok: {path}")
 
 

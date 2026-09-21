@@ -689,6 +689,43 @@ def _contract_mutants():
     add("link drift",
         c + ["links", "transposition_node_contract"],
         "data/contracts/variant.yaml")
+    # -- closure family: the file envelope and every section
+    # are CLOSED; undeclared keys can never smuggle normative
+    # semantics past the lint.
+    add("schema version older", ["schema_version"], 0)
+    add("schema version newer", ["schema_version"], 2)
+    add("schema version string", ["schema_version"], "1")
+    add("schema version bool", ["schema_version"], True)
+
+    def drop(name, path):
+        m = copy.deepcopy(doc)
+        node = m
+        for key in path[:-1]:
+            node = node[key]
+        del node[path[-1]]
+        out.append((name, m))
+
+    drop("schema version missing", ["schema_version"])
+    add("undeclared top-level key", ["unexpected"], {})
+    add("undeclared contract key", c + ["new_semantics"], {})
+    for section in ("role", "record", "operation", "identifiers",
+                    "semantics", "failures", "errors",
+                    "properties", "versioning", "links"):
+        add(f"undeclared {section} key", c + [section, "x"], 1)
+    add("undeclared identifiers.state_id key",
+        c + ["identifiers", "state_id", "x"], 1)
+    add("undeclared identifiers.edit_id key",
+        c + ["identifiers", "edit_id", "x"], 1)
+    add("undeclared errors.shape key",
+        c + ["errors", "shape", "x"], 1)
+    add("undeclared failures.mapping key",
+        c + ["failures", "mapping", "x"], "internal")
+    add("undeclared failures.triggers key",
+        c + ["failures", "triggers", "x"], "y")
+    drop("failures closed dropped-key", c + ["failures",
+                                             "closed"])
+    drop("errors.shape dropped", c + ["errors", "shape"])
+    drop("contract id dropped", c + ["id"])
     return out
 
 
@@ -705,9 +742,11 @@ def test_contract_mutations_fail_lint(tmp_path):
 def test_contract_mutants_never_silent_subset():
     """Every mutant actually CHANGES the contract document - a
     no-op mutant can never masquerade as coverage."""
-    base_doc = yaml.safe_load(CONTRACT.read_text())
+    # serialized comparison: type-aware (True != 1, "1" != 1)
+    base_text = yaml.safe_dump(
+        yaml.safe_load(CONTRACT.read_text()))
     for name, m in _contract_mutants():
-        assert m != base_doc, name
+        assert yaml.safe_dump(m) != base_text, name
 
 
 def test_empty_operations_noop_edit():
