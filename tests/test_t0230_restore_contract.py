@@ -105,11 +105,17 @@ class RestoreEngine:
         self.parser = bundle_parser  # UNTRUSTED
 
     def _parse(self, bundle):
-        """THE parser boundary: raising or non-exact-dict output
-        fails closed as divergent_parse."""
+        """THE parser boundary: raising ANY BaseException
+        (including KeyboardInterrupt/SystemExit/GeneratorExit) or
+        returning non-exact-dict output fails closed as
+        divergent_parse."""
         try:
             out = self.parser(bundle)
-        except Exception:
+        except BaseException:
+            # fail closed against the FULL BaseException surface:
+            # KeyboardInterrupt/SystemExit/GeneratorExit from the
+            # untrusted oracle map to the typed failure, never a
+            # raw escape (totality)
             _fail("divergent_parse")
         if type(out) is not dict:
             _fail("divergent_parse")
@@ -309,9 +315,22 @@ def _hostile_parsers():
     def evil_dict(bundle):
         return EvilDict()
 
+    def raising_keyboard_interrupt(bundle):
+        raise KeyboardInterrupt("boom")
+
+    def raising_system_exit(bundle):
+        raise SystemExit("boom")
+
+    def raising_generator_exit(bundle):
+        raise GeneratorExit("boom")
+
     return [("raising", raising), ("bad-list", bad_list),
             ("bad-none", bad_none), ("bad-str", bad_str),
-            ("evil-dict", evil_dict)]
+            ("evil-dict", evil_dict),
+            ("raising-keyboard-interrupt",
+             raising_keyboard_interrupt),
+            ("raising-system-exit", raising_system_exit),
+            ("raising-generator-exit", raising_generator_exit)]
 
 
 @pytest.mark.parametrize("name,parser", _hostile_parsers(),

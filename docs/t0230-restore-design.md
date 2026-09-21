@@ -29,7 +29,7 @@ not scope.
 ## Failures (closed)
 - malformed_restore_record: receipt grammar/type violations.
 - unverified_backup: receipt fails linked backup verification.
-- divergent_parse: parser raising or non-exact-mapping output.
+- divergent_parse: parser raising ANY BaseException (KeyboardInterrupt/SystemExit/GeneratorExit included - the boundary catches BaseException so the untrusted oracle can never escape raw) or non-exact-mapping output.
 - divergent_state: parsed content invalid (record, identity) or
   recomputed state id differs from the receipt's.
 

@@ -82,7 +82,7 @@ FAILURE_TRIGGERS = {
     "unverified_backup":
         "receipt-fails-linked-backup-verification",
     "divergent_parse":
-        "parser-raising-or-non-exact-mapping-output",
+        "parser-raising-any-baseexception-or-non-exact-mapping-output",
     "divergent_state":
         "parsed-content-invalid-or-state-id-divergence",
 }

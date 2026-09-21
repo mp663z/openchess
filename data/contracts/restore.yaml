@@ -46,7 +46,7 @@ contract:
     triggers:
       malformed_restore_record: receipt-grammar-or-type-violation
       unverified_backup: receipt-fails-linked-backup-verification
-      divergent_parse: parser-raising-or-non-exact-mapping-output
+      divergent_parse: parser-raising-any-baseexception-or-non-exact-mapping-output
       divergent_state: parsed-content-invalid-or-state-id-divergence
     mapping:
       malformed_restore_record: malformed_request
