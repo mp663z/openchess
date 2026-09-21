@@ -3647,11 +3647,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "in_progress",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "f3bbb769f834c0e42f090ffa31d5917bb4d0ab3b",
+   "evidence_manifest": "evidence/T0172.md"
   },
   {
    "id": "T0173",
