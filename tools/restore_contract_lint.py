@@ -69,7 +69,8 @@ IDENTIFIERS = {
 SEMANTICS = {
     "verify_first":
         "full-linked-backup-verification-before-any-parse",
-    "parse": "canonical-bundle-parsed-exactly-once",
+    "parse": "canonical-bundle-parsed-exactly-once-and-"
+            "reserialized-byte-identical",
     "reconstruction":
         "parsed-state-validated-record-by-record-identity-exact",
     "integrity":
@@ -92,7 +93,8 @@ FAILURE_TRIGGERS = {
     "unverified_backup":
         "receipt-fails-linked-backup-verification",
     "divergent_parse":
-        "parser-raising-any-baseexception-or-non-exact-mapping-output",
+        "parser-raising-any-baseexception-non-exact-mapping-output-"
+        "or-noncanonical-bundle-bytes",
     "divergent_state":
         "parsed-content-invalid-or-state-id-divergence",
 }

@@ -27,13 +27,19 @@ not scope.
   validated record-by-record through the linked node machinery
   (exact str keys, exact records, identity == key) and its
   recomputed gs1: id must equal the receipt's state_id - anything
-  less is divergent_state. The input receipt is restored
+  less is divergent_state. Finally the staged validated state is
+  RESERIALIZED through the linked canonical serializer and must
+  equal the frozen bundle BYTE-FOR-BYTE - a bundle that decodes
+  to the right state only through duplicate/overwrite, record or
+  field reordering, or framing tricks is laundered input and
+  fails closed as divergent_parse (the untrusted parser is never
+  called again). The input receipt is restored
   bit-identical on every exit.
 
 ## Failures (closed)
 - malformed_restore_record: receipt grammar/type violations.
 - unverified_backup: receipt fails linked backup verification.
-- divergent_parse: parser raising ANY BaseException (KeyboardInterrupt/SystemExit/GeneratorExit included - the boundary catches BaseException so the untrusted oracle can never escape raw) or non-exact-mapping output.
+- divergent_parse: parser raising ANY BaseException (KeyboardInterrupt/SystemExit/GeneratorExit included - the boundary catches BaseException so the untrusted oracle can never escape raw), non-exact-mapping output, or a NON-CANONICAL bundle whose byte-identical reserialization of the validated state differs (duplicate/overwrite, reorder, framing laundering).
 - divergent_state: parsed content invalid (record, identity) or
   recomputed state id differs from the receipt's.
 

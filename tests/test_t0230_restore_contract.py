@@ -133,8 +133,12 @@ class RestoreEngine:
         failed verification -> unverified_backup), FREEZE the
         validated fields, parse exactly once behind the boundary,
         validate every parsed record and its identity, recompute
-        the state id - the receipt is restored bit-identical on
-        every exit."""
+        the state id, then require the staged state to reserialize
+        BYTE-FOR-BYTE to the frozen bundle through the linked
+        canonical serializer (non-canonical bytes laundered
+        through duplicate/overwrite or reordering fail closed as
+        divergent_parse) - the receipt is restored bit-identical
+        on every exit."""
         try:
             _BACKUP.verify(receipt)
         except BackupError as err:
@@ -171,6 +175,16 @@ class RestoreEngine:
             state[key] = dict(rec)
         if state_id(state) != frozen_state_id:
             _fail("divergent_state")
+        # CANONICAL ROUND-TRIP: the accepted bundle must be the
+        # UNIQUE canonical serialization of the staged validated
+        # state, byte-for-byte. A bundle that decodes to the right
+        # state only through duplicate/overwrite, record or field
+        # reordering, or framing tricks is laundered input - two
+        # distinct verified bundles would restore to one state.
+        # The LINKED pinned serializer does this check; the
+        # untrusted parser is NEVER called again.
+        if serialize_bundle(state) != frozen_bundle:
+            _fail("divergent_parse")
         return {"restore_id": self._derive_restore_id(
             frozen_backup_id, frozen_state_id),
             "backup_id": frozen_backup_id,
@@ -379,6 +393,93 @@ def test_hostile_parser(name, parser):
     assert receipt == before
 
 
+# -- canonical-bundle laundering ------------------------------------------------
+
+
+def _reforge(receipt, bundle):
+    """A receipt over hostile BYTES whose backup id is re-forged
+    through the linked derivation: backup verify accepts it, so
+    only restore's own canonical guard can stop it."""
+    forged = dict(receipt, bundle=bundle)
+    forged["backup_id"] = BackupEngine._derive_backup_id(
+        forged["head"], forged["state_id"],
+        forged["entry_count"], bundle, "divergent_snapshot")
+    assert _BACKUP.verify(forged) is not None
+    return forged
+
+
+def _laundering_bundles():
+    one = _BACKUP.backup(_log_of(("put", STARTPOS)))
+    two = _BACKUP.backup(
+        _log_of(("put", STARTPOS), ("put", KINGS)))
+    honest1 = one["bundle"]
+    key, body = honest1.rstrip("\n").split("\n")
+    pairs = body.split("|")
+    rec = two["bundle"].rstrip("\n").split("\n")
+    swapped = (f"{rec[2]}\n{rec[3]}\n"
+               f"{rec[0]}\n{rec[1]}\n")
+    blank_between = (f"{rec[0]}\n{rec[1]}\n\n"
+                     f"{rec[2]}\n{rec[3]}\n")
+    return [
+        ("duplicate-identical-records", one,
+         honest1 + honest1, "divergent_parse"),
+        ("duplicate-field-same-value", one,
+         f"{key}\n{body}|{pairs[0]}\n", "divergent_parse"),
+        ("duplicate-field-conflicting", one,
+         f"{key}\n{body}|digest={'0' * 64}\n",
+         "divergent_state"),
+        ("reordered-records", two, swapped, "divergent_parse"),
+        ("reordered-fields", one,
+         f"{key}\n{'|'.join(reversed(pairs))}\n",
+         "divergent_parse"),
+        ("malformed-separator", one,
+         f"{key}\n{body}|bogus\n", "divergent_state"),
+        ("trailing-blank-line", one,
+         honest1 + "\n", "divergent_parse"),
+        ("blank-line-between-records", two, blank_between,
+         "divergent_parse"),
+        ("missing-trailing-newline", one,
+         honest1.rstrip("\n"), "divergent_parse"),
+    ]
+
+
+_LAUNDERING = _laundering_bundles()
+
+
+@pytest.mark.parametrize("name,base,bundle,cls", _LAUNDERING,
+                         ids=[n for n, _, _, _ in _LAUNDERING])
+def test_noncanonical_bundle_laundering_fails_closed(
+        name, base, bundle, cls):
+    """A bundle that is NOT the unique canonical serialization of
+    the state it decodes to - duplicated records or fields,
+    reordered records or fields, malformed separators, bad
+    framing - fails closed typed even when its backup id is
+    re-forged so linked verification accepts it. The decisive
+    invariant: only byte-canonical bundles restore."""
+    forged = _reforge(base, bundle)
+    before = copy.deepcopy(forged)
+    with pytest.raises(RestoreError) as exc:
+        _engine().restore(forged)
+    assert exc.value.failure_class == cls
+    assert exc.value.code == FAILURE_MAPPING[cls]
+    assert exc.value.code in ERROR_ENUM
+    assert forged == before
+
+
+def test_canonical_roundtrip_invariant_on_accepted_receipts():
+    """DECISIVE INVARIANT: every accepted receipt's bundle is
+    byte-for-byte the canonical serialization of the restored
+    state."""
+    for ops in [(), (("put", STARTPOS),),
+                (("put", STARTPOS), ("put", KINGS)),
+                (("put", STARTPOS), ("put", KINGS),
+                 ("delete", STARTPOS))]:
+        receipt = _BACKUP.backup(_log_of(*ops))
+        result = _engine().restore(receipt)
+        assert serialize_bundle(result["state"]) == \
+            receipt["bundle"]
+
+
 def _divergent_states():
     """Well-formed mappings whose CONTENT is wrong."""
     good_record = _node(STARTPOS)
@@ -541,6 +642,34 @@ def test_mutant_parser_output_trusted_without_validation():
     assert exc.value.failure_class == "divergent_state"
 
 
+def test_mutant_restore_skipping_canonical_roundtrip():
+    """Behavioral mutant: a restore that validates the parsed
+    state and its id but skips the canonical reserialization
+    guard ACCEPTS a duplicated-record bundle - laundering
+    non-canonical bytes into a verified restore. Counter-test:
+    the real engine's round-trip guard rejects it as
+    divergent_parse, receipt bit-identical."""
+    def mutant_restore(receipt):
+        _BACKUP.verify(receipt)
+        parsed = parse_bundle(receipt["bundle"])
+        state = {}
+        for key, rec in parsed.items():
+            assert key == _WAL._validate_record(rec)
+            state[key] = dict(rec)
+        assert state_id(state) == receipt["state_id"]
+        # NO canonical round-trip guard
+        return state
+
+    good = _BACKUP.backup(_log_of(("put", STARTPOS)))
+    doubled = _reforge(good, good["bundle"] + good["bundle"])
+    assert mutant_restore(doubled)  # the mutant launders it
+    before = copy.deepcopy(doubled)
+    with pytest.raises(RestoreError) as exc:
+        _engine().restore(doubled)
+    assert exc.value.failure_class == "divergent_parse"
+    assert doubled == before
+
+
 # -- lint mutants ---------------------------------------------------------------
 
 
@@ -564,6 +693,9 @@ def _mutants():
         ["restore_id"])
     add("record exact drift", ["contract", "record", "exact"],
         False)
+    add("parse canonical-roundtrip dropped",
+        ["contract", "semantics", "parse"],
+        "canonical-bundle-parsed-exactly-once")
     add("record drops state (implementation returns it)",
         ["contract", "record", "fields"],
         ["restore_id", "backup_id", "state_id"])
