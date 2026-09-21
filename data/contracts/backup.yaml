@@ -1,0 +1,82 @@
+schema_version: 1
+
+contract:
+  id: store-backup
+  role:
+    kind: content-addressed-backup-over-wal-logged-graph-states
+    serves: position-graph-store-durability
+    scope: snapshot-and-integrity-verification-of-a-single-log
+    owns: backup-receipt-semantics-and-verification
+    not_scope: restore-incremental-or-offsite-replication
+  record:
+    fields: [backup_id, head, state_id, entry_count, bundle]
+    exact: true
+    field_definitions:
+      bundle:
+        kind: canonical-serialized-snapshot
+        type: exact-built-in-string-utf8-encodable
+        source: serializer-output-validated-at-the-oracle-boundary
+  identifiers:
+    backup_id:
+      kind: content-addressed-backup-receipt-id
+      grammar: ^bck1:[0-9a-f]{64}$
+      derivation: sha256-over-head-state-id-entry-count-canonical-bundle
+      source: derived-from-validated-snapshot-never-caller-supplied
+    head:
+      kind: wal-chain-tip-or-pinned-genesis
+      grammar: ^(wal0:0{64}|wal1:[0-9a-f]{64})$
+      source: derived-from-validated-source-log-never-caller-supplied
+    state_id:
+      kind: canonical-state-content-digest
+      grammar: ^gs1:[0-9a-f]{64}$
+      derivation: sha256-over-canonical-serialization-of-sorted-identity-record-map
+      source: derived-from-replayed-state-never-caller-supplied
+  semantics:
+    source_validation: full-linked-wal-validation-and-replay-before-snapshot
+    snapshot: replayed-state-frozen-detached-before-serialization
+    integrity: recomputed-backup-id-must-equal-stored-backup-id
+    head_count_consistency: empty-log-backup-pins-genesis-head-and-empty-state
+    commit: staged-receipt-only-source-log-never-mutated
+  oracle_boundary:
+    role: bundle-serializer-is-untrusted-input
+    single_evaluation: exactly-one-call-per-backup
+    frozen_snapshots: entire-log-and-state-frozen-before-first-oracle-call-never-re-read
+    output_validation: exact-built-in-string-or-fail-closed
+  failures:
+    classes:
+      - malformed_backup_record
+      - corrupt_source
+      - divergent_snapshot
+      - divergent_backup
+    triggers:
+      malformed_backup_record: receipt-grammar-type-or-utf8-violation-or-source-log-type-violation
+      corrupt_source: source-log-fails-linked-wal-validation-or-chain-rederivation
+      divergent_snapshot: serializer-raising-any-baseexception-or-non-exact-string-output
+      divergent_backup: recomputed-backup-id-divergence-or-head-count-inconsistency
+    mapping:
+      malformed_backup_record: malformed_request
+      corrupt_source: corrupt_source
+      divergent_snapshot: divergent_snapshot
+      divergent_backup: divergent_backup
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - corrupt_source
+      - divergent_snapshot
+      - divergent_backup
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-logs-receipts-and-serializers-fail-closed-typed-never-raw
+    atomic: rejected-backup-or-verify-leaves-inputs-bit-identical
+    deterministic: same-log-same-backup-receipt
+    rollback: staged-receipt-only-commit-after-full-validation
+  versioning:
+    base_path: /store/backup/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    wal_contract: data/contracts/wal.yaml
+    migration_contract: data/contracts/migration.yaml
+    diff_contract: data/contracts/diff.yaml
