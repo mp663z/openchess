@@ -70,6 +70,11 @@ def _is_dunder(value):
 
 def findings(source: str):
     tree = ast.parse(source)
+    parents = {
+        child: parent
+        for parent in ast.walk(tree)
+        for child in ast.iter_child_nodes(parent)
+    }
     found = []
     attribute_roots = {}
     for node in ast.walk(tree):
@@ -112,6 +117,44 @@ def findings(source: str):
                 surface = _FROM_IMPORT_ATTRIBUTE_SURFACES.get((module, alias.name))
                 if surface is not None:
                     attribute_roots[alias.asname or alias.name] = surface
+        elif (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id in attribute_roots
+            and node.attr in attribute_roots[node.value.id]
+        ):
+            parent = parents.get(node)
+            laundering_contexts = (
+                ast.Assign,
+                ast.AnnAssign,
+                ast.NamedExpr,
+                ast.Return,
+                ast.List,
+                ast.Tuple,
+                ast.Set,
+                ast.Dict,
+            )
+            if isinstance(parent, laundering_contexts):
+                found.append(node)
+        elif isinstance(node, ast.Name) and node.id in attribute_roots:
+            parent = parents.get(node)
+            is_allowed_attribute_root = (
+                isinstance(parent, ast.Attribute)
+                and parent.value is node
+                and parent.attr in attribute_roots[node.id]
+            )
+            is_monkeypatch_object = (
+                node.id == "node"
+                and isinstance(parent, ast.Call)
+                and isinstance(parent.func, ast.Attribute)
+                and parent.func.attr == "setattr"
+                and bool(parent.args)
+                and parent.args[0] is node
+                and len(parent.args) >= 3
+            )
+            is_allowed_root = is_allowed_attribute_root or is_monkeypatch_object
+            if not is_allowed_root:
+                found.append(node)
         elif (
             isinstance(node, ast.Attribute)
             and isinstance(node.value, ast.Name)

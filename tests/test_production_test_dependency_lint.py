@@ -68,7 +68,7 @@ def test_from_imported_module_surface_tracks_aliases():
         "from graph import diff as d\nd.compute({}, {})",
         "from graph import diff as d\nd.apply({}, {})",
         "from graph import diff as d\nd.state_id({})",
-        "from graph import diff as d\nerror = d.DiffError",
+        "from graph import diff as d\nraise d.DiffError('x')",
     ]
     for source in allowed:
         assert findings(source) == [], source

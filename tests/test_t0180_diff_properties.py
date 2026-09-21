@@ -291,6 +291,17 @@ def test_repository_dependency_lint_detects_all_import_mutants():
             "import pytest\n@pytest.mark.parametrize('request', [1])\n"
             "def test_escape(seed):\n    pass"
         ),
+        "import random\nr = random\nr._os.system('pass')",
+        (
+            "from graph import diff\nd = diff\n"
+            "d.re.enum.sys.modules['os'].system('pass')"
+        ),
+        "import random\nr = [random][0]\nr._os.system('pass')",
+        "import random\ndef f(): return random\nf()._os.system('pass')",
+        (
+            "import pytest\nm = pytest.mark\n@m.usefixtures('request')\n"
+            "def test_escape():\n    pass"
+        ),
     ]
     for mutant in mutants:
         assert findings(mutant), mutant
