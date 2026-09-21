@@ -6,8 +6,9 @@ import copy
 import hashlib
 import re
 
+from tests.test_t0113_position_digest_contract import digest_fen
 from tools.diff_contract_lint import FAILURE_MAPPING
-from tools.variant_runtime import VariantError, identity, parse_position
+from tools.variant_runtime import identity, parse_position
 
 _STATE_ID = re.compile(r"^gs1:[0-9a-f]{64}$")
 _DIGEST = re.compile(r"^pdv1:[0-9a-f]{64}$")
@@ -38,8 +39,11 @@ def _record_identity(record):
         _fail("malformed_diff_record")
     try:
         projection = identity(parse_position(record["variant"], record["snapshot_fen"]))
-    except VariantError as error:
+        expected_digest = digest_fen(record["variant"], record["snapshot_fen"])
+    except BaseException as error:
         raise DiffError("malformed_diff_record") from error
+    if record["digest"] != expected_digest:
+        _fail("malformed_diff_record")
     return repr(tuple(projection.values()))
 
 
@@ -85,6 +89,11 @@ def compute(base, target):
 
 
 def validate_diff(diff):
+    # With the current exact three-field linked node schema, every field is
+    # identity-derived and digest-consistent. Therefore no unequal exact-valid
+    # records can share an identity: changed is future-facing until an additive
+    # non-identity field exists. Hostile changed witnesses are still validated
+    # and rejected as executable mutants; we do not weaken linked node validity.
     if type(diff) is not dict or set(diff) != _FIELDS:
         _fail("malformed_diff_record")
     if any(

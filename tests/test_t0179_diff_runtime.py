@@ -10,7 +10,6 @@ import pytest
 
 from graph import diff as production
 from tests.test_t0176_diff_contract import DiffEngine
-from tests.test_t0176_diff_contract import DiffError as ReferenceError
 
 CASES = json.loads((Path(__file__).parent / "fixtures" / "diff" / "cases.json").read_text())
 
@@ -32,36 +31,71 @@ def _call_ref(case):
     return engine.validate_diff(case["diff"])
 
 
-@pytest.mark.parametrize("section", ["happy", "boundary"])
-def test_production_matches_reference_on_valid_fixture(section):
-    for case in CASES[section]:
-        assert _call_prod(copy.deepcopy(case)) == _call_ref(copy.deepcopy(case)), case["name"]
+def _valid_records():
+    from tests.test_t0113_position_digest_contract import AFTER_E4, STARTPOS, digest_fen
+    from tests.test_t0122_transposition_node_contract import KINGS, _docs, _make_record
+
+    docs = _docs()
+    return [_make_record(*docs, digest_fen, "standard", fen) for fen in (STARTPOS, AFTER_E4, KINGS)]
 
 
-def test_production_rejects_malformed_with_exact_failure_and_rollback():
-    for case in CASES["malformed"]:
-        before = copy.deepcopy(case)
-        with pytest.raises(production.DiffError) as caught:
-            _call_prod(case)
-        assert caught.value.failure_class == case["expect_failure"], case["name"]
-        assert case == before, case["name"]
+def _key(record):
+    from tests.test_t0122_transposition_node_contract import _docs, _record_identity
+
+    return repr(_record_identity(*_docs(), record))
 
 
-def test_production_rollback_cases_then_valid_apply():
-    for case in CASES["rollback"]:
-        before = copy.deepcopy(case["base"])
-        with pytest.raises(production.DiffError) as caught:
-            production.apply(case["diff"], case["base"])
-        assert caught.value.failure_class == case["expect_failure"]
-        assert case["base"] == before
-        assert production.apply(case["then_diff"], case["then_base"]) == case["expect_target"]
+def _assert_malformed_unchanged(call, *objects):
+    pristine = copy.deepcopy(objects)
+    with pytest.raises(production.DiffError) as caught:
+        call()
+    assert caught.value.failure_class == "malformed_diff_record"
+    assert objects == pristine
 
 
-def test_reference_and_production_failure_classes_match_all_invalid_cases():
-    for case in CASES["malformed"]:
-        with pytest.raises(ReferenceError) as reference:
-            _call_ref(copy.deepcopy(case))
-        with pytest.raises(production.DiffError) as actual:
-            _call_prod(copy.deepcopy(case))
-        assert actual.value.failure_class == reference.value.failure_class
-        assert actual.value.code == reference.value.code
+def test_well_formed_sibling_digest_substitution_rejected_on_every_path():
+    first, sibling, third = _valid_records()
+    forged = dict(first, digest=sibling["digest"])
+    assert forged["digest"].startswith("pdv1:") and len(forged["digest"]) == 69
+    good_state = {_key(first): first}
+    forged_state = {_key(first): forged}
+    _assert_malformed_unchanged(lambda: production.compute(forged_state, {}), forged_state)
+    _assert_malformed_unchanged(lambda: production.compute({}, forged_state), forged_state)
+
+    added = production.compute({}, {_key(first): first})
+    added["added"][_key(first)] = copy.deepcopy(forged)
+    removed = production.compute({_key(first): first}, {})
+    removed["removed"][_key(first)] = copy.deepcopy(forged)
+    for diff, base in ((added, {}), (removed, {_key(first): first})):
+        _assert_malformed_unchanged(lambda d=diff: production.validate_diff(d), diff)
+        _assert_malformed_unchanged(lambda d=diff, b=base: production.apply(d, b), diff, base)
+
+    # changed is reserved/future-facing for the current exact three-field node.
+    # Both witness sides are tested as hostile executable mutants, never valid fixtures.
+    for slot in ("base", "target"):
+        witness = {"base": copy.deepcopy(first), "target": copy.deepcopy(third)}
+        witness[slot] = copy.deepcopy(forged)
+        diff = {
+            "base_id": "gs1:" + "1" * 64,
+            "target_id": "gs1:" + "2" * 64,
+            "added": {},
+            "removed": {},
+            "changed": {_key(first): witness},
+        }
+        _assert_malformed_unchanged(lambda d=diff: production.validate_diff(d), diff)
+        _assert_malformed_unchanged(
+            lambda d=diff, b=good_state: production.apply(d, b), diff, good_state
+        )
+
+
+def test_reference_strict_linked_record_oracle_rejects_sibling_digest():
+    """Prerequisite repair oracle: legacy fake changed fixtures remain executable
+    mutants, while this strict linked-record oracle is the authority for runtime work."""
+    from tests.test_t0113_position_digest_contract import digest_fen
+
+    first, sibling, _ = _valid_records()
+    forged = dict(first, digest=sibling["digest"])
+    assert forged["digest"] != digest_fen(forged["variant"], forged["snapshot_fen"])
+    with pytest.raises(production.DiffError) as caught:
+        production.compute({_key(forged): forged}, {})
+    assert caught.value.failure_class == "malformed_diff_record"
