@@ -1,0 +1,98 @@
+# T0203: store atomic edit contract (implementation-neutral; the
+# product runtime target is the Rust core per ADR-0001).
+#
+# Source of truth for ATOMIC EDIT semantics everywhere in the
+# product: one edit request against one content-addressed base
+# state commits entirely or not at all. This is the store's write
+# front door: every later durability contract (WAL, crash resume,
+# backup/restore) builds on the all-or-nothing guarantee pinned
+# here. ALL normative semantics live in STRUCTURED fields the lint
+# compares exactly - prose is documentation, never the enforcement
+# surface. The contract owns NO identity semantics of its own:
+# canonical identities are exactly the linked table contract's
+# identities, and state ids are exactly the content-addressed
+# digests the linked graph contracts pin.
+schema_version: 1
+
+contract:
+  id: store-atomic-edit
+  role:
+    kind: atomic-single-state-edit-over-content-addressed-graph-states
+    serves: all-or-nothing-writes-for-the-store-front-door
+    scope: one-base-state-plus-one-edit-request
+    owns: edit-validation-atomic-staging-commit-and-derived-receipt
+    not_scope: concurrency-control-durability-wal-and-crash-recovery
+  record:
+    fields: [edit_id, base_id, target_id, state]
+    exact: true
+  operation:
+    fields: [kind, identity, record]
+    exact: true
+    kinds: [put, delete]
+    put: record-required-exact-node-record-whose-derived-identity-equals-the-operation-identity
+    delete: record-must-be-null-identity-an-exact-string
+    uniqueness: exactly-one-operation-per-identity-per-edit
+    order: insignificant-under-uniqueness-receipt-derives-from-canonical-identity-order
+    rule: >-
+      An operation is exactly {kind, identity, record}. A put
+      carries an exact valid LINKED node record whose DERIVED
+      canonical identity equals the operation identity (upsert:
+      insert when absent, replace when present). A delete carries
+      record: null and targets the identity, which MUST be present
+      in the base. Exactly one operation per identity per edit -
+      a repeated identity fails closed as malformed, so operation
+      order can never change the outcome.
+  identifiers:
+    state_id:
+      kind: canonical-state-content-digest
+      grammar: ^gs1:[0-9a-f]{64}$
+      derivation: sha256-over-canonical-serialization-of-sorted-identity-record-map
+      source: derived-from-validated-state-never-caller-supplied
+    edit_id:
+      kind: content-addressed-edit-receipt-id
+      grammar: ^ae1:[0-9a-f]{64}$
+      derivation: sha256-over-base-id-target-id-and-canonical-operation-list
+      source: derived-never-caller-supplied
+  semantics:
+    base_check: recomputed-base-state-id-must-equal-request-base-id-before-staging
+    staging: whole-edit-staged-on-a-detached-copy-before-any-observable-mutation
+    commit: single-commit-point-after-total-validation-of-request-base-and-every-operation
+    put_upsert: put-inserts-or-replaces-the-record-at-its-derived-identity
+    delete_rule: delete-removes-a-present-identity-absent-is-unknown_identity
+    result_state: fresh-deep-copied-state-never-aliases-base-records
+    target_verification: recomputed-staged-state-id-is-the-receipt-target-id
+  failures:
+    classes:
+      - malformed_edit_record
+      - conflicting_base
+      - unknown_identity
+    triggers:
+      malformed_edit_record: request-operation-grammar-record-or-duplicate-identity-violation
+      conflicting_base: recomputed-base-state-id-differs-from-request-base-id
+      unknown_identity: delete-targets-an-identity-absent-from-the-base
+    mapping:
+      malformed_edit_record: malformed_request
+      conflicting_base: conflicting_base
+      unknown_identity: unknown_identity
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - conflicting_base
+      - unknown_identity
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-operations-and-states-fail-closed-typed-never-raw
+    atomic: whole-edit-commits-or-base-left-bit-identical
+    deterministic: same-base-and-edit-same-receipt
+    input_preservation: base-and-request-never-mutated-result-fresh
+    rollback: rejected-edit-leaves-base-bit-identical
+  versioning:
+    base_path: /store/atomic-edit/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    transposition_node_contract: data/contracts/transposition_node.yaml
+    position_digest_contract: data/contracts/position_digest.yaml
+    variant_contract: data/contracts/variant.yaml
