@@ -2821,11 +2821,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "a20a0e1f3a455f546845592398cae426fd1c34a0",
+   "evidence_manifest": "evidence/T0132.md"
   },
   {
    "id": "T0133",
@@ -3737,11 +3739,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "b15d3ac12ba833b0a3fbcf24c9e2c25c0bbe96c4",
+   "evidence_manifest": "evidence/T0177.md"
   },
   {
    "id": "T0178",
@@ -3921,11 +3925,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "8d1c64d8e087da5278ef5ad89e07d2448d64afa7",
+   "evidence_manifest": "evidence/T0186.md"
   },
   {
    "id": "T0187",
@@ -4105,11 +4111,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "9acd73f546fd8b780dbfaefe2b988712e3706a53",
+   "evidence_manifest": "evidence/T0195.md"
   },
   {
    "id": "T0196",
@@ -4266,11 +4274,13 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "claimed",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler",
-   "claimed_by": "task-agent"
+   "claimed_by": "task-agent",
+   "done_sha": "0c8e50e643f7d36501ace9a1a1200310796cd76c",
+   "evidence_manifest": "evidence/T0203.md"
   },
   {
    "id": "T0204",
