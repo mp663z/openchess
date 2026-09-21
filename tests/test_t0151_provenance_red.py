@@ -1,10 +1,10 @@
-"""T0151: production provenance red suite.
+"""T0151: standalone provenance red battery.
 
-This file deliberately imports the production surface owned by T0152.
-On T0151's parent main that module does not exist, so collection is red
-for exactly one reason: ``ModuleNotFoundError: graph.provenance``.
-The fixture/reference oracle is used only for vectors and differential
-expectations. No test-local table is a production substitute.
+The battery stays green on its own head by executing the T0149 reference
+oracle over T0150's pinned vectors, following the established standalone-red
+convention. T0152 review must switch only the three bindings below to
+``graph.provenance``; all scenarios and assertions remain byte-for-byte
+unchanged when proving the production implementation green.
 """
 from __future__ import annotations
 
@@ -13,9 +13,16 @@ import json
 from pathlib import Path
 
 import pytest
-from graph.provenance import ProvenanceError, ProvenanceTable, validate_record
 
-from tests.test_t0149_provenance_contract import FAILURE_MAPPING
+from tests import test_t0149_provenance_contract as oracle
+
+FAILURE_MAPPING = oracle.FAILURE_MAPPING
+ProvenanceError = oracle.ProvenanceError
+ProvenanceTable = oracle.ProvenanceTable
+
+
+def validate_record(record):
+    return oracle.validate_record(*oracle._docs(), record)
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = json.loads((ROOT / "tests/fixtures/provenance/cases.json").read_text())
