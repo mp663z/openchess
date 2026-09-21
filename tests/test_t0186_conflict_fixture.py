@@ -292,7 +292,21 @@ def _assert_conflict_scenario(case, scenario, kinds):
         assert shared, name
         assert all(left[i] == right[i] for i in shared), name
     elif scenario == "equal-outcomes":
-        assert left == right and base != left, name
+        # the NAMED boundary: equal outcomes DESPITE A BASE
+        # DIGEST DIFFERENCE - same canonical identity set on all
+        # three states, left and right byte-identical, at least
+        # one retained record differs from base, and every
+        # differing record keeps its canonical identity fields
+        # with only the (valid) accelerator digest changed. An
+        # add/remove substitution can never satisfy this.
+        assert set(base) == set(left) == set(right), name
+        assert left == right, name
+        differing = [i for i in base if base[i] != left[i]]
+        assert differing, name
+        for i in differing:
+            b, lft = base[i], left[i]
+            assert _identity(b) == _identity(lft), name
+            assert b["digest"] != lft["digest"], name
         expect = case["expect"]
         assert expect["left_id"] == expect["right_id"], name
         assert expect["base_id"] != expect["left_id"], name
@@ -812,3 +826,25 @@ def test_mutant_intra_failure_class_malformed_substitution():
                                      name=case["name"])
     with pytest.raises(AssertionError):
         _validate_structure(m)
+
+
+def test_exhaustive_pairwise_intra_section_substitution():
+    """The standing scan: EVERY ordered donor/recipient pair in
+    EVERY section, donor content under the recipient's name,
+    must fail structure validation."""
+    for section in MANIFESTS:
+        rows = CASES[section]
+        for i, recipient in enumerate(rows):
+            for j, donor in enumerate(rows):
+                if i == j:
+                    continue
+                m = copy.deepcopy(CASES)
+                m[section][i] = dict(copy.deepcopy(donor),
+                                     name=recipient["name"])
+                try:
+                    _validate_structure(m)
+                except AssertionError:
+                    continue
+                raise AssertionError(
+                    f"{section}: {donor['name']!r} substitutes "
+                    f"for {recipient['name']!r} undetected")
