@@ -7,8 +7,11 @@ import random
 
 import pytest
 
+import graph.node as node
 from graph import diff
 from graph.node import make_record, record_identity
+from tools.production_test_dependency_lint import findings, lint
+from tools.variant_runtime import VariantError
 
 FENS = [
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -122,8 +125,6 @@ def test_compute_hostile_inputs_total_typed(hostile):
     ],
 )
 def test_shipped_node_constructor_fails_closed_on_invalid_input(variant, fen):
-    from tools.variant_runtime import VariantError
-
     with pytest.raises(VariantError):
         make_record(variant, fen)
 
@@ -136,8 +137,6 @@ def test_node_constructor_only_normalizes_clocks_and_preserves_semantics():
 
 
 def test_process_control_escape_is_not_caught_or_rewritten(monkeypatch):
-    import graph.node as node
-
     sentinel = KeyboardInterrupt("stop")
     calls = []
 
@@ -153,14 +152,10 @@ def test_process_control_escape_is_not_caught_or_rewritten(monkeypatch):
 
 
 def test_property_file_has_no_tests_package_imports():
-    from tools.production_test_dependency_lint import lint
-
     lint(__file__)
 
 
 def test_repository_dependency_lint_detects_all_import_mutants():
-    from tools.production_test_dependency_lint import findings
-
     mutants = [
         "import tests.bad_fixture",
         "import tests.bad_fixture as fixture",
