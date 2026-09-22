@@ -1,0 +1,1219 @@
+{
+ "boundary": [
+  {
+   "appends": [],
+   "expect": {
+    "receipts": [],
+    "replay": {
+     "applied": 0,
+     "head": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "state": {},
+     "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+   },
+   "kind": "script",
+   "name": "replay-empty-log",
+   "oracle": "honest"
+  },
+  {
+   "appends": [
+    {
+     "op": "delete",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "receipts": [
+     {
+      "entry_id": "wal1:29c8e50427d39480cdc82992a97cc03d645a0e483810389604cdf29e1a291623",
+      "op": "delete",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     }
+    ],
+    "replay": {
+     "applied": 1,
+     "head": "wal1:29c8e50427d39480cdc82992a97cc03d645a0e483810389604cdf29e1a291623",
+     "state": {},
+     "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+   },
+   "kind": "script",
+   "name": "delete-missing-identity-noop",
+   "oracle": "honest"
+  },
+  {
+   "appends": [
+    {
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     }
+    },
+    {
+     "op": "delete",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "receipts": [
+     {
+      "entry_id": "wal1:521a7e918e2b93372a09fb1210dbf0ecb0a9f43ae03746467eb864cd5cbec67f",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     },
+     {
+      "entry_id": "wal1:bb7a370f570c558a06c2237e94e6e01140f4f631056d0190cd6ba66829b364ce",
+      "op": "delete",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:521a7e918e2b93372a09fb1210dbf0ecb0a9f43ae03746467eb864cd5cbec67f",
+      "sequence": 2
+     }
+    ],
+    "replay": {
+     "applied": 2,
+     "head": "wal1:bb7a370f570c558a06c2237e94e6e01140f4f631056d0190cd6ba66829b364ce",
+     "state": {},
+     "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+   },
+   "kind": "script",
+   "name": "delete-last-record-empty-state",
+   "oracle": "honest"
+  }
+ ],
+ "contract": "store-wal",
+ "contract_base_path": "/store/wal/v1",
+ "happy": [
+  {
+   "appends": [
+    {
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     }
+    },
+    {
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     }
+    },
+    {
+     "op": "delete",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "receipts": [
+     {
+      "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     },
+     {
+      "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "sequence": 2
+     },
+     {
+      "entry_id": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+      "op": "delete",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "sequence": 3
+     }
+    ],
+    "replay": {
+     "applied": 3,
+     "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+     "state": {
+      "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+    }
+   },
+   "kind": "script",
+   "name": "append-put-put-delete-chain",
+   "oracle": "honest"
+  },
+  {
+   "appends": [
+    {
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "receipts": [
+     {
+      "entry_id": "wal1:56e791776a33e2f536b928b01ed7f1724daf7e94efd86873b1130c59c97eb45c",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     }
+    ],
+    "replay": {
+     "applied": 1,
+     "head": "wal1:56e791776a33e2f536b928b01ed7f1724daf7e94efd86873b1130c59c97eb45c",
+     "state": {
+      "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "state_id": "gs1:283ea65149fb39b27c8e102a791f5177c4614160a5b7b72976b1e9c8f768a5ea"
+    }
+   },
+   "kind": "script",
+   "name": "append-single-put-after-e4",
+   "oracle": "honest"
+  },
+  {
+   "appends": [
+    {
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     }
+    },
+    {
+     "op": "delete",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     }
+    },
+    {
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "receipts": [
+     {
+      "entry_id": "wal1:521a7e918e2b93372a09fb1210dbf0ecb0a9f43ae03746467eb864cd5cbec67f",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     },
+     {
+      "entry_id": "wal1:bb7a370f570c558a06c2237e94e6e01140f4f631056d0190cd6ba66829b364ce",
+      "op": "delete",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:521a7e918e2b93372a09fb1210dbf0ecb0a9f43ae03746467eb864cd5cbec67f",
+      "sequence": 2
+     },
+     {
+      "entry_id": "wal1:c680b94c422f70cfda80683297901682aa4184c6e788f304dfbfe9bfa341c774",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:bb7a370f570c558a06c2237e94e6e01140f4f631056d0190cd6ba66829b364ce",
+      "sequence": 3
+     }
+    ],
+    "replay": {
+     "applied": 3,
+     "head": "wal1:c680b94c422f70cfda80683297901682aa4184c6e788f304dfbfe9bfa341c774",
+     "state": {
+      "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+    }
+   },
+   "kind": "script",
+   "name": "append-put-delete-put",
+   "oracle": "honest"
+  }
+ ],
+ "malformed": [
+  {
+   "defect": "request is missing the op field",
+   "expect_failure": "malformed_wal_entry",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      }
+     }
+    }
+   },
+   "name": "request-missing-op-field",
+   "oracle": "honest",
+   "request": {
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "request carries an undeclared extra field",
+   "expect_failure": "malformed_wal_entry",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      }
+     }
+    }
+   },
+   "name": "request-extra-field",
+   "oracle": "honest",
+   "request": {
+    "comment": "extra",
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "op is not a registered operation",
+   "expect_failure": "unknown_operation",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "op",
+     "value": "put"
+    }
+   },
+   "name": "op-unregistered",
+   "oracle": "honest",
+   "request": {
+    "op": "move",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "op is not a string",
+   "expect_failure": "malformed_wal_entry",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "op",
+     "value": "put"
+    }
+   },
+   "name": "op-non-str",
+   "oracle": "honest",
+   "request": {
+    "op": 5,
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "payload is missing the record field",
+   "expect_failure": "malformed_wal_entry",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      }
+     }
+    }
+   },
+   "name": "payload-missing-record",
+   "oracle": "honest",
+   "request": {
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+    }
+   }
+  },
+  {
+   "defect": "payload identity does not match the derived record identity",
+   "expect_failure": "malformed_wal_entry",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      }
+     }
+    }
+   },
+   "name": "payload-identity-mismatch",
+   "oracle": "honest",
+   "request": {
+    "op": "put",
+    "payload": {
+     "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "record digest is well-formed but belongs to another record",
+   "expect_failure": "malformed_wal_entry",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      }
+     }
+    }
+   },
+   "name": "record-wrong-digest",
+   "oracle": "honest",
+   "request": {
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "a record field is not a string",
+   "expect_failure": "malformed_wal_entry",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      }
+     }
+    }
+   },
+   "name": "record-non-str-field",
+   "oracle": "honest",
+   "request": {
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": 5
+     }
+    }
+   }
+  },
+  {
+   "defect": "the canonicalizer raises during append",
+   "expect_failure": "divergent_canonicalization",
+   "kind": "append",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    }
+   ],
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-raises",
+   "oracle": "raising",
+   "request": {
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "the canonicalizer returns a non-string",
+   "expect_failure": "divergent_canonicalization",
+   "kind": "append",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    }
+   ],
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-non-str-output",
+   "oracle": "non-str",
+   "request": {
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "the canonicalizer returns a non-UTF-8-encodable string",
+   "expect_failure": "divergent_canonicalization",
+   "kind": "append",
+   "log": [],
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-lone-surrogate",
+   "oracle": "lone-surrogate",
+   "request": {
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   }
+  },
+  {
+   "defect": "a log entry id fails the entry-id grammar",
+   "expect_failure": "malformed_wal_entry",
+   "kind": "replay",
+   "log": [
+    {
+     "entry_id": "wal1:zz",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    }
+   ],
+   "minimal_repair": {
+    "replace_log": {
+     "log": [
+      {
+       "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+        "record": {
+         "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+         "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+       "sequence": 1
+      },
+      {
+       "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+        "record": {
+         "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+         "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "sequence": 2
+      }
+     ]
+    }
+   },
+   "name": "log-entry-bad-id-grammar",
+   "oracle": "honest"
+  },
+  {
+   "defect": "an entry sequence skips the exact 1-based position",
+   "expect_failure": "sequence_conflict",
+   "kind": "replay",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 3
+    }
+   ],
+   "minimal_repair": {
+    "replace_log": {
+     "log": [
+      {
+       "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+        "record": {
+         "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+         "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+       "sequence": 1
+      },
+      {
+       "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+        "record": {
+         "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+         "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "sequence": 2
+      }
+     ]
+    }
+   },
+   "name": "log-sequence-gap",
+   "oracle": "honest"
+  },
+  {
+   "defect": "two entries carry the same sequence",
+   "expect_failure": "sequence_conflict",
+   "kind": "replay",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 1
+    }
+   ],
+   "minimal_repair": {
+    "replace_log": {
+     "log": [
+      {
+       "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+        "record": {
+         "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+         "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+       "sequence": 1
+      },
+      {
+       "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+        "record": {
+         "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+         "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "sequence": 2
+      }
+     ]
+    }
+   },
+   "name": "log-sequence-duplicate",
+   "oracle": "honest"
+  },
+  {
+   "defect": "an entry's prior link does not match the previous tip",
+   "expect_failure": "corrupt_chain",
+   "kind": "replay",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 2
+    }
+   ],
+   "minimal_repair": {
+    "replace_log": {
+     "log": [
+      {
+       "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+        "record": {
+         "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+         "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+       "sequence": 1
+      },
+      {
+       "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+        "record": {
+         "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+         "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "sequence": 2
+      }
+     ]
+    }
+   },
+   "name": "log-prior-link-broken",
+   "oracle": "honest"
+  },
+  {
+   "defect": "an entry id diverges from the recomputed chain",
+   "expect_failure": "corrupt_chain",
+   "kind": "replay",
+   "log": [
+    {
+     "entry_id": "wal1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    }
+   ],
+   "minimal_repair": {
+    "replace_log": {
+     "log": [
+      {
+       "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+        "record": {
+         "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+         "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+       "sequence": 1
+      },
+      {
+       "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+       "op": "put",
+       "payload": {
+        "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+        "record": {
+         "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+         "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+         "variant": "standard"
+        }
+       },
+       "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+       "sequence": 2
+      }
+     ]
+    }
+   },
+   "name": "log-entry-id-tampered",
+   "oracle": "honest"
+  }
+ ],
+ "notes": "T0213 WAL conformance fixture: every pinned receipt and replay result computed from the contract-derived reference engine at authoring time; any contract or derivation drift breaks this battery. The fixture proves fixture/contract CONSISTENCY, not production behavior - the later runtime must execute these same cases against a separately implemented runtime.",
+ "rollback": [
+  {
+   "expect": {
+    "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+    "sequence": 1
+   },
+   "expect_failure": "divergent_canonicalization",
+   "kind": "append",
+   "log": [],
+   "name": "rejected-append-raising-oracle-then-valid-append",
+   "oracle": "raising",
+   "request": {
+    "op": "put",
+    "payload": {
+     "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+     "record": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    }
+   },
+   "then_oracle": "honest"
+  },
+  {
+   "expect": {
+    "applied": 2,
+    "head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     },
+     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   },
+   "expect_failure": "corrupt_chain",
+   "kind": "replay",
+   "log": [
+    {
+     "entry_id": "wal1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    }
+   ],
+   "name": "rejected-replay-tampered-chain-then-valid-replay",
+   "oracle": "honest",
+   "then_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    }
+   ],
+   "then_oracle": "honest"
+  }
+ ],
+ "schema": 1
+}
