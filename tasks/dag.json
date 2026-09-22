@@ -3079,10 +3079,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "eee1398d9348a61272a0154d76b48304beb084a0",
+   "evidence_manifest": "evidence/T0143.md"
   },
   {
    "id": "T0144",
@@ -3244,10 +3246,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "5caf7789cd47c1adb09c3aa46dc4cc54c7042cbe",
+   "evidence_manifest": "evidence/T0151.md"
   },
   {
    "id": "T0152",
@@ -3264,10 +3268,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "ea310f9bff53733269b3198fa59e3cdabe858273",
+   "evidence_manifest": "evidence/T0152.md"
   },
   {
    "id": "T0153",
