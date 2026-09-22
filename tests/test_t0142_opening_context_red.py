@@ -58,7 +58,7 @@ class PartialCommitOnReject(ContextTable):
         try:
             return super().insert(variant_id, path)
         except ContextError:
-            self.map[("standard", ("a2a3",))] = {
+            self._records[("standard", ("a2a3",))] = {
                 "variant": "standard",
                 "path_moves": ["a2a3"],
                 "opening_code": "-",

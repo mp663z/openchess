@@ -73,3 +73,49 @@ def test_public_boundaries_are_typed_total():
         with pytest.raises(ContextError):
             table.insert(variant, path)
         assert table.records == before
+
+
+def test_every_public_view_is_detached():
+    table = ContextTable()
+    table.insert("standard", ["e2e4", "c7c5"])
+    baseline = table.serialize()
+    views = [table.records, table.map, table.serialize()]
+    views[0][0]["opening_name"] = "POISON"
+    next(iter(views[1].values()))["opening_name"] = "POISON"
+    views[2][0] = ("standard", "", "-", "POISON")
+    assert table.serialize() == baseline
+
+
+@pytest.mark.parametrize("location", ["destination-value", "destination-key", "incoming-key"])
+def test_merge_rejects_key_or_record_corruption_atomically(location):
+    destination = ContextTable()
+    destination.insert("standard", ["e2e4", "c7c5"])
+    incoming = ContextTable()
+    incoming.insert("standard", ["d2d4", "d7d5", "c2c4"])
+    if location == "destination-value":
+        victim = next(iter(destination._records.values()))
+        victim["opening_name"] = "POISON"
+    elif location == "destination-key":
+        key, record = destination._records.popitem()
+        destination._records[(key[0], ("a2a3",))] = record
+    else:
+        key, record = incoming._records.popitem()
+        incoming._records[(key[0], ("a2a3",))] = record
+    before = copy.deepcopy(destination._records)
+    with pytest.raises(ContextError):
+        destination.merge(incoming)
+    assert destination._records == before
+
+
+def test_mixed_valid_prefix_corrupt_suffix_merge_rolls_back():
+    destination = ContextTable()
+    destination.insert("standard", ["e2e4", "c7c5"])
+    incoming = ContextTable()
+    incoming.insert("standard", ["a2a3"])
+    incoming.insert("standard", ["d2d4", "d7d5", "c2c4"])
+    last = list(incoming._records)[-1]
+    incoming._records[last]["opening_name"] = "POISON"
+    before = copy.deepcopy(destination._records)
+    with pytest.raises(ContextError):
+        destination.merge(incoming)
+    assert destination._records == before

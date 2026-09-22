@@ -76,11 +76,15 @@ class ContextTable:
         self.reg = self.registry
         self.variants = set(loaded_variants if variants is None else variants)
         self._records = {}
-        self.map = self._records
 
     @property
     def records(self):
         return copy.deepcopy(list(self._records.values()))
+
+    @property
+    def map(self):
+        """Detached compatibility view for pre-runtime red probes."""
+        return copy.deepcopy(self._records)
 
     def _make(self, variant, path):
         if type(variant) is not str or variant not in self.variants:
@@ -135,22 +139,35 @@ class ContextTable:
             for r in self._records.values()
         )
 
+    def _validated_pairs(self, records):
+        out = []
+        if type(records) is not dict:
+            _fail("malformed_context_record")
+        try:
+            items = list(records.items())
+        except BaseException as exc:
+            raise ContextError("malformed_context_record") from exc
+        for raw_key, raw_record in items:
+            record = self._validate(raw_record)
+            expected_key = (record["variant"], tuple(record["path_moves"]))
+            if type(raw_key) is not tuple or raw_key != expected_key:
+                _fail("malformed_context_record")
+            out.append((expected_key, record))
+        return out
+
     def merge(self, other):
         if type(other) is not ContextTable:
             _fail("malformed_context_record")
+        # Validate both sides before staging: existing corruption or key drift
+        # is a typed rejection, never carried through a successful merge.
+        current = self._validated_pairs(self._records)
+        incoming = self._validated_pairs(other._records)
         staged = ContextTable(registry=self.registry, variants=self.variants)
-        staged._records = copy.deepcopy(self._records)
-        try:
-            incoming = copy.deepcopy(other._records)
-        except BaseException as exc:
-            raise ContextError("malformed_context_record") from exc
-        for raw in incoming.values():
-            record = staged._validate(raw)
-            key = (record["variant"], tuple(record["path_moves"]))
+        staged._records = {key: copy.deepcopy(record) for key, record in current}
+        for key, record in incoming:
             existing = staged._records.get(key)
             if existing is not None and existing != record:
                 _fail("conflicting_context")
             staged._records[key] = copy.deepcopy(record)
         self._records = staged._records
-        self.map = self._records
         return self
