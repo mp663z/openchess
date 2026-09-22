@@ -1,8 +1,8 @@
 """T0142: permanent red battery for opening-context contract defects.
 
-Scope is deliberate: this pre-implementation task executes the T0140 reference
-contract and T0141 fixture as its oracle. Binding the battery to the shipped
-opening-context runtime is owned by T0143's implementation and review.
+The battery was authored against the T0140 reference oracle, then rebound by
+T0143 to the shipped runtime below. The T0141 fixture remains the pinned data
+source; every mutant now subclasses the production ContextTable.
 """
 
 from __future__ import annotations
@@ -10,17 +10,19 @@ from __future__ import annotations
 import contextlib
 import copy
 
+from graph.opening_context import ContextError, ContextTable
 from tests.test_t0122_transposition_node_contract import _docs as _node_docs
 from tests.test_t0122_transposition_node_contract import _table as _node_table
 from tests.test_t0140_opening_context_contract import (
     PETROFF_PATH,
     ZUKERTORT_TRANSPOSITION_PATH,
-    ContextError,
-    ContextTable,
     _apply_path_from_start,
-    _docs,
 )
 from tests.test_t0141_opening_context_fixture import CASES
+
+
+def _docs():
+    return None
 
 
 def _case(section, name):
@@ -56,7 +58,7 @@ class PartialCommitOnReject(ContextTable):
         try:
             return super().insert(variant_id, path)
         except ContextError:
-            self.map[("standard", ("a2a3",))] = {
+            self._records[("standard", ("a2a3",))] = {
                 "variant": "standard",
                 "path_moves": ["a2a3"],
                 "opening_code": "-",
