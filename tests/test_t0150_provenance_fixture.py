@@ -17,7 +17,7 @@ import tests.test_t0149_provenance_contract as oracle
 
 ROOT = Path(__file__).resolve().parents[1]
 ORACLE_PATH = ROOT / "tests" / "test_t0149_provenance_contract.py"
-ORACLE_FILE_SHA256 = "8a2e5ab1f1e9be53bfe39cf19414da50ecbc7f86b623c7820eee410374cf6b93"
+ORACLE_FILE_SHA256 = "4013dba330ba92545b28089ac1779add996c6f08852984d38d30bf940f6370d3"
 
 
 def _load_isolated_oracle_class():

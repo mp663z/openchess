@@ -96,7 +96,7 @@ def _move_parts(lc, move):
     shape = lc["move_model"]["shape"]
     grammar = lc["move_model"]["square_grammar"]
     promo_enum = shape["types"]["promotion"]["enum"]
-    if not isinstance(move, str) or not move.isascii():
+    if type(move) is not str or not move.isascii():
         raise ValueError("move must be an ascii string")
     squares_len = 2 * len(shape["required"])  # two square fields
     if len(move) not in (squares_len, squares_len + 1):
@@ -132,8 +132,13 @@ def _make_record(ec, vc, dc, epc, fc, lc, nc, digest_fn,
     positions and are pinned to their canonical identities and
     snapshots here."""
     ids = [e["id"] for e in vc["variants"]["entries"]]
-    if variant_id not in ids:
+    # EXACT str for every argument BEFORE membership, grammar or parse
+    if type(variant_id) is not str or variant_id not in ids:
         _fail(ec, "unknown_variant")
+    if type(move) is not str:
+        _fail(ec, "malformed_edge_record")
+    if type(from_fen) is not str or type(to_fen) is not str:
+        _fail(ec, "malformed_position")
     try:
         _move_parts(lc, move)
     except ValueError:
@@ -170,6 +175,14 @@ def _record_identity(ec, vc, dc, epc, fc, lc, nc, record):
     )
 
 
+def _exact_dict(obj):
+    """EXACT built-in dict whose every key is an EXACT str - checked
+    before any set build, membership test or lookup, so a subclass
+    cannot lie about its content and a key with a colliding hash and a
+    raising __eq__ fails closed instead of escaping raw."""
+    return type(obj) is dict and all(type(k) is str for k in dict.keys(obj))
+
+
 def validate_record(ec, vc, dc, epc, fc, lc, nc, record,
                     digest_fn=digest_fen):
     """A stored edge record must satisfy the record section exactly:
@@ -177,7 +190,12 @@ def validate_record(ec, vc, dc, epc, fc, lc, nc, record,
     the linked move_model, and both snapshots satisfying the NODE
     contract's record snapshot pins - checked THROUGH the node
     contract's own record validator, never restated here."""
-    if set(record.keys()) != set(ec["record"]["fields"]):
+    if not _exact_dict(record) or \
+            set(record.keys()) != set(ec["record"]["fields"]):
+        _fail(ec, "malformed_edge_record")
+    # EXACT str for every field BEFORE membership, grammar or parse
+    if not all(type(record[f]) is str for f in (
+            "variant", "move", "from_snapshot_fen", "to_snapshot_fen")):
         _fail(ec, "malformed_edge_record")
     ids = [e["id"] for e in vc["variants"]["entries"]]
     if record["variant"] not in ids:
@@ -259,7 +277,10 @@ class EdgeTable:
             (self.ec, self.vc, self.dc, self.epc, self.fc, self.lc,
              self.nc), self.digest_fn)
         staged.buckets = copy.deepcopy(self.buckets)
-        for rec in other.records():
+        source = other.records()
+        if type(source) is not list:
+            _fail(self.ec, "malformed_edge_record")
+        for rec in source:
             # the source mapping is validated AS A RECORD against
             # the destination's linked docs and digest oracle
             # (original field set and canonical snapshot text)
@@ -970,3 +991,242 @@ def test_linkage_legal_moves_promotion_drift_fails(tmp_path):
     paths = _lint_doc(tmp_path, "l", drift, target="legal_moves")
     with pytest.raises(ContractError):
         _lint_with(paths)
+
+
+# -- totality sweep: hostile keys, values and container subclasses -----------
+
+
+class _SK(str):
+    """str subclass: hashes like the text it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+class _ListSub(list):
+    pass
+
+
+class _Src:
+    """A merge source that hands back exactly the given records."""
+
+    def __init__(self, records):
+        self._records = records
+
+    def records(self):
+        return list(self._records)
+
+
+def _rekey(d, field, key_type):
+    return {key_type(k) if k == field else k: v for k, v in d.items()}
+
+
+_KEY_TYPES = pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+
+
+def _sweep_valid_record():
+    return dict(_table().insert("standard", "e2e4", STARTPOS, AFTER_E4))
+
+
+def _sweep_expect(call, table=None):
+    before = table.serialize() if table is not None else None
+    with pytest.raises(EdgeError) as exc:
+        call()
+    assert exc.value.failure_class == "malformed_edge_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_edge_record"]
+    if table is not None:
+        assert table.serialize() == before
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["variant", "move", "from_snapshot_fen", "to_snapshot_fen"])
+def test_merge_total_over_hostile_record_keys(key_type, field):
+    dst = _table()
+    dst.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+    hostile = _rekey(_sweep_valid_record(), field, key_type)
+    _sweep_expect(lambda: dst.merge(_Src([hostile])), dst)
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["variant", "move", "from_snapshot_fen", "to_snapshot_fen"])
+def test_validate_record_total_over_hostile_record_keys(key_type, field):
+    hostile = _rekey(_sweep_valid_record(), field, key_type)
+    _sweep_expect(lambda: validate_record(*_docs(), hostile))
+
+
+def test_merge_rejects_subclasses_and_hostile_values():
+    dst = _table()
+    dst.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+    rec = _sweep_valid_record()
+    _sweep_expect(lambda: dst.merge(_Src([_DictSub(rec)])), dst)
+    _sweep_expect(lambda: dst.merge(_Src([dict(rec, variant=_SK("standard"))])), dst)
+    _sweep_expect(lambda: dst.merge(_Src([None])), dst)
+    _sweep_expect(lambda: validate_record(*_docs(), _DictSub(rec)))
+    _sweep_expect(lambda: validate_record(*_docs(), None))
+
+
+@_KEY_TYPES
+def test_hostile_record_key_escapes_raw_without_guard(key_type):
+    hostile = _rekey(_sweep_valid_record(), "variant", key_type)
+    with pytest.raises(RuntimeError):
+        hostile["variant"]  # noqa: B018
+
+
+# -- totality sweep: hostile VALUES per field and per entry point ------------
+
+
+class _RaisingList(list):
+    def __iter__(self):
+        raise RuntimeError("hostile __iter__")
+
+
+def _sweep_expect_cls(call, table, cls):
+    before = table.serialize() if table is not None else None
+    with pytest.raises(EdgeError) as exc:
+        call()
+    assert exc.value.failure_class == cls
+    assert exc.value.code == FAILURE_MAPPING[cls]
+    if table is not None:
+        assert table.serialize() == before
+
+
+def _sk_value_records():
+    rec = _sweep_valid_record()
+    out = [
+        (f"SK-{f}", dict(rec, **{f: _SK(rec[f])}), cls)
+        for f, cls in {
+            f: "malformed_edge_record"
+            for f in ("variant", "move", "from_snapshot_fen", "to_snapshot_fen")
+        }.items()
+    ]
+    out += []
+    return out
+
+
+_SK_VALUE_RECORDS = _sk_value_records()
+_SK_IDS = [c[0] for c in _SK_VALUE_RECORDS]
+
+
+@pytest.mark.parametrize("name,record,cls", _SK_VALUE_RECORDS, ids=_SK_IDS)
+def test_validate_record_total_over_hostile_values(name, record, cls):
+    _sweep_expect_cls(lambda: validate_record(*_docs(), record), None, cls)
+
+
+@pytest.mark.parametrize("name,record,cls", _SK_VALUE_RECORDS, ids=_SK_IDS)
+@pytest.mark.parametrize("existing", [False, True], ids=["new-key", "existing-key"])
+def test_merge_total_over_hostile_values(name, record, cls, existing):
+    dst = _table()
+    if existing:
+        # the hostile record's own key is already stored
+        dst.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+    else:
+        # a different edge only: the hostile record's key is new
+        dst.insert("standard", "e1e2", KINGS, KINGS_E1E2_TO)
+    _sweep_expect_cls(lambda: dst.merge(_Src([record])), dst, "malformed_edge_record")
+
+
+@pytest.mark.parametrize(
+    "args,cls",
+    [
+        ((_SK("standard"), "e2e4", STARTPOS, AFTER_E4), "unknown_variant"),
+        (("standard", _SK("e2e4"), STARTPOS, AFTER_E4), "malformed_edge_record"),
+        (("standard", "e2e4", _SK(STARTPOS), AFTER_E4), "malformed_position"),
+        (("standard", "e2e4", STARTPOS, _SK(AFTER_E4)), "malformed_position"),
+    ],
+    ids=["SK-variant", "SK-move", "SK-from", "SK-to"],
+)
+def test_insert_total_over_hostile_values(args, cls):
+    t = _table()
+    t.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+    _sweep_expect_cls(lambda: t.insert(*args), t, cls)
+
+
+@pytest.mark.parametrize(
+    "records", [None, _RaisingList([1]), (), {}], ids=["None", "raising-list", "tuple", "dict"]
+)
+def test_merge_rejects_non_list_sources(records):
+    dst = _table()
+    dst.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+
+    class _Bad:
+        def records(self):
+            return records
+
+    _sweep_expect_cls(lambda: dst.merge(_Bad()), dst, "malformed_edge_record")
+
+
+def _selfref():
+    loop = []
+    loop.append(loop)
+    return loop
+
+
+def _deep(n=100_000):
+    root = cur = []
+    for _ in range(n):
+        nxt = []
+        cur.append(nxt)
+        cur = nxt
+    return root
+
+
+def _structural_value_records():
+    rec = _sweep_valid_record()
+    return [
+        (f"{kind}-{f}", dict(rec, **{f: make()}), cls)
+        for f, cls in {
+            f: "malformed_edge_record"
+            for f in ("variant", "move", "from_snapshot_fen", "to_snapshot_fen")
+        }.items()
+        for kind, make in (("selfref", _selfref), ("deep", _deep), ("hugeint", lambda: 10**5000))
+    ]
+
+
+_STRUCT_RECORDS = _structural_value_records()
+_STRUCT_IDS = [c[0] for c in _STRUCT_RECORDS]
+
+
+@pytest.mark.parametrize("name,record,cls", _STRUCT_RECORDS, ids=_STRUCT_IDS)
+def test_validate_record_total_over_structural_values(name, record, cls):
+    _sweep_expect_cls(lambda: validate_record(*_docs(), record), None, cls)
+
+
+@pytest.mark.parametrize("name,record,cls", _STRUCT_RECORDS, ids=_STRUCT_IDS)
+def test_merge_total_over_structural_values(name, record, cls):
+    dst = _table()
+    dst.insert("standard", "e2e4", STARTPOS, AFTER_E4)
+    _sweep_expect_cls(lambda: dst.merge(_Src([record])), dst, "malformed_edge_record")
+
+
+@pytest.mark.parametrize("field", ["variant", "move", "from_snapshot_fen", "to_snapshot_fen"])
+def test_hostile_value_escapes_raw_without_guard(field):
+    """Guardless demo: the pre-sweep isinstance check admits the SK value,
+    and the next == / in against it raises raw."""
+    value = _SK(_sweep_valid_record()[field])
+    assert isinstance(value, str)
+    with pytest.raises(RuntimeError):
+        value in [str(value)]  # noqa: B015

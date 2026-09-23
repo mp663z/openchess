@@ -1086,14 +1086,36 @@ def test_diff_sections_total_over_hostile_record_values(kind, field, section, en
         _expect_malformed(lambda: engine.apply(diff, base), diff, base)
 
 
+def _pre_sweep_make_record(nc, vc, dc, ec, fc, digest_fn, variant_id, fen_text):
+    """The pre-sweep T0122 _make_record (no exact-str guards). T0122's
+    own sweep made _make_record total, so this T0176 guard is now defense
+    in depth; the demo pins that with NEITHER guard the value escapes."""
+    import tests.test_t0122_transposition_node_contract as t0122
+
+    ids = [e["id"] for e in vc["variants"]["entries"]]
+    if variant_id not in ids:
+        t0122._fail(nc, "unknown_variant")
+    try:
+        position = t0122.parse_fen(fc, fen_text)
+    except t0122.FenError:
+        t0122._fail(nc, "malformed_position")
+    identity = t0122._identity_tuple(nc, vc, dc, ec, fc, variant_id, position)
+    return {
+        "variant": variant_id,
+        "digest": digest_fn(variant_id, fen_text),
+        "snapshot_fen": t0122._snapshot_fen(nc, vc, fc, identity),
+    }
+
+
 def _guardless_validate_record_key(key, rec):
-    """Mutant: the pre-sweep reference, without the exact-value guard -
-    the node machinery and the == compares see the hostile value."""
+    """Mutant: the pre-sweep reference, without the exact-value guard
+    and over the pre-sweep node machinery - the parser and the ==
+    compares see the hostile value."""
     if type(key) is not str or not _exact_dict(rec):
         _fail("malformed_diff_record")
     try:
-        derived = _make_record(*_NDOCS, digest_fen, rec.get("variant"),
-                               rec.get("snapshot_fen"))
+        derived = _pre_sweep_make_record(*_NDOCS, digest_fen, rec.get("variant"),
+                                         rec.get("snapshot_fen"))
     except NodeError:
         _fail("malformed_diff_record")
     if set(rec.keys()) != set(derived.keys()):

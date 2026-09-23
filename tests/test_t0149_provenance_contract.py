@@ -124,7 +124,7 @@ def _valid_timestamp(text):
     the pinned NON-LEAP profile - second is 00-59, a :60 leap second
     is rejected, never normalized. ASCII digit classes only, never
     str.isdigit (Unicode)."""
-    if not isinstance(text, str) or not text.isascii():
+    if type(text) is not str or not text.isascii():
         return False
     if _TS_RE.fullmatch(text) is None:
         return False
@@ -146,17 +146,29 @@ def _valid_timestamp(text):
 def _valid_game_id(text):
     """Nonempty, delimiter-free printable ASCII: every byte in
     0x21-0x7E (printable, no space, no DEL, no control)."""
-    if not isinstance(text, str) or not text:
+    if type(text) is not str or not text:
         return False
     return all(0x21 <= ord(ch) <= 0x7E for ch in text)
+
+
+def _exact_dict(obj):
+    """EXACT built-in dict whose every key is an EXACT str - checked
+    before any set build, membership test or lookup, so a subclass
+    cannot lie about its content and a key with a colliding hash and a
+    raising __eq__ fails closed instead of escaping raw."""
+    return type(obj) is dict and all(type(k) is str for k in dict.keys(obj))
 
 
 def _validate_source_entry(pc, ic, entry):
     """A source entry satisfies the source_entry section exactly:
     the declared field set, a registry source id (fail closed), a
     pinned game_id storage form, and the pinned timestamp grammar."""
-    if not isinstance(entry, dict) or \
+    if not _exact_dict(entry) or \
             set(entry.keys()) != set(pc["source_entry"]["fields"]):
+        _fail(pc, "malformed_provenance_record")
+    # exact-str type BEFORE membership: a hostile str subclass must
+    # never reach a hash/== compare
+    if type(entry["source_id"]) is not str:
         _fail(pc, "malformed_provenance_record")
     if entry["source_id"] not in _registry_ids(ic):
         _fail(pc, "unknown_source")
@@ -175,7 +187,7 @@ def _source_key(entry):
 def _canonical_sources(pc, ic, sources):
     """Set semantics: order-free, exact duplicates collapse; the
     canonical stored form sorts by the full entry tuple."""
-    if not isinstance(sources, list) or not sources:
+    if type(sources) is not list or not sources:
         _fail(pc, "malformed_provenance_record")  # nonempty pinned
     seen = {}
     for entry in sources:
@@ -192,15 +204,15 @@ def _validate_target(pc, kind, target):
     """The target identity is validated THROUGH the owning sibling
     contract's own machinery, imported never restated; any sibling
     rejection is a malformed_target_identity here."""
-    if not isinstance(target, dict):
+    if not _exact_dict(target):
         _fail(pc, "malformed_target_identity")
     if kind == NODE_KIND:
         if set(target.keys()) != {"variant", "snapshot_fen"}:
             _fail(pc, "malformed_target_identity")
         # total: explicit field-type guards BEFORE the sibling
         # calls - a non-string field never reaches sibling machinery
-        if not isinstance(target["variant"], str) or \
-                not isinstance(target["snapshot_fen"], str):
+        if type(target["variant"]) is not str or \
+                type(target["snapshot_fen"]) is not str:
             _fail(pc, "malformed_target_identity")
         nc, vc, dc, epc, fc = _node_docs()
         try:
@@ -218,7 +230,7 @@ def _validate_target(pc, kind, target):
                                   "from_snapshot_fen",
                                   "to_snapshot_fen"}:
             _fail(pc, "malformed_target_identity")
-        if not all(isinstance(target[key], str) for key in (
+        if not all(type(target[key]) is str for key in (
                 "variant", "move", "from_snapshot_fen",
                 "to_snapshot_fen")):
             _fail(pc, "malformed_target_identity")
@@ -229,9 +241,9 @@ def _validate_target(pc, kind, target):
     elif kind == CTX_KIND:
         if set(target.keys()) != {"variant", "path_moves"}:
             _fail(pc, "malformed_target_identity")
-        if not isinstance(target["variant"], str) or \
-                not isinstance(target["path_moves"], list) or \
-                not all(isinstance(m, str)
+        if type(target["variant"]) is not str or \
+                type(target["path_moves"]) is not list or \
+                not all(type(m) is str
                         for m in target["path_moves"]):
             _fail(pc, "malformed_target_identity")
         oc, vc, lc, nc, reg = _ctx_docs()
@@ -266,10 +278,12 @@ def validate_record(pc, ic, record):
     kind, a NONEMPTY sources set of valid entries, and a target
     passing the owning sibling's validation. Returns the canonical
     record (sources deduplicated and sorted)."""
-    if not isinstance(record, dict) or \
+    if not _exact_dict(record) or \
             set(record.keys()) != set(pc["record"]["fields"]):
         _fail(pc, "malformed_provenance_record")
     kind = record["target_kind"]
+    if type(kind) is not str:
+        _fail(pc, "malformed_provenance_record")
     if kind not in pc["targets"]["kinds"]:
         _fail(pc, "unknown_target_kind")
     canonical_sources = _canonical_sources(pc, ic, record["sources"])
@@ -334,7 +348,10 @@ class ProvenanceTable:
         any rejection, over both merge orders."""
         staged = ProvenanceTable((self.pc, self.ic))
         staged.by_key = copy.deepcopy(self.by_key)
-        for rec in other.records():
+        source = other.records()
+        if type(source) is not list:
+            _fail(self.pc, "malformed_provenance_record")
+        for rec in source:
             validate_record(self.pc, self.ic, rec)
             staged.insert(rec)
         self.by_key = staged.by_key
@@ -1118,3 +1135,154 @@ def test_linkage_context_identity_drift_fails(tmp_path):
     paths = _lint_doc(tmp_path, "c", drift, target="context")
     with pytest.raises(ContractError):
         _lint_with(paths)
+
+
+# -- totality sweep: hostile keys, values and container subclasses -----------
+
+
+class _SK(str):
+    """str subclass: hashes like the text it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+class _ListSub(list):
+    pass
+
+
+def _rekey(d, field, key_type):
+    return {key_type(k) if k == field else k: v for k, v in d.items()}
+
+
+_TARGETS = {NODE_KIND: NODE_TARGET, EDGE_KIND: EDGE_TARGET, CTX_KIND: CTX_TARGET}
+MPR = "malformed_provenance_record"
+MTI = "malformed_target_identity"
+
+
+def _rec(kind=NODE_KIND, target=None, sources=None):
+    return {"target_kind": kind,
+            "target": copy.deepcopy(_TARGETS[kind]) if target is None else target,
+            "sources": [dict(S1)] if sources is None else sources}
+
+
+def _hostile_cases():
+    cases = []
+    for kt in (_SK, _HK):
+        n = kt.__name__[1:]
+        for f in ("target_kind", "target", "sources"):
+            cases.append((f"{n}-record-key-{f}", _rekey(_rec(), f, kt), MPR))
+        for f in S1:
+            cases.append((f"{n}-source-key-{f}", _rec(sources=[_rekey(S1, f, kt)]), MPR))
+        for kind, target in _TARGETS.items():
+            for f in target:
+                cases.append((f"{n}-{kind}-target-key-{f}",
+                              _rec(kind, target=_rekey(target, f, kt)), MTI))
+    cases.append(("SK-target_kind", dict(_rec(), target_kind=_SK(NODE_KIND)), MPR))
+    for f in S1:
+        cases.append((f"SK-source-{f}", _rec(sources=[dict(S1, **{f: _SK(S1[f])})]), MPR))
+    for kind, target in _TARGETS.items():
+        for f, v in target.items():
+            if type(v) is str:
+                hostile = dict(target, **{f: _SK(v)})
+                cases.append((f"SK-{kind}-{f}", _rec(kind, target=hostile), MTI))
+    cases.append(("SK-path-move", _rec(CTX_KIND, target=dict(
+        CTX_TARGET, path_moves=[_SK("e2e4"), "c7c5"])), MTI))
+    cases.append(("listsub-path", _rec(CTX_KIND, target=dict(
+        CTX_TARGET, path_moves=_ListSub(CTX_TARGET["path_moves"]))), MTI))
+    cases.append(("dictsub-record", _DictSub(_rec()), MPR))
+    cases.append(("dictsub-source", _rec(sources=[_DictSub(S1)]), MPR))
+    cases.append(("listsub-sources", _rec(sources=_ListSub([dict(S1)])), MPR))
+    for kind, target in _TARGETS.items():
+        cases.append((f"dictsub-{kind}-target", _rec(kind, target=_DictSub(target)), MTI))
+    return cases
+
+
+_CASES = _hostile_cases()
+
+
+def _expect(call, table, cls):
+    before = table.serialize()
+    with pytest.raises(ProvenanceError) as exc:
+        call()
+    assert exc.value.failure_class == cls
+    assert exc.value.code == FAILURE_MAPPING[cls]
+    assert table.serialize() == before
+
+
+@pytest.mark.parametrize("name,record,cls", _CASES, ids=[c[0] for c in _CASES])
+def test_insert_total_over_hostile_records(name, record, cls):
+    t = _table()
+    t.insert(_rec(sources=[dict(S2)]))
+    _expect(lambda: t.insert(record), t, cls)
+
+
+@pytest.mark.parametrize("name,record,cls", _CASES, ids=[c[0] for c in _CASES])
+def test_merge_total_over_hostile_records(name, record, cls):
+    t = _table()
+    t.insert(_rec(sources=[dict(S2)]))
+    _expect(lambda: t.merge(_Batch([_rec(EDGE_KIND), record])), t, cls)
+
+
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_hostile_record_key_escapes_raw_without_guard(key_type):
+    hostile = _rekey(_rec(), "target_kind", key_type)
+    with pytest.raises(RuntimeError):
+        set(hostile.keys()) != {"target_kind", "target", "sources"}  # noqa: B015
+
+
+class _RaisingList(list):
+    def __iter__(self):
+        raise RuntimeError("hostile __iter__")
+
+
+class _BadSource:
+    def __init__(self, records):
+        self._records = records
+
+    def records(self):
+        return self._records
+
+
+@pytest.mark.parametrize(
+    "records",
+    [None, _RaisingList([1]), (), {}],
+    ids=["None", "raising-list", "tuple", "dict"],
+)
+def test_merge_rejects_non_list_sources(records):
+    t = _table()
+    t.insert(_rec(sources=[dict(S2)]))
+    _expect(lambda: t.merge(_BadSource(records)), t, MPR)
+
+
+def test_non_list_source_escapes_raw_without_guard():
+    """Guardless demo: iterating the source without the exact-list check
+    raises raw on None and on a raising list subclass."""
+    for records in (None, _RaisingList([1])):
+        with pytest.raises((TypeError, RuntimeError)):
+            for _ in records:
+                pass
