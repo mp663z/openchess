@@ -5265,10 +5265,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "b35e89527bbceea91f81132f33627293dc778778",
+   "evidence_manifest": "evidence/T0248.md"
   },
   {
    "id": "T0249",
@@ -5445,10 +5447,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "5e166bb0ab6a47ea997553d86f02ef0cf0873b6c",
+   "evidence_manifest": "evidence/T0257.md"
   },
   {
    "id": "T0258",
@@ -5625,10 +5629,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "f5d96dc7e47513dc7a26f8094e58f110ef280d48",
+   "evidence_manifest": "evidence/T0266.md"
   },
   {
    "id": "T0267",
@@ -5805,10 +5811,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "792cf3000e280db5db3b728efc1274fe082d2501",
+   "evidence_manifest": "evidence/T0275.md"
   },
   {
    "id": "T0276",
