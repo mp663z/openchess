@@ -38,7 +38,7 @@ _RECORD_FIELDS = ("variant", "digest", "snapshot_fen")
 GENESIS = "wal0:" + "0" * 64
 
 __all__ = ["FAILURE_MAPPING", "GENESIS", "WalEngine", "WalError",
-           "canonical_payload"]
+           "canonical_payload", "restore", "snapshot"]
 
 
 class WalError(Exception):
@@ -156,9 +156,11 @@ def _validate_log(log):
         tip = entry["entry_id"]
 
 
-def _snapshot(log):
-    """Reference-preserving snapshot of the caller's log: the oracle may
-    hold external references into it, so every exit restores it."""
+def snapshot(log):
+    """Reference-preserving snapshot of a structurally validated log.
+    Untrusted code may hold external references into the caller's log,
+    so pair this with restore() on every exit. Returns (container,
+    saved) for restore()."""
     saved = []
     for entry in log:
         payload = entry["payload"]
@@ -168,7 +170,9 @@ def _snapshot(log):
     return list(log), saved
 
 
-def _restore(log, container, saved):
+def restore(log, container, saved):
+    """Put a log back exactly as snapshot() found it: same list contents,
+    same entry / payload / record objects, same values."""
     log[:] = container
     for entry, e_copy, payload, p_copy, record, r_copy in saved:
         record.clear()
@@ -245,7 +249,7 @@ class WalEngine:
                           "identity": request["payload"]["identity"],
                           "record": dict(request["payload"]["record"])}}
         _validate_log(log)
-        container, saved = _snapshot(log)
+        container, saved = snapshot(log)
         payload = request["payload"]
         record = payload["record"]
         saved_req = (dict(request), dict(payload), dict(record))
@@ -266,7 +270,7 @@ class WalEngine:
                 "prior_entry_id": tip,
             }
         finally:
-            _restore(log, container, saved)
+            restore(log, container, saved)
             req_copy, p_copy, r_copy = saved_req
             record.clear()
             record.update(r_copy)
@@ -284,7 +288,7 @@ class WalEngine:
         if type(log) is not list:
             _fail("malformed_wal_entry")
         _validate_log(log)
-        container, saved = _snapshot(log)
+        container, saved = snapshot(log)
         frozen = [_freeze_entry(entry) for entry in log]
         try:
             tip = self._rederive(frozen)
@@ -298,5 +302,5 @@ class WalEngine:
             result = {"state": state, "state_id": state_id(state),
                       "head": tip, "applied": len(frozen)}
         finally:
-            _restore(log, container, saved)
+            restore(log, container, saved)
         return result

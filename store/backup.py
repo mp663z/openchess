@@ -115,13 +115,13 @@ class BackupEngine:
             replayed = self._wal.replay(log)
         except _wal.WalError:
             _fail("corrupt_source")
-        container, saved = _wal._snapshot(log)
+        container, saved = _wal.snapshot(log)
         frozen = {key: dict(rec) for key, rec in replayed["state"].items()}
         try:
             bundle = self._serialize(
                 {key: dict(rec) for key, rec in frozen.items()})
         finally:
-            _wal._restore(log, container, saved)
+            _wal.restore(log, container, saved)
         return {
             "backup_id": _derive(replayed["head"], replayed["state_id"],
                                  replayed["applied"], bundle,
