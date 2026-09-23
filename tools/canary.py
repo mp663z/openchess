@@ -65,7 +65,12 @@ def head_sha(root: Path = ROOT) -> str:
     return out.stdout.strip()
 
 
-GATE_TIMEOUT_S = 900  # a hung gate is a failed gate
+# a hung gate is a failed gate. Sized from the measured test-gate time
+# (ci.yml "Tests" = tools/test_gate.py): 19m10s at 7fa3aed on the GitHub
+# runner (~1.57x headroom at 1800s; less after #204/#205). The 900s
+# limit was exceeded at 47433d9 and 7fa3aed. Lower this again only after
+# the fixture closure loops are sped up.
+GATE_TIMEOUT_S = 1800
 
 
 def check(root: Path = ROOT, gates: list[list[str]] | None = None,
