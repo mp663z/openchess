@@ -22,6 +22,7 @@ repo_areas:
   graph: agpl
   importers: agpl
   server: agpl
+  store: agpl
   uci-worker: agpl
   web: agpl
   .githooks: agpl
