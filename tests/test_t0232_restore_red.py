@@ -87,8 +87,8 @@ from tools.restore_contract_lint import (  # noqa: E402
 )
 
 # -- binding switch: the production task replaces ONLY these two
-RestoreEngine = _reference.RestoreEngine
-RestoreError = _reference.RestoreError
+RestoreEngine = __import__("store.restore").restore.RestoreEngine
+RestoreError = __import__("store.restore").restore.RestoreError
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "restore"
            / "cases.json")
