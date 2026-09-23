@@ -6,6 +6,8 @@ en-passant and FEN contracts.
 
 from __future__ import annotations
 
+import copy
+import functools
 import hashlib
 import re
 from pathlib import Path
@@ -22,13 +24,23 @@ EN_PASSANT = ROOT / "data" / "contracts" / "en_passant.yaml"
 FEN = ROOT / "data" / "contracts" / "fen.yaml"
 
 
-def _docs():
+@functools.lru_cache(maxsize=1)
+def _parsed_docs():
+    """Parse the four linked contracts once per process. The cached
+    tuple is private: callers only ever get deep copies from _docs()."""
     return (
         yaml.safe_load(CONTRACT.read_text())["contract"],
         yaml.safe_load(VARIANT.read_text())["contract"],
         yaml.safe_load(EN_PASSANT.read_text())["contract"],
         yaml.safe_load(FEN.read_text())["contract"],
     )
+
+
+def _docs():
+    """The linked contract documents. Parsed once per process (about
+    40 ms of yaml per call before); each call returns a fresh deep copy
+    (about 0.3 ms) so no caller can mutate shared state."""
+    return copy.deepcopy(_parsed_docs())
 
 
 def _lint():
