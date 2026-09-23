@@ -107,11 +107,19 @@ def state_id(state):
         "".join(parts).encode()).hexdigest()
 
 
+def _exact_dict(obj):
+    """EXACT built-in dict whose every key is an EXACT str - checked
+    before any set build, membership test or lookup, so a subclass
+    cannot lie about its content and a key with a colliding hash and a
+    raising __eq__ fails closed instead of escaping raw."""
+    return type(obj) is dict and all(type(k) is str for k in dict.keys(obj))
+
+
 def _validate_record(rec):
     """An exact valid LINKED node record: canonical fields through
     the node machinery (exact built-in-str guards BEFORE sibling
     machinery), exact built-in-str digest in the linked format."""
-    if not isinstance(rec, dict):
+    if not _exact_dict(rec):
         _fail("malformed_edit_record")
     if set(rec.keys()) != set(_NDOCS[0]["record"]["fields"]):
         _fail("malformed_edit_record")
@@ -149,22 +157,24 @@ class AtomicEditEngine:
         # built-in-str base_id in the pinned grammar, operations
         # a list of exact operation shapes - explicit guards on
         # every field, never a raw escape.
-        if not isinstance(request, dict) or \
+        if not _exact_dict(request) or \
                 set(request.keys()) != {"base_id", "operations"}:
             _fail("malformed_edit_record")
         if type(request["base_id"]) is not str or \
                 _ID_RE.fullmatch(request["base_id"]) is None:
             _fail("malformed_edit_record")
         operations = request["operations"]
-        if not isinstance(operations, list):
+        if type(operations) is not list:
             _fail("malformed_edit_record")
         seen = set()
         for op in operations:
-            if not isinstance(op, dict) or set(op.keys()) != \
+            if not _exact_dict(op) or set(op.keys()) != \
                     _OP_FIELDS:
                 _fail("malformed_edit_record")
-            if op["kind"] not in _OP_KINDS or \
-                    type(op["kind"]) is not str:
+            # exact-str type BEFORE membership: a hostile str
+            # subclass must never reach a hash/== compare
+            if type(op["kind"]) is not str or \
+                    op["kind"] not in _OP_KINDS:
                 _fail("malformed_edit_record")
             if type(op["identity"]) is not str:
                 _fail("malformed_edit_record")
@@ -182,7 +192,7 @@ class AtomicEditEngine:
                     _fail("malformed_edit_record")
         # BASE VALIDATION: mapping of exact-str keys to exact
         # valid records whose derived identity equals the key.
-        if not isinstance(base, dict):
+        if not _exact_dict(base):
             _fail("malformed_edit_record")
         for key, rec in base.items():
             if type(key) is not str:
@@ -834,3 +844,122 @@ def test_mutant_delete_absent_allowed_caught():
 def test_mutant_dup_identity_allowed_caught():
     with pytest.raises(AssertionError):
         _dup_identity_witness(_DupIdentityAllowedEngine())
+
+
+# -- totality sweep: hostile keys and container subclasses ---------------------
+
+
+class _SK(str):
+    """str subclass: hashes like the text it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+class _ListSub(list):
+    pass
+
+
+def _refs(obj):
+    """Identity snapshot that never hashes or compares a caller key."""
+    if type(obj) is dict:
+        return tuple((id(k), id(v), _refs(v)) for k, v in dict.items(obj))
+    if type(obj) is list:
+        return tuple((id(v), _refs(v)) for v in obj)
+    return id(obj)
+
+
+def _rekey(d, field, key_type):
+    return {key_type(k) if k == field else k: v for k, v in d.items()}
+
+
+def _expect_malformed(request, base):
+    before = (_refs(request), _refs(base))
+    with pytest.raises(AtomicEditError) as exc:
+        AtomicEditEngine().apply(request, base)
+    assert exc.value.failure_class == "malformed_edit_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_edit_record"]
+    assert (_refs(request), _refs(base)) == before
+
+
+_KEY_TYPES = pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["base_id", "operations"])
+def test_total_over_hostile_request_keys(key_type, field):
+    base = _state(REC_A)
+    _expect_malformed(_rekey(_request(base, [_put(REC_B)]), field, key_type), base)
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["kind", "identity", "record"])
+def test_total_over_hostile_operation_keys(key_type, field):
+    base = _state(REC_A)
+    _expect_malformed(_request(base, [_rekey(_put(REC_B), field, key_type)]), base)
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["variant", "snapshot_fen", "digest"])
+@pytest.mark.parametrize("where", ["operation", "base"])
+def test_total_over_hostile_record_keys(key_type, field, where):
+    base = _state(REC_A)
+    if where == "operation":
+        op = _put(REC_B)
+        op["record"] = _rekey(REC_B, field, key_type)
+        _expect_malformed(_request(base, [op]), base)
+    else:
+        request = _request(base, [_put(REC_B)])
+        hostile = {ID_A: _rekey(REC_A, field, key_type)}
+        _expect_malformed(request, hostile)
+
+
+def test_hostile_kind_value_fails_closed():
+    base = _state(REC_A)
+    op = _put(REC_B)
+    op["kind"] = _SK("put")
+    _expect_malformed(_request(base, [op]), base)
+
+
+def test_container_subclasses_rejected():
+    base = _state(REC_A)
+    request = _request(base, [_put(REC_B)])
+    _expect_malformed(_DictSub(request), base)
+    _expect_malformed(dict(request, operations=_ListSub(request["operations"])), base)
+    _expect_malformed(dict(request, operations=[_DictSub(_put(REC_B))]), base)
+    _expect_malformed(request, _DictSub(base))
+    _expect_malformed(request, {ID_A: _DictSub(REC_A)})
+    op = _put(REC_B)
+    op["record"] = _DictSub(REC_B)
+    _expect_malformed(_request(base, [op]), base)
+
+
+@_KEY_TYPES
+def test_hostile_key_escapes_raw_without_guard(key_type):
+    request = _rekey(_request(_state(REC_A), []), "base_id", key_type)
+    with pytest.raises(RuntimeError):
+        set(request.keys()) != {"base_id", "operations"}  # noqa: B015

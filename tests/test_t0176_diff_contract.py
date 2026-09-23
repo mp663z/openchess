@@ -94,6 +94,17 @@ def _state(*records):
     return {_identity(r): r for r in records}
 
 
+def _exact_dict(obj):
+    """EXACT built-in dict whose every key is an EXACT str - checked
+    before any set build, membership test or lookup, so a subclass
+    cannot lie about its content and a key with a colliding hash and a
+    raising __eq__ fails closed instead of escaping raw."""
+    return type(obj) is dict and all(type(k) is str for k in dict.keys(obj))
+
+
+_RECORD_FIELDS = frozenset(("variant", "digest", "snapshot_fen"))
+
+
 def _validate_record_key(key, rec):
     """Every section entry: the value must be an exact valid
     LINKED node record (canonical fields through the node
@@ -101,7 +112,13 @@ def _validate_record_key(key, rec):
     whose DERIVED canonical identity equals the map key."""
     if not isinstance(key, str) or type(key) is not str:
         _fail("malformed_diff_record")
-    if not isinstance(rec, dict):
+    if not _exact_dict(rec):
+        _fail("malformed_diff_record")
+    # exact field set and EXACT str values BEFORE the node machinery:
+    # a str subclass can raise from ==/hash inside the FEN parser, and
+    # only an exact str is guaranteed flat (no self-reference, no depth)
+    if set(dict.keys(rec)) != _RECORD_FIELDS or \
+            any(type(rec[f]) is not str for f in _RECORD_FIELDS):
         _fail("malformed_diff_record")
     try:
         derived = _make_record(*_NDOCS, digest_fen,
@@ -141,7 +158,7 @@ class DiffEngine:
     model, atomic staged apply with structural base check."""
 
     def _validate_state(self, state):
-        if not isinstance(state, dict):
+        if not _exact_dict(state):
             _fail("malformed_diff_record")
         for key, rec in state.items():
             _validate_record_key(key, rec)
@@ -168,7 +185,7 @@ class DiffEngine:
         entry validated through the linked machinery with
         key/identity agreement; changed witnesses carry unequal
         exact content under one derived identity."""
-        if not isinstance(diff, dict):
+        if not _exact_dict(diff):
             _fail("malformed_diff_record")
         if set(diff.keys()) != set(_FIELDS):
             _fail("malformed_diff_record")
@@ -179,15 +196,15 @@ class DiffEngine:
                 _fail("malformed_diff_record")
         for section in ("added", "removed"):
             value = diff[section]
-            if not isinstance(value, dict):
+            if not _exact_dict(value):
                 _fail("malformed_diff_record")
             for key, rec in value.items():
                 _validate_record_key(key, rec)
         changed = diff["changed"]
-        if not isinstance(changed, dict):
+        if not _exact_dict(changed):
             _fail("malformed_diff_record")
         for key, witness in changed.items():
-            if not isinstance(witness, dict) or \
+            if not _exact_dict(witness) or \
                     set(witness.keys()) != {"base", "target"}:
                 _fail("malformed_diff_record")
             _validate_record_key(key, witness["base"])
@@ -854,3 +871,244 @@ def test_mutant_apply_skipping_target_check_accepts_lies():
     with pytest.raises(DiffError) as exc:
         engine.apply(tampered, base)
     assert exc.value.failure_class == "divergent_target"
+
+
+# -- totality sweep: hostile keys and dict subclasses ----------------------------
+
+
+class _SK(str):
+    """str subclass: hashes like the field it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+def _refs(obj):
+    """Identity snapshot that never hashes or compares a caller key."""
+    if type(obj) is dict:
+        return tuple((id(k), id(v), _refs(v)) for k, v in dict.items(obj))
+    return id(obj)
+
+
+def _rekey(d, field, key_type):
+    return {key_type(k) if k == field else k: v for k, v in d.items()}
+
+
+def _expect_malformed(call, *inputs):
+    before = [_refs(x) for x in inputs]
+    with pytest.raises(DiffError) as exc:
+        call()
+    assert exc.value.failure_class == "malformed_diff_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_diff_record"]
+    assert [_refs(x) for x in inputs] == before
+
+
+_KEY_TYPES = pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+_REC_FIELDS = pytest.mark.parametrize("field", ["variant", "snapshot_fen", "digest"])
+
+
+@_KEY_TYPES
+@_REC_FIELDS
+@pytest.mark.parametrize("slot", ["base", "target"])
+def test_compute_total_over_hostile_record_keys(key_type, field, slot):
+    engine = DiffEngine()
+    rec = _node(KINGS)
+    args = {"base": _state(_node(STARTPOS)), "target": _state(_node(STARTPOS))}
+    args[slot] = {_identity(rec): _rekey(rec, field, key_type)}
+    _expect_malformed(lambda: engine.compute(args["base"], args["target"]),
+                      args["base"], args["target"])
+
+
+@_KEY_TYPES
+@_REC_FIELDS
+def test_apply_total_over_hostile_base_record_keys(key_type, field):
+    engine = DiffEngine()
+    base = _state(_node(STARTPOS))
+    diff = engine.compute(base, _state(_node(STARTPOS), _node(KINGS)))
+    rec = _node(STARTPOS)
+    hostile = {_identity(rec): _rekey(rec, field, key_type)}
+    _expect_malformed(lambda: engine.apply(diff, hostile), diff, hostile)
+
+
+@_KEY_TYPES
+@_REC_FIELDS
+def test_validate_diff_total_over_hostile_section_record_keys(key_type, field):
+    engine = DiffEngine()
+    diff = engine.compute(_state(_node(STARTPOS)), _state(_node(STARTPOS), _node(KINGS)))
+    (key,) = diff["added"]
+    diff["added"][key] = _rekey(diff["added"][key], field, key_type)
+    _expect_malformed(lambda: engine.validate_diff(diff), diff)
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["base_id", "target_id", "added", "removed", "changed"])
+def test_validate_diff_total_over_hostile_top_level_keys(key_type, field):
+    engine = DiffEngine()
+    diff = engine.compute(_state(_node(STARTPOS)), _state(_node(STARTPOS), _node(KINGS)))
+    hostile = _rekey(diff, field, key_type)
+    _expect_malformed(lambda: engine.validate_diff(hostile), hostile)
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["base", "target"])
+def test_validate_diff_total_over_hostile_witness_keys(key_type, field):
+    engine = DiffEngine()
+    base = _state(_node(KINGS))
+    target = _state(_node(KINGS, K1))
+    diff = engine.compute(base, target)
+    (key,) = diff["changed"]
+    diff["changed"][key] = _rekey(diff["changed"][key], field, key_type)
+    _expect_malformed(lambda: engine.validate_diff(diff), diff)
+
+
+def test_dict_subclasses_rejected():
+    engine = DiffEngine()
+    base = _state(_node(STARTPOS))
+    target = _state(_node(STARTPOS), _node(KINGS))
+    diff = engine.compute(base, target)
+    _expect_malformed(lambda: engine.compute(_DictSub(base), target))
+    _expect_malformed(lambda: engine.compute(
+        base, {k: _DictSub(v) for k, v in target.items()}))
+    _expect_malformed(lambda: engine.validate_diff(_DictSub(diff)))
+    _expect_malformed(lambda: engine.validate_diff(dict(diff, added=_DictSub(diff["added"]))))
+    _expect_malformed(lambda: engine.apply(diff, _DictSub(base)))
+    changed = engine.compute(_state(_node(KINGS)), _state(_node(KINGS, K1)))
+    (key,) = changed["changed"]
+    changed["changed"][key] = _DictSub(changed["changed"][key])
+    _expect_malformed(lambda: engine.validate_diff(changed))
+
+
+@_KEY_TYPES
+def test_hostile_record_key_escapes_raw_without_guard(key_type):
+    rec = _rekey(_node(KINGS), "variant", key_type)
+    with pytest.raises(RuntimeError):
+        rec.get("variant")
+
+
+# -- totality sweep: hostile record VALUES ------------------------------------
+
+
+def _deep(n=100_000):
+    root = cur = []
+    for _ in range(n):
+        nxt = []
+        cur.append(nxt)
+        cur = nxt
+    return root
+
+
+def _selfref():
+    loop = []
+    loop.append(loop)
+    return loop
+
+
+def _hostile_values(rec, field):
+    """Each hostile value a record field can carry: a raising str
+    subclass that hashes like the real text, a self-referential list
+    and a 1e5-deep list."""
+    return {"SK": _SK(rec[field]), "selfref": _selfref(), "deep": _deep()}
+
+
+_VALUE_KINDS = pytest.mark.parametrize("kind", ["SK", "selfref", "deep"])
+
+
+@_VALUE_KINDS
+@_REC_FIELDS
+@pytest.mark.parametrize("slot", ["base", "target"])
+def test_compute_total_over_hostile_record_values(kind, field, slot):
+    engine = DiffEngine()
+    rec = _node(KINGS)
+    args = {"base": _state(_node(STARTPOS)), "target": _state(_node(STARTPOS))}
+    args[slot] = {_identity(rec): dict(rec, **{field: _hostile_values(rec, field)[kind]})}
+    _expect_malformed(lambda: engine.compute(args["base"], args["target"]),
+                      args["base"], args["target"])
+
+
+@_VALUE_KINDS
+@_REC_FIELDS
+def test_apply_total_over_hostile_base_record_values(kind, field):
+    engine = DiffEngine()
+    base = _state(_node(STARTPOS))
+    diff = engine.compute(base, _state(_node(STARTPOS), _node(KINGS)))
+    rec = _node(STARTPOS)
+    hostile = {_identity(rec): dict(rec, **{field: _hostile_values(rec, field)[kind]})}
+    _expect_malformed(lambda: engine.apply(diff, hostile), diff, hostile)
+
+
+@_VALUE_KINDS
+@_REC_FIELDS
+@pytest.mark.parametrize("section", ["added", "removed", "changed-base", "changed-target"])
+@pytest.mark.parametrize("entry", ["validate_diff", "apply"])
+def test_diff_sections_total_over_hostile_record_values(kind, field, section, entry):
+    engine = DiffEngine()
+    if section.startswith("changed"):
+        base = _state(_node(KINGS))
+        diff = engine.compute(base, _state(_node(KINGS, K1)))
+        (key,) = diff["changed"]
+        side = section.split("-")[1]
+        rec = diff["changed"][key][side]
+        diff["changed"][key][side] = dict(rec, **{field: _hostile_values(rec, field)[kind]})
+    else:
+        a, b = _state(_node(STARTPOS)), _state(_node(STARTPOS), _node(KINGS))
+        base, target = (a, b) if section == "added" else (b, a)
+        diff = engine.compute(base, target)
+        (key,) = diff[section]
+        rec = diff[section][key]
+        diff[section][key] = dict(rec, **{field: _hostile_values(rec, field)[kind]})
+    if entry == "validate_diff":
+        _expect_malformed(lambda: engine.validate_diff(diff), diff)
+    else:
+        _expect_malformed(lambda: engine.apply(diff, base), diff, base)
+
+
+def _guardless_validate_record_key(key, rec):
+    """Mutant: the pre-sweep reference, without the exact-value guard -
+    the node machinery and the == compares see the hostile value."""
+    if type(key) is not str or not _exact_dict(rec):
+        _fail("malformed_diff_record")
+    try:
+        derived = _make_record(*_NDOCS, digest_fen, rec.get("variant"),
+                               rec.get("snapshot_fen"))
+    except NodeError:
+        _fail("malformed_diff_record")
+    if set(rec.keys()) != set(derived.keys()):
+        _fail("malformed_diff_record")
+    if rec["variant"] != derived["variant"] or \
+            rec["snapshot_fen"] != derived["snapshot_fen"]:
+        _fail("malformed_diff_record")
+
+
+@pytest.mark.parametrize("field,kind", [
+    ("variant", "SK"), ("snapshot_fen", "SK"),
+    ("snapshot_fen", "selfref"), ("snapshot_fen", "deep")])
+def test_hostile_record_value_escapes_raw_without_guard(field, kind):
+    rec = _node(KINGS)
+    hostile = dict(rec, **{field: _hostile_values(rec, field)[kind]})
+    with pytest.raises(Exception) as exc:
+        _guardless_validate_record_key(_identity(rec), hostile)
+    assert not isinstance(exc.value, DiffError)

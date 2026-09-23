@@ -78,7 +78,7 @@ def _valid_timestamp(value):
     """The contract's created_at rules: pinned grammar shape, a
     REAL Gregorian date (leap-year rules), leap seconds rejected
     (second field 00-59)."""
-    if not isinstance(value, str) or _TS_RE.fullmatch(
+    if type(value) is not str or _TS_RE.fullmatch(
             value) is None:
         return False
     year = int(value[0:4])
@@ -116,10 +116,11 @@ class VersionStore:
                     label):
         """Build a candidate record with the content address this
         store's hasher derives - callers never invent ids."""
-        canonical_parents = sorted(set(parent_ids)) if \
-            isinstance(parent_ids, list) else parent_ids
-        if isinstance(canonical_parents, list) and \
-                all(isinstance(p, str) for p in canonical_parents):
+        exact = type(parent_ids) is list and \
+            all(type(p) is str for p in parent_ids)
+        canonical_parents = sorted(set(parent_ids)) if exact \
+            else parent_ids
+        if exact and type(graph_digest) is str:
             vid = self.hasher(canonical_parents, graph_digest)
         else:
             vid = self.hasher([], "")
@@ -132,29 +133,32 @@ class VersionStore:
     def _validate_shape(self, record):
         """TOTAL validation: explicit type guards on every field
         before any sibling machinery - nothing raw escapes."""
-        if not isinstance(record, dict):
+        # EXACT built-in dict, and every key an EXACT str BEFORE the
+        # set compare: a subclass can lie about its content, and a key
+        # with a colliding hash and a raising __eq__ must fail closed.
+        if type(record) is not dict:
+            _fail("malformed_version_record")
+        if not all(type(k) is str for k in dict.keys(record)):
             _fail("malformed_version_record")
         if set(record.keys()) != set(_FIELDS):
             _fail("malformed_version_record")
         vid = record["version_id"]
-        if not isinstance(vid, str) or isinstance(vid, bool) or \
+        if type(vid) is not str or \
                 _ID_RE.fullmatch(vid) is None:
             _fail("malformed_version_record")
         parents = record["parent_ids"]
-        if not isinstance(parents, list) or \
-                any(not isinstance(p, str) or isinstance(p, bool)
-                    or _ID_RE.fullmatch(p) is None for p in
-                    parents):
+        if type(parents) is not list or \
+                any(type(p) is not str or _ID_RE.fullmatch(p) is None
+                    for p in parents):
             _fail("malformed_version_record")
         digest = record["graph_digest"]
-        if not isinstance(digest, str) or \
+        if type(digest) is not str or \
                 _DIGEST_RE.fullmatch(digest) is None:
             _fail("malformed_version_record")
         if not _valid_timestamp(record["created_at"]):
             _fail("malformed_version_record")
         label = record["label"]
-        if not isinstance(label, str) or isinstance(label, bool) \
-                or _LABEL_RE.fullmatch(label) is None:
+        if type(label) is not str or _LABEL_RE.fullmatch(label) is None:
             _fail("malformed_version_record")
         # content addressing: the id MUST be the store-derived
         # address of its own content
@@ -162,8 +166,12 @@ class VersionStore:
             _fail("malformed_version_record")
 
     def insert(self, record):
+        # TOTAL shape check on the caller's object BEFORE any copy:
+        # after it every value is an exact str or an exact list of
+        # exact str, so the copy can neither recurse without bound nor
+        # run a subclass hook
+        self._validate_shape(record)
         rec = copy.deepcopy(record)
-        self._validate_shape(rec)
         rec["parent_ids"] = sorted(set(rec["parent_ids"]))
         vid = rec["version_id"]
         if vid in self.records:
@@ -213,19 +221,28 @@ class VersionStore:
         # phase only guarantees inspection safety - no parent
         # existence required here)
         batch = []
-        for vid in other.canonical_view():
-            raw = other.records[vid]
-            if not isinstance(raw, dict) or \
+        # the source map itself: EXACT dict, EXACT str keys, iterated
+        # via dict.items so no caller hook runs; each key must equal
+        # its record's version_id (checked below once both are exact)
+        source = other.records
+        if type(source) is not dict or \
+                not all(type(k) is str for k in dict.keys(source)):
+            _fail("malformed_version_record")
+        for vid, raw in sorted(dict.items(source)):
+            if type(raw) is not dict or \
+                    not all(type(k) is str for k in dict.keys(raw)) or \
                     set(raw.keys()) != set(_FIELDS):
                 _fail("malformed_version_record")
             parents = raw["parent_ids"]
-            if not isinstance(parents, list) or \
-                    any(not isinstance(x, str) for x in parents):
+            if type(parents) is not list or \
+                    any(type(x) is not str for x in parents):
                 _fail("malformed_version_record")
             for scalar in ("version_id", "graph_digest",
                            "created_at", "label"):
-                if not isinstance(raw[scalar], str):
+                if type(raw[scalar]) is not str:
                     _fail("malformed_version_record")
+            if raw["version_id"] != vid:
+                _fail("malformed_version_record")
             batch.append(copy.deepcopy(raw))
         # PHASE 2 - topological order over the SAFE batch: a
         # record is staged once every parent is present; a batch
@@ -802,3 +819,248 @@ def test_mutants_never_silent_subset():
                        "content_addressing", "fields", "lineage",
                        "merge", "failures", "errors", "properties",
                        "versioning", "links"}
+
+
+# -- totality sweep: hostile record keys and dict subclasses -----------------
+
+
+class _SK(str):
+    """str subclass: hashes like the field it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+def _refs(obj):
+    """Identity snapshot that never hashes or compares a caller key."""
+    if type(obj) is dict:
+        return tuple((id(k), id(v), _refs(v)) for k, v in dict.items(obj))
+    return id(obj)
+
+
+def _rekeyed(field, key_type):
+    rec = VersionStore().make_record([], D1, T1, "root")
+    return {key_type(k) if k == field else k: v for k, v in rec.items()}
+
+
+@pytest.mark.parametrize("field", _FIELDS)
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_insert_total_over_hostile_record_keys(field, key_type):
+    store = VersionStore()
+    rec = _rekeyed(field, key_type)
+    refs = _refs(rec)
+    with pytest.raises(VersionError) as exc:
+        store.insert(rec)
+    assert exc.value.failure_class == "malformed_version_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_version_record"]
+    assert store.records == {} and store.root_id is None
+    assert _refs(rec) == refs
+
+
+@pytest.mark.parametrize("field", _FIELDS)
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_merge_total_over_hostile_record_keys(field, key_type):
+    dst = VersionStore()
+    dst.insert(dst.make_record([], D1, T1, "root"))
+    before = copy.deepcopy(dst.records)
+    src = VersionStore()
+    rec = _rekeyed(field, key_type)
+    src.records = {"v1:" + "0" * 64: rec}
+    with pytest.raises(VersionError) as exc:
+        dst.merge(src)
+    assert exc.value.failure_class == "malformed_version_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_version_record"]
+    assert dst.records == before
+
+
+def test_dict_subclass_records_rejected():
+    store = VersionStore()
+    rec = store.make_record([], D1, T1, "root")
+    with pytest.raises(VersionError) as exc:
+        store.insert(_DictSub(rec))
+    assert exc.value.failure_class == "malformed_version_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_version_record"]
+    dst = VersionStore()
+    src = VersionStore()
+    src.records = {rec["version_id"]: _DictSub(rec)}
+    with pytest.raises(VersionError) as exc:
+        dst.merge(src)
+    assert exc.value.failure_class == "malformed_version_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_version_record"]
+    assert dst.records == {}
+
+
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_hostile_record_key_escapes_raw_without_guard(key_type):
+    rec = _rekeyed("label", key_type)
+    with pytest.raises(RuntimeError):
+        set(rec.keys()) != set(_FIELDS)  # noqa: B015
+
+
+# -- totality sweep: hostile record VALUES and merge source maps -------------
+
+
+class _ListSub(list):
+    """list subclass whose iteration raises."""
+
+    def __iter__(self):
+        raise RuntimeError("hostile __iter__")
+
+
+def _deep(n=100_000):
+    root = cur = []
+    for _ in range(n):
+        nxt = []
+        cur.append(nxt)
+        cur = nxt
+    return root
+
+
+def _selfref():
+    loop = []
+    loop.append(loop)
+    return loop
+
+
+def _expect_malformed(call, store, *inputs):
+    before = copy.deepcopy(store.records), store.root_id
+    refs = [_refs(x) for x in inputs]
+    with pytest.raises(VersionError) as exc:
+        call()
+    assert exc.value.failure_class == "malformed_version_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_version_record"]
+    assert (store.records, store.root_id) == before
+    assert [_refs(x) for x in inputs] == refs
+
+
+def _rooted():
+    store = VersionStore()
+    root = store.insert(store.make_record([], D1, T1, "root"))
+    child = store.make_record([root["version_id"]], D2, T2, "child")
+    return store, root, child
+
+
+def _hostile_variants(child, root):
+    """(name, record) pairs: an SK value in every str field, SK and
+    list-subclass parent ids, and self-ref / 1e5-deep values."""
+    out = []
+    for field in ("version_id", "graph_digest", "created_at", "label"):
+        out.append((f"SK-{field}", dict(child, **{field: _SK(child[field])})))
+        out.append((f"selfref-{field}", dict(child, **{field: _selfref()})))
+        out.append((f"deep-{field}", dict(child, **{field: _deep()})))
+    out.append(("SK-parent", dict(child, parent_ids=[_SK(root["version_id"])])))
+    out.append(("listsub-parents", dict(child, parent_ids=_ListSub([root["version_id"]]))))
+    out.append(("selfref-parents", dict(child, parent_ids=_selfref())))
+    out.append(("deep-parents", dict(child, parent_ids=_deep())))
+    return out
+
+
+_VARIANT_NAMES = [n for n, _ in _hostile_variants(
+    {"version_id": "a", "graph_digest": "b", "created_at": "c", "label": "d",
+     "parent_ids": []}, {"version_id": "a"})]
+
+
+@pytest.mark.parametrize("name", _VARIANT_NAMES)
+def test_insert_total_over_hostile_record_values(name):
+    store, root, child = _rooted()
+    rec = dict(_hostile_variants(child, root))[name]
+    _expect_malformed(lambda: store.insert(rec), store, rec)
+
+
+def test_insert_sk_version_id_colliding_with_stored_id():
+    store, root, _ = _rooted()
+    rec = dict(root, version_id=_SK(root["version_id"]))
+    _expect_malformed(lambda: store.insert(rec), store, rec)
+
+
+@pytest.mark.parametrize("name", _VARIANT_NAMES)
+def test_merge_total_over_hostile_record_values(name):
+    dst, root, child = _rooted()
+    rec = dict(_hostile_variants(child, root))[name]
+    src = VersionStore()
+    src.records = {child["version_id"]: rec}
+    _expect_malformed(lambda: dst.merge(src), dst, src.records)
+
+
+def test_merge_sk_version_id_matching_its_map_key():
+    dst, root, _ = _rooted()
+    rid = root["version_id"]
+    src = VersionStore()
+    src.records = {rid: dict(root, version_id=_SK(rid))}
+    _expect_malformed(lambda: dst.merge(src), dst, src.records)
+
+
+@pytest.mark.parametrize("records", [
+    _DictSub(), _selfref(), _deep(), None, [("k", "v")]],
+    ids=["dictsub", "selfref", "deep", "none", "pairs"])
+def test_merge_rejects_non_exact_source_maps(records):
+    dst, root, child = _rooted()
+    src = VersionStore()
+    if type(records) is _DictSub:
+        records[child["version_id"]] = child
+    src.records = records
+    _expect_malformed(lambda: dst.merge(src), dst)
+
+
+@pytest.mark.parametrize("make_key", [
+    lambda vid: _SK(vid), lambda vid: _HK(vid), lambda vid: None,
+    lambda vid: "gv1:" + "f" * 64], ids=["SK", "HK", "None", "mismatched"])
+def test_merge_rejects_bad_source_map_keys(make_key):
+    dst, root, child = _rooted()
+    src = VersionStore()
+    src.records = {make_key(child["version_id"]): child}
+    _expect_malformed(lambda: dst.merge(src), dst, child)
+    assert child["version_id"] not in dst.records
+
+
+def _guardless_shape(record):
+    """Mutant: the pre-sweep isinstance guards, which admit subclasses."""
+    vid = record["version_id"]
+    if not isinstance(vid, str) or _ID_RE.fullmatch(vid) is None:
+        _fail("malformed_version_record")
+    parents = record["parent_ids"]
+    if not isinstance(parents, list) or \
+            any(not isinstance(p, str) for p in parents):
+        _fail("malformed_version_record")
+    return vid in {record["version_id"]: 1, str(vid): 1} and parents == [vid]
+
+
+@pytest.mark.parametrize("name", ["SK-version_id", "SK-parent", "listsub-parents"])
+def test_hostile_record_value_escapes_raw_without_guard(name):
+    _, root, child = _rooted()
+    rec = dict(_hostile_variants(child, root))[name]
+    with pytest.raises(Exception) as exc:
+        _guardless_shape(rec)
+    assert not isinstance(exc.value, VersionError)
+
+
+def test_isinstance_guard_admits_subclass_values():
+    """Store poisoning the exact-type guards close: isinstance accepts
+    every one of these, type() is rejects them."""
+    for value in (_SK("c"), _ListSub(["x"]), _DictSub()):
+        base = type(value).__mro__[1]
+        assert isinstance(value, base) and type(value) is not base
