@@ -136,7 +136,11 @@ class RollbackEngine:
         request bit-identical."""
         if type(log) is not list:
             _fail("malformed_rollback_record")
+        # Request keys are checked as EXACT str BEFORE the set
+        # compare: a key with a colliding hash and a raising __eq__
+        # must fail closed, never escape raw.
         if type(request) is not dict or \
+                not all(type(k) is str for k in dict.keys(request)) or \
                 set(request.keys()) != {"target_sequence"}:
             _fail("malformed_rollback_record")
         target = request["target_sequence"]
@@ -795,3 +799,77 @@ def test_mutants_never_silent_subset():
                        "semantics", "oracle_boundary", "failures",
                        "errors", "properties", "versioning",
                        "links"}
+
+
+# -- totality sweep: hostile request keys --------------------------------------
+
+
+class _SK(str):
+    """str subclass: hashes like the field it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+def _refs(obj):
+    """Identity snapshot that never hashes or compares a caller key."""
+    if type(obj) is dict:
+        return tuple((id(k), id(v)) for k, v in dict.items(obj))
+    return id(obj)
+
+
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_total_over_hostile_request_keys(key_type):
+    engine = _engine()
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    before = copy.deepcopy(log)
+    request = {key_type("target_sequence"): 1}
+    refs = _refs(request)
+    with pytest.raises(RollbackError) as exc:
+        engine.rollback(log, request)
+    assert exc.value.failure_class == "malformed_rollback_record"
+    assert exc.value.code in ERROR_ENUM
+    assert log == before
+    assert _refs(request) == refs
+
+
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_hostile_request_key_escapes_raw_without_guard(key_type):
+    """The probe bites: the unguarded set compare raises raw."""
+    request = {key_type("target_sequence"): 1}
+    with pytest.raises(RuntimeError):
+        set(request.keys()) != {"target_sequence"}  # noqa: B015
+
+
+def test_dict_subclass_request_rejected():
+    engine = _engine()
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    before = copy.deepcopy(log)
+    with pytest.raises(RollbackError) as exc:
+        engine.rollback(log, _DictSub(target_sequence=1))
+    assert exc.value.failure_class == "malformed_rollback_record"
+    assert log == before
