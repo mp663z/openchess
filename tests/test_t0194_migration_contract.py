@@ -124,16 +124,23 @@ class MigrationEngine:
         exact valid linked records (field set + exact-string
         guards BEFORE sibling machinery), digest grammar of the
         SOURCE schema, derived identity == key."""
-        if not isinstance(state, dict):
+        # EXACT built-in dicts only: a subclass can override
+        # items/keys/__getitem__ and lie about its content.
+        if type(state) is not dict:
             _fail("malformed_migration_record")
         digest_re = re.compile(digest_grammar)
-        for key, rec in state.items():
+        for key, rec in dict.items(state):
             if type(key) is not str:
                 _fail("malformed_migration_record")
-            if not isinstance(rec, dict):
+            if type(rec) is not dict:
                 _fail("malformed_migration_record")
-            if set(rec.keys()) != \
-                    set(_NDOCS[0]["record"]["fields"]):
+            # Record keys are type-checked as EXACT str BEFORE any
+            # set build, membership test or lookup: a key with a
+            # colliding hash and a raising __eq__ fails closed.
+            rec_keys = list(dict.keys(rec))
+            if not all(type(k) is str for k in rec_keys):
+                _fail("malformed_migration_record")
+            if set(rec_keys) != set(_NDOCS[0]["record"]["fields"]):
                 _fail("malformed_migration_record")
             if type(rec["variant"]) is not str or \
                     type(rec["snapshot_fen"]) is not str or \
@@ -162,8 +169,12 @@ class MigrationEngine:
         digest_re = re.compile(grammar)
         if set(staged) != set(frozen) or len(staged) != len(frozen):
             _fail("divergent_target")
-        for key, rec in staged.items():
-            if set(rec.keys()) != \
+        for key, rec in dict.items(staged):
+            if type(key) is not str or type(rec) is not dict:
+                _fail("divergent_target")
+            rec_keys = list(dict.keys(rec))
+            if not all(type(k) is str for k in rec_keys) or \
+                    set(rec_keys) != \
                     set(_NDOCS[0]["record"]["fields"]):
                 _fail("divergent_target")
             if type(rec["variant"]) is not str or \
@@ -189,9 +200,12 @@ class MigrationEngine:
         """THE target-oracle boundary: raising or non-exact-str or
         wrong-grammar output fails closed as divergent_target."""
         grammar = _schema("store-v2")["digest_grammar"]
+        # BaseException: the oracle is untrusted, so KeyboardInterrupt,
+        # SystemExit and GeneratorExit raised by it fail closed too
+        # (contract: hostile oracles fail closed typed, never raw).
         try:
             key = self.target_oracle(variant, snapshot_fen)
-        except Exception:
+        except BaseException:  # noqa: BLE001
             _fail("divergent_target")
         if type(key) is not str or \
                 re.fullmatch(grammar, key) is None:
@@ -203,10 +217,19 @@ class MigrationEngine:
         verify the source id structurally, resolve the registered
         step, transform a STAGED copy behind the oracle boundary,
         derive the receipt - the source is never mutated."""
-        if not isinstance(request, dict) or \
-                set(request.keys()) != {"from_schema", "to_schema",
-                                        "source_id"}:
+        # EXACT built-in dict with EXACT str keys, checked BEFORE any
+        # set build or comparison over caller-owned keys.
+        if type(request) is not dict:
             _fail("malformed_migration_record")
+        req_keys = list(dict.keys(request))
+        if not all(type(k) is str for k in req_keys) or \
+                set(req_keys) != {"from_schema", "to_schema",
+                                  "source_id"}:
+            _fail("malformed_migration_record")
+        # the caller's request exactly as received (validated below:
+        # exact str keys and values) - restored in its ORIGINAL key
+        # order on every exit
+        saved_req_items = list(dict.items(request))
         # FREEZE THE REQUEST DURING VALIDATION: each field is read
         # EXACTLY ONCE into a detached plain dict of the validated
         # exact built-in strings - immediately after total request
@@ -241,7 +264,6 @@ class MigrationEngine:
         saved_container = dict(source_state)
         saved_recs = {id(rec): (rec, dict(rec))
                       for rec in source_state.values()}
-        saved_req = dict(frozen_req)
         # FREEZE THE ENTIRE SOURCE: one detached plain-dict
         # snapshot taken BEFORE the first oracle call; every later
         # phase - source-id derivation, iteration, transform -
@@ -279,8 +301,8 @@ class MigrationEngine:
             source_state.update(saved_container)
             # the caller's REQUEST is restored bit-identical too -
             # the oracle may hold an external reference to it
-            request.clear()
-            request.update(saved_req)
+            dict.clear(request)
+            dict.update(request, saved_req_items)
         return {
             "migration_id": "mg1:" + hashlib.sha256(
                 f"{frozen_req['from_schema']}\n"
@@ -1058,3 +1080,144 @@ def test_mutant_live_request_reread_after_oracle():
     assert engine.migrate(request, source) == honest
     assert request == request_before
     assert source == source_before
+
+
+# -- totality: hostile keys, dict subclasses, BaseException oracles ----------
+
+
+class _SK(str):
+    """str subclass: hashes like the key it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+def _rekey(mapping, field, key_type):
+    """Copy of mapping, same order, with one key re-keyed hostile."""
+    return {key_type(k) if k == field else k: v
+            for k, v in dict.items(mapping)}
+
+
+def _refs(obj):
+    """Identity snapshot that never hashes or compares a caller key."""
+    if type(obj) is dict:
+        return tuple((id(k), id(v), _refs(v))
+                     for k, v in dict.items(obj))
+    return id(obj)
+
+
+def _assert_fails_untouched(request, source, failure_class,
+                            oracle=pdv2_oracle):
+    before = (_refs(request), _refs(source))
+    with pytest.raises(MigrationError) as exc:
+        MigrationEngine(oracle).migrate(request, source)
+    assert exc.value.failure_class == failure_class
+    assert exc.value.code == FAILURE_MAPPING[failure_class]
+    assert exc.value.code in ERROR_ENUM
+    assert (_refs(request), _refs(source)) == before
+
+
+@pytest.mark.parametrize("field", ["from_schema", "to_schema",
+                                   "source_id"])
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_total_over_hostile_request_keys(field, key_type):
+    source = _v1_state(STARTPOS, KINGS)
+    request = _rekey(_request(source), field, key_type)
+    _assert_fails_untouched(request, source,
+                            "malformed_migration_record")
+
+
+@pytest.mark.parametrize("field", ["variant", "snapshot_fen",
+                                   "digest"])
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_total_over_hostile_record_keys(field, key_type):
+    good = _node(KINGS)
+    source = {_identity(good): _rekey(good, field, key_type)}
+    _assert_fails_untouched(_request(_v1_state(KINGS)), source,
+                            "malformed_migration_record")
+
+
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_hostile_keys_escape_raw_without_guard(key_type):
+    """The probes bite: an unguarded set comparison raises raw."""
+    rec = _rekey(_node(KINGS), "digest", key_type)
+    with pytest.raises(RuntimeError):
+        set(rec.keys()) != set(_NDOCS[0]["record"]["fields"])  # noqa: B015
+    req = _rekey(_request(_v1_state(KINGS)), "source_id", key_type)
+    with pytest.raises(RuntimeError):
+        set(req.keys()) != {"from_schema", "to_schema",  # noqa: B015
+                            "source_id"}
+
+
+@pytest.mark.parametrize("where", ["request", "source", "record"])
+def test_dict_subclasses_rejected(where):
+    source = _v1_state(STARTPOS, KINGS)
+    request = _request(source)
+    if where == "request":
+        request = _DictSub(request)
+    elif where == "source":
+        source = _DictSub(source)
+    else:
+        source = {k: _DictSub(v) for k, v in source.items()}
+    _assert_fails_untouched(request, source,
+                            "malformed_migration_record")
+
+
+@pytest.mark.parametrize("exc_type", [KeyboardInterrupt, SystemExit,
+                                      GeneratorExit])
+def test_base_exception_oracle_fails_closed(exc_type):
+    """The oracle boundary catches BaseException: an untrusted
+    oracle raising KeyboardInterrupt/SystemExit/GeneratorExit
+    fails closed as divergent_target, never raw."""
+    def oracle(variant, fen):
+        raise exc_type("hostile")
+    source = _v1_state(STARTPOS, KINGS)
+    _assert_fails_untouched(_request(source), source,
+                            "divergent_target", oracle)
+
+
+def test_request_restored_in_original_key_order():
+    """A successful migrate leaves the caller's request with the
+    same keys, values AND key order (and same objects) it had,
+    even when the oracle reorders it mid-call."""
+    source = _v1_state(STARTPOS, KINGS)
+    base = _request(source)
+    request = {k: base[k] for k in ("source_id", "to_schema",
+                                    "from_schema")}
+    order = list(request)
+    items = [(id(k), id(v)) for k, v in request.items()]
+
+    def reordering(variant, fen):
+        saved = dict(request)
+        request.clear()
+        request.update(sorted(saved.items()))
+        return pdv2_oracle(variant, fen)
+    receipt = MigrationEngine(reordering).migrate(request, source)
+    assert receipt == MigrationEngine(pdv2_oracle).migrate(
+        dict(base), copy.deepcopy(source))
+    assert list(request) == order
+    assert [(id(k), id(v)) for k, v in request.items()] == items
