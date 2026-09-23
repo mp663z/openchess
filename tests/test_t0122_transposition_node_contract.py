@@ -121,8 +121,12 @@ def _make_record(nc, vc, dc, ec, fc, digest_fn, variant_id, fen_text):
     """Build the exact three-field node record - nothing else is
     stored, returned, or compared."""
     ids = [e["id"] for e in vc["variants"]["entries"]]
-    if variant_id not in ids:
+    # EXACT str before membership / parsing: a str subclass can raise
+    # from == inside `in`, and only an exact str is flat
+    if type(variant_id) is not str or variant_id not in ids:
         _fail(nc, "unknown_variant")
+    if type(fen_text) is not str:
+        _fail(nc, "malformed_position")
     try:
         position = parse_fen(fc, fen_text)
     except FenError:
@@ -178,7 +182,25 @@ class NodeTable:
         stored records (snapshots are canonical inputs) - the
         structural definition that makes associativity a witness,
         not a claim."""
-        for rec in other.records():
+        source = other.records()
+        if type(source) is not list:
+            _fail(self.nc, "malformed_node_record")
+        # every source record's container, keys and field types are
+        # checked BEFORE any lookup or insertion: a hostile record
+        # fails closed, never raw, and never after a partial merge
+        for rec in source:
+            if not _exact_dict(rec) or \
+                    set(rec.keys()) != set(self.nc["record"]["fields"]) or \
+                    type(rec["variant"]) is not str or \
+                    type(rec["digest"]) is not str or \
+                    type(rec["snapshot_fen"]) is not str:
+                _fail(self.nc, "malformed_node_record")
+            # the source record is validated AS A RECORD (digest
+            # included) against this table's docs and digest oracle
+            # before any insert - never laundered through re-derivation
+            validate_record(self.nc, self.vc, self.dc, self.ec, self.fc,
+                            rec, self.digest_fn)
+        for rec in source:
             self.insert(rec["variant"], rec["snapshot_fen"])
         return self
 
@@ -196,13 +218,27 @@ def _table(digest_fn=digest_fen):
     return NodeTable(_docs(), digest_fn)
 
 
+def _exact_dict(obj):
+    """EXACT built-in dict whose every key is an EXACT str - checked
+    before any set build, membership test or lookup, so a subclass
+    cannot lie about its content and a key with a colliding hash and a
+    raising __eq__ fails closed instead of escaping raw."""
+    return type(obj) is dict and all(type(k) is str for k in dict.keys(obj))
+
+
 def validate_record(nc, vc, dc, ec, fc, record, digest_fn=digest_fen):
     """A stored node record must satisfy the record section exactly:
     EXACTLY the declared field set, known variant, pinned digest
     format, canonical snapshot with identity ep value and
     normalized clocks, and the digest consistent with the identity
     inside the snapshot under the table's digest oracle."""
-    if set(record.keys()) != set(nc["record"]["fields"]):
+    if not _exact_dict(record) or \
+            set(record.keys()) != set(nc["record"]["fields"]):
+        _fail(nc, "malformed_node_record")
+    # EXACT str for every field BEFORE membership, regex or parse
+    if type(record["variant"]) is not str or \
+            type(record["digest"]) is not str or \
+            type(record["snapshot_fen"]) is not str:
         _fail(nc, "malformed_node_record")
     ids = [e["id"] for e in vc["variants"]["entries"]]
     if record["variant"] not in ids:
@@ -716,3 +752,270 @@ def test_linkage_ep_identity_drift_fails(tmp_path):
         lint(CONTRACT, variant_path=paths["variant"],
              digest_path=paths["digest"], fen_path=paths["fen"],
              en_passant_path=paths["en_passant"])
+
+
+# -- totality sweep: hostile keys, values and container subclasses -----------
+
+
+class _SK(str):
+    """str subclass: hashes like the text it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+class _ListSub(list):
+    pass
+
+
+class _Src:
+    """A merge source that hands back exactly the given records."""
+
+    def __init__(self, records):
+        self._records = records
+
+    def records(self):
+        return list(self._records)
+
+
+def _rekey(d, field, key_type):
+    return {key_type(k) if k == field else k: v for k, v in d.items()}
+
+
+_KEY_TYPES = pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+
+
+def _sweep_valid_record():
+    return dict(_table().insert("standard", AFTER_E4))
+
+
+def _sweep_expect(call, table=None):
+    before = table.serialize() if table is not None else None
+    with pytest.raises(NodeError) as exc:
+        call()
+    assert exc.value.failure_class == "malformed_node_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_node_record"]
+    if table is not None:
+        assert table.serialize() == before
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["variant", "digest", "snapshot_fen"])
+def test_merge_total_over_hostile_record_keys(key_type, field):
+    dst = _table()
+    dst.insert("standard", STARTPOS)
+    hostile = _rekey(_sweep_valid_record(), field, key_type)
+    _sweep_expect(lambda: dst.merge(_Src([hostile])), dst)
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["variant", "digest", "snapshot_fen"])
+def test_validate_record_total_over_hostile_record_keys(key_type, field):
+    hostile = _rekey(_sweep_valid_record(), field, key_type)
+    _sweep_expect(lambda: validate_record(*_docs(), hostile))
+
+
+def test_merge_rejects_subclasses_and_hostile_values():
+    dst = _table()
+    dst.insert("standard", STARTPOS)
+    rec = _sweep_valid_record()
+    _sweep_expect(lambda: dst.merge(_Src([_DictSub(rec)])), dst)
+    _sweep_expect(lambda: dst.merge(_Src([dict(rec, variant=_SK("standard"))])), dst)
+    _sweep_expect(lambda: dst.merge(_Src([None])), dst)
+    _sweep_expect(lambda: validate_record(*_docs(), _DictSub(rec)))
+    _sweep_expect(lambda: validate_record(*_docs(), None))
+
+
+@_KEY_TYPES
+def test_hostile_record_key_escapes_raw_without_guard(key_type):
+    hostile = _rekey(_sweep_valid_record(), "variant", key_type)
+    with pytest.raises(RuntimeError):
+        hostile["variant"]  # noqa: B018
+
+
+@pytest.mark.parametrize("variant,fen,cls", [
+    (_SK("standard"), STARTPOS, "unknown_variant"),
+    (_HK("standard"), STARTPOS, "unknown_variant"),
+    ("standard", _SK(STARTPOS), "malformed_position"),
+    ("standard", ["x"], "malformed_position")],
+    ids=["SK-variant", "HK-variant", "SK-fen", "list-fen"])
+def test_insert_total_over_hostile_arguments(variant, fen, cls):
+    t = _table()
+    t.insert("standard", STARTPOS)
+    before = t.serialize()
+    with pytest.raises(NodeError) as exc:
+        t.insert(variant, fen)
+    assert exc.value.failure_class == cls
+    assert exc.value.code == FAILURE_MAPPING[cls]
+    assert t.serialize() == before
+
+
+def test_hostile_variant_escapes_raw_without_guard():
+    ids = ["standard"]
+    with pytest.raises(RuntimeError):
+        _SK("standard") in ids  # noqa: B015
+
+
+# -- totality sweep: hostile VALUES per field and per entry point ------------
+
+
+class _RaisingList(list):
+    def __iter__(self):
+        raise RuntimeError("hostile __iter__")
+
+
+def _sweep_expect_cls(call, table, cls):
+    before = table.serialize() if table is not None else None
+    with pytest.raises(NodeError) as exc:
+        call()
+    assert exc.value.failure_class == cls
+    assert exc.value.code == FAILURE_MAPPING[cls]
+    if table is not None:
+        assert table.serialize() == before
+
+
+def _sk_value_records():
+    rec = _sweep_valid_record()
+    out = [
+        (f"SK-{f}", dict(rec, **{f: _SK(rec[f])}), cls)
+        for f, cls in {
+            "variant": "malformed_node_record",
+            "digest": "malformed_node_record",
+            "snapshot_fen": "malformed_node_record",
+        }.items()
+    ]
+    out += []
+    return out
+
+
+_SK_VALUE_RECORDS = _sk_value_records()
+_SK_IDS = [c[0] for c in _SK_VALUE_RECORDS]
+
+
+@pytest.mark.parametrize("name,record,cls", _SK_VALUE_RECORDS, ids=_SK_IDS)
+def test_validate_record_total_over_hostile_values(name, record, cls):
+    _sweep_expect_cls(lambda: validate_record(*_docs(), record), None, cls)
+
+
+@pytest.mark.parametrize("name,record,cls", _SK_VALUE_RECORDS, ids=_SK_IDS)
+@pytest.mark.parametrize("existing", [False, True], ids=["new-key", "existing-key"])
+def test_merge_total_over_hostile_values(name, record, cls, existing):
+    dst = _table()
+    dst.insert("standard", STARTPOS)
+    if existing:
+        dst.insert("standard", AFTER_E4)
+    _sweep_expect_cls(lambda: dst.merge(_Src([record])), dst, "malformed_node_record")
+
+
+@pytest.mark.parametrize(
+    "args,cls",
+    [
+        ((_SK("standard"), STARTPOS), "unknown_variant"),
+        (("standard", _SK(STARTPOS)), "malformed_position"),
+    ],
+    ids=["SK-variant", "SK-fen"],
+)
+def test_insert_total_over_hostile_values(args, cls):
+    t = _table()
+    t.insert("standard", STARTPOS)
+    _sweep_expect_cls(lambda: t.insert(*args), t, cls)
+
+
+@pytest.mark.parametrize(
+    "records", [None, _RaisingList([1]), (), {}], ids=["None", "raising-list", "tuple", "dict"]
+)
+def test_merge_rejects_non_list_sources(records):
+    dst = _table()
+    dst.insert("standard", STARTPOS)
+
+    class _Bad:
+        def records(self):
+            return records
+
+    _sweep_expect_cls(lambda: dst.merge(_Bad()), dst, "malformed_node_record")
+
+
+def _selfref():
+    loop = []
+    loop.append(loop)
+    return loop
+
+
+def _deep(n=100_000):
+    root = cur = []
+    for _ in range(n):
+        nxt = []
+        cur.append(nxt)
+        cur = nxt
+    return root
+
+
+def _structural_value_records():
+    rec = _sweep_valid_record()
+    return [
+        (f"{kind}-{f}", dict(rec, **{f: make()}), cls)
+        for f, cls in {
+            f: "malformed_node_record" for f in ("variant", "digest", "snapshot_fen")
+        }.items()
+        for kind, make in (("selfref", _selfref), ("deep", _deep), ("hugeint", lambda: 10**5000))
+    ]
+
+
+_STRUCT_RECORDS = _structural_value_records()
+_STRUCT_IDS = [c[0] for c in _STRUCT_RECORDS]
+
+
+@pytest.mark.parametrize("name,record,cls", _STRUCT_RECORDS, ids=_STRUCT_IDS)
+def test_validate_record_total_over_structural_values(name, record, cls):
+    _sweep_expect_cls(lambda: validate_record(*_docs(), record), None, cls)
+
+
+@pytest.mark.parametrize("name,record,cls", _STRUCT_RECORDS, ids=_STRUCT_IDS)
+def test_merge_total_over_structural_values(name, record, cls):
+    dst = _table()
+    dst.insert("standard", STARTPOS)
+    _sweep_expect_cls(lambda: dst.merge(_Src([record])), dst, "malformed_node_record")
+
+
+@pytest.mark.parametrize("field", ["variant", "digest", "snapshot_fen"])
+def test_hostile_value_escapes_raw_without_guard(field):
+    """Guardless demo: the pre-sweep isinstance check admits the SK value,
+    and the next == / in against it raises raw."""
+    value = _SK(_sweep_valid_record()[field])
+    assert isinstance(value, str)
+    with pytest.raises(RuntimeError):
+        value in [str(value)]  # noqa: B015
+
+
+def test_merge_rejects_well_formed_wrong_digest():
+    """merge validates each source record as a record: a digest in the
+    right format but for another position is rejected, never re-derived."""
+    dst = _table()
+    dst.insert("standard", STARTPOS)
+    rec = _sweep_valid_record()
+    wrong = dict(rec, digest=_table().insert("standard", KINGS)["digest"])
+    _sweep_expect_cls(lambda: dst.merge(_Src([wrong])), dst, "malformed_node_record")

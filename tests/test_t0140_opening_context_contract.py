@@ -85,9 +85,11 @@ def _validate_path(oc, vc, lc, reg, variant_id, path):
     """The identity section's key shape: a list of move-model texts,
     grammar READ from the linked legal-moves contract."""
     ids = [e["id"] for e in vc["variants"]["entries"]]
-    if variant_id not in ids:
+    # EXACT str / list BEFORE membership or grammar checks
+    if type(variant_id) is not str or variant_id not in ids:
         _fail(oc, "unknown_variant")
-    if not isinstance(path, list):
+    if type(path) is not list or \
+            not all(type(move) is str for move in path):
         _fail(oc, "malformed_path")
     for move in path:
         if not _valid_move_text(lc, move):
@@ -125,13 +127,24 @@ def _make_record(oc, vc, lc, nc, reg, variant_id, path):
     }
 
 
+def _exact_dict(obj):
+    """EXACT built-in dict whose every key is an EXACT str - checked
+    before any set build, membership test or lookup, so a subclass
+    cannot lie about its content and a key with a colliding hash and a
+    raising __eq__ fails closed instead of escaping raw."""
+    return type(obj) is dict and all(type(k) is str for k in dict.keys(obj))
+
+
 def validate_record(oc, vc, lc, nc, reg, record):
     """A stored context record must satisfy the record section
     exactly: EXACTLY the declared field set, known variant, a
     well-formed path, both-sentinels-or-neither, a registry-known
     code whose name matches the registry entry, and consistency
     with the pinned resolution of the record's own path."""
-    if set(record.keys()) != set(oc["record"]["fields"]):
+    if not _exact_dict(record) or \
+            set(record.keys()) != set(oc["record"]["fields"]):
+        _fail(oc, "malformed_context_record")
+    if type(record["variant"]) is not str:
         _fail(oc, "malformed_context_record")
     ids = [e["id"] for e in vc["variants"]["entries"]]
     if record["variant"] not in ids:
@@ -140,12 +153,14 @@ def validate_record(oc, vc, lc, nc, reg, record):
                    record["path_moves"])
     sentinel = _sentinel(oc)
     code, name = record["opening_code"], record["opening_name"]
+    if type(code) is not str or type(name) is not str:
+        _fail(oc, "malformed_context_record")
     if (code == sentinel) != (name == sentinel):
         _fail(oc, "malformed_context_record")  # one without the other
     if code != sentinel:
         import re
         pattern = reg["code_grammar"]["pattern"]
-        if (not isinstance(code, str) or not code.isascii()
+        if (type(code) is not str or not code.isascii()
                 or re.fullmatch(pattern, code) is None):
             _fail(oc, "malformed_context_record")
         entries = {e["code"]: e for e in reg["entries"]}
@@ -201,10 +216,16 @@ class ContextTable:
         staged = ContextTable((self.oc, self.vc, self.lc, self.nc,
                                self.reg))
         staged.map = copy.deepcopy(self.map)
-        for rec in other.records():
-            if (not isinstance(rec, dict)
-                    or not isinstance(rec.get("path_moves"), list)
-                    or "variant" not in rec):
+        source = other.records()
+        if type(source) is not list:
+            _fail(self.oc, "malformed_context_record")
+        for rec in source:
+            if (not _exact_dict(rec)
+                    or set(dict.keys(rec)) != set(self.oc["record"]["fields"])
+                    or type(rec["path_moves"]) is not list
+                    or not all(type(rec[f]) is str for f in (
+                        "variant", "opening_code", "opening_name"))
+                    or not all(type(m) is str for m in rec["path_moves"])):
                 _fail(self.oc, "malformed_context_record")
             key = (rec["variant"], tuple(rec["path_moves"]))
             existing = staged.map.get(key)
@@ -963,3 +984,256 @@ def test_registry_sentinel_drift_fails(tmp_path):
     paths = _lint_doc(tmp_path, "rsd", drift, target="registry")
     with pytest.raises(ContractError):
         _lint_with(paths)
+
+
+# -- totality sweep: hostile keys, values and container subclasses -----------
+
+
+class _SK(str):
+    """str subclass: hashes like the text it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+class _ListSub(list):
+    pass
+
+
+class _Src:
+    """A merge source that hands back exactly the given records."""
+
+    def __init__(self, records):
+        self._records = records
+
+    def records(self):
+        return list(self._records)
+
+
+def _rekey(d, field, key_type):
+    return {key_type(k) if k == field else k: v for k, v in d.items()}
+
+
+_KEY_TYPES = pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+
+
+def _sweep_valid_record():
+    return dict(_table().insert("standard", KINGS_PAWN_PATH))
+
+
+def _sweep_expect(call, table=None):
+    before = table.serialize() if table is not None else None
+    with pytest.raises(ContextError) as exc:
+        call()
+    assert exc.value.failure_class == "malformed_context_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_context_record"]
+    if table is not None:
+        assert table.serialize() == before
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["variant", "path_moves", "opening_code", "opening_name"])
+def test_merge_total_over_hostile_record_keys(key_type, field):
+    dst = _table()
+    dst.insert("standard", ["d2d4"])
+    hostile = _rekey(_sweep_valid_record(), field, key_type)
+    _sweep_expect(lambda: dst.merge(_Src([hostile])), dst)
+
+
+@_KEY_TYPES
+@pytest.mark.parametrize("field", ["variant", "path_moves", "opening_code", "opening_name"])
+def test_validate_record_total_over_hostile_record_keys(key_type, field):
+    hostile = _rekey(_sweep_valid_record(), field, key_type)
+    _sweep_expect(lambda: validate_record(*_docs(), hostile))
+
+
+def test_merge_rejects_subclasses_and_hostile_values():
+    dst = _table()
+    dst.insert("standard", ["d2d4"])
+    rec = _sweep_valid_record()
+    _sweep_expect(lambda: dst.merge(_Src([_DictSub(rec)])), dst)
+    _sweep_expect(lambda: dst.merge(_Src([dict(rec, variant=_SK("standard"))])), dst)
+    _sweep_expect(lambda: dst.merge(_Src([None])), dst)
+    _sweep_expect(lambda: validate_record(*_docs(), _DictSub(rec)))
+    _sweep_expect(lambda: validate_record(*_docs(), None))
+
+
+def test_merge_rejects_hostile_path_moves():
+    dst = _table()
+    dst.insert("standard", ["d2d4"])
+    rec = _sweep_valid_record()
+    _sweep_expect(lambda: dst.merge(_Src([dict(rec, path_moves=_ListSub(rec["path_moves"]))])), dst)
+    _sweep_expect(lambda: dst.merge(_Src([dict(rec, path_moves=[_SK("e2e4"), "e7e5"])])), dst)
+
+
+@_KEY_TYPES
+def test_hostile_record_key_escapes_raw_without_guard(key_type):
+    hostile = _rekey(_sweep_valid_record(), "variant", key_type)
+    with pytest.raises(RuntimeError):
+        hostile["variant"]  # noqa: B018
+
+
+# -- totality sweep: hostile VALUES per field and per entry point ------------
+
+
+class _RaisingList(list):
+    def __iter__(self):
+        raise RuntimeError("hostile __iter__")
+
+
+def _sweep_expect_cls(call, table, cls):
+    before = table.serialize() if table is not None else None
+    with pytest.raises(ContextError) as exc:
+        call()
+    assert exc.value.failure_class == cls
+    assert exc.value.code == FAILURE_MAPPING[cls]
+    if table is not None:
+        assert table.serialize() == before
+
+
+def _sk_value_records():
+    rec = _sweep_valid_record()
+    out = [
+        (f"SK-{f}", dict(rec, **{f: _SK(rec[f])}), cls)
+        for f, cls in {
+            "variant": "malformed_context_record",
+            "opening_code": "malformed_context_record",
+            "opening_name": "malformed_context_record",
+        }.items()
+    ]
+    out += [
+        (
+            "SK-path-element",
+            dict(rec, path_moves=[_SK(rec["path_moves"][0])] + rec["path_moves"][1:]),
+            "malformed_path",
+        ),
+        ("listsub-path", dict(rec, path_moves=_RaisingList(rec["path_moves"])), "malformed_path"),
+    ]
+    return out
+
+
+_SK_VALUE_RECORDS = _sk_value_records()
+_SK_IDS = [c[0] for c in _SK_VALUE_RECORDS]
+
+
+@pytest.mark.parametrize("name,record,cls", _SK_VALUE_RECORDS, ids=_SK_IDS)
+def test_validate_record_total_over_hostile_values(name, record, cls):
+    _sweep_expect_cls(lambda: validate_record(*_docs(), record), None, cls)
+
+
+@pytest.mark.parametrize("name,record,cls", _SK_VALUE_RECORDS, ids=_SK_IDS)
+@pytest.mark.parametrize("existing", [False, True], ids=["new-key", "existing-key"])
+def test_merge_total_over_hostile_values(name, record, cls, existing):
+    dst = _table()
+    dst.insert("standard", ["d2d4"])
+    if existing:
+        dst.insert("standard", KINGS_PAWN_PATH)
+    _sweep_expect_cls(lambda: dst.merge(_Src([record])), dst, "malformed_context_record")
+
+
+@pytest.mark.parametrize(
+    "args,cls",
+    [
+        ((_SK("standard"), KINGS_PAWN_PATH), "unknown_variant"),
+        (("standard", _RaisingList(KINGS_PAWN_PATH)), "malformed_path"),
+        (("standard", [_SK(KINGS_PAWN_PATH[0])] + list(KINGS_PAWN_PATH[1:])), "malformed_path"),
+    ],
+    ids=["SK-variant", "listsub-path", "SK-path-element"],
+)
+def test_insert_total_over_hostile_values(args, cls):
+    t = _table()
+    t.insert("standard", ["d2d4"])
+    _sweep_expect_cls(lambda: t.insert(*args), t, cls)
+
+
+@pytest.mark.parametrize(
+    "records", [None, _RaisingList([1]), (), {}], ids=["None", "raising-list", "tuple", "dict"]
+)
+def test_merge_rejects_non_list_sources(records):
+    dst = _table()
+    dst.insert("standard", ["d2d4"])
+
+    class _Bad:
+        def records(self):
+            return records
+
+    _sweep_expect_cls(lambda: dst.merge(_Bad()), dst, "malformed_context_record")
+
+
+def _selfref():
+    loop = []
+    loop.append(loop)
+    return loop
+
+
+def _deep(n=100_000):
+    root = cur = []
+    for _ in range(n):
+        nxt = []
+        cur.append(nxt)
+        cur = nxt
+    return root
+
+
+def _structural_value_records():
+    rec = _sweep_valid_record()
+    return [
+        (f"{kind}-{f}", dict(rec, **{f: make()}), cls)
+        for f, cls in {
+            "variant": "malformed_context_record",
+            "path_moves": "malformed_path",
+            "opening_code": "malformed_context_record",
+            "opening_name": "malformed_context_record",
+        }.items()
+        for kind, make in (("selfref", _selfref), ("deep", _deep), ("hugeint", lambda: 10**5000))
+    ]
+
+
+_STRUCT_RECORDS = _structural_value_records()
+_STRUCT_IDS = [c[0] for c in _STRUCT_RECORDS]
+
+
+@pytest.mark.parametrize("name,record,cls", _STRUCT_RECORDS, ids=_STRUCT_IDS)
+def test_validate_record_total_over_structural_values(name, record, cls):
+    _sweep_expect_cls(lambda: validate_record(*_docs(), record), None, cls)
+
+
+@pytest.mark.parametrize("name,record,cls", _STRUCT_RECORDS, ids=_STRUCT_IDS)
+def test_merge_total_over_structural_values(name, record, cls):
+    dst = _table()
+    dst.insert("standard", ["d2d4"])
+    _sweep_expect_cls(lambda: dst.merge(_Src([record])), dst, "malformed_context_record")
+
+
+@pytest.mark.parametrize("field", ["variant", "opening_code", "opening_name"])
+def test_hostile_value_escapes_raw_without_guard(field):
+    """Guardless demo: the pre-sweep isinstance check admits the SK value,
+    and the next == / in against it raises raw."""
+    value = _SK(_sweep_valid_record()[field])
+    assert isinstance(value, str)
+    with pytest.raises(RuntimeError):
+        value in [str(value)]  # noqa: B015
