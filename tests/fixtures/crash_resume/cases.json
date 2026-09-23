@@ -1,0 +1,2566 @@
+{
+ "boundary": [
+  {
+   "expect": {
+    "discarded_count": 0,
+    "head": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+    "quarantine_token": "qtn1:f8bfff38c0e60e031f49127908041530fa5c7220e4121dc6e81c4cc8c60eb27e",
+    "resume_id": "rsm1:c8eadd8f1edf681ca8677525db167091386045a51843e806807f1861c6f1ea2f",
+    "resumed_count": 0,
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   "expect_log": [],
+   "log": [],
+   "name": "empty_log_genesis",
+   "request": {
+    "checkpoint_sequence": 0
+   },
+   "sink": "canonical",
+   "why": "an empty log resumes at genesis with an empty-tail quarantine"
+  },
+  {
+   "expect": {
+    "discarded_count": 3,
+    "head": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+    "quarantine_token": "qtn1:982466c75165210899e56915fd94ba6c70529fd0acb584f242969dca44634cb3",
+    "resume_id": "rsm1:b641b93faff3607fd30f77eb1befb3a9c212bbe0bf2086513a72bbb3d7ecc252",
+    "resumed_count": 0,
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   "expect_log": [],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "name": "checkpoint_zero_whole_log_torn",
+   "request": {
+    "checkpoint_sequence": 0
+   },
+   "sink": "canonical",
+   "why": "checkpoint 0 with an invalid first entry discards the whole log"
+  },
+  {
+   "expect": {
+    "discarded_count": 2,
+    "head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+    "quarantine_token": "qtn1:6da4cb66b08fa700bed56dfb1cb55bca375e1f08a98eeff6b24ac7202ef8a337",
+    "resume_id": "rsm1:ebff3a7a99b4fb15cf181958daaa4b0747916b51af19dc0a0e82323823fa7a1c",
+    "resumed_count": 2,
+    "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   },
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    null,
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "name": "valid_looking_entries_after_first_invalid",
+   "request": {
+    "checkpoint_sequence": 2
+   },
+   "sink": "canonical",
+   "why": "everything from the first invalid entry on is discarded even if later entries look valid"
+  },
+  {
+   "expect": {
+    "discarded_count": 1,
+    "head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+    "quarantine_token": "qtn1:cf533c221c208fb7627ae34dc90075e65244c782f191820b0ba083754df8326e",
+    "resume_id": "rsm1:9435559f461d4b38b87a7d3ae06c4428d5143a4c20a45abbb1ec079832a9d075",
+    "resumed_count": 3,
+    "state_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f"
+   },
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    [
+     [
+      [
+       [
+        [
+         [
+          [
+           [
+            [
+             [
+              [
+               [
+                [
+                 [
+                  [
+                   [
+                    [
+                     [
+                      [
+                       [
+                        [
+                         [
+                          [
+                           [
+                            [
+                             [
+                              [
+                               [
+                                [
+                                 [
+                                  [
+                                   [
+                                    [
+                                     [
+                                      [
+                                       [
+                                        [
+                                         [
+                                          [
+                                           [
+                                            [
+                                             [
+                                              [
+                                               [
+                                                [
+                                                 [
+                                                  [
+                                                   [
+                                                    [
+                                                     [
+                                                      [
+                                                       [
+                                                        [
+                                                         [
+                                                          [
+                                                           [
+                                                            [
+                                                             [
+                                                              [
+                                                               [
+                                                                [
+                                                                 [
+                                                                  [
+                                                                   [
+                                                                    0
+                                                                   ]
+                                                                  ]
+                                                                 ]
+                                                                ]
+                                                               ]
+                                                              ]
+                                                             ]
+                                                            ]
+                                                           ]
+                                                          ]
+                                                         ]
+                                                        ]
+                                                       ]
+                                                      ]
+                                                     ]
+                                                    ]
+                                                   ]
+                                                  ]
+                                                 ]
+                                                ]
+                                               ]
+                                              ]
+                                             ]
+                                            ]
+                                           ]
+                                          ]
+                                         ]
+                                        ]
+                                       ]
+                                      ]
+                                     ]
+                                    ]
+                                   ]
+                                  ]
+                                 ]
+                                ]
+                               ]
+                              ]
+                             ]
+                            ]
+                           ]
+                          ]
+                         ]
+                        ]
+                       ]
+                      ]
+                     ]
+                    ]
+                   ]
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ],
+   "name": "tail_depth_at_limit",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical",
+   "why": "a torn entry nested exactly 64 deep is admissible"
+  },
+  {
+   "expect": {
+    "discarded_count": 1,
+    "head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+    "quarantine_token": "qtn1:9217edb9efe3d9dcc2e237b66d082d0124482e877938be479bb1926199e7fe1b",
+    "resume_id": "rsm1:cba4cccc13b73ac2f074260bb12315835f8b777f275f48ec1b40ae1aaa56b9a8",
+    "resumed_count": 3,
+    "state_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f"
+   },
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "n": 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+    }
+   ],
+   "name": "tail_int_at_digit_limit",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical",
+   "why": "a torn entry with a 4000-digit int is admissible"
+  }
+ ],
+ "contract": "store-crash-resume",
+ "contract_base_path": "/store/crash-resume/v1",
+ "happy": [
+  {
+   "expect": {
+    "discarded_count": 0,
+    "head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+    "quarantine_token": "qtn1:f8bfff38c0e60e031f49127908041530fa5c7220e4121dc6e81c4cc8c60eb27e",
+    "resume_id": "rsm1:c4f74eed0a169ff3b4138b58cb2eb153520f8e326f5667bbb56b326659e29b11",
+    "resumed_count": 3,
+    "state_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f"
+   },
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "name": "clean_log_resumes_unchanged",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical",
+   "why": "a clean log discards nothing and keeps every entry"
+  },
+  {
+   "expect": {
+    "discarded_count": 1,
+    "head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+    "quarantine_token": "qtn1:8882dffe9179b84d04617c7407daa966e29a3ef9a1dd130ed186893fafcd0eac",
+    "resume_id": "rsm1:c17dc797a0cc8233142016fe66fc3eff34c596b8f26b8b211987324734aad3f8",
+    "resumed_count": 3,
+    "state_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f"
+   },
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "name": "torn_fragment_discarded",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical",
+   "why": "a half-written trailing fragment is quarantined and removed"
+  },
+  {
+   "expect": {
+    "discarded_count": 1,
+    "head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+    "quarantine_token": "qtn1:8e9fc9a589b66b6b6592f7f8375ad356db907dba80d8a246427e75a95b543756",
+    "resume_id": "rsm1:d9204e129a74e2bd9b593181092410c3decfdcb24939b05b8ddc9ea0777abe06",
+    "resumed_count": 3,
+    "state_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f"
+   },
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "entry_id": "wal1:6b3c7e3b9b8230bd63c74ee16157dea70c289d4a19317a2b00a1103bf20dd3ed",
+     "op": "delete",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "sequence": 4
+    }
+   ],
+   "name": "torn_broken_chain_discarded",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical",
+   "why": "an unacknowledged last entry with a broken prior link is discarded"
+  }
+ ],
+ "malformed": [
+  {
+   "defect": "the source log is a dict, not a list",
+   "expect_failure": "malformed_resume_record",
+   "log": {
+    "entries": []
+   },
+   "minimal_repair": {
+    "log": [
+     {
+      "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     },
+     {
+      "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "sequence": 2
+     },
+     {
+      "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "sequence": 3
+     },
+     {
+      "op": "pu"
+     }
+    ]
+   },
+   "name": "log_not_a_list",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "request has no checkpoint_sequence",
+   "expect_failure": "malformed_resume_record",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "request": {
+     "checkpoint_sequence": 3
+    }
+   },
+   "name": "request_missing_checkpoint",
+   "request": {},
+   "sink": "canonical"
+  },
+  {
+   "defect": "request carries an unknown extra field",
+   "expect_failure": "malformed_resume_record",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "request": {
+     "checkpoint_sequence": 3
+    }
+   },
+   "name": "request_extra_field",
+   "request": {
+    "checkpoint_sequence": 3,
+    "force": true
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "checkpoint_sequence is a bool, not an int",
+   "expect_failure": "malformed_resume_record",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "request": {
+     "checkpoint_sequence": 3
+    }
+   },
+   "name": "checkpoint_bool",
+   "request": {
+    "checkpoint_sequence": true
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "checkpoint_sequence is a string",
+   "expect_failure": "malformed_resume_record",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "request": {
+     "checkpoint_sequence": 3
+    }
+   },
+   "name": "checkpoint_string",
+   "request": {
+    "checkpoint_sequence": "3"
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "checkpoint_sequence is -1",
+   "expect_failure": "unknown_checkpoint",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "request": {
+     "checkpoint_sequence": 3
+    }
+   },
+   "name": "checkpoint_negative",
+   "request": {
+    "checkpoint_sequence": -1
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "checkpoint 5 acknowledges entries the log does not have",
+   "expect_failure": "corrupt_source",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "request": {
+     "checkpoint_sequence": 3
+    }
+   },
+   "name": "checkpoint_past_log_end",
+   "request": {
+    "checkpoint_sequence": 5
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "acknowledged entry 2 has a wrong digest",
+   "expect_failure": "corrupt_source",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "minimal_repair": {
+    "log": [
+     {
+      "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     },
+     {
+      "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "sequence": 2
+     },
+     {
+      "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "sequence": 3
+     }
+    ]
+   },
+   "name": "durable_entry_damaged",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "the torn entry nests 65 deep",
+   "expect_failure": "malformed_resume_record",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    [
+     [
+      [
+       [
+        [
+         [
+          [
+           [
+            [
+             [
+              [
+               [
+                [
+                 [
+                  [
+                   [
+                    [
+                     [
+                      [
+                       [
+                        [
+                         [
+                          [
+                           [
+                            [
+                             [
+                              [
+                               [
+                                [
+                                 [
+                                  [
+                                   [
+                                    [
+                                     [
+                                      [
+                                       [
+                                        [
+                                         [
+                                          [
+                                           [
+                                            [
+                                             [
+                                              [
+                                               [
+                                                [
+                                                 [
+                                                  [
+                                                   [
+                                                    [
+                                                     [
+                                                      [
+                                                       [
+                                                        [
+                                                         [
+                                                          [
+                                                           [
+                                                            [
+                                                             [
+                                                              [
+                                                               [
+                                                                [
+                                                                 [
+                                                                  [
+                                                                   [
+                                                                    [
+                                                                     0
+                                                                    ]
+                                                                   ]
+                                                                  ]
+                                                                 ]
+                                                                ]
+                                                               ]
+                                                              ]
+                                                             ]
+                                                            ]
+                                                           ]
+                                                          ]
+                                                         ]
+                                                        ]
+                                                       ]
+                                                      ]
+                                                     ]
+                                                    ]
+                                                   ]
+                                                  ]
+                                                 ]
+                                                ]
+                                               ]
+                                              ]
+                                             ]
+                                            ]
+                                           ]
+                                          ]
+                                         ]
+                                        ]
+                                       ]
+                                      ]
+                                     ]
+                                    ]
+                                   ]
+                                  ]
+                                 ]
+                                ]
+                               ]
+                              ]
+                             ]
+                            ]
+                           ]
+                          ]
+                         ]
+                        ]
+                       ]
+                      ]
+                     ]
+                    ]
+                   ]
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ],
+   "minimal_repair": {
+    "log": [
+     {
+      "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     },
+     {
+      "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "sequence": 2
+     },
+     {
+      "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "sequence": 3
+     },
+     [
+      [
+       [
+        [
+         [
+          [
+           [
+            [
+             [
+              [
+               [
+                [
+                 [
+                  [
+                   [
+                    [
+                     [
+                      [
+                       [
+                        [
+                         [
+                          [
+                           [
+                            [
+                             [
+                              [
+                               [
+                                [
+                                 [
+                                  [
+                                   [
+                                    [
+                                     [
+                                      [
+                                       [
+                                        [
+                                         [
+                                          [
+                                           [
+                                            [
+                                             [
+                                              [
+                                               [
+                                                [
+                                                 [
+                                                  [
+                                                   [
+                                                    [
+                                                     [
+                                                      [
+                                                       [
+                                                        [
+                                                         [
+                                                          [
+                                                           [
+                                                            [
+                                                             [
+                                                              [
+                                                               [
+                                                                [
+                                                                 [
+                                                                  [
+                                                                   [
+                                                                    [
+                                                                     0
+                                                                    ]
+                                                                   ]
+                                                                  ]
+                                                                 ]
+                                                                ]
+                                                               ]
+                                                              ]
+                                                             ]
+                                                            ]
+                                                           ]
+                                                          ]
+                                                         ]
+                                                        ]
+                                                       ]
+                                                      ]
+                                                     ]
+                                                    ]
+                                                   ]
+                                                  ]
+                                                 ]
+                                                ]
+                                               ]
+                                              ]
+                                             ]
+                                            ]
+                                           ]
+                                          ]
+                                         ]
+                                        ]
+                                       ]
+                                      ]
+                                     ]
+                                    ]
+                                   ]
+                                  ]
+                                 ]
+                                ]
+                               ]
+                              ]
+                             ]
+                            ]
+                           ]
+                          ]
+                         ]
+                        ]
+                       ]
+                      ]
+                     ]
+                    ]
+                   ]
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   },
+   "name": "tail_too_deep",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "the torn entry holds a 4001-digit int",
+   "expect_failure": "malformed_resume_record",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "n": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    }
+   ],
+   "minimal_repair": {
+    "log": [
+     {
+      "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     },
+     {
+      "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "sequence": 2
+     },
+     {
+      "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "sequence": 3
+     },
+     {
+      "n": 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+     }
+    ]
+   },
+   "name": "tail_int_past_digit_bound",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "the torn entry holds a lone surrogate, not UTF-8 encodable",
+   "expect_failure": "malformed_resume_record",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "\ud800"
+    }
+   ],
+   "minimal_repair": {
+    "log": [
+     {
+      "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+      "sequence": 1
+     },
+     {
+      "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+       "record": {
+        "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+        "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "sequence": 2
+     },
+     {
+      "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+      "op": "put",
+      "payload": {
+       "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+       "record": {
+        "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+        "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        "variant": "standard"
+       }
+      },
+      "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "sequence": 3
+     },
+     {
+      "op": "pu"
+     }
+    ]
+   },
+   "name": "tail_lone_surrogate",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "canonical"
+  },
+  {
+   "defect": "the quarantine sink raises",
+   "expect_failure": "divergent_quarantine",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "sink": "canonical"
+   },
+   "name": "sink_raises",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "raising"
+  },
+  {
+   "defect": "the sink returns bytes",
+   "expect_failure": "divergent_quarantine",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "sink": "canonical"
+   },
+   "name": "sink_non_string",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "bytes"
+  },
+  {
+   "defect": "the sink token breaks the pinned grammar",
+   "expect_failure": "divergent_quarantine",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "sink": "canonical"
+   },
+   "name": "sink_bad_grammar",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "bad_grammar"
+  },
+  {
+   "defect": "the sink returns the token of an empty tail",
+   "expect_failure": "divergent_quarantine",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "sink": "canonical"
+   },
+   "name": "sink_empty_tail_token",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "empty_tail_token"
+  },
+  {
+   "defect": "the sink hashes the tail without length framing",
+   "expect_failure": "divergent_quarantine",
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "minimal_repair": {
+    "sink": "canonical"
+   },
+   "name": "sink_unframed_token",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "sink": "unframed"
+  }
+ ],
+ "notes": "Closed fixture for the T0275 store-crash-resume contract: pinned resume receipts and surviving logs computed by the reference engine over linked WAL logs; malformed rows cover every failure class with a single-locus minimal repair; rollback rows prove a rejected resume leaves the exact supplied log and request bit-identical before the valid follow-up resume removes exactly the torn tail.",
+ "rollback": [
+  {
+   "expect": {
+    "discarded_count": 1,
+    "head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+    "quarantine_token": "qtn1:8882dffe9179b84d04617c7407daa966e29a3ef9a1dd130ed186893fafcd0eac",
+    "resume_id": "rsm1:c17dc797a0cc8233142016fe66fc3eff34c596b8f26b8b211987324734aad3f8",
+    "resumed_count": 3,
+    "state_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f"
+   },
+   "expect_failure": "divergent_quarantine",
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "name": "mutate_inputs_then_raise",
+   "rejected_sink": "mutate_inputs_then_raise",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "why": "sink rewrites the caller log and request then raises"
+  },
+  {
+   "expect": {
+    "discarded_count": 1,
+    "head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+    "quarantine_token": "qtn1:8882dffe9179b84d04617c7407daa966e29a3ef9a1dd130ed186893fafcd0eac",
+    "resume_id": "rsm1:c17dc797a0cc8233142016fe66fc3eff34c596b8f26b8b211987324734aad3f8",
+    "resumed_count": 3,
+    "state_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f"
+   },
+   "expect_failure": "divergent_quarantine",
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "name": "mutate_inputs_then_wrong_token",
+   "rejected_sink": "mutate_inputs_then_wrong_token",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "why": "sink rewrites the caller log and request then returns a wrong token"
+  },
+  {
+   "expect": {
+    "discarded_count": 1,
+    "head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+    "quarantine_token": "qtn1:8882dffe9179b84d04617c7407daa966e29a3ef9a1dd130ed186893fafcd0eac",
+    "resume_id": "rsm1:c17dc797a0cc8233142016fe66fc3eff34c596b8f26b8b211987324734aad3f8",
+    "resumed_count": 3,
+    "state_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f"
+   },
+   "expect_failure": "divergent_quarantine",
+   "expect_log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    }
+   ],
+   "log": [
+    {
+     "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 1
+    },
+    {
+     "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+      "record": {
+       "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+       "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+     "sequence": 2
+    },
+    {
+     "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+     "op": "put",
+     "payload": {
+      "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+      "record": {
+       "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+       "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+       "variant": "standard"
+      }
+     },
+     "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+     "sequence": 3
+    },
+    {
+     "op": "pu"
+    }
+   ],
+   "name": "mutate_tail_arg_then_matching_token",
+   "rejected_sink": "mutate_tail_arg_then_matching_token",
+   "request": {
+    "checkpoint_sequence": 3
+   },
+   "why": "sink mutates its tail argument and returns the token of the mutated tail"
+  }
+ ],
+ "schema": 1
+}
