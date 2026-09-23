@@ -111,8 +111,8 @@ from tools.idempotency_contract_lint import (  # noqa: E402
 )
 
 # -- binding switch: the production task replaces ONLY these two
-IdempotencyEngine = _reference.IdempotencyEngine
-IdempotencyError = _reference.IdempotencyError
+IdempotencyEngine = __import__("store.idempotency").idempotency.IdempotencyEngine
+IdempotencyError = __import__("store.idempotency").idempotency.IdempotencyError
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "idempotency"
            / "cases.json")
