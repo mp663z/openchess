@@ -81,14 +81,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # -- production bindings (the implementation task swaps ONLY these) --------
-from tests import test_t0221_backup_contract as _ref  # noqa: E402
+from store import backup as _ref  # noqa: E402
 
 BackupEngine = _ref.BackupEngine
 BackupError = _ref.BackupError
 serialize_bundle = _ref.serialize_bundle
 FAILURE_MAPPING = _ref.FAILURE_MAPPING
 GENESIS = _ref.GENESIS
-EMPTY_STATE_ID = _ref.state_id({})
+EMPTY_STATE_ID = _ref.EMPTY_STATE_ID
 
 
 def derive_backup_id(head, state_id, entry_count, bundle):
@@ -97,8 +97,7 @@ def derive_backup_id(head, state_id, entry_count, bundle):
     equivalent that REPRODUCES THE PINNED RECEIPTS' backup ids (enforced
     by test_forgery_derivation_is_faithful) - not merely whatever
     derivation production happens to expose."""
-    return BackupEngine._derive_backup_id(
-        head, state_id, entry_count, bundle, "malformed_backup_record")
+    return _ref.derive_backup_id(head, state_id, entry_count, bundle)
 # ---------------------------------------------------------------------------
 
 FIXTURE = ROOT / "tests" / "fixtures" / "backup" / "cases.json"
