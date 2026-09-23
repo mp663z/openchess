@@ -4208,10 +4208,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "73a6bca45a23c8b1d55c6e12a19077acdb96082a",
+   "evidence_manifest": "evidence/T0196.md"
   },
   {
    "id": "T0197",
