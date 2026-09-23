@@ -92,8 +92,8 @@ from tools.export_contract_lint import (  # noqa: E402
 )
 
 # -- binding switch: the production task replaces ONLY these two
-ExportEngine = _reference.ExportEngine
-ExportError = _reference.ExportError
+ExportEngine = __import__("store.export").export.ExportEngine
+ExportError = __import__("store.export").export.ExportError
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "export"
            / "cases.json")
