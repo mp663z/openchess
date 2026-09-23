@@ -1,0 +1,626 @@
+{
+ "boundary": [
+  {
+   "expect": {
+    "backup_id": "bck1:ff982bfb0c409f5aaf686416ec585bb8a63f19106904b7bbe6836f94e9f09d31",
+    "restore_id": "rst1:0df786c634d966e3c132a0a7e6ff91a06edf7aa209c7149148bc1c38c1e27c33",
+    "state": {},
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   "kind": "restore",
+   "name": "restore-empty-log-backup",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:ff982bfb0c409f5aaf686416ec585bb8a63f19106904b7bbe6836f94e9f09d31",
+    "bundle": "",
+    "entry_count": 0,
+    "head": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  },
+  {
+   "expect": {
+    "backup_id": "bck1:52f8eddf2b9ad798a239a53e4350de4f63e98b53dc1be0d137f6a51dd984688c",
+    "restore_id": "rst1:90e22ed2c830b0c5137b9b2d40097ea65b67b2a8db90a904ae42c1625d91c8b4",
+    "state": {},
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   "kind": "restore",
+   "name": "restore-delete-missing-identity-noop",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:52f8eddf2b9ad798a239a53e4350de4f63e98b53dc1be0d137f6a51dd984688c",
+    "bundle": "",
+    "entry_count": 1,
+    "head": "wal1:29c8e50427d39480cdc82992a97cc03d645a0e483810389604cdf29e1a291623",
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  },
+  {
+   "expect": {
+    "backup_id": "bck1:a9e70560d0d387f5c3ff46cb7e6ed7d0eb5c84cc42d2213d2dd801536833f943",
+    "restore_id": "rst1:f7360ff184f0058f312813d67f602071dc33aa350c8542e7aa474514f8fc87bf",
+    "state": {},
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   "kind": "restore",
+   "name": "restore-delete-last-record-empty-state",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:a9e70560d0d387f5c3ff46cb7e6ed7d0eb5c84cc42d2213d2dd801536833f943",
+    "bundle": "",
+    "entry_count": 2,
+    "head": "wal1:bb7a370f570c558a06c2237e94e6e01140f4f631056d0190cd6ba66829b364ce",
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  }
+ ],
+ "contract": "store-restore",
+ "contract_base_path": "/store/restore/v1",
+ "happy": [
+  {
+   "expect": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "restore_id": "rst1:7bb1c47c5a324989819532ecd8995440792f391350682b403df73692310b68e2",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     }
+    },
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "kind": "restore",
+   "name": "restore-put-put-delete-chain",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   }
+  },
+  {
+   "expect": {
+    "backup_id": "bck1:6f5a77739c64bd0cc6aebb6d75da3de4466064a52aa6b90b32eb8f58f40ac325",
+    "restore_id": "rst1:7b8001dc8442c5015caea28948ca168dee16b441c314957940ba1d695a9fa609",
+    "state": {
+     "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+      "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "state_id": "gs1:283ea65149fb39b27c8e102a791f5177c4614160a5b7b72976b1e9c8f768a5ea"
+   },
+   "kind": "restore",
+   "name": "restore-single-put-after-e4",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:6f5a77739c64bd0cc6aebb6d75da3de4466064a52aa6b90b32eb8f58f40ac325",
+    "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')\ndigest=pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff|snapshot_fen=rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1|variant=standard\n",
+    "entry_count": 1,
+    "head": "wal1:56e791776a33e2f536b928b01ed7f1724daf7e94efd86873b1130c59c97eb45c",
+    "state_id": "gs1:283ea65149fb39b27c8e102a791f5177c4614160a5b7b72976b1e9c8f768a5ea"
+   }
+  },
+  {
+   "expect": {
+    "backup_id": "bck1:e2ee8e318c5b6cb56c567b84e6d6fba368eb7090cc1ace8e92cbc0f221cdab4d",
+    "restore_id": "rst1:a61d14a5f5e86ded8f69991b4adc69722f43a4e76e3cd534ea436a5de2e02c05",
+    "state": {
+     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+   },
+   "kind": "restore",
+   "name": "restore-put-delete-put",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:e2ee8e318c5b6cb56c567b84e6d6fba368eb7090cc1ace8e92cbc0f221cdab4d",
+    "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:c680b94c422f70cfda80683297901682aa4184c6e788f304dfbfe9bfa341c774",
+    "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+   }
+  }
+ ],
+ "malformed": [
+  {
+   "defect": "the receipt is missing the bundle field",
+   "expect_failure": "malformed_restore_record",
+   "kind": "restore",
+   "minimal_repair": {
+    "replace_receipt": {
+     "receipt": {
+      "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+      "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+      "entry_count": 3,
+      "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+      "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+     }
+    }
+   },
+   "name": "receipt-missing-field",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "scenario": "missing-receipt-field"
+  },
+  {
+   "defect": "the receipt carries an undeclared extra field",
+   "expect_failure": "malformed_restore_record",
+   "kind": "restore",
+   "minimal_repair": {
+    "replace_receipt": {
+     "receipt": {
+      "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+      "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+      "entry_count": 3,
+      "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+      "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+     }
+    }
+   },
+   "name": "receipt-extra-field",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71",
+    "stray": 1
+   },
+   "scenario": "extra-receipt-field"
+  },
+  {
+   "defect": "the backup id fails the backup-id grammar",
+   "expect_failure": "malformed_restore_record",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_receipt_field": {
+     "field": "backup_id",
+     "value": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639"
+    }
+   },
+   "name": "receipt-bad-backup-id-grammar",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:zz",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "scenario": "bad-backup-id-grammar"
+  },
+  {
+   "defect": "the entry count is not an integer",
+   "expect_failure": "malformed_restore_record",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_receipt_field": {
+     "field": "entry_count",
+     "value": 3
+    }
+   },
+   "name": "receipt-non-int-entry-count",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": "3",
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "scenario": "non-int-entry-count"
+  },
+  {
+   "defect": "the bundle is not a string",
+   "expect_failure": "malformed_restore_record",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_receipt_field": {
+     "field": "bundle",
+     "value": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n"
+    }
+   },
+   "name": "receipt-non-str-bundle",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": [],
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "scenario": "non-str-bundle"
+  },
+  {
+   "defect": "the bundle is not UTF-8 encodable",
+   "expect_failure": "malformed_restore_record",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_receipt_field": {
+     "field": "bundle",
+     "value": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n"
+    }
+   },
+   "name": "receipt-unencodable-bundle",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "\ud800",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "scenario": "unencodable-receipt-field"
+  },
+  {
+   "defect": "the backup id is well-formed but diverges from the recomputed one",
+   "expect_failure": "unverified_backup",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_receipt_field": {
+     "field": "backup_id",
+     "value": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639"
+    }
+   },
+   "name": "receipt-wrong-backup-id",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "scenario": "wrong-backup-id"
+  },
+  {
+   "defect": "a non-empty backup pins the genesis head",
+   "expect_failure": "unverified_backup",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_receipt_field": {
+     "field": "head",
+     "value": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708"
+    }
+   },
+   "name": "receipt-head-count-inconsistent",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "scenario": "genesis-head-nonzero-count"
+  },
+  {
+   "defect": "the bundle parser raises during restore",
+   "expect_failure": "divergent_parse",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-raises",
+   "oracle": "raising",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "scenario": "oracle-raises"
+  },
+  {
+   "defect": "the bundle parser returns a non-mapping",
+   "expect_failure": "divergent_parse",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-non-dict-output",
+   "oracle": "non-dict",
+   "receipt": {
+    "backup_id": "bck1:42a71be87a26539e7fcdc7825592a5e606d2053e915ef61b50e5c0864b39f558",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+    "entry_count": 2,
+    "head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+    "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   },
+   "scenario": "oracle-non-dict-output"
+  },
+  {
+   "defect": "the bundle decodes to the right state only through record reordering",
+   "expect_failure": "divergent_parse",
+   "kind": "restore",
+   "minimal_repair": {
+    "replace_receipt": {
+     "receipt": {
+      "backup_id": "bck1:42a71be87a26539e7fcdc7825592a5e606d2053e915ef61b50e5c0864b39f558",
+      "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+      "entry_count": 2,
+      "head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+      "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+     }
+    }
+   },
+   "name": "bundle-reordered-records",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:a3baf2b59da01705b2240186a818db83c5d467caaedfaecf129a406bb0837ee7",
+    "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 2,
+    "head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+    "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   },
+   "scenario": "reordered-records"
+  },
+  {
+   "defect": "the bundle decodes to the right state only through a duplicated record block",
+   "expect_failure": "divergent_parse",
+   "kind": "restore",
+   "minimal_repair": {
+    "replace_receipt": {
+     "receipt": {
+      "backup_id": "bck1:c2c4943dcd1d99192040fcd91ade2e3cdaee4eafa0754bca1369d3a15def6ecf",
+      "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+      "entry_count": 1,
+      "head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+     }
+    }
+   },
+   "name": "bundle-duplicate-identical-records",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:04b6312347f95aeb44e5fe0670cbe10ddf1c27c5f0dec2f53e1b256977b6699f",
+    "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+    "entry_count": 1,
+    "head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+    "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+   },
+   "scenario": "duplicate-identical-records"
+  },
+  {
+   "defect": "the bundle carries non-canonical framing",
+   "expect_failure": "divergent_parse",
+   "kind": "restore",
+   "minimal_repair": {
+    "replace_receipt": {
+     "receipt": {
+      "backup_id": "bck1:c2c4943dcd1d99192040fcd91ade2e3cdaee4eafa0754bca1369d3a15def6ecf",
+      "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+      "entry_count": 1,
+      "head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+     }
+    }
+   },
+   "name": "bundle-trailing-blank-line",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:ca13020a6087b5914ae7cb452d5d92361e82266abe3524bf8495caeb89a6b1b3",
+    "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n\n",
+    "entry_count": 1,
+    "head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+    "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+   },
+   "scenario": "trailing-blank-line"
+  },
+  {
+   "defect": "the bundle launders an invalid record through a conflicting duplicate field",
+   "expect_failure": "divergent_state",
+   "kind": "restore",
+   "minimal_repair": {
+    "replace_receipt": {
+     "receipt": {
+      "backup_id": "bck1:c2c4943dcd1d99192040fcd91ade2e3cdaee4eafa0754bca1369d3a15def6ecf",
+      "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+      "entry_count": 1,
+      "head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+      "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+     }
+    }
+   },
+   "name": "bundle-duplicate-field-conflicting",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:3532584b8b3ec938cb65946fa5cad797c340d9caa134e1224fec97331e9efcea",
+    "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard|digest=0000000000000000000000000000000000000000000000000000000000000000\n",
+    "entry_count": 1,
+    "head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+    "state_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a"
+   },
+   "scenario": "duplicate-field-conflicting"
+  },
+  {
+   "defect": "the parser returns a valid record under a key that is not its identity",
+   "expect_failure": "divergent_state",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-wrong-content",
+   "oracle": "wrong-content",
+   "receipt": {
+    "backup_id": "bck1:6f5a77739c64bd0cc6aebb6d75da3de4466064a52aa6b90b32eb8f58f40ac325",
+    "bundle": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')\ndigest=pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff|snapshot_fen=rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1|variant=standard\n",
+    "entry_count": 1,
+    "head": "wal1:56e791776a33e2f536b928b01ed7f1724daf7e94efd86873b1130c59c97eb45c",
+    "state_id": "gs1:283ea65149fb39b27c8e102a791f5177c4614160a5b7b72976b1e9c8f768a5ea"
+   },
+   "scenario": "parser-wrong-content"
+  },
+  {
+   "defect": "the parser returns a record under another record's identity key",
+   "expect_failure": "divergent_state",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-key-mismatch",
+   "oracle": "key-mismatch",
+   "receipt": {
+    "backup_id": "bck1:ff982bfb0c409f5aaf686416ec585bb8a63f19106904b7bbe6836f94e9f09d31",
+    "bundle": "",
+    "entry_count": 0,
+    "head": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+    "state_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   },
+   "scenario": "parser-key-mismatch"
+  },
+  {
+   "defect": "the parser returns a fully valid state whose id diverges from the receipt",
+   "expect_failure": "divergent_state",
+   "kind": "restore",
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-divergent-state",
+   "oracle": "divergent-state",
+   "receipt": {
+    "backup_id": "bck1:873b92c0d877752f0c0bc23ddf021f0b0c6a76d9f2e4d30cc18c5bbe7d1235eb",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+    "entry_count": 4,
+    "head": "wal1:b5e40a11d2320910ad3103be5007d8cb1d3c5d1e88ab31b92fb0a6bf63226a8e",
+    "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   },
+   "scenario": "parser-state-divergence"
+  }
+ ],
+ "notes": "T0231 restore conformance fixture: every pinned restore receipt computed from the contract-derived reference engine at authoring time; any contract or derivation drift breaks this battery. The fixture proves fixture/contract CONSISTENCY, not production behavior - the later runtime must execute these same cases against a separately implemented runtime.",
+ "rollback": [
+  {
+   "expect": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "restore_id": "rst1:7bb1c47c5a324989819532ecd8995440792f391350682b403df73692310b68e2",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     }
+    },
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "expect_failure": "divergent_parse",
+   "kind": "restore",
+   "name": "rejected-restore-raising-parser-then-valid-restore",
+   "oracle": "raising",
+   "receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "then_oracle": "honest",
+   "then_receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   }
+  },
+  {
+   "expect": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "restore_id": "rst1:7bb1c47c5a324989819532ecd8995440792f391350682b403df73692310b68e2",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     }
+    },
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "expect_failure": "unverified_backup",
+   "kind": "restore",
+   "name": "rejected-restore-unverified-receipt-then-valid-restore",
+   "oracle": "honest",
+   "receipt": {
+    "backup_id": "bck1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   },
+   "then_oracle": "honest",
+   "then_receipt": {
+    "backup_id": "bck1:751dfeb6dce29d509dc7b94a32f83f0e83533d7bdbf0ff4e7d6003039f68a639",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n",
+    "entry_count": 3,
+    "head": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+    "state_id": "gs1:de199dde56ba0d9d151cece7cb936188e128888d90d07b5da38686c8560a0b71"
+   }
+  },
+  {
+   "expect": {
+    "backup_id": "bck1:873b92c0d877752f0c0bc23ddf021f0b0c6a76d9f2e4d30cc18c5bbe7d1235eb",
+    "restore_id": "rst1:7ea635061f983c2cf3350406d380b471442138e07415331d2feee4128de386ea",
+    "state": {
+     "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+      "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+      "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      "variant": "standard"
+     },
+     "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+      "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+      "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "variant": "standard"
+     }
+    },
+    "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   },
+   "expect_failure": "divergent_state",
+   "kind": "restore",
+   "name": "rejected-restore-divergent-state-then-valid-restore",
+   "oracle": "divergent-state",
+   "receipt": {
+    "backup_id": "bck1:873b92c0d877752f0c0bc23ddf021f0b0c6a76d9f2e4d30cc18c5bbe7d1235eb",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+    "entry_count": 4,
+    "head": "wal1:b5e40a11d2320910ad3103be5007d8cb1d3c5d1e88ab31b92fb0a6bf63226a8e",
+    "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   },
+   "then_oracle": "honest",
+   "then_receipt": {
+    "backup_id": "bck1:873b92c0d877752f0c0bc23ddf021f0b0c6a76d9f2e4d30cc18c5bbe7d1235eb",
+    "bundle": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')\ndigest=pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b|snapshot_fen=4k3/8/8/8/8/8/8/4K3 w - - 0 1|variant=standard\n('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')\ndigest=pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe|snapshot_fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1|variant=standard\n",
+    "entry_count": 4,
+    "head": "wal1:b5e40a11d2320910ad3103be5007d8cb1d3c5d1e88ab31b92fb0a6bf63226a8e",
+    "state_id": "gs1:c532bfcfc2f83500766b1603e71f269e571bc7e774ba6ffc4341683233e65a33"
+   }
+  }
+ ],
+ "schema": 1
+}
