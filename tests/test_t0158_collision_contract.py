@@ -19,6 +19,7 @@ lint-mutant and sibling-linkage batteries below.
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import hashlib
 import itertools
@@ -271,9 +272,13 @@ class CollisionProbe:
         accelerator_inconsistent outcome. The contract's own typed
         validation errors are raised by sibling machinery OUTSIDE
         this wrapper and are never caught or relabeled here."""
+        # BaseException: the oracle is untrusted code, and a raised
+        # KeyboardInterrupt / SystemExit / GeneratorExit (or any other
+        # BaseException subclass) is the same inability to supply a key
+        # - it must map to the typed outcome, never escape raw
         try:
             key = self.oracle(variant, fen)
-        except Exception:
+        except BaseException:
             _fail(self.cc, "accelerator_inconsistent")
         # EXACT built-in str only: a valid-text str subclass stays
         # hostile (raising/deceptive __hash__ or __eq__) past a
@@ -2166,3 +2171,72 @@ def test_mutant_merge_deepcopy_staging_replaces_records():
     assert any(r is old2 for b in dest2.buckets.values()
                for r in b)
     assert dest2.insert("standard", KINGS) is old2
+
+
+# -- totality sweep: BaseException at the oracle boundary --------------------
+
+
+class _CustomBase(BaseException):
+    pass
+
+
+_BASE_EXCS = pytest.mark.parametrize(
+    "exc_type",
+    [KeyboardInterrupt, SystemExit, GeneratorExit, _CustomBase],
+    ids=["KeyboardInterrupt", "SystemExit", "GeneratorExit", "custom"],
+)
+
+
+def _base_raising_oracle(exc_type, on_call):
+    calls = {"n": 0}
+
+    def oracle(variant, fen):
+        calls["n"] += 1
+        if calls["n"] == on_call:
+            raise exc_type("hostile oracle")
+        return digest_fen(variant, fen)
+
+    return oracle
+
+
+def _expect_accelerator_inconsistent(call, probe):
+    before = (copy.deepcopy(probe.identity_index), copy.deepcopy(probe.buckets))
+    with pytest.raises(CollisionError) as exc:
+        call()
+    assert exc.value.failure_class == "accelerator_inconsistent"
+    assert exc.value.code == FAILURE_MAPPING["accelerator_inconsistent"]
+    assert (probe.identity_index, probe.buckets) == before
+
+
+@_BASE_EXCS
+def test_base_exception_oracle_first_insert(exc_type):
+    probe = _probe(_base_raising_oracle(exc_type, 1))
+    _expect_accelerator_inconsistent(lambda: probe.insert("standard", STARTPOS), probe)
+    assert probe.records() == []
+
+
+@_BASE_EXCS
+def test_base_exception_oracle_equal_identity_insert(exc_type):
+    probe = _probe(_base_raising_oracle(exc_type, 2))
+    probe.insert("standard", STARTPOS)
+    twin = STARTPOS.replace(" 0 1", " 7 42")
+    _expect_accelerator_inconsistent(lambda: probe.insert("standard", twin), probe)
+    _assert_one_record_per_identity(probe, 1)
+
+
+@_BASE_EXCS
+def test_base_exception_oracle_during_merge(exc_type):
+    source = _probe(digest_fen)
+    source.insert("standard", KINGS)
+    dest = _probe(_base_raising_oracle(exc_type, 2))
+    dest.insert("standard", STARTPOS)
+    _expect_accelerator_inconsistent(lambda: dest.merge(source), dest)
+
+
+@_BASE_EXCS
+def test_base_exception_escapes_raw_without_guard(exc_type):
+    """Guardless demo: the pre-sweep `except Exception` boundary lets a
+    BaseException raised by the oracle escape raw."""
+    oracle = _base_raising_oracle(exc_type, 1)
+    with pytest.raises(exc_type), contextlib.suppress(Exception):
+        oracle("standard", STARTPOS)
