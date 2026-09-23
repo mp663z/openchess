@@ -1,0 +1,2456 @@
+{
+  "boundary": [
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "k",
+          "receipt_id": "idr1:ab46b02b27b2cbff0e42dc2227061e9be45fed65c6acf521470ba0ea9b1ca142",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      },
+      "kind": "idempotent_apply",
+      "ledger": [],
+      "log": [],
+      "name": "key-single-char",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "k",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "Kxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "receipt_id": "idr1:d3f011b368f3e2577effd9ef1182b5a91fa0ded4e71ef007c8efbf82f0323dcd",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      },
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "name": "key-max-length-128",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "Kxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:02184355f8bdc8b5278312536055d0db926e972fe8b82b8591264fb9fb36e768",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:b622b515a866d4e3648f9fde4719c496f4cfa04c728f1055e67acf7a14193cd7",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 2
+        }
+      },
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "name": "same-payload-distinct-key-applies-again",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "idempotency_key": "c",
+          "receipt_id": "idr1:9fcf6d518c165e8e3b861ee0e821255144f4a139cd08ffa48d0442c06eee1f3c",
+          "request_fingerprint": "idf1:dc5c6c3138a7859d0ff60937e8d677accd4850a842744dff6e7829b8f8dd7dfe",
+          "sequence": 3
+        }
+      },
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "name": "apply-over-ledger-covering-log-subset",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "replayed",
+        "receipt": {
+          "entry_id": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+          "idempotency_key": "c",
+          "receipt_id": "idr1:bb20ff165bfb4c5add94fe9b98810972687aca039aad961614f1ee710da2ea4a",
+          "request_fingerprint": "idf1:b47d8ff5e76cd81073266957455a87abcbea64e4a57d3fbe2de555b65fff6c6c",
+          "sequence": 3
+        }
+      },
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+          "idempotency_key": "c",
+          "receipt_id": "idr1:bb20ff165bfb4c5add94fe9b98810972687aca039aad961614f1ee710da2ea4a",
+          "request_fingerprint": "idf1:b47d8ff5e76cd81073266957455a87abcbea64e4a57d3fbe2de555b65fff6c6c",
+          "sequence": 3
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+          "op": "delete",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "replay-delete-receipt-at-tip",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "delete",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    }
+  ],
+  "contract": "store-idempotency",
+  "contract_base_path": "/store/idempotency/v1",
+  "happy": [
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "order-1",
+          "receipt_id": "idr1:a6ec5788582456725bb8c107ab140da9ff9575810031bb37c876a8cade88b0e5",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      },
+      "kind": "idempotent_apply",
+      "ledger": [],
+      "log": [],
+      "name": "apply-first-key-empty-store",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "order-1",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "idempotency_key": "c",
+          "receipt_id": "idr1:9fcf6d518c165e8e3b861ee0e821255144f4a139cd08ffa48d0442c06eee1f3c",
+          "request_fingerprint": "idf1:dc5c6c3138a7859d0ff60937e8d677accd4850a842744dff6e7829b8f8dd7dfe",
+          "sequence": 3
+        }
+      },
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "name": "apply-new-key-extends-store",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "replayed",
+        "receipt": {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      },
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "name": "replay-seen-key-identical-request",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "a",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    }
+  ],
+  "malformed": [
+    {
+      "defect": "the request is a list, not a dict",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "replace_request": {
+          "request": {
+            "idempotency_key": "b",
+            "op": "put",
+            "payload": {
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                "variant": "standard"
+              }
+            }
+          }
+        }
+      },
+      "name": "request-not-a-dict",
+      "oracle": "honest",
+      "request": [
+        "b",
+        "put"
+      ],
+      "scenario": "non-dict-request"
+    },
+    {
+      "defect": "the request is missing the op field",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "replace_request": {
+          "request": {
+            "idempotency_key": "b",
+            "op": "put",
+            "payload": {
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                "variant": "standard"
+              }
+            }
+          }
+        }
+      },
+      "name": "request-missing-field",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "b",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "missing-request-field"
+    },
+    {
+      "defect": "the request carries a stray field",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "replace_request": {
+          "request": {
+            "idempotency_key": "b",
+            "op": "put",
+            "payload": {
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                "variant": "standard"
+              }
+            }
+          }
+        }
+      },
+      "name": "request-extra-field",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        },
+        "retry": true
+      },
+      "scenario": "extra-request-field"
+    },
+    {
+      "defect": "the idempotency key is the empty string",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "idempotency_key",
+          "value": "b"
+        }
+      },
+      "name": "key-empty",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "empty-key"
+    },
+    {
+      "defect": "the idempotency key is 129 characters, one past the grammar bound",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "idempotency_key",
+          "value": "Kxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      },
+      "name": "key-too-long",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "Kxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "key-too-long"
+    },
+    {
+      "defect": "the idempotency key starts with a non-alphanumeric character",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "idempotency_key",
+          "value": "b"
+        }
+      },
+      "name": "key-bad-leading-char",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": ".b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "key-bad-leading-char"
+    },
+    {
+      "defect": "the idempotency key is an int, not a string",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "idempotency_key",
+          "value": "b7"
+        }
+      },
+      "name": "key-non-str",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": 7,
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "non-str-key"
+    },
+    {
+      "defect": "the request op is outside the wal registry",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "op",
+          "value": "put"
+        }
+      },
+      "name": "op-unregistered",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "b",
+        "op": "upsert",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "unregistered-request-op"
+    },
+    {
+      "defect": "the payload identity does not derive from its record",
+      "expect_failure": "malformed_idempotency_request",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "payload",
+          "value": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          }
+        }
+      },
+      "name": "payload-identity-mismatch",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "payload-identity-mismatch"
+    },
+    {
+      "defect": "a log entry sequence skips a position",
+      "expect_failure": "corrupt_source",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "replace_log": {
+          "log": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+                "record": {
+                  "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                  "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "sequence": 2
+            }
+          ]
+        }
+      },
+      "name": "log-sequence-gap",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "sequence-gap"
+    },
+    {
+      "defect": "a log entry id does not re-derive from its content",
+      "expect_failure": "corrupt_source",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "replace_log": {
+          "log": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+                "record": {
+                  "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                  "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "sequence": 2
+            }
+          ]
+        }
+      },
+      "name": "log-tampered-entry-id",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "tampered-entry-id"
+    },
+    {
+      "defect": "the ledger is a dict, not a list",
+      "expect_failure": "corrupt_ledger",
+      "kind": "idempotent_apply",
+      "ledger": {
+        "receipts": [
+          {
+            "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+            "idempotency_key": "a",
+            "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+            "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+            "sequence": 1
+          }
+        ]
+      },
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "replace_ledger": {
+          "ledger": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "idempotency_key": "a",
+              "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+              "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+              "sequence": 1
+            }
+          ]
+        }
+      },
+      "name": "ledger-not-a-list",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "non-list-ledger"
+    },
+    {
+      "defect": "a receipt id does not re-derive from its fields",
+      "expect_failure": "corrupt_ledger",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:0000000000000000000000000000000000000000000000000000000000000000",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "replace_ledger": {
+          "ledger": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "idempotency_key": "a",
+              "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+              "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "idempotency_key": "b",
+              "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+              "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+              "sequence": 2
+            }
+          ]
+        }
+      },
+      "name": "ledger-tampered-receipt-id",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "tampered-receipt-id"
+    },
+    {
+      "defect": "the log was rolled back past a receipt that the ledger still holds",
+      "expect_failure": "corrupt_ledger",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "replace_ledger": {
+          "ledger": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "idempotency_key": "a",
+              "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+              "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+              "sequence": 1
+            }
+          ]
+        }
+      },
+      "name": "ledger-receipt-beyond-rolled-back-log",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "stale-receipt-beyond-log"
+    },
+    {
+      "defect": "a re-signed receipt names a fingerprint that is not its entry's",
+      "expect_failure": "corrupt_ledger",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:d017f16adc48fb26e580d349c4e35e0138c3207a7a1acec757f234fece46db64",
+          "request_fingerprint": "idf1:dc5c6c3138a7859d0ff60937e8d677accd4850a842744dff6e7829b8f8dd7dfe",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "replace_ledger": {
+          "ledger": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "idempotency_key": "a",
+              "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+              "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "idempotency_key": "b",
+              "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+              "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+              "sequence": 2
+            }
+          ]
+        }
+      },
+      "name": "ledger-fingerprint-not-of-entry",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "receipt-fingerprint-mismatch"
+    },
+    {
+      "defect": "two re-signed receipts share one idempotency key",
+      "expect_failure": "corrupt_ledger",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:c5b6acede9b01049ed71867928f1d55d2b6a170782123b6bfc4ebcc200dd1579",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "replace_ledger": {
+          "ledger": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "idempotency_key": "a",
+              "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+              "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "idempotency_key": "b",
+              "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+              "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+              "sequence": 2
+            }
+          ]
+        }
+      },
+      "name": "ledger-duplicate-key",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "duplicate-ledger-key"
+    },
+    {
+      "defect": "a seen key arrives with a different payload",
+      "expect_failure": "key_conflict",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "idempotency_key",
+          "value": "c"
+        }
+      },
+      "name": "key-conflict-different-payload",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "a",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "conflict-different-payload"
+    },
+    {
+      "defect": "a seen key arrives with a different op",
+      "expect_failure": "key_conflict",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "idempotency_key",
+          "value": "c"
+        }
+      },
+      "name": "key-conflict-different-op",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "a",
+        "op": "delete",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "conflict-different-op"
+    },
+    {
+      "defect": "the fingerprinter raises instead of returning a token",
+      "expect_failure": "divergent_fingerprint",
+      "kind": "idempotent_apply",
+      "ledger": [],
+      "log": [],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "oracle-raises",
+      "oracle": "raising",
+      "request": {
+        "idempotency_key": "a",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "oracle-raises"
+    },
+    {
+      "defect": "the fingerprinter returns a list, not a string",
+      "expect_failure": "divergent_fingerprint",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "oracle-non-str-output",
+      "oracle": "non_str_output",
+      "request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "oracle-non-str-output"
+    },
+    {
+      "defect": "the fingerprinter token violates the pinned grammar",
+      "expect_failure": "divergent_fingerprint",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "oracle-bad-grammar",
+      "oracle": "bad_grammar",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "oracle-bad-grammar"
+    },
+    {
+      "defect": "the fingerprinter token is grammar-valid but not bound to the local request derivation",
+      "expect_failure": "divergent_fingerprint",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+          "idempotency_key": "c",
+          "receipt_id": "idr1:bb20ff165bfb4c5add94fe9b98810972687aca039aad961614f1ee710da2ea4a",
+          "request_fingerprint": "idf1:b47d8ff5e76cd81073266957455a87abcbea64e4a57d3fbe2de555b65fff6c6c",
+          "sequence": 3
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:9354fd5cf2ade784b576f3e723fe6ed8e2464e6a73917bcd84cc8b471b440708",
+          "op": "delete",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "oracle-unbound-token",
+      "oracle": "unbound_token",
+      "request": {
+        "idempotency_key": "a",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "oracle-unbound-token"
+    },
+    {
+      "defect": "the fingerprinter token is not UTF-8 encodable",
+      "expect_failure": "divergent_fingerprint",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "oracle-lone-surrogate",
+      "oracle": "lone_surrogate",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "scenario": "oracle-lone-surrogate"
+    }
+  ],
+  "notes": "T0258 idempotency conformance fixture. Receipts, logs and ledgers were computed at authoring time from the T0257 contract-derived reference engine (tests/test_t0257_idempotency_contract.py) over the linked WAL and rollback references. Malformed rows are discriminating: repairing only the declared locus makes each row valid. Rollback rows prove a rejected apply leaves the supplied log, ledger and request bit-identical before the valid follow-up.",
+  "rollback": [
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      },
+      "expect_failure": "divergent_fingerprint",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "name": "rejected-apply-raising-fingerprinter-then-valid-apply",
+      "oracle": "raising",
+      "request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "then_ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "then_log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "then_oracle": "honest",
+      "then_request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "replayed",
+        "receipt": {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      },
+      "expect_failure": "key_conflict",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "name": "rejected-apply-key-conflict-then-replay",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "a",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "then_ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "then_log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "then_oracle": "honest",
+      "then_request": {
+        "idempotency_key": "a",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "idempotency_key": "c",
+          "receipt_id": "idr1:9fcf6d518c165e8e3b861ee0e821255144f4a139cd08ffa48d0442c06eee1f3c",
+          "request_fingerprint": "idf1:dc5c6c3138a7859d0ff60937e8d677accd4850a842744dff6e7829b8f8dd7dfe",
+          "sequence": 3
+        }
+      },
+      "expect_failure": "corrupt_source",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "name": "rejected-apply-corrupt-source-then-valid-apply",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "then_ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "then_log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "then_oracle": "honest",
+      "then_request": {
+        "idempotency_key": "c",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "record": {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "outcome": "applied",
+        "receipt": {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      },
+      "expect_failure": "corrupt_ledger",
+      "kind": "idempotent_apply",
+      "ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "idempotency_key": "b",
+          "receipt_id": "idr1:9ee8ac4d6e083b9df028446b9de39159a93aa758722fa147ac308b431d397ad6",
+          "request_fingerprint": "idf1:71ff589fc1cff6413beaa1a589254fdf4dc0b52e26ff98cd799a79923e5ac942",
+          "sequence": 2
+        }
+      ],
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "name": "rejected-apply-stale-ledger-after-log-rollback-then-trimmed-reapply",
+      "oracle": "honest",
+      "request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      },
+      "then_ledger": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "idempotency_key": "a",
+          "receipt_id": "idr1:acf0e08a57b2353b6cfa01f51fe5ec1875a0ae98ba47ef8629e57aeeb4616a97",
+          "request_fingerprint": "idf1:731d607fcee3e593daa961c6c3d4855cfdb321c87b14b686a37bb006dee7c8e2",
+          "sequence": 1
+        }
+      ],
+      "then_log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "then_oracle": "honest",
+      "then_request": {
+        "idempotency_key": "b",
+        "op": "put",
+        "payload": {
+          "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "record": {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        }
+      }
+    }
+  ],
+  "schema": 1
+}
