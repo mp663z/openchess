@@ -4599,10 +4599,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "77cbe10de6612e602c3efd6e489ce600f583c78b",
+   "evidence_manifest": "evidence/T0215.md"
   },
   {
    "id": "T0216",
