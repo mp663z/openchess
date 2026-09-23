@@ -4780,6 +4780,7 @@
    "track": "public-product",
    "title": "Store/backup/implement",
    "dependencies": [
+    "T0215",
     "T0223",
     "T2357"
    ],
@@ -5325,10 +5326,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "7ad8b4d5c39448f1932bb5df668f50f726d09ab6",
+   "evidence_manifest": "evidence/T0250.md"
   },
   {
    "id": "T0251",
