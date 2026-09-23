@@ -1,0 +1,86 @@
+schema_version: 1
+
+contract:
+  id: store-export
+  role:
+    kind: canonical-read-only-export-of-a-wal-logged-graph-state
+    serves: position-graph-store-portability
+    scope: single-log-current-state-export-to-a-pinned-format
+    owns: export-receipt-semantics-and-document-binding
+    not_scope: import-backup-restore-or-partial-filtered-export
+  record:
+    fields: [export_id, head, state_id, record_count, format, document]
+    exact: true
+    field_definitions:
+      document:
+        kind: canonical-rendered-export-document
+        type: exact-built-in-string-utf8-encodable
+        source: exporter-output-bound-byte-exact-to-the-local-canonical-rendering
+  request:
+    fields: [format]
+    exact: true
+    formats: [jsonl-v1]
+  identifiers:
+    export_id:
+      kind: content-addressed-export-receipt-id
+      grammar: ^exp1:[0-9a-f]{64}$
+      derivation: sha256-over-head-state-id-record-count-format-document
+      source: derived-from-validated-export-never-caller-supplied
+    head:
+      kind: wal-chain-tip-or-pinned-genesis
+      grammar: ^(wal0:0{64}|wal1:[0-9a-f]{64})$
+      source: derived-from-validated-source-log-never-caller-supplied
+    state_id:
+      kind: canonical-state-content-digest
+      grammar: ^gs1:[0-9a-f]{64}$
+      derivation: sha256-over-canonical-serialization-of-sorted-identity-record-map
+      source: derived-from-replayed-state-never-caller-supplied
+  semantics:
+    source_validation: full-linked-wal-validation-and-replay-before-rendering
+    format_resolution: request-format-is-an-exact-member-of-the-closed-format-list
+    rendering: one-line-per-live-record-sorted-by-identity-canonical-json-sorted-keys-compact-separators
+    binding: exporter-document-must-equal-local-canonical-rendering-byte-for-byte
+    commit: read-only-staged-receipt-source-log-and-request-never-mutated
+  oracle_boundary:
+    role: document-exporter-is-untrusted-input
+    single_evaluation: exactly-one-call-per-export
+    frozen_snapshots: entire-log-state-and-request-frozen-before-first-oracle-call-never-re-read-restored-bit-identical
+    output_validation: exact-built-in-string-utf8-encodable-byte-exact-canonical-document-or-fail-closed
+  failures:
+    classes:
+      - malformed_export_request
+      - unsupported_format
+      - corrupt_source
+      - divergent_export
+    triggers:
+      malformed_export_request: request-shape-or-type-violation-or-source-log-type-violation
+      unsupported_format: exact-string-format-outside-the-closed-format-list
+      corrupt_source: source-log-fails-linked-wal-validation-or-chain-rederivation
+      divergent_export: exporter-raising-any-baseexception-non-exact-string-utf8-inencodable-or-canonical-divergent-document
+    mapping:
+      malformed_export_request: malformed_request
+      unsupported_format: unsupported_format
+      corrupt_source: corrupt_source
+      divergent_export: divergent_export
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - unsupported_format
+      - corrupt_source
+      - divergent_export
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-logs-and-exporters-fail-closed-typed-never-raw
+    atomic: every-export-leaves-log-and-request-bit-identical
+    deterministic: same-log-same-format-same-receipt
+    rollback: read-only-export-no-commit-to-undo
+  versioning:
+    base_path: /store/export/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    wal_contract: data/contracts/wal.yaml
+    migration_contract: data/contracts/migration.yaml
+    backup_contract: data/contracts/backup.yaml
