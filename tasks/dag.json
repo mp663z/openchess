@@ -4951,10 +4951,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "32a2a96d03c80e850396c9d7b3672c3ccce5daff",
+   "evidence_manifest": "evidence/T0232.md"
   },
   {
    "id": "T0233",
