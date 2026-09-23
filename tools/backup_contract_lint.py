@@ -33,12 +33,25 @@ RECORD = {
     "fields": ["backup_id", "head", "state_id", "entry_count",
                "bundle"],
     "exact": True,
+    "key_type": "exact-built-in-str-checked-before-any-set-or-hash-"
+                "comparison",
     "field_definitions": {
         "bundle": {
             "kind": "canonical-serialized-snapshot",
             "type": "exact-built-in-string-utf8-encodable",
             "source": "serializer-output-validated-at-the-"
                       "oracle-boundary",
+        },
+        "entry_count": {
+            "kind": "applied-source-entry-count",
+            "type": "exact-built-in-int-non-negative",
+            # a domain ceiling (int64 max, 19 digits), far below
+            # CPython's str_digits_check_threshold (640): ints this
+            # short are never checked against any configurable
+            # int->str limit, so derivation is environment-independent
+            "max_value": 9223372036854775807,
+            "bound_check": "before-any-int-to-text-conversion-or-"
+                           "derivation",
         },
     },
 }
@@ -143,6 +156,13 @@ def lint(path=None):
 
     check("role", ROLE, cc.get("role"))
     check("record", RECORD, cc.get("record"))
+    ceiling = cc["record"]["field_definitions"]["entry_count"][
+        "max_value"]
+    # CPython's str_digits_check_threshold: ints below 10**640 are
+    # never checked against any configurable int->str limit
+    if type(ceiling) is not int or not 0 <= ceiling < 10 ** 640:
+        raise ContractError(
+            "entry_count max_value must be an int in [0, 10**640)")
     check("identifiers", IDENTIFIERS, cc.get("identifiers"))
     check("semantics", SEMANTICS, cc.get("semantics"))
     check("oracle_boundary", ORACLE_BOUNDARY,

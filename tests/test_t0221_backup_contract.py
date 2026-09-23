@@ -57,6 +57,20 @@ _BACKUP_RE = re.compile(
     _CC["identifiers"]["backup_id"]["grammar"])
 _HEAD_RE = re.compile(_CC["identifiers"]["head"]["grammar"])
 _STATE_RE = re.compile(_CC["identifiers"]["state_id"]["grammar"])
+# inclusive domain ceiling (int64 max): short enough that formatting it
+# never meets any configurable int->str digit limit
+_COUNT_MAX = _CC["record"]["field_definitions"]["entry_count"][
+    "max_value"]
+
+
+def _exact_str_keys(mapping):
+    """KEY-TYPE GUARD, checked BEFORE any set/hash comparison on a
+    caller-supplied dict: a hostile key whose __hash__ collides with
+    a field name and whose __eq__ raises (or a str subclass with a
+    raising __eq__) must fail closed typed, never escape raw.
+    dict.keys is called unbound so a dict subclass cannot intercept
+    it (the caller already requires an exact dict)."""
+    return all(type(key) is str for key in dict.keys(mapping))
 
 
 class BackupError(Exception):
@@ -189,7 +203,8 @@ class BackupEngine:
         # EXACT normative shape: the receipt is exactly the
         # contract's five-field record, bundle included
         if type(receipt) is not dict or \
-                set(receipt.keys()) != set(_FIELDS):
+                not _exact_str_keys(receipt) or \
+                set(dict.keys(receipt)) != set(_FIELDS):
             _fail("malformed_backup_record")
         if type(receipt["backup_id"]) is not str or \
                 _BACKUP_RE.fullmatch(receipt["backup_id"]) is None:
@@ -201,7 +216,10 @@ class BackupEngine:
                 _STATE_RE.fullmatch(receipt["state_id"]) is None:
             _fail("malformed_backup_record")
         count = receipt["entry_count"]
-        if type(count) is not int or count < 0:
+        # BOUND before any int->text conversion: derivation formats
+        # the count, and an over-long int would raise a raw
+        # ValueError at the (configurable) int->str digit limit
+        if type(count) is not int or not 0 <= count <= _COUNT_MAX:
             _fail("malformed_backup_record")
         if type(receipt["bundle"]) is not str:
             _fail("malformed_backup_record")
@@ -890,6 +908,23 @@ def _mutants():
     add("record bundle type drift",
         ["contract", "record", "field_definitions", "bundle",
          "type"], "any-string")
+    add("record key_type guard dropped",
+        ["contract", "record", "key_type"], "any-hashable")
+    add("entry_count definition dropped",
+        ["contract", "record", "field_definitions", "entry_count"],
+        None)
+    add("entry_count ceiling negative",
+        ["contract", "record", "field_definitions", "entry_count",
+         "max_value"], -1)
+    add("entry_count ceiling as text",
+        ["contract", "record", "field_definitions", "entry_count",
+         "max_value"], "9223372036854775807")
+    add("entry_count ceiling raised",
+        ["contract", "record", "field_definitions", "entry_count",
+         "max_value"], 2 ** 64)
+    add("entry_count bound check moved after derivation",
+        ["contract", "record", "field_definitions", "entry_count",
+         "bound_check"], "after-derivation")
     add("backup id grammar drift",
         ["contract", "identifiers", "backup_id", "grammar"],
         "^.*$")
@@ -967,3 +1002,124 @@ def test_mutants_never_silent_subset():
                        "semantics", "oracle_boundary", "failures",
                        "errors", "properties", "versioning",
                        "links"}
+
+
+# -- hostile receipt keys and the entry_count digit bound --------------------
+
+
+class _CollidingKey:
+    """Hash collides with a field name; __eq__ raises."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+
+class _RaisingStrKey(str):
+    """str subclass key whose comparisons raise."""
+
+    __hash__ = str.__hash__
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile str __eq__")
+
+    def __ne__(self, other):
+        raise RuntimeError("hostile str __ne__")
+
+
+_KEY_TYPES = {"colliding": _CollidingKey, "str-subclass": _RaisingStrKey}
+
+
+def _good_receipt():
+    return _engine().backup(_log_of(("put", STARTPOS), ("put", KINGS)))
+
+
+def _rekeyed(receipt, field, key_cls):
+    out = {k: v for k, v in receipt.items() if k != field}
+    out[key_cls(field)] = receipt[field]
+    return out
+
+
+@pytest.mark.parametrize("key_type", list(_KEY_TYPES))
+@pytest.mark.parametrize("field", list(RECORD["fields"]))
+def test_total_over_hostile_receipt_keys(field, key_type):
+    """A hostile key in ANY receipt slot fails closed typed as
+    malformed_backup_record, never a raw escape; the receipt's
+    key objects and values are left untouched."""
+    receipt = _rekeyed(_good_receipt(), field, _KEY_TYPES[key_type])
+    keys = list(dict.keys(receipt))
+    values = list(dict.values(receipt))
+    with pytest.raises(BackupError) as err:
+        _engine().verify(receipt)
+    assert err.value.failure_class == "malformed_backup_record"
+    assert err.value.code == FAILURE_MAPPING["malformed_backup_record"]
+    assert all(a is b for a, b in
+               zip(dict.keys(receipt), keys, strict=True))
+    assert all(a is b for a, b in
+               zip(dict.values(receipt), values, strict=True))
+
+
+@pytest.mark.parametrize("key_type", list(_KEY_TYPES))
+def test_hostile_receipt_key_escapes_raw_without_guard(key_type):
+    """Guardless mutant: the unguarded set compare raises raw, so the
+    key-type guard is load-bearing, not decorative."""
+    receipt = _rekeyed(_good_receipt(), "bundle", _KEY_TYPES[key_type])
+    with pytest.raises(RuntimeError):
+        set(receipt.keys()) != set(_FIELDS)  # noqa: B015
+    with pytest.raises(BackupError):
+        _engine().verify(receipt)
+
+
+def test_entry_count_bound_pinned_below_int_str_limit():
+    assert RECORD["field_definitions"]["entry_count"]["max_value"] == \
+        _COUNT_MAX == 2 ** 63 - 1
+    # never checked against any configurable int->str limit
+    assert len(str(_COUNT_MAX)) <= sys.int_info.str_digits_check_threshold
+
+
+@pytest.mark.parametrize("count,cls", [
+    (2 ** 63 - 1, "divergent_backup"),        # at the ceiling: admitted
+    (2 ** 63, "malformed_backup_record"),     # one past the ceiling
+    (10 ** 700, "malformed_backup_record"),   # past the 640-digit floor
+    (10 ** 5000 - 1, "malformed_backup_record"),  # past the default limit
+], ids=["at-bound", "one-past-bound", "past-640-digits",
+        "past-default-limit"])
+@pytest.mark.parametrize("str_digits", [None, 640],
+                         ids=["default-limit", "limit-640"])
+def test_entry_count_bound(count, cls, str_digits):
+    """At the ceiling the count is admitted and the receipt fails only
+    its integrity check; past it verify rejects BEFORE derivation -
+    typed, never a raw ValueError - including under the lowest
+    configurable int->str limit (640), so totality does not depend on
+    the runner's environment."""
+    saved = sys.get_int_max_str_digits()
+    try:
+        if str_digits is not None:
+            sys.set_int_max_str_digits(str_digits)
+        receipt = _good_receipt()
+        receipt["entry_count"] = count
+        before = dict(receipt)
+        with pytest.raises(BackupError) as err:
+            _engine().verify(receipt)
+        assert err.value.failure_class == cls
+        assert receipt == before and receipt["entry_count"] is count
+        # a genuine receipt still verifies under the lowered limit
+        good = _good_receipt()
+        assert _engine().verify(good) == good
+    finally:
+        sys.set_int_max_str_digits(saved)
+
+
+def test_unbounded_count_escapes_raw_without_bound():
+    """Mutant without the bound: deriving over a 5000-digit count
+    raises raw at CPython's int->str limit."""
+    receipt = _good_receipt()
+    with pytest.raises(ValueError):
+        BackupEngine._derive_backup_id(
+            receipt["head"], receipt["state_id"], 10 ** 5000 - 1,
+            receipt["bundle"], "malformed_backup_record")
