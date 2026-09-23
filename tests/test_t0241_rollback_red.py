@@ -85,8 +85,8 @@ from tools.rollback_contract_lint import (  # noqa: E402
 )
 
 # -- binding switch: the production task replaces ONLY these two
-RollbackEngine = _reference.RollbackEngine
-RollbackError = _reference.RollbackError
+RollbackEngine = __import__("store.rollback").rollback.RollbackEngine
+RollbackError = __import__("store.rollback").rollback.RollbackError
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "rollback"
            / "cases.json")
