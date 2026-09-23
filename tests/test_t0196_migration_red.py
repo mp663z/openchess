@@ -1324,6 +1324,14 @@ def _source_mutant(name, edits):
             raise AssertionError(f"{name}: edit site missing: {old!r}")
         src = src.replace(old, new, 1)
     namespace = dict(vars(_reference))
+    # the mutant raises the BOUND error class, so a correct rejection
+    # counts as one under any binding (reference or production)
+    namespace["MigrationError"] = MigrationError
+
+    def _bound_fail(cls):
+        raise MigrationError(cls, FAILURE_MAPPING[cls])
+
+    namespace["_fail"] = _bound_fail
     exec(compile(src, f"<mutant {name}>", "exec"), namespace)  # noqa: S102
     return namespace["MigrationEngine"]
 
