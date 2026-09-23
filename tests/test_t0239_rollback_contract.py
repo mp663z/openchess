@@ -103,10 +103,10 @@ class RollbackEngine:
         non-exact-str, UTF-8-inencodable or wrong-grammar output
         fails closed as divergent_archive."""
         try:
-            # DETACHED argument copy: the archiver never sees the
-            # frozen snapshot objects - mutating them is inert
-            out = self.archiver([dict(entry) for entry in
-                                 frozen_tail])
+            # DEEP-DETACHED argument copy: the archiver never sees
+            # ANY frozen snapshot object (entries, payloads,
+            # records) - mutating its argument at any depth is inert
+            out = self.archiver(copy.deepcopy(frozen_tail))
         except BaseException:
             # fail closed against the FULL BaseException surface:
             # KeyboardInterrupt/SystemExit/GeneratorExit from the
@@ -549,6 +549,59 @@ def test_archiver_mutating_its_tail_argument():
     assert receipt["truncated_count"] == 1
     assert receipt["to_head"] == honest_log[1]["entry_id"]
     assert log == honest_log[:2]
+
+
+def test_archiver_mutating_nested_tail_argument():
+    """The archiver computes the honest token, THEN mutates the
+    NESTED payload/record dicts of its argument: the frozen tail
+    must be untouched, so the honest rollback is accepted with the
+    token bound to the ORIGINAL tail."""
+    log = _log_of(("put", STARTPOS), ("put", KINGS),
+                  ("put", AFTER_E4))
+    honest_log = copy.deepcopy(log)
+    expected_token = archive_tail(honest_log[1:])
+
+    def archiver(tail):
+        token = archive_tail(tail)
+        for entry in tail:
+            entry["payload"]["identity"] = "forged"
+            entry["payload"]["record"]["digest"] = "forged"
+        return token
+
+    receipt = RollbackEngine(archiver).rollback(
+        log, {"target_sequence": 1})
+    assert receipt["archive_token"] == expected_token
+    assert receipt["truncated_count"] == 2
+    assert log == honest_log[:1]
+
+
+def test_mutant_shallow_archiver_copy_is_caught():
+    """One-guard mutant: the pre-fix SHALLOW per-entry copy lets a
+    nested mutation poison the frozen tail and reject an honest
+    rollback."""
+    class Shallow(RollbackEngine):
+        def _archive(self, frozen_tail):
+            original = self.archiver
+
+            def shallow(_detached):
+                return original([dict(entry) for entry in frozen_tail])
+            self.archiver = shallow
+            try:
+                return RollbackEngine._archive(self, frozen_tail)
+            finally:
+                self.archiver = original
+
+    log = _log_of(("put", STARTPOS), ("put", KINGS),
+                  ("put", AFTER_E4))
+
+    def archiver(tail):
+        token = archive_tail(tail)
+        tail[0]["payload"]["identity"] = "forged"
+        return token
+
+    with pytest.raises(RollbackError) as exc:
+        Shallow(archiver).rollback(log, {"target_sequence": 1})
+    assert exc.value.failure_class == "divergent_archive"
 
 
 def test_archiver_mutating_log_and_request_during_call():
