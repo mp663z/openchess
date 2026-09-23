@@ -76,9 +76,41 @@ def test_r2_production_imports_only_shipped_runtimes():
 
 def test_r3_public_surface():
     assert set(wal.__all__) == {"FAILURE_MAPPING", "GENESIS", "WalEngine",
-                                "WalError", "canonical_payload"}
+                                "WalError", "canonical_payload", "restore",
+                                "snapshot"}
+    assert not hasattr(wal, "_snapshot") and not hasattr(wal, "_restore")
     assert GENESIS == "wal0:" + "0" * 64
     assert issubclass(WalError, Exception)
+
+
+def test_r3_snapshot_restore_round_trip_preserves_identity_and_value():
+    log = []
+    engine = WalEngine(canonical_payload)
+    engine.append(log, {"op": "put", "payload": _payload(START)})
+    engine.append(log, {"op": "put", "payload": _payload(KINGS)})
+    objs = [(e, e["payload"], e["payload"]["record"]) for e in log]
+    values = copy.deepcopy(log)
+    container, saved = wal.snapshot(log)
+    # an ADDED key at every level must be gone after restore too
+    for e in log:
+        e["x"] = 1
+        e["payload"]["x"] = 1
+        e["payload"]["record"]["x"] = 1
+    log[0]["payload"]["record"]["digest"] = "tampered"
+    log[1]["payload"].clear()
+    log[0]["op"] = "delete"
+    log[:] = [{"junk": 1}]
+    wal.restore(log, container, saved)
+    assert log == values
+    assert [list(e) for e in log] == [list(e) for e in values]
+    assert [list(e["payload"]) for e in log] == \
+        [list(e["payload"]) for e in values]
+    assert [list(e["payload"]["record"]) for e in log] == \
+        [list(e["payload"]["record"]) for e in values]
+    after = [(e, e["payload"], e["payload"]["record"]) for e in log]
+    assert len(after) == len(objs)
+    assert all(x is y for pa, pb in zip(after, objs, strict=True)
+               for x, y in zip(pa, pb, strict=True))
 
 
 def test_r4_memoized_linked_derivation_is_detached():
