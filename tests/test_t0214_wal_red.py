@@ -21,13 +21,14 @@ What is proven, per fixture section:
 - request freeze and detachment: each appended request is unchanged after
   a successful append, the committed entry never aliases the request's
   payload and the receipt is never the log's own entry object;
-- totality (PROBE_MANIFEST, 52 in-file probes, production bindings only):
+- totality (PROBE_MANIFEST, 54 in-file probes, production bindings only):
   hostile keys HK (hash collides with a field name, raising __eq__) and SK
   (str subclass, raising __eq__) in request / request payload / request
   record / log entry / entry payload / entry record; SK and int-subclass
   values for op, sequence, entry_id and prior_entry_id; dict and list
   subclasses for request, payload, log and entry; self-referencing log
-  and payload; 10**5-level nesting; a 5000-digit sequence int; hostile
+  and payload; 10**5-level nesting; a 5000-digit sequence int; request
+  records whose FEN fullmove clock has 43 or 5000 digits; hostile
   canonicalizers (ValueError, KeyboardInterrupt, SystemExit,
   GeneratorExit, hash-raising str, non-str) and canonicalizers mutating
   or clearing the live request / log mid-call. Each rejects with a
@@ -784,6 +785,14 @@ def _op_value(value):
     return build
 
 
+def _fen_value(fen):
+    def build():
+        req = _base_request()
+        req["payload"]["record"]["snapshot_fen"] = fen()
+        return "append", [], req, "honest"
+    return build
+
+
 def _containers(target):
     def build():
         log, req = _base_log(), _base_request()
@@ -933,6 +942,8 @@ PROBE_MANIFEST = {
     "deep-nesting-log": MWE,
     "huge-int-sequence-replay": SC,
     "huge-int-sequence-append": SC,
+    "huge-fullmove-fen-43-digits": MWE,
+    "huge-fullmove-fen-5000-digits": MWE,
     "oracle-raises-value-error": DC,
     "oracle-raises-keyboard-interrupt": DC,
     "oracle-raises-system-exit": DC,
@@ -978,6 +989,9 @@ def _probe_builders():
                    "deep-nesting-log", "huge-int-sequence-replay",
                    "huge-int-sequence-append"):
         out[target] = _structural(target)
+    for digits in (43, 5000):
+        out[f"huge-fullmove-fen-{digits}-digits"] = _fen_value(
+            lambda d=digits: "4k3/8/8/8/8/8/8/4K3 w - - 0 " + "1" * d)
     for which in _PROBE_ORACLES:
         out[f"oracle-{which}"] = _hostile_oracle(which)
     for which in ("mutates-request", "clears-request", "mutates-log"):

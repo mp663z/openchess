@@ -166,7 +166,10 @@ class WalEngine:
             derived = _make_record(*_NDOCS, digest_fen,
                                    record["variant"],
                                    record["snapshot_fen"])
-        except NodeError:
+        except (NodeError, ValueError):
+            # ValueError: the linked FEN parser converts clock fields
+            # with int(), which raises at the int->str digit limit on
+            # an over-long clock - still caller input, still typed
             _fail("malformed_wal_entry")
         # EXACT record equality: a well-formed-but-wrong digest
         # (e.g. swapped from another valid record) is as rejected
@@ -543,6 +546,33 @@ def test_total_over_hostile_requests(req):
     assert exc.value.code == FAILURE_MAPPING["malformed_wal_entry"]
     assert exc.value.code in ERROR_ENUM
     assert log == before
+
+
+HUGE_CLOCK_FENS = {
+    "fullmove-43-digits": "4k3/8/8/8/8/8/8/4K3 w - - 0 " + "1" * 43,
+    "fullmove-5000-digits": "4k3/8/8/8/8/8/8/4K3 w - - 0 " + "1" * 5000,
+    "halfmove-5000-digits": "4k3/8/8/8/8/8/8/4K3 w - - " + "1" * 5000
+                            + " 1",
+}
+
+
+@pytest.mark.parametrize("name", list(HUGE_CLOCK_FENS))
+def test_huge_clock_fen_fails_closed_typed(name):
+    """An over-long clock field must reject typed - on append and on
+    replay - never escape as a raw ValueError from the digit limit."""
+    record = {"variant": "standard", "digest": "pdv1:" + "0" * 64,
+              "snapshot_fen": HUGE_CLOCK_FENS[name]}
+    payload = {"identity": _identity(_node(KINGS)), "record": record}
+    req = {"op": "put", "payload": payload}
+    log = [{"entry_id": "wal1:" + "0" * 64, "sequence": 1, "op": "put",
+            "payload": copy.deepcopy(payload), "prior_entry_id": GENESIS}]
+    before = copy.deepcopy((req, log))
+    for call in (lambda e: e.append([], req), lambda e: e.replay(log)):
+        with pytest.raises(WalError) as exc:
+            call(_engine())
+        assert exc.value.failure_class == "malformed_wal_entry"
+        assert exc.value.code == FAILURE_MAPPING["malformed_wal_entry"]
+    assert (req, log) == before
 
 
 def test_request_identity_record_mismatch():
