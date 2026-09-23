@@ -14,6 +14,7 @@ mutant and sibling-linkage batteries below.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import re
 import sys
@@ -40,11 +41,22 @@ EN_PASSANT = ROOT / "data" / "contracts" / "en_passant.yaml"
 FEN = ROOT / "data" / "contracts" / "fen.yaml"
 
 
+_PARSED = {}
+
+
+def _load(path):
+    """Parse each contract once per distinct file text. Keyed on the
+    text, so an edited file is re-parsed; a deep copy is returned, so a
+    caller that mutates its docs never leaks into another caller."""
+    text = path.read_text()
+    key = (str(path), text)
+    if key not in _PARSED:
+        _PARSED[key] = yaml.safe_load(text)["contract"]
+    return copy.deepcopy(_PARSED[key])
+
+
 def _docs():
-    return (yaml.safe_load(CONTRACT.read_text())["contract"],
-            yaml.safe_load(VARIANT.read_text())["contract"],
-            yaml.safe_load(EN_PASSANT.read_text())["contract"],
-            yaml.safe_load(FEN.read_text())["contract"])
+    return (_load(CONTRACT), _load(VARIANT), _load(EN_PASSANT), _load(FEN))
 
 
 def _lint():
