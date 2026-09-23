@@ -11,11 +11,17 @@ contract:
   record:
     fields: [backup_id, head, state_id, entry_count, bundle]
     exact: true
+    key_type: exact-built-in-str-checked-before-any-set-or-hash-comparison
     field_definitions:
       bundle:
         kind: canonical-serialized-snapshot
         type: exact-built-in-string-utf8-encodable
         source: serializer-output-validated-at-the-oracle-boundary
+      entry_count:
+        kind: applied-source-entry-count
+        type: exact-built-in-int-non-negative
+        max_value: 9223372036854775807
+        bound_check: before-any-int-to-text-conversion-or-derivation
   identifiers:
     backup_id:
       kind: content-addressed-backup-receipt-id
