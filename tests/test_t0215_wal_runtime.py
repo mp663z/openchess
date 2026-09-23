@@ -30,9 +30,10 @@ RED = ROOT / "tests" / "test_t0214_wal_red.py"
 PRODUCTION = ROOT / "store" / "wal.py"
 ORACLE_LINE = "from tests import test_t0212_wal_contract as _ref  # noqa: E402\n"
 PRODUCTION_LINE = "from store import wal as _ref  # noqa: E402\n"
-# sha256 of tests/test_t0214_wal_red.py as merged in #210 (18adad5)
+# sha256 of tests/test_t0214_wal_red.py with the oracle binding line: the
+# #210 battery (18adad5) plus the two huge-fullmove-FEN probes
 RED_AS_MERGED_SHA256 = (
-    "a1b78eeafae004a406a024451d0220374051dc59e23037a17dc05a514ade7642")
+    "9f81bb7b5f0242ba3d8751d57e328f7c233ba8d6c296d238a267e7a556e78d88")
 ALLOWED_IMPORTS = {"__future__", "functools", "hashlib", "re", "pathlib",
                    "yaml", "graph.diff", "graph.node",
                    "graph.position_digest", "tools.variant_runtime",
