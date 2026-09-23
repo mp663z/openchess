@@ -125,18 +125,26 @@ def _validate_state(state):
     re-derived through the node machinery, exact built-in-str
     digest in the linked format), and each value's DERIVED
     canonical identity equal to its map key."""
-    if not isinstance(state, dict):
+    # EXACT built-in dicts only: a subclass can override items/keys/
+    # __getitem__ and lie about its content.
+    if type(state) is not dict:
         _fail("malformed_conflict_record")
-    for key, rec in state.items():
+    for key, rec in dict.items(state):
         if type(key) is not str:
             _fail("malformed_conflict_record")
-        if not isinstance(rec, dict):
+        if type(rec) is not dict:
+            _fail("malformed_conflict_record")
+        # Record keys are type-checked as EXACT str BEFORE any set
+        # build, membership test or lookup: a key with a colliding
+        # hash and a raising __eq__ must fail closed, never raw.
+        rec_keys = list(dict.keys(rec))
+        if not all(type(k) is str for k in rec_keys):
             _fail("malformed_conflict_record")
         # Field set and EXACT built-in-string guards BEFORE any
         # sibling machinery: the linked FEN parser is not total
         # over non-string input, so arbitrary field values must
         # be rejected HERE - never handed across the boundary.
-        if set(rec.keys()) != set(_NDOCS[0]["record"]["fields"]):
+        if set(rec_keys) != set(_NDOCS[0]["record"]["fields"]):
             _fail("malformed_conflict_record")
         if type(rec["variant"]) is not str or \
                 type(rec["snapshot_fen"]) is not str or \
@@ -728,3 +736,106 @@ def test_total_over_missing_record_fields(field, slot):
     assert exc.value.failure_class == "malformed_conflict_record"
     assert exc.value.code in ERROR_ENUM
     assert args == before
+
+
+# -- v4: record-level hostile keys and dict subclasses ------------------------
+
+
+class _SK(str):
+    """str subclass: hashes like the field it imitates, raises on ==."""
+
+    def __hash__(self):
+        return str.__hash__(str(self))
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _HK:
+    """Non-str key with a colliding hash and a raising ==."""
+
+    def __init__(self, text):
+        self.text = text
+
+    def __hash__(self):
+        return hash(self.text)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+    __ne__ = __eq__
+
+
+class _DictSub(dict):
+    pass
+
+
+def _rekeyed(field, key_type):
+    """A valid node record with one field re-keyed to a hostile key."""
+    rec = {}
+    for k, v in _node(KINGS).items():
+        rec[key_type(k) if k == field else k] = v
+    return rec
+
+
+def _refs(obj):
+    """Identity snapshot that never hashes or compares a caller key."""
+    if type(obj) is dict:
+        return tuple((id(k), id(v), _refs(v)) for k, v in dict.items(obj))
+    return id(obj)
+
+
+def _assert_malformed_untouched(args):
+    before = {slot: _refs(args[slot]) for slot in args}
+    det = ConflictDetector()
+    with pytest.raises(ConflictError_) as exc:
+        det.detect(args["base"], args["left"], args["right"])
+    assert exc.value.failure_class == "malformed_conflict_record"
+    assert exc.value.code == FAILURE_MAPPING["malformed_conflict_record"]
+    assert exc.value.code in ERROR_ENUM
+    assert {slot: _refs(args[slot]) for slot in args} == before
+
+
+@pytest.mark.parametrize("field", ["variant", "snapshot_fen", "digest"])
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+@pytest.mark.parametrize("slot", ["base", "left", "right"])
+def test_total_over_hostile_record_keys(field, key_type, slot):
+    args = {"base": _state(_node(STARTPOS)),
+            "left": _state(_node(KINGS, K1)),
+            "right": _state(_node(KINGS, K2))}
+    args[slot] = {_identity(_node(KINGS)): _rekeyed(field, key_type)}
+    _assert_malformed_untouched(args)
+
+
+@pytest.mark.parametrize("key_type", [_SK, _HK], ids=["SK", "HK"])
+def test_hostile_record_key_escapes_raw_without_guard(key_type):
+    """The probe bites: an unguarded set comparison raises raw."""
+    rec = _rekeyed("digest", key_type)
+    with pytest.raises(RuntimeError):
+        set(rec.keys()) != set(_NDOCS[0]["record"]["fields"])  # noqa: B015
+
+
+@pytest.mark.parametrize("where", ["state", "record"])
+@pytest.mark.parametrize("slot", ["base", "left", "right"])
+def test_dict_subclasses_rejected(where, slot):
+    args = {"base": _state(_node(STARTPOS)),
+            "left": _state(_node(KINGS, K1)),
+            "right": _state(_node(KINGS, K2))}
+    good = args[slot]
+    if where == "state":
+        args[slot] = _DictSub(good)
+    else:
+        args[slot] = {k: _DictSub(v) for k, v in good.items()}
+    _assert_malformed_untouched(args)
+
+
+def test_state_level_hostile_keys_rejected():
+    rec = _node(KINGS)
+    ident = _identity(rec)
+    for bad in (_SK(ident), _HK(ident)):
+        args = {"base": {bad: rec},
+                "left": _state(_node(KINGS, K1)),
+                "right": _state(_node(KINGS, K2))}
+        _assert_malformed_untouched(args)
