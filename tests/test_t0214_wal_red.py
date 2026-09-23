@@ -61,7 +61,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # -- production bindings (the implementation task swaps ONLY these) --------
-from tests import test_t0212_wal_contract as _ref  # noqa: E402
+from store import wal as _ref  # noqa: E402
 
 WalEngine = _ref.WalEngine
 WalError = _ref.WalError
