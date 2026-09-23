@@ -1,0 +1,2133 @@
+{
+  "boundary": [
+    {
+      "expect": {
+        "quarantine_token": null,
+        "quarantined_count": 0,
+        "scan_id": "crp1:0b9df618dc14bc5791718878b37f7a0dd5a38522c264b59fbd91253a29a4ee26",
+        "verdict": "clean",
+        "verified_count": 0,
+        "verified_head": "wal0:0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "kind": "corruption",
+      "log": [],
+      "name": "clean-empty-log",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 0
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:cbae023bbe990246dca8f239251ec0b4e88e4193d26a3548b5226217fb87544b",
+        "quarantined_count": 3,
+        "scan_id": "crp1:047c4d6c8c0899acf6029406b449df88cd2be0684c498b34cd94c8894fb9704a",
+        "verdict": "salvaged",
+        "verified_count": 0,
+        "verified_head": "wal0:0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 9
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "salvage-to-genesis",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 3
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:bed751b6efd27b2d8648c145a9c4f3be61734791ca069e9496a1c616febb7c43",
+        "quarantined_count": 2,
+        "scan_id": "crp1:a44d6499bf2c1c285dd91ef3d9fb677f26ba1a2d7bbb6c30adc4cfb13f3c3945",
+        "verdict": "salvaged",
+        "verified_count": 1,
+        "verified_head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412"
+      },
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "loss-exactly-at-bound",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 2
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:ea5546ae1c5005b905cf9eceed85f1c79153b74e607eea0b77aae3733884a16f",
+        "quarantined_count": 1,
+        "scan_id": "crp1:e7c676c30b537bbce39fb0dcc1b1363551e5ef08ae054399ff8a6f51c58e7eb0",
+        "verdict": "salvaged",
+        "verified_count": 2,
+        "verified_head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4"
+      },
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 115792089237316195423570985008687907853269984665640564039457584007913129639935
+        }
+      ],
+      "name": "int-at-range-edge-in-suffix",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:4ff6e7212f15f401d5bf8b0b282a857a52ceba004d580fe6d6983fe97cbc2901",
+        "quarantined_count": 1,
+        "scan_id": "crp1:a2026601911a389e2b5222aad6dedd74a92ca3ca40b188a643edbe8c0c1d048a",
+        "verdict": "salvaged",
+        "verified_count": 2,
+        "verified_head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4"
+      },
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "deep": [
+            [
+              [
+                [
+                  [
+                    "leaf"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "depth-at-limit-in-suffix",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      }
+    }
+  ],
+  "contract": "store-corruption",
+  "contract_base_path": "/store/corruption/v1",
+  "happy": [
+    {
+      "expect": {
+        "quarantine_token": null,
+        "quarantined_count": 0,
+        "scan_id": "crp1:37b79e6b0315c081ecc8e1d13d54fd3a65db27d36ed35e1e903efd392a1a891e",
+        "verdict": "clean",
+        "verified_count": 3,
+        "verified_head": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580"
+      },
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "clean-three-entry-log",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 0
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:33fc7aa60e5e3cc32b67ce0403992ca3606680bbbf9557e3f245b7368d97a4d1",
+        "quarantined_count": 1,
+        "scan_id": "crp1:a7cf7efc573b48392c246b12793641bc6a2b52badb95e559cf2c9a02464653b8",
+        "verdict": "salvaged",
+        "verified_count": 2,
+        "verified_head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4"
+      },
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "salvage-tampered-tail-entry",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:5c6ec9c2aa225b7553973586e78b001e73e508cc53f54442f63f814ec45ecb69",
+        "quarantined_count": 2,
+        "scan_id": "crp1:96920e669fe2a418d581b0bdb61b5fd45987ddb5f9a021bb1502592be3aed621",
+        "verdict": "salvaged",
+        "verified_count": 1,
+        "verified_head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412"
+      },
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4"
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "salvage-torn-write-mid-log",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 2
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:bed53937fe01e04f589eaf7b8b6e81d701895405887bd23a53755ec5dc218f19",
+        "quarantined_count": 1,
+        "scan_id": "crp1:0718e8f8ea61e11b9f8acdac4a38ed9e2bb9061009db3a374ac34dca53215a92",
+        "verdict": "salvaged",
+        "verified_count": 2,
+        "verified_head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4"
+      },
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        "garbage"
+      ],
+      "name": "salvage-garbage-appended",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 4
+      }
+    }
+  ],
+  "malformed": [
+    {
+      "defect": "the source log is a dict, not a list",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": {
+        "entries": "not-a-list"
+      },
+      "minimal_repair": {
+        "replace_log": {
+          "log": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+                "record": {
+                  "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                  "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "sequence": 2
+            },
+            {
+              "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "sequence": 3
+            }
+          ]
+        }
+      },
+      "name": "log-not-a-list",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "non-list-source-log"
+    },
+    {
+      "defect": "the request is missing the max_loss field",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "replace_request": {
+          "request": {
+            "max_loss": 1
+          }
+        }
+      },
+      "name": "request-missing-field",
+      "oracle": "honest",
+      "request": {},
+      "scenario": "missing-request-field"
+    },
+    {
+      "defect": "the request carries a stray field",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "replace_request": {
+          "request": {
+            "max_loss": 1
+          }
+        }
+      },
+      "name": "request-extra-field",
+      "oracle": "honest",
+      "request": {
+        "force": true,
+        "max_loss": 1
+      },
+      "scenario": "extra-request-field"
+    },
+    {
+      "defect": "max_loss is a string, not an int",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "max_loss",
+          "value": 1
+        }
+      },
+      "name": "max-loss-non-int",
+      "oracle": "honest",
+      "request": {
+        "max_loss": "1"
+      },
+      "scenario": "non-int-max-loss"
+    },
+    {
+      "defect": "max_loss is a bool, not an exact int",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "max_loss",
+          "value": 1
+        }
+      },
+      "name": "max-loss-bool",
+      "oracle": "honest",
+      "request": {
+        "max_loss": true
+      },
+      "scenario": "bool-max-loss"
+    },
+    {
+      "defect": "max_loss is below zero",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "max_loss",
+          "value": 1
+        }
+      },
+      "name": "max-loss-negative",
+      "oracle": "honest",
+      "request": {
+        "max_loss": -1
+      },
+      "scenario": "negative-max-loss"
+    },
+    {
+      "defect": "a log leaf is a float, outside the scan domain",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3.0
+        }
+      ],
+      "minimal_repair": {
+        "replace_log": {
+          "log": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+                "record": {
+                  "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                  "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "sequence": 2
+            },
+            {
+              "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "sequence": 3
+            }
+          ]
+        }
+      },
+      "name": "log-float-leaf",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "float-leaf"
+    },
+    {
+      "defect": "a log int is wider than the pinned 256-bit range",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 115792089237316195423570985008687907853269984665640564039457584007913129639936
+        }
+      ],
+      "minimal_repair": {
+        "replace_log": {
+          "log": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+                "record": {
+                  "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                  "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "sequence": 2
+            },
+            {
+              "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "sequence": 3
+            }
+          ]
+        }
+      },
+      "name": "log-int-over-range",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "int-over-range"
+    },
+    {
+      "defect": "a log value nests deeper than the pinned depth",
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "deep": [
+            [
+              [
+                [
+                  [
+                    [
+                      "leaf"
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ],
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "replace_log": {
+          "log": [
+            {
+              "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+              "sequence": 1
+            },
+            {
+              "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+                "record": {
+                  "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                  "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+              "sequence": 2
+            },
+            {
+              "deep": [
+                [
+                  [
+                    [
+                      [
+                        "leaf"
+                      ]
+                    ]
+                  ]
+                ]
+              ],
+              "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "op": "put",
+              "payload": {
+                "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+                "record": {
+                  "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+                  "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+                  "variant": "standard"
+                }
+              },
+              "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+              "sequence": 3
+            }
+          ]
+        }
+      },
+      "name": "log-over-depth",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "over-depth"
+    },
+    {
+      "defect": "the corrupt suffix is one entry longer than max_loss",
+      "expect_failure": "excessive_loss",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 9
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "max_loss",
+          "value": 2
+        }
+      },
+      "name": "loss-one-over-bound",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "excessive-loss-by-one"
+    },
+    {
+      "defect": "max_loss is zero but the log has a corrupt suffix",
+      "expect_failure": "excessive_loss",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "truncate",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "set_request_field": {
+          "field": "max_loss",
+          "value": 3
+        }
+      },
+      "name": "loss-zero-bound-on-corrupt-log",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 0
+      },
+      "scenario": "excessive-loss-zero-bound"
+    },
+    {
+      "defect": "the sink raises instead of returning a token",
+      "expect_failure": "divergent_quarantine",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "sink-raises",
+      "oracle": "raising",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "sink-raises"
+    },
+    {
+      "defect": "the sink raises KeyboardInterrupt, a BaseException",
+      "expect_failure": "divergent_quarantine",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "delete",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "sequence": 4
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "sink-raises-keyboard-interrupt",
+      "oracle": "raising_keyboard_interrupt",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "sink-raises-base-exception"
+    },
+    {
+      "defect": "the sink returns a list, not a string",
+      "expect_failure": "divergent_quarantine",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "sink-non-str-output",
+      "oracle": "non_str_output",
+      "request": {
+        "max_loss": 2
+      },
+      "scenario": "sink-non-str-output"
+    },
+    {
+      "defect": "the sink token violates the pinned grammar",
+      "expect_failure": "divergent_quarantine",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "sink-bad-grammar",
+      "oracle": "bad_grammar",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "sink-bad-grammar"
+    },
+    {
+      "defect": "the sink token is grammar-valid but not bound to the local suffix derivation",
+      "expect_failure": "divergent_quarantine",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        },
+        {
+          "entry_id": "wal1:292831501bddf271cea6303aba5c279e16f2414ff4870a01f5697e34cd0a6acf",
+          "op": "delete",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "sequence": 4
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "sink-unbound-token",
+      "oracle": "unbound_token",
+      "request": {
+        "max_loss": 2
+      },
+      "scenario": "sink-unbound-token"
+    },
+    {
+      "defect": "the sink token is not UTF-8 encodable",
+      "expect_failure": "divergent_quarantine",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        }
+      ],
+      "minimal_repair": {
+        "set_oracle": {
+          "oracle": "honest"
+        }
+      },
+      "name": "sink-lone-surrogate",
+      "oracle": "lone_surrogate",
+      "request": {
+        "max_loss": 1
+      },
+      "scenario": "sink-lone-surrogate"
+    }
+  ],
+  "notes": "Closed fixture for the T0266 store-corruption contract: pinned scan receipts computed by the reference engine over linked WAL logs with injected corruption; malformed rows cover every failure class; rollback rows prove a rejected scan leaves the exact supplied log and request bit-identical before the valid follow-up salvage commits.",
+  "rollback": [
+    {
+      "expect": {
+        "quarantine_token": "qrn1:33fc7aa60e5e3cc32b67ce0403992ca3606680bbbf9557e3f245b7368d97a4d1",
+        "quarantined_count": 1,
+        "scan_id": "crp1:a7cf7efc573b48392c246b12793641bc6a2b52badb95e559cf2c9a02464653b8",
+        "verdict": "salvaged",
+        "verified_count": 2,
+        "verified_head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4"
+      },
+      "expect_failure": "divergent_quarantine",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "rejected-salvage-raising-sink-then-valid-salvage",
+      "oracle": "raising",
+      "request": {
+        "max_loss": 1
+      },
+      "then_log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "then_oracle": "honest",
+      "then_request": {
+        "max_loss": 1
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:e1ad03bec97035a06f8d576425bd9f7f21af99f6f25ad5c4ddcb73ab354912b2",
+        "quarantined_count": 2,
+        "scan_id": "crp1:2b0d9fee8e3e34297c601291afee363b2979e5bc08d4ac172d5cd18dcc417f74",
+        "verdict": "salvaged",
+        "verified_count": 2,
+        "verified_head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4"
+      },
+      "expect_failure": "divergent_quarantine",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        },
+        {
+          "entry_id": "wal1:292831501bddf271cea6303aba5c279e16f2414ff4870a01f5697e34cd0a6acf",
+          "op": "delete",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "sequence": 4
+        }
+      ],
+      "name": "rejected-salvage-keyboard-interrupt-sink-then-valid-salvage",
+      "oracle": "raising_keyboard_interrupt",
+      "request": {
+        "max_loss": 2
+      },
+      "then_log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        },
+        {
+          "entry_id": "wal1:292831501bddf271cea6303aba5c279e16f2414ff4870a01f5697e34cd0a6acf",
+          "op": "delete",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "sequence": 4
+        }
+      ],
+      "then_oracle": "honest",
+      "then_request": {
+        "max_loss": 2
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:8a98111670ab80635b59c8e1f0d835e72ae24becd5a6682efc1c43409a875b20",
+        "quarantined_count": 2,
+        "scan_id": "crp1:4c7409279cadf45597a569e3f74ad4d46e31d55cde4bbe64fbf9cb64600f0d46",
+        "verdict": "salvaged",
+        "verified_count": 1,
+        "verified_head": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412"
+      },
+      "expect_failure": "excessive_loss",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 9
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "rejected-salvage-excessive-loss-then-valid-salvage",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      },
+      "then_log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 9
+        },
+        {
+          "entry_id": "wal1:db87e058ce9d9463d70218b5c77eda90cc750c42336fc9adc82fa2f5e3aef580",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "then_oracle": "honest",
+      "then_request": {
+        "max_loss": 2
+      }
+    },
+    {
+      "expect": {
+        "quarantine_token": "qrn1:83a67b031ca6bb6c86b4e8d6f9316b20abdd7b57fc9cfa633e2098c6483b905f",
+        "quarantined_count": 1,
+        "scan_id": "crp1:23480ae4ad167b38eb509b78011ee707586dfcba8f86852fbe4bcd7743e7ad02",
+        "verdict": "salvaged",
+        "verified_count": 2,
+        "verified_head": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4"
+      },
+      "expect_failure": "malformed_corruption_record",
+      "kind": "corruption",
+      "log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "extra": 2.0,
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "name": "rejected-scan-out-of-domain-then-valid-salvage",
+      "oracle": "honest",
+      "request": {
+        "max_loss": 1
+      },
+      "then_log": [
+        {
+          "entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal0:0000000000000000000000000000000000000000000000000000000000000000",
+          "sequence": 1
+        },
+        {
+          "entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "op": "put",
+          "payload": {
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:f27b07632252d1f0da48068c9c20c2ccc9d93e8ca0c638befe90f62ba5518412",
+          "sequence": 2
+        },
+        {
+          "entry_id": "wal1:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "extra": 2,
+          "op": "put",
+          "payload": {
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          },
+          "prior_entry_id": "wal1:aa7680033301d2cbc27223d9d03150f370263f9f803cbdf1a02f138ff9c22eb4",
+          "sequence": 3
+        }
+      ],
+      "then_oracle": "honest",
+      "then_request": {
+        "max_loss": 1
+      }
+    }
+  ],
+  "schema": 1
+}
