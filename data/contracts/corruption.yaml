@@ -1,0 +1,87 @@
+schema_version: 1
+
+contract:
+  id: store-corruption
+  role:
+    kind: verified-corruption-scan-and-salvage-over-a-wal-logged-store
+    serves: position-graph-store-durability
+    scope: single-log-scan-to-the-longest-verified-prefix
+    owns: corruption-receipt-semantics-and-suffix-quarantine
+    not_scope: repair-of-corrupt-entries-or-target-chosen-rollback
+  record:
+    fields: [scan_id, verdict, verified_head, verified_count, quarantined_count, quarantine_token]
+    exact: true
+    field_definitions:
+      verdict:
+        kind: closed-scan-verdict
+        values: [clean, salvaged]
+        source: derived-from-the-verified-prefix-never-caller-supplied
+      verified_count:
+        kind: longest-verified-prefix-length
+        type: exact-built-in-int-zero-through-log-length
+        source: derived-from-linked-wal-validation-of-every-prefix
+      quarantined_count:
+        kind: corrupt-suffix-length
+        type: exact-built-in-int-log-length-minus-verified-count
+        source: derived-never-caller-supplied
+  identifiers:
+    scan_id:
+      kind: content-addressed-corruption-receipt-id
+      grammar: ^crp1:[0-9a-f]{64}$
+      derivation: sha256-over-verdict-verified-head-verified-count-quarantined-count-quarantine-token
+      source: derived-from-validated-scan-never-caller-supplied
+    verified_head:
+      kind: wal-chain-tip-of-the-verified-prefix-or-pinned-genesis
+      grammar: ^(wal0:0{64}|wal1:[0-9a-f]{64})$
+      source: derived-from-linked-wal-replay-of-the-verified-prefix-never-caller-supplied
+    quarantine_token:
+      kind: untrusted-quarantine-sink-receipt-token-or-null-when-clean
+      grammar: ^qrn1:[0-9a-f]{64}$
+      derivation: sha256-over-domain-separated-type-tagged-length-framed-canonical-encoding-of-the-entire-frozen-corrupt-suffix
+      source: sink-output-shape-validated-and-bound-byte-exact-to-the-local-suffix-derivation
+  semantics:
+    scan_domain: exact-built-in-acyclic-alias-free-tree-of-dict-list-str-int-bool-null-within-nesting-depth-8-ints-within-256-bits
+    detection: longest-prefix-passing-full-linked-wal-validation-and-chain-rederivation
+    loss_bound: quarantined-count-must-not-exceed-request-max-loss
+    quarantine: nonempty-corrupt-suffix-quarantined-exactly-once-before-commit-token-bound-byte-exact-to-canonical-suffix-encoding
+    clean: empty-corrupt-suffix-never-calls-the-sink-null-token-log-untouched
+    commit: suffix-removal-only-after-full-scan-loss-check-and-quarantine
+  oracle_boundary:
+    role: quarantine-sink-is-untrusted-input
+    single_evaluation: exactly-one-call-per-salvage-zero-when-clean
+    frozen_snapshots: entire-log-and-request-frozen-before-first-oracle-call-never-re-read-restored-bit-identical
+    output_validation: exact-built-in-string-pinned-grammar-byte-exact-suffix-bound-token-or-fail-closed
+  failures:
+    classes:
+      - malformed_corruption_record
+      - excessive_loss
+      - divergent_quarantine
+    triggers:
+      malformed_corruption_record: request-grammar-or-type-violation-or-log-outside-the-scan-domain
+      excessive_loss: corrupt-suffix-longer-than-request-max-loss
+      divergent_quarantine: sink-raising-any-baseexception-non-exact-string-bad-grammar-or-suffix-divergent-token
+    mapping:
+      malformed_corruption_record: malformed_request
+      excessive_loss: excessive_loss
+      divergent_quarantine: divergent_quarantine
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - excessive_loss
+      - divergent_quarantine
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-logs-and-sinks-fail-closed-typed-never-raw
+    atomic: rejected-scan-leaves-inputs-bit-identical
+    deterministic: same-inputs-same-receipt-and-verified-prefix
+    rollback: committed-salvage-removes-exactly-the-corrupt-suffix
+  versioning:
+    base_path: /store/corruption/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    wal_contract: data/contracts/wal.yaml
+    rollback_contract: data/contracts/rollback.yaml
+    restore_contract: data/contracts/restore.yaml
