@@ -92,6 +92,15 @@ def _op_spec(op):
     return None
 
 
+def _exact_str_keys(mapping):
+    """KEY-TYPE GUARD, checked BEFORE any set/hash comparison on a
+    caller-supplied dict: a hostile key whose __hash__ collides with
+    a field name and whose __eq__ raises must fail closed typed,
+    never escape raw. dict.keys is called unbound so a dict subclass
+    cannot intercept it (the caller already requires exact dict)."""
+    return all(type(key) is str for key in dict.keys(mapping))
+
+
 def canonical_payload(identity, record):
     """The honest payload canonicalizer: one canonical string per
     validated payload - the entry-id derivation input."""
@@ -145,6 +154,7 @@ class WalEngine:
         """Exact node record through the linked machinery; returns
         the derived identity string."""
         if type(record) is not dict or \
+                not _exact_str_keys(record) or \
                 set(record.keys()) != \
                 set(_NDOCS[0]["record"]["fields"]):
             _fail("malformed_wal_entry")
@@ -168,6 +178,7 @@ class WalEngine:
     def _validate_payload(self, op, payload):
         spec = _op_spec(op)
         if type(payload) is not dict or \
+                not _exact_str_keys(payload) or \
                 set(payload.keys()) != set(spec["payload_fields"]):
             _fail("malformed_wal_entry")
         identity = payload["identity"]
@@ -183,6 +194,7 @@ class WalEngine:
         shape, op registration, exact 1-based sequence, id
         grammars, prior-link, payload and record validity."""
         if type(entry) is not dict or \
+                not _exact_str_keys(entry) or \
                 set(entry.keys()) != set(_FIELDS):
             _fail("malformed_wal_entry")
         if type(entry["op"]) is not str:
@@ -278,6 +290,7 @@ class WalEngine:
         if type(log) is not list:
             _fail("malformed_wal_entry")
         if type(request) is not dict or \
+                not _exact_str_keys(request) or \
                 set(request.keys()) != {"op", "payload"}:
             _fail("malformed_wal_entry")
         op = request["op"]
@@ -1374,3 +1387,88 @@ def test_mutants_never_silent_subset():
                        "semantics", "oracle_boundary", "failures",
                        "errors", "properties", "versioning",
                        "links"}
+
+
+# -- hostile dict keys (hash collides with a field name, __eq__ raises) ----------
+
+
+class _CollidingKey:
+    def __init__(self, name):
+        self.name = name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        raise RuntimeError("hostile __eq__")
+
+
+def _colliding(mapping, field):
+    """mapping with `field` replaced by a colliding hostile key."""
+    out = {k: v for k, v in mapping.items() if k != field}
+    out[_CollidingKey(field)] = mapping[field]
+    return out
+
+
+def _hostile_key_logs():
+    def entry(log):
+        log[1] = _colliding(log[1], "entry_id")
+
+    def payload(log):
+        log[1]["payload"] = _colliding(log[1]["payload"], "identity")
+
+    def record(log):
+        log[1]["payload"]["record"] = _colliding(
+            log[1]["payload"]["record"], "digest")
+
+    return [("entry", entry), ("payload", payload), ("record", record)]
+
+
+@pytest.mark.parametrize("name,mutate", _hostile_key_logs())
+def test_hostile_keys_in_log_fail_closed_typed(name, mutate):
+    log = _log_of(("put", STARTPOS), ("put", KINGS))
+    mutate(log)
+    container = list(log)
+    with pytest.raises(WalError) as err:
+        _engine().replay(log)
+    assert err.value.failure_class == "malformed_wal_entry", name
+    assert all(a is b for a, b in zip(log, container, strict=True)), name
+    with pytest.raises(WalError) as err:
+        _engine().append(log, {"op": "put", "payload": _payload(AFTER_E4)})
+    assert err.value.failure_class == "malformed_wal_entry", name
+    assert len(log) == 2, name
+
+
+def _hostile_key_requests():
+    good = {"op": "put", "payload": _payload(AFTER_E4)}
+    return [
+        ("request", lambda: _colliding(good, "op")),
+        ("request_payload", lambda: {
+            "op": "put", "payload": _colliding(good["payload"], "record")}),
+        ("request_record", lambda: {"op": "put", "payload": {
+            "identity": good["payload"]["identity"],
+            "record": _colliding(good["payload"]["record"],
+                                 "variant")}}),
+        ("int_key", lambda: {1: "put", "payload": good["payload"]}),
+    ]
+
+
+@pytest.mark.parametrize("name,build", _hostile_key_requests())
+def test_hostile_keys_in_append_request_fail_closed_typed(name, build):
+    log = _log_of(("put", STARTPOS))
+    before = copy.deepcopy(log)
+    request = build()
+    keys = list(dict.keys(request))
+    with pytest.raises(WalError) as err:
+        _engine().append(log, request)
+    assert err.value.failure_class == "malformed_wal_entry", name
+    assert log == before, name
+    assert list(dict.keys(request)) == keys, name
+
+
+def test_mutant_without_key_type_guard_escapes_raw():
+    request = _colliding({"op": "put", "payload": _payload(AFTER_E4)}, "op")
+    with pytest.raises(RuntimeError):
+        set(request.keys()) != {"op", "payload"}  # noqa: B015
+    with pytest.raises(WalError):
+        _engine().append([], request)
