@@ -168,15 +168,39 @@ def _rekey(mapping, old, new):
     return mapping
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _shape(value):
     """Value, exact type, key order and identity at every level."""
     if isinstance(value, dict):
-        return (type(value), id(value),
-                [(type(k), k if type(k) is str else id(k), _shape(v))
+        return (type(value), _Pin(value),
+                [(type(k), k if type(k) is str else _Pin(k), _shape(v))
                  for k, v in dict.items(value)])
     if isinstance(value, list):
-        return (type(value), id(value), [_shape(v) for v in list.__iter__(value)])
-    return (type(value), value if not isinstance(value, _Colliding) else id(value))
+        return (type(value), _Pin(value), [_shape(v) for v in list.__iter__(value)])
+    return (type(value), value if not isinstance(value, _Colliding) else _Pin(value))
 
 
 # -- the serializer ------------------------------------------------------------
@@ -761,3 +785,14 @@ def test_mutant_is_red(name):
 @pytest.mark.parametrize("name", sorted(EQUIVALENT_EDITS))
 def test_equivalent_edits_stay_green(name):
     assert _probe(_source_mutant(name, EQUIVALENT_EDITS[name])) == []
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original leaf and
+    the second can land on its freed address, which a bare id() would
+    miss. The fingerprint pins the original, so the swap goes red."""
+    value = {"k": _Colliding("a")}
+    before = _shape(value)
+    value["k"] = _Colliding("a")
+    value["k"] = _Colliding("a")
+    assert _shape(value) != before

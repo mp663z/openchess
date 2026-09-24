@@ -339,6 +339,30 @@ def _store(*items):
     return log, ledger
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _snap(*objs):
     """Structural snapshot that NEVER calls a caller-supplied
     __eq__/__hash__: exact types, str keys by value, any other
@@ -347,13 +371,13 @@ def _snap(*objs):
         t = type(o)
         if t is dict:
             return ("dict", tuple(
-                (k if type(k) is str else ("key", id(k)), walk(v))
+                (k if type(k) is str else ("key", _Pin(k)), walk(v))
                 for k, v in dict.items(o)))
         if t in (list, tuple):
             return (t.__name__, tuple(walk(v) for v in o))
         if t in (str, int, bool, float, bytes, type(None)):
             return (t.__name__, o)
-        return ("obj", id(o))
+        return ("obj", _Pin(o))
     return walk(objs)
 
 
@@ -1268,3 +1292,18 @@ def test_mutant_without_hostile_key_guard_escapes_raw(
     _failure, log, ledger, req = build(_CollidingKey)
     with pytest.raises(RuntimeError, match="hostile key"):
         _engine().apply(log, ledger, req)
+
+
+class _PinProbeLeaf:
+    pass
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original leaf and
+    the second can land on its freed address, which a bare id() would
+    miss. The fingerprint pins the original, so the swap goes red."""
+    value = {"k": _PinProbeLeaf()}
+    before = _snap(value)
+    value["k"] = _PinProbeLeaf()
+    value["k"] = _PinProbeLeaf()
+    assert _snap(value) != before
