@@ -1,0 +1,87 @@
+schema_version: 1
+
+contract:
+  id: jobs-dead-letter
+  role:
+    kind: pure-job-dead-letter-entry-function
+    serves: background-job-execution
+    scope: one-dead-letter-entry-for-one-dead-queue-job-over-an-explicit-logical-clock
+    owns: dead-letter-admission-and-dead-letter-entry-records
+    not_scope: queue-state-transitions-retry-decisions-redrive-idempotency-keys-or-cancellation
+  record:
+    fields: [op, job_id, seq, priority, payload_digest, attempts, reason, buried_at, entry_id]
+    exact: true
+  request:
+    operations:
+      - op: bury
+        fields: [op, job, reason, now]
+    exact: true
+    closure: no-other-operations-registered
+    job: exactly-one-job-of-the-linked-queue-contract-with-its-job-fields
+    reasons: [exhausted, permanent]
+    bounds:
+      now: int-0-through-2-pow-53-minus-1-milliseconds
+      seq: int-0-through-2-pow-53-minus-2
+      priority: int-0-through-9
+      payload: exact-canonical-json-acyclic-alias-free-depth-at-most-64-int-digits-at-most-4000
+    max_attempts: 5
+    max_attempts_source: linked-queue-contract-state-max-attempts-never-caller-supplied
+  identifiers:
+    job_id:
+      kind: content-addressed-job-id
+      grammar: ^job1:[0-9a-f]{64}$
+      source: the-linked-queue-contract-job-id-grammar
+    payload_digest:
+      kind: canonical-payload-digest
+      grammar: ^pd1:[0-9a-f]{64}$
+      derivation: sha256-of-ascii-pd1-then-nul-byte-then-utf8-canonical-json-sort-keys-compact-separators-ensure-ascii-of-the-payload
+      source: derived-never-caller-supplied
+    entry_id:
+      kind: canonical-dead-letter-entry-digest
+      grammar: ^dl1:[0-9a-f]{64}$
+      derivation: sha256-of-ascii-dl1-then-nul-byte-then-utf8-canonical-json-sort-keys-compact-separators-ensure-ascii-of-the-record-without-entry-id
+      source: derived-never-caller-supplied
+  semantics:
+    validation: request-shape-then-job-integrity-then-dead-status-first-failure-wins
+    integrity: the-job-must-satisfy-every-linked-queue-job-invariant-or-it-is-corrupt-never-repaired
+    dead_only: only-a-job-with-status-dead-is-buried-any-other-valid-status-is-job-not-dead
+    attempts: a-dead-job-carries-attempts-equal-to-max-attempts-matching-the-queue-dead-invariant
+    reason: fail-closed-reading-reason-is-caller-attested-exhausted-or-permanent-and-both-require-the-queue-dead-invariant
+    lease: a-dead-job-holds-no-lease-owner-and-no-lease-expiry
+    payload: fail-closed-reading-the-entry-stores-only-the-payload-digest-never-a-copy-of-the-payload
+    clock: buried-at-is-now
+    provisional: a-permanent-failure-job-with-attempts-below-max-attempts-is-not-a-valid-dead-queue-job-and-is-corrupt-job-provisional-pending-owner-ruling-on-the-retry-permanent-dead-rule-vs-the-queue-dead-invariant
+    purity: inputs-are-never-mutated-and-the-record-shares-no-container-with-them
+  failures:
+    classes:
+      - malformed_bury_request
+      - corrupt_job
+      - job_not_dead
+    triggers:
+      malformed_bury_request: request-shape-type-enum-or-bound-violation-outside-the-job-contents
+      corrupt_job: job-with-wrong-keys-types-grammar-bounds-inadmissible-payload-or-a-broken-queue-job-invariant
+      job_not_dead: a-valid-queue-job-whose-status-is-ready-leased-or-done
+    mapping:
+      malformed_bury_request: malformed_request
+      corrupt_job: corrupt_job
+      job_not_dead: job_not_dead
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - corrupt_job
+      - job_not_dead
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    deterministic: same-request-same-record
+    pure: rejected-and-accepted-requests-leave-the-request-bit-identical
+    bound: an-entry-binds-the-exact-payload-through-its-digest
+  versioning:
+    base_path: /jobs/dead-letter/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    queue_contract: data/contracts/queue.yaml
+    retry_contract: data/contracts/retry.yaml
