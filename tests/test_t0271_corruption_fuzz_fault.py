@@ -488,22 +488,46 @@ def _case(gen, seed):
 
 # -- running a case --------------------------------------------------------------
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _shape(value, seen=None):
     seen = set() if seen is None else seen
     if isinstance(value, (dict, list)):
         if id(value) in seen:
-            return ("again", id(value))
+            return ("again", _Pin(value))
         seen.add(id(value))
         if isinstance(value, dict):
-            return (type(value), id(value),
-                    [(type(k), k if type(k) is str else id(k), _shape(v, seen))
+            return (type(value), _Pin(value),
+                    [(type(k), k if type(k) is str else _Pin(k), _shape(v, seen))
                      for k, v in dict.items(value)])
-        return (type(value), id(value), [_shape(v, seen) for v in list.__iter__(value)])
+        return (type(value), _Pin(value), [_shape(v, seen) for v in list.__iter__(value)])
     if isinstance(value, float) and value != value:
         return (type(value), "nan")
     if type(value) in (str, int, float, bool, bytes, type(None), _Str, _Int):
         return (type(value), value)
-    return (type(value), id(value))
+    return (type(value), _Pin(value))
 
 
 def _outcome(module, case):
@@ -511,7 +535,7 @@ def _outcome(module, case):
     log, request = case["build"]()
     log_before, request_before = _shape(log), _shape(request)
     keep = case.get("keep", 0)
-    kept = [id(e) for e in log[:keep]] if type(log) is list else []
+    kept = [_Pin(e) for e in log[:keep]] if type(log) is list else []
     live = _live_edit(log, request, case["live"]) if "live" in case else None
     engine = module.CorruptionEngine(_sink(module, case.get("fault"), calls, forged, live))
     _ARMED[0] = True
@@ -538,7 +562,7 @@ def _outcome(module, case):
         if forged[0] is not None and result is forged[0]:
             why.append("forged error escaped")
         return result.failure_class, why
-    if [id(e) for e in log] != kept or _shape(log)[2] != log_before[2][:keep]:
+    if [_Pin(e) for e in log] != kept or _shape(log)[2] != log_before[2][:keep]:
         why.append("verified prefix not kept in place")
     if type(result) is not dict or list(result) != list(FIELDS):
         why.append("receipt not in contract order")
@@ -784,3 +808,16 @@ def test_mutant_is_red(name):
 @pytest.mark.parametrize("name", sorted(EQUIVALENT_EDITS))
 def test_equivalent_edits_stay_green(name):
     assert _probe(_source_mutant(name, EQUIVALENT_EDITS[name])) == []
+
+
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": {"x": 1}}
+    before = _shape(value)
+    value["k"] = {"x": 1}
+    value["k"] = {"x": 1}
+    assert _shape(value) != before

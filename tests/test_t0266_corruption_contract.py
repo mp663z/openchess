@@ -330,8 +330,32 @@ def _expect(cls, fn, *args):
     return exc.value
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _identity_map(log):
-    return [id(entry) for entry in log]
+    return [_Pin(entry) for entry in log]
 
 
 # -- lint + happy path ------------------------------------------------------------
@@ -1246,3 +1270,16 @@ def test_mutants_cover_every_section():
                        "identifiers", "semantics", "oracle_boundary",
                        "failures", "errors", "properties",
                        "versioning", "links"}
+
+
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    log = [{"a": 1}]
+    before = _identity_map(log)
+    log[0] = {"a": 1}
+    log[0] = {"a": 1}
+    assert _identity_map(log) != before

@@ -949,10 +949,34 @@ def test_fixture_schema_version_mutations_fail():
 # -- execution ------------------------------------------------------------------
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _run_scan(oracle_name, log, request, expect):
     work_log = copy.deepcopy(log)
     work_req = copy.deepcopy(request)
-    kept_ids = [id(entry) for entry in work_log]
+    kept_ids = [_Pin(entry) for entry in work_log]
     receipt = CorruptionEngine(ORACLES[oracle_name]).scan(
         work_log, work_req)
     assert receipt == expect
@@ -961,7 +985,7 @@ def _run_scan(oracle_name, log, request, expect):
     # the commit removed EXACTLY the corrupt suffix, nothing
     # else, and kept the surviving entry OBJECTS
     assert work_log == log[:count]
-    assert [id(entry) for entry in work_log] == kept_ids[:count]
+    assert [_Pin(entry) for entry in work_log] == kept_ids[:count]
     assert work_req == request
     assert _wal_verifies(work_log)
     # deterministic: fresh copies re-derive the same receipt
@@ -1600,3 +1624,16 @@ def test_verifier1_named_survivors_are_killed():
         dst[key] = copy.deepcopy(src[key])
     with pytest.raises(AssertionError):
         _validate_case("rollback", dst)
+
+
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    log = [{"a": 1}]
+    before = [_Pin(e) for e in log]
+    log[0] = {"a": 1}
+    log[0] = {"a": 1}
+    assert [_Pin(e) for e in log] != before
