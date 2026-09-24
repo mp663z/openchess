@@ -163,7 +163,7 @@ def _attacked(occ: dict, square: str, by_side: str) -> bool:
         df, dr = f1 - f0, r1 - r0
         piece = tok[1]
         if piece == "p":
-            pawn_dr = 1 if by_side == "w" else -1
+            pawn_dr = -1 if by_side == "w" else 1  # the attacker sits behind the square
             if dr == pawn_dr and abs(df) == 1:
                 return True
         elif piece == "n":
@@ -506,3 +506,55 @@ def test_rollback():
             raise AssertionError(f"{case['name']}: defect did not fire")
         assert case["state"] == pre, f"{case['name']}: input mutated"
         assert case["state"] == case["expect_state_after"], case["name"]
+
+
+def _st(target: str, side: str, occupied: dict) -> dict:
+    return {"ep_target": target, "side_to_move": side, "occupied": occupied}
+
+
+# A pawn attacks the two diagonal squares in front of it: white up, black down.
+PAWN_ATTACK_GEOMETRY = [
+    ("wp", "e4", "d5", True), ("wp", "e4", "f5", True),
+    ("wp", "e4", "d3", False), ("wp", "e4", "f3", False), ("wp", "e4", "e5", False),
+    ("bp", "e5", "d4", True), ("bp", "e5", "f4", True),
+    ("bp", "e5", "d6", False), ("bp", "e5", "f6", False), ("bp", "e5", "e4", False),
+]
+
+# (state, move, expected failure or None for accepted, expected identity)
+PAWN_ATTACK_ROWS = [
+    # black pawn d3 attacks c2/e2, not the white king on e4: legal capture
+    (_st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "d3": "bp", "f5": "bp"}),
+     {"type": "ep-capture", "from": "e5", "to": "f6"}, None, "f6"),
+    # mirror: white pawn d6 attacks c7/e7, not the black king on e5
+    (_st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "d6": "wp", "f4": "wp"}),
+     {"type": "ep-capture", "from": "e4", "to": "f3"}, None, "f3"),
+    # black pawn d5 checks the white king on e4 and still does after the capture
+    (_st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "d5": "bp", "f5": "bp"}),
+     {"type": "ep-capture", "from": "e5", "to": "f6"}, "pinned_capture", "-"),
+    # mirror: white pawn d4 checks the black king on e5
+    (_st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "d4": "wp", "f4": "wp"}),
+     {"type": "ep-capture", "from": "e4", "to": "f3"}, "pinned_capture", "-"),
+    # the double-advanced pawn itself gives check: capturing it is legal
+    (_st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "f5": "bp"}),
+     {"type": "ep-capture", "from": "e5", "to": "f6"}, None, "f6"),
+    (_st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "f4": "wp"}),
+     {"type": "ep-capture", "from": "e4", "to": "f3"}, None, "f3"),
+]
+
+
+def test_pawn_attack_direction():
+    for pawn, at, square, hit in PAWN_ATTACK_GEOMETRY:
+        assert _attacked({at: pawn}, square, pawn[0]) is hit, (pawn, at, square)
+
+
+def test_pawn_attack_direction_rows():
+    for state, move, failure, ident in PAWN_ATTACK_ROWS:
+        pre = copy.deepcopy(state)
+        try:
+            _apply(state, move)
+        except EnPassantFailure as e:
+            assert e.failure_class == failure, (state, e.failure_class)
+        else:
+            assert failure is None, state
+        assert state == pre
+        assert _identity_value(state) == ident, state
