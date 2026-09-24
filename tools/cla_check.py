@@ -125,15 +125,24 @@ def load_base_registry(base_ref: str) -> dict[str, dict]:
     return validate_registry(yaml.safe_load(r.stdout))
 
 
+GH_API_TIMEOUT_S = 30
+
+
 def _gh_api(endpoint: str) -> dict | list:
     token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if not token:
         raise ClaError("no GH_TOKEN/GITHUB_TOKEN for acceptance verification")
-    r = subprocess.run(
-        ["gh", "api", endpoint],
-        cwd=ROOT, capture_output=True, text=True,
-        env={**os.environ, "GH_TOKEN": token},
-    )
+    try:
+        r = subprocess.run(
+            ["gh", "api", endpoint],
+            cwd=ROOT, capture_output=True, text=True,
+            env={**os.environ, "GH_TOKEN": token},
+            timeout=GH_API_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        # fail closed: a hung API call is a CLA failure, never a pass
+        raise ClaError(f"GitHub API timed out after {GH_API_TIMEOUT_S}s "
+                       f"for {endpoint}") from None
     if r.returncode != 0:
         raise ClaError(f"GitHub API failed for {endpoint}: {r.stderr.strip()}")
     return json.loads(r.stdout)

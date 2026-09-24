@@ -16,7 +16,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_runner_both_modes_green():
-    assert runner.run_all() == []
+    skipped: list[str] = []
+    assert runner.run_all(skipped=skipped) == []
+    if skipped:  # local clone only; in_ci() turns every skip into a failure
+        pytest.skip("; ".join(skipped))
 
 
 def test_discovery_finds_checks_without_registry():
