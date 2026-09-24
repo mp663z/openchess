@@ -409,16 +409,40 @@ def test_r3_binding_is_live():
     assert all("_apply(" in inspect.getsource(getattr(red, n)) for n in RED_TESTS)
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 # -- R4: no input mutation, no aliasing -----------------------------------------
 
 
 def test_r4_inputs_unchanged_and_outputs_detached():
     for state, move in SWEEP[::7]:
         s, m = copy.deepcopy(state), copy.deepcopy(move)
-        ids = (id(s["occupied"]), list(s), list(s["occupied"]))
+        ids = (_Pin(s["occupied"]), list(s), list(s["occupied"]))
         out = _outcome(lambda s=s, m=m: prod.apply(s, m))
         assert s == state and m == move
-        assert ids == (id(s["occupied"]), list(s), list(s["occupied"]))
+        assert ids == (_Pin(s["occupied"]), list(s), list(s["occupied"]))
         if out[0] == "ok":
             assert out[1] is not s and out[1]["occupied"] is not s["occupied"]
             out[1]["occupied"]["a1"] = "wq"

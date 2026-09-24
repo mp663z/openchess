@@ -656,24 +656,56 @@ def _domain_rows():
 DOMAIN_ROWS = _domain_rows()
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _fingerprint(value):
     """Structure, exact types, identities and text of VALUE, read with base
-    methods only, so no hostile method runs."""
+    methods only, so no hostile method runs. Tuples (such as the row[1:]
+    slice the hostile check fingerprints, a fresh temporary) are walked by
+    content; identity is taken only of the caller's own objects, pinned."""
+    if isinstance(value, tuple):
+        return (
+            type(value),
+            None if type(value) is tuple else _Pin(value),
+            tuple(_fingerprint(tuple.__getitem__(value, i)) for i in range(tuple.__len__(value))),
+        )
     if isinstance(value, dict):
         return (
             type(value),
-            id(value),
+            _Pin(value),
             tuple((_fingerprint(k), _fingerprint(v)) for k, v in dict.items(value)),
         )
     if isinstance(value, list):
         return (
             type(value),
-            id(value),
+            _Pin(value),
             tuple(_fingerprint(list.__getitem__(value, i)) for i in range(list.__len__(value))),
         )
     if isinstance(value, str):
-        return (type(value), id(value), str.__str__(value))
-    return (type(value), id(value))
+        return (type(value), _Pin(value), str.__str__(value))
+    return (type(value), _Pin(value))
 
 
 def _hostile_call(mod, row):
@@ -955,3 +987,36 @@ def test_every_property_with_a_one_line_defect_has_a_killer():
     # P-atomic and P-deterministic guard defects no one-line edit of the
     # current copy-based source produces; they stay as regression properties
     assert set(PROPERTIES) - hit == {"P-atomic", "P-deterministic"}
+
+
+def test_hostile_check_detects_a_mutating_engine():
+    """The hostile-row check fingerprints the row[1:] slice, a fresh tuple:
+    it must see a typed rejection that mutated an argument in place."""
+    entry, state, move = HOSTILE_ROWS["apply:state-list-subclass"]
+    assert type(move) is dict
+    assert _hostile_row_ok(prod, (entry, state, move))
+
+    def mutate(a, b=None):
+        for arg in (a, b):
+            if type(arg) is dict:
+                dict.__setitem__(arg, "zz", 1)
+                break
+        raise prod.EnPassantError("target_malformed")
+
+    engine = types.SimpleNamespace(apply=mutate, identity_value=mutate, turn_transition=mutate)
+    assert not _hostile_row_ok(engine, (entry, state, dict(move)))
+
+
+class _PinProbeLeaf:
+    pass
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": _PinProbeLeaf()}
+    before = _fingerprint(value)
+    value["k"] = _PinProbeLeaf()
+    value["k"] = _PinProbeLeaf()
+    assert _fingerprint(value) != before
