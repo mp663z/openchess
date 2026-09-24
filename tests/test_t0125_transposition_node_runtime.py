@@ -32,6 +32,8 @@ if str(ROOT) not in sys.path:
 import graph.transposition_node as prod  # noqa: E402
 from graph.fen import FenError  # noqa: E402
 from graph.position_digest import DigestError, digest_fen  # noqa: E402
+from tests import test_t0086_fen_contract as ref_fen  # noqa: E402
+from tests import test_t0113_position_digest_contract as ref_digest  # noqa: E402
 from tests import test_t0122_transposition_node_contract as ref  # noqa: E402
 from tests.test_t0123_fixture import CASES, _repaired  # noqa: E402
 from tools.variant_contract_lint import ContractError  # noqa: E402
@@ -108,8 +110,8 @@ def _insert_both(variant, fen, digest_fn=digest_fen):
 def _validate_both(record, digest_fn=digest_fen):
     a = _outcome(lambda: prod.validate_record(*DOCS, copy.deepcopy(record),
                                               digest_fn))
-    b = _outcome(lambda: ref.validate_record(*DOCS, copy.deepcopy(record),
-                                             digest_fn))
+    b = _outcome(lambda: ref.validate_record_bounded(
+        *DOCS, copy.deepcopy(record), digest_fn))
     return a, b
 
 
@@ -675,6 +677,279 @@ def test_r2_clock_beyond_int_string_limit_fails_closed_typed():
 
 def test_r2_merge_inserts_the_frozen_source_not_live_records():
     assert not _live_rewrite_red(prod)
+
+
+# -- R2: reference totality parity (T0122 reference follow-up) ----------------
+
+# The reference module's forge set: its own NodeError per class, the
+# classes in its own except clauses (its linked FenError, ValueError,
+# BaseException subclasses), the assertion drift guards, its linked
+# DigestError per class, and the production-side forges above.
+REF_FORGED = dict(FORGED, **{
+    "ref-node-malformed_node_record": ref.NodeError(
+        "malformed_node_record", "malformed_request"),
+    "ref-node-malformed_position": ref.NodeError(
+        "malformed_position", "malformed_request"),
+    "ref-node-unknown_variant": ref.NodeError("unknown_variant",
+                                              "unknown_variant"),
+    "ref-fen-error": ref_fen.FenError("illegal_position",
+                                      "malformed_request"),
+    "ref-digest-malformed_digest": ref_digest.DigestError(
+        "malformed_digest", "malformed_request"),
+    "ref-digest-unknown_variant": ref_digest.DigestError(
+        "unknown_variant", "unknown_variant"),
+    "runtime-error": RuntimeError("x"),
+    "type-error": TypeError("x"),
+})
+MALFORMED_NODE_RECORD = ("err", "malformed_node_record", "malformed_request")
+
+
+@pytest.mark.parametrize("name", list(REF_FORGED))
+def test_r2_raising_oracle_parity_fails_closed(name):
+    """A raising digest oracle fails closed as a FRESH malformed_node_record
+    in the reference exactly as in production, on insert and validate."""
+    forged = REF_FORGED[name]
+    fn = _raiser(forged)
+    assert _insert_both("standard", STARTPOS, fn) == (MALFORMED_NODE_RECORD,
+                                                      MALFORMED_NODE_RECORD)
+    assert _validate_both(_good_record(), fn) == (MALFORMED_NODE_RECORD,
+                                                  MALFORMED_NODE_RECORD)
+    t = ref.NodeTable(DOCS, fn)
+    for call in (lambda: t.insert("standard", STARTPOS),
+                 lambda: ref.validate_record_bounded(*DOCS, _good_record(), fn)):
+        with pytest.raises(ref.NodeError) as err:
+            call()
+        assert err.value is not forged and err.value.__cause__ is None
+    assert t.records() == []
+
+
+@pytest.mark.parametrize("name", list(BAD_OUTPUTS))
+def test_r2_bad_oracle_output_parity_fails_closed(name):
+    out = BAD_OUTPUTS[name]
+    fn = lambda v, f: out  # noqa: E731
+    assert _insert_both("standard", STARTPOS, fn) == (MALFORMED_NODE_RECORD,
+                                                      MALFORMED_NODE_RECORD)
+    assert _validate_both(_good_record(), fn) == (MALFORMED_NODE_RECORD,
+                                                  MALFORMED_NODE_RECORD)
+
+
+@pytest.mark.parametrize("fen", HUGE_CLOCKS, ids=["halfmove", "fullmove"])
+def test_r2_huge_clock_parity_is_typed(fen):
+    """A clock beyond the int-string limit is a typed rejection in the
+    reference exactly as in production (never a raw ValueError)."""
+    a, b = _insert_both("standard", fen)
+    assert a == b == ("err", "malformed_position", "malformed_request")
+    rec = {**_good_record(), "snapshot_fen": fen}
+    assert _validate_both(rec) == (MALFORMED_NODE_RECORD,
+                                   MALFORMED_NODE_RECORD)
+    assert not _huge_clock_red(ref)
+
+
+def test_r2_frozen_source_parity():
+    """Both merges take frozen copies of the source records before any
+    oracle call: an oracle rewriting live source records changes nothing."""
+    assert not _live_rewrite_red(ref)
+
+    def run(mod, snapshot, digest):
+        records = [_good_record(STARTPOS), _good_record(LEGAL_EP)]
+
+        def oracle(v, f):
+            for rec in records:
+                rec["snapshot_fen"] = snapshot
+                rec["digest"] = digest
+            return digest_fen(v, f)
+
+        dst = mod.NodeTable(DOCS, oracle)
+        dst.merge(types.SimpleNamespace(records=lambda: records))
+        return dst.serialize()
+
+    honest = ref.NodeTable(DOCS)
+    honest.insert("standard", STARTPOS)
+    honest.insert("standard", LEGAL_EP)
+    # a valid rewrite (would change what is inserted) and a malformed
+    # rewrite (would change what is validated): both are ignored
+    for snapshot, digest in ((KINGS, digest_fen("standard", KINGS)),
+                             ("not a fen", "junk")):
+        assert run(prod, snapshot, digest) == run(ref, snapshot, digest) \
+            == honest.serialize()
+
+
+
+class _PlainDictSubclass(dict):
+    """A dict subclass with honest contents and no overrides."""
+
+
+REF_FREEZE_GATE_OFF_MUTANT = (
+    "            if not _exact_dict(rec):\n"
+    "                _fail(self.nc, \"malformed_node_record\")\n"
+    "            frozen.append(dict(rec))\n",
+    "            frozen.append(dict(rec))\n")
+
+FREEZE_GATE_RECORDS = {
+    # dict(rec) would turn these pairs into a valid exact dict
+    "list-of-pairs": lambda: list(_good_record().items()),
+    # dict(rec) would copy a valid record out of the subclass
+    "plain-dict-subclass": lambda: _PlainDictSubclass(_good_record()),
+    # dict(rec) would call the lying accessors before any check
+    "lying-dict-subclass": _hostile_record,
+}
+
+
+def _contents(rec):
+    """Record contents read without calling any overridden accessor."""
+    return (type(rec), list(dict.items(rec)) if isinstance(rec, dict)
+            else list(rec))
+
+
+def _freeze_gate_outcome(mod, make):
+    """Merge a one-record source whose record is not an exact dict into
+    a one-node table: (outcome, oracle calls, hostile calls, table
+    unchanged, source unchanged)."""
+    calls = []
+
+    def oracle(v, f):
+        calls.append((v, f))
+        return digest_fen(v, f)
+
+    dst = mod.NodeTable(DOCS, oracle)
+    dst.insert("standard", KINGS)
+    before = dst.serialize()
+    calls.clear()
+    rec = make()
+    snapshot = _contents(rec)
+    source = [rec]
+    _HostileDict.calls.clear()
+    out = _outcome(lambda: dst.merge(types.SimpleNamespace(
+        records=lambda: source)) and "merged")
+    hostile = list(_HostileDict.calls)
+    _HostileDict.calls.clear()
+    same_source = (len(source) == 1 and source[0] is rec
+                   and _contents(rec) == snapshot)
+    return out, len(calls), hostile, dst.serialize() == before, same_source
+
+
+@pytest.mark.parametrize("name", sorted(FREEZE_GATE_RECORDS))
+def test_r2_freeze_gate_rejects_non_exact_dict_records(name):
+    """The freeze step's exact-dict gate: a source record given as a list
+    of (field, value) pairs or as a dict subclass fails closed as
+    malformed_node_record in both modules, before any oracle call or
+    hostile accessor, with table and source unchanged."""
+    make = FREEZE_GATE_RECORDS[name]
+    got = _freeze_gate_outcome(prod, make)
+    assert got == _freeze_gate_outcome(ref, make) == (
+        MALFORMED_NODE_RECORD, 0, [], True, True)
+
+
+@pytest.mark.parametrize("name", ["list-of-pairs", "plain-dict-subclass"])
+def test_r2_reference_freeze_gate_off_mutant_is_red(name):
+    """One-edit reference mutant: the freeze loop's exact-dict gate
+    deleted, so dict(rec) launders the record and the merge accepts it."""
+    make = FREEZE_GATE_RECORDS[name]
+    got = _freeze_gate_outcome(_ref_mutant(*REF_FREEZE_GATE_OFF_MUTANT), make)
+    assert got[0] == ("ok", "merged")
+    assert got != _freeze_gate_outcome(ref, make)
+
+
+KINGS_B = "4k3/8/8/8/8/8/8/3K4 w - - 0 1"
+REF_LIVE_INSERT_MUTANT = (
+    "        for rec in frozen:\n"
+    "            staged.insert(rec[\"variant\"], rec[\"snapshot_fen\"])\n",
+    "        for rec in frozen:\n"
+    "            self.insert(rec[\"variant\"], rec[\"snapshot_fen\"])\n")
+
+
+def _ref_mutant(before, after):
+    """The reference module source with exactly one edit, executed into a
+    fresh namespace that keeps the reference NodeError."""
+    source = Path(ref.__file__).read_text()
+    assert source.count(before) == 1
+    module = types.ModuleType("t0122_reference_mutant")
+    module.__file__ = ref.__file__
+    exec(compile(source.replace(before, after), ref.__file__, "exec"),
+         module.__dict__)
+    module.NodeError = ref.NodeError
+    return module
+
+
+SWEEP_CONSTANT = "pdv1:" + "5" * 64
+SWEEP_DIGESTS = {"honest": digest_fen,
+                 # total collision: every node shares ONE bucket, so a
+                 # staged copy that shares the live bucket lists is caught
+                 "constant": lambda v, f: SWEEP_CONSTANT}
+
+
+def _merge_fault_at(mod, fault_at, digest="honest"):
+    """Destination holds START; the source is two king-only nodes; the
+    destination's oracle is honest (or a total collision) but raises on
+    its FAULT_AT-th call during the merge (validation and insert phases
+    alike)."""
+    base = SWEEP_DIGESTS[digest]
+    src = ref.NodeTable(DOCS, base)
+    source = [src.insert("standard", KINGS), src.insert("standard", KINGS_B)]
+    state = {"armed": False, "n": 0}
+
+    def oracle(v, f):
+        if state["armed"]:
+            state["n"] += 1
+            if state["n"] - 1 == fault_at:
+                raise RuntimeError("oracle fault")
+        return base(v, f)
+
+    dst = mod.NodeTable(DOCS, oracle)
+    dst.insert("standard", STARTPOS)
+    before = (copy.deepcopy(dst.buckets), dst.buckets,
+              {k: (id(v), [id(r) for r in v]) for k, v in dst.buckets.items()})
+    state["armed"] = True
+    out = _outcome(lambda: dst.merge(types.SimpleNamespace(
+        records=lambda: copy.deepcopy(source))) and "merged")
+    after = (copy.deepcopy(dst.buckets), dst.buckets,
+             {k: (id(v), [id(r) for r in v]) for k, v in dst.buckets.items()})
+    unchanged = before[0] == after[0] and before[2] == after[2]
+    return out, unchanged, dst.serialize(), state["n"]
+
+
+# an honest merge of the two-record source makes 4 oracle calls (2 in
+# validation, 2 in the insert phase); index 4 is the no-fault control
+MERGE_FAULT_INDEXES = range(5)
+
+
+@pytest.mark.parametrize("digest", list(SWEEP_DIGESTS))
+@pytest.mark.parametrize("fault_at", MERGE_FAULT_INDEXES)
+def test_r2_merge_oracle_fault_sweep_parity(fault_at, digest):
+    """An oracle fault at ANY call of the merge - validation or insert
+    phase - rejects as malformed_node_record and leaves the destination
+    bit-identical, in the reference exactly as in production."""
+    a = _merge_fault_at(prod, fault_at, digest)
+    b = _merge_fault_at(ref, fault_at, digest)
+    assert a == b
+    out, unchanged, _, calls = a
+    if fault_at < 4:
+        assert out == MALFORMED_NODE_RECORD and unchanged
+    else:
+        assert out == ("ok", "merged") and calls == 4
+
+
+REF_SHARED_BUCKET_LISTS_MUTANT = (
+    "        staged.buckets = {key: list(bucket)\n"
+    "                          for key, bucket in self.buckets.items()}\n"
+    "        for rec in frozen:\n",
+    "        staged.buckets = dict(self.buckets)\n"
+    "        for rec in frozen:\n")
+
+
+@pytest.mark.parametrize("mutation,digest", [
+    (REF_LIVE_INSERT_MUTANT, "honest"),
+    (REF_LIVE_INSERT_MUTANT, "constant"),
+    (REF_SHARED_BUCKET_LISTS_MUTANT, "constant"),
+], ids=["live-insert-honest", "live-insert-constant", "shared-bucket-lists"])
+def test_r2_reference_staging_mutants_are_red(mutation, digest):
+    """One-edit reference mutants (merge inserting into the LIVE table;
+    staged buckets sharing the live bucket lists) fail the sweep at an
+    insert-phase fault; the reference passes the same row."""
+    mutant = _ref_mutant(*mutation)
+    assert _merge_fault_at(mutant, 3, digest)[1] is False
+    assert _merge_fault_at(mutant, 3, digest) != _merge_fault_at(prod, 3, digest)
+    assert _merge_fault_at(ref, 3, digest)[1] is True
 
 
 def test_r3_every_raise_site_and_except_clause_is_forged():
