@@ -131,13 +131,37 @@ def _shape(value):
     return value
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _deep_ids(value):
     if isinstance(value, dict):
-        return [id(value)] + [x for k, v in value.items()
-                              for x in (id(k), *_deep_ids(v))]
+        return [_Pin(value)] + [x for k, v in value.items()
+                              for x in (_Pin(k), *_deep_ids(v))]
     if isinstance(value, list):
-        return [id(value)] + [x for v in value for x in _deep_ids(v)]
-    return [id(value)]
+        return [_Pin(value)] + [x for v in value for x in _deep_ids(v)]
+    return [_Pin(value)]
 
 
 def _snap(value):
@@ -159,8 +183,8 @@ def _fails(failure, call, *args):
 def _run(log, target, archiver=rollback.archive_tail):
     """Roll LOG back to TARGET and check the receipt and the commit."""
     original = copy.deepcopy(log)
-    entry_ids = [id(e) for e in log]
-    inner = [(id(e["payload"]), id(e["payload"]["record"])) for e in log]
+    entry_ids = [_Pin(e) for e in log]
+    inner = [(_Pin(e["payload"]), _Pin(e["payload"]["record"])) for e in log]
     container = id(log)
     request = {"target_sequence": target}
     req_before = _snap(request)
@@ -180,8 +204,8 @@ def _run(log, target, archiver=rollback.archive_tail):
     # commit: same container, exactly the original prefix, same objects
     assert id(log) == container
     assert log == original[:target]
-    assert [id(e) for e in log] == entry_ids[:target]
-    assert [(id(e["payload"]), id(e["payload"]["record"])) for e in log] == inner[:target]
+    assert [_Pin(e) for e in log] == entry_ids[:target]
+    assert [(_Pin(e["payload"]), _Pin(e["payload"]["record"])) for e in log] == inner[:target]
     replay = wal.WalEngine(wal.canonical_payload).replay(copy.deepcopy(log))
     assert replay["head"] == out["to_head"] and replay["applied"] == target
     assert _snap(request) == req_before
@@ -334,7 +358,7 @@ def test_r5_live_input_mutation_is_undone(seed, fail):
     target = seed % len(log)
     request = {"target_sequence": target}
     original = copy.deepcopy(log)
-    entry_ids = [id(e) for e in log]
+    entry_ids = [_Pin(e) for e in log]
     before, req_before = _snap(log), _snap(request)
 
     def archiver(tail):
@@ -359,7 +383,7 @@ def test_r5_live_input_mutation_is_undone(seed, fail):
         out = _engine(archiver).rollback(log, request)
         assert out == _engine().rollback(copy.deepcopy(original), {"target_sequence": target})
         assert log == original[:target]
-        assert [id(e) for e in log] == entry_ids[:target]
+        assert [_Pin(e) for e in log] == entry_ids[:target]
     assert _snap(request) == req_before
 
 
@@ -503,3 +527,16 @@ def test_r10_property_file_uses_no_test_helpers():
     assert not any(m == "tests" or m.startswith("tests.") for m in modules)
     assert modules <= {"__future__", "ast", "copy", "hashlib", "random",
                        "pathlib", "pytest", "graph.node", "store"}
+
+
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": {"x": 1}}
+    before = _snap(value)
+    value["k"] = {"x": 1}
+    value["k"] = {"x": 1}
+    assert _snap(value) != before
