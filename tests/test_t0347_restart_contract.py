@@ -941,11 +941,35 @@ def _corrupt_rows():
 CORRUPT = _corrupt_rows()
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _snap(obj, memo=None):
     memo = set() if memo is None else memo
     if isinstance(obj, (dict, list)):
         if id(obj) in memo:
-            return ("seen", id(obj))
+            return ("seen", _Pin(obj))
         memo.add(id(obj))
     if isinstance(obj, dict):
         return (
@@ -964,7 +988,7 @@ def _snap(obj, memo=None):
         return (type(obj), repr(float(obj)))
     return (
         type(obj),
-        int.__repr__(obj) if isinstance(obj, int) and obj.bit_length() < 64 else id(obj),
+        int.__repr__(obj) if isinstance(obj, int) and obj.bit_length() < 64 else _Pin(obj),
     )
 
 
@@ -1249,3 +1273,18 @@ def test_reference_mutant_is_red(name, monkeypatch):
 def test_equivalent_edit_stays_green(name, monkeypatch):
     _install(monkeypatch, name)
     assert _battery() == [], name
+
+
+class _PinProbeLeaf:
+    pass
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": _PinProbeLeaf()}
+    before = _snap(value)
+    value["k"] = _PinProbeLeaf()
+    value["k"] = _PinProbeLeaf()
+    assert _snap(value) != before

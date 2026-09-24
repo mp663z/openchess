@@ -366,6 +366,30 @@ def _run(state, *requests):
     return out
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _snap(obj, memo=None):
     """Identity-and-value snapshot that never hashes or compares a
     caller key (hostile keys stay inert) and terminates on cycles."""
@@ -373,21 +397,21 @@ def _snap(obj, memo=None):
     kind = type(obj)
     if kind in (dict, list):
         if id(obj) in memo:
-            return ("seen", id(obj))
+            return ("seen", _Pin(obj))
         memo[id(obj)] = True
         if kind is dict:
             return (
                 "dict",
-                id(obj),
+                _Pin(obj),
                 tuple(
-                    (k if type(k) is str else ("key", id(k)), _snap(v, memo))
+                    (k if type(k) is str else ("key", _Pin(k)), _snap(v, memo))
                     for k, v in dict.items(obj)
                 ),
             )
-        return ("list", id(obj), tuple(_snap(v, memo) for v in list.__iter__(obj)))
+        return ("list", _Pin(obj), tuple(_snap(v, memo) for v in list.__iter__(obj)))
     if kind is float and obj != obj:
         return ("nan",)
-    return (kind.__name__, repr(obj) if kind in (int, float, str, bool, type(None)) else id(obj))
+    return (kind.__name__, repr(obj) if kind in (int, float, str, bool, type(None)) else _Pin(obj))
 
 
 def _raises(cls, state, request):
@@ -1141,3 +1165,18 @@ def test_mutant_non_atomic_commit_is_detected():
 def test_engine_error_codes_are_the_closed_enum():
     assert set(FAILURE_MAPPING.values()) | {"internal"} == set(ERROR_ENUM)
     assert set(FAILURE_MAPPING) == set(_CC["failures"]["classes"])
+
+
+class _PinProbeLeaf:
+    pass
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": _PinProbeLeaf()}
+    before = _snap(value)
+    value["k"] = _PinProbeLeaf()
+    value["k"] = _PinProbeLeaf()
+    assert _snap(value) != before
