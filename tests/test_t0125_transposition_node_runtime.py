@@ -740,9 +740,6 @@ MUTANTS = {
     "variant-isinstance": (
         "if type(variant_id) is not str or variant_id not in",
         "if not isinstance(variant_id, str) or variant_id not in"),
-    "fen-type-check-off": (
-        "    if type(fen_text) is not str:\n"
-        "        _fail(nc, \"malformed_position\")\n", ""),
     "record-key-set-subset": (
         "if not _exact_dict(record) or set(dict.keys(record)) != set(",
         "if not _exact_dict(record) or not set(dict.keys(record)) >= set("),
@@ -797,9 +794,6 @@ MUTANTS = {
         "                _fail(self.nc, \"malformed_node_record\")\n"
         "            frozen.append(dict(rec))\n",
         "            frozen.append(dict(rec))\n"),
-    "parse-catches-fenerror-only": (
-        "    except (FenError, ValueError):\n",
-        "    except FenError:\n"),
     "parse-fails-inside-except-chained": (
         "    except (FenError, ValueError):\n        failed = True\n",
         "    except (FenError, ValueError):\n        _fail(nc, cls)\n"),
@@ -846,6 +840,18 @@ MUTANTS = {
 # itself format-checked, so digest consistency rejects it with the same
 # class (malformed_node_record)
 EQUIVALENT_EDITS = {
+    # linked parse_fen is total since the T0089 'graph.fen: total parse_fen'
+    # commit (exact str, over-limit counters as FenError); the downstream
+    # guard is defense in depth
+    "fen-type-check-off": (
+        "    if type(fen_text) is not str:\n"
+        "        _fail(nc, \"malformed_position\")\n", ""),
+    # linked parse_fen is total since the T0089 'graph.fen: total parse_fen'
+    # commit (exact str, over-limit counters as FenError); the downstream
+    # guard is defense in depth
+    "parse-catches-fenerror-only": (
+        "    except (FenError, ValueError):\n",
+        "    except FenError:\n"),
     # the freeze loop reads the whole source list before any oracle
     # call, so iterating the caller's list directly is unobservable
     "merge-freeze-iterates-source-directly": (
