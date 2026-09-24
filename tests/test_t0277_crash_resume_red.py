@@ -120,8 +120,8 @@ from tools.crash_resume_contract_lint import (  # noqa: E402
 )
 
 # -- binding (the production task replaces ONLY these two lines) ---------------
-ResumeEngine = _reference.ResumeEngine
-ResumeError = _reference.ResumeError
+ResumeEngine = __import__("store.crash_resume").crash_resume.ResumeEngine
+ResumeError = __import__("store.crash_resume").crash_resume.ResumeError
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "crash_resume"
            / "cases.json")
