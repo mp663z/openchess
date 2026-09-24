@@ -174,7 +174,12 @@ def _validate_state(state: object) -> None:
     defect is malformed_request with failure_class None, never a raw
     exception. Exactly the two declared fields; occupied maps contract
     squares to side+piece tokens; exactly one king per side."""
-    if type(state) is not dict or set(state) != _STATE_KEYS:
+    if type(state) is not dict:
+        _malformed(f"state must be exactly {sorted(_STATE_KEYS)}")
+    # exact-str keys BEFORE the key-set comparison: a str subclass key
+    # must not stand in for a declared field, and a key with a user
+    # __eq__/__hash__ must never run during the comparison
+    if any(type(key) is not str for key in state) or set(state) != _STATE_KEYS:
         _malformed(f"state must be exactly {sorted(_STATE_KEYS)}")
     occ = state["occupied"]
     if type(occ) is not dict:
@@ -372,6 +377,10 @@ def _validate_move_shape(move: object) -> None:
     string when present. Any violation is malformed_move."""
     if type(move) is not dict:
         _fail("malformed_move", "move must be a mapping")
+    # exact-str member names before any key-set comparison (same reason
+    # as the state keys); a non-str name is a closed-keys violation
+    if any(type(key) is not str for key in move):
+        _fail("malformed_move", "move member names must be exact strings")
     if _CLOSED_KEYS:
         allowed = set(_REQUIRED) | set(_OPTIONAL)
         if not set(move) <= allowed:
