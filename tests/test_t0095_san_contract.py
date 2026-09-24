@@ -217,6 +217,12 @@ def resolve_san(contract, text, state):
             tok = occ.get(mv["from_square"])
             if tok is None or tok[1] != piece_type:
                 return False
+            # castling is denoted ONLY by the castling token: a K +
+            # destination body never matches the king's two-square move
+            if piece_type == "k" and abs(
+                    FILES.index(mv["from_square"][0])
+                    - FILES.index(mv["to_square"][0])) == 2:
+                return False
             if mv["to_square"] != dest:
                 return False
             if use_disamb:
@@ -605,6 +611,44 @@ def test_no_legal_match_rejected(san, board, side, rights):
         resolve_san(doc, san, _state(board, side, rights))
     assert exc.value.failure_class == "no_legal_match"
     assert exc.value.code == "illegal_move"
+
+
+CASTLE_BOTH_BOARD = (
+    "-- -- -- -- -- -- -- --/-- -- -- -- -- -- -- --/"
+    "-- -- -- -- -- -- -- --/-- bk -- -- -- -- -- --/"
+    "-- -- -- -- -- -- -- --/-- -- -- -- -- -- -- --/"
+    "-- -- -- -- -- -- -- --/wr -- -- -- wk -- -- wr")
+
+
+@pytest.mark.parametrize("san", ["Kc1", "Kc1+", "Kc1#", "Kg1", "Kg1+",
+                                 "Kg1#", "Kxc1", "Kxg1", "Kec1", "Keg1",
+                                 "Ke1c1", "Ke1g1"])
+def test_castling_only_via_the_castling_token(san):
+    """T0097 reference fix: a K + destination body never denotes
+    castling, whatever suffix or disambiguation it carries."""
+    state = _state(CASTLE_BOTH_BOARD, "w", "KQ")
+    before = copy.deepcopy(state)
+    with pytest.raises(SanError) as err:
+        resolve_san(_doc()["contract"], san, state)
+    assert err.value.failure_class == "no_legal_match"
+    assert err.value.code == "illegal_move"
+    assert state == before
+
+
+def test_castling_tokens_and_plain_king_moves_still_resolve():
+    c = _doc()["contract"]
+    state = _state(CASTLE_BOTH_BOARD, "w", "KQ")
+    assert resolve_san(c, "O-O", state) == {"from_square": "e1",
+                                            "to_square": "g1"}
+    assert resolve_san(c, "O-O-O", state) == {"from_square": "e1",
+                                              "to_square": "c1"}
+    assert resolve_san(c, "Kd1", state) == {"from_square": "e1",
+                                            "to_square": "d1"}
+    assert resolve_san(c, "Kf1", state) == {"from_square": "e1",
+                                            "to_square": "f1"}
+    for move in ({"from_square": "e1", "to_square": "g1"},
+                 {"from_square": "e1", "to_square": "c1"}):
+        assert emit_san(c, move, state) in ("O-O", "O-O-O")
 
 
 def test_rejected_resolution_yields_no_move():
