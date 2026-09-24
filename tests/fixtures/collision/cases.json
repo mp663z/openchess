@@ -1,0 +1,1502 @@
+{
+  "boundary": [
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 1
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [],
+      "name": "first-insert-into-empty-table",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "constant",
+      "why": "the first insert creates the only bucket and record"
+    },
+    {
+      "expect": {
+        "buckets": {},
+        "records": [],
+        "view": []
+      },
+      "initial": [],
+      "name": "merge-empty-into-empty",
+      "op": {
+        "kind": "merge",
+        "records": []
+      },
+      "oracle": "constant",
+      "why": "merging an empty table into an empty table leaves it empty"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 2
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "merge-is-idempotent",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "constant",
+      "why": "merging a table's own stored records changes nothing"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b": 1
+        },
+        "records": [
+          {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "real-digest-ignores-clocks",
+      "op": {
+        "fen": "4k3/8/8/8/8/8/8/4K3 w - - 7 30",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "real",
+      "why": "under the real digest an equal identity with different clocks has the same key and dedupes"
+    }
+  ],
+  "contract": "graph-collision",
+  "contract_base_path": "/graph/collision/v1",
+  "happy": [
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b": 1,
+          "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe": 1,
+          "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff": 1
+        },
+        "records": [
+          {
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "collision-free-baseline",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "real",
+      "why": "three distinct positions under the real digest land in three buckets"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 3
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "total-collision-same-set",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "constant",
+      "why": "the same three positions all collide into one bucket and stay three records in the same canonical order"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 4
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ],
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+        ]
+      ],
+      "name": "total-collision-four-distinct",
+      "op": {
+        "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "constant",
+      "why": "four distinct identities in one bucket yield exactly four records (count-exact, no-merge)"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 4
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+        ],
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "total-collision-reversed-arrival",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "constant",
+      "why": "the same four records inserted in reverse order give the identical table (order-insensitivity)"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 1
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "total-collision-same-identity-new-clocks",
+      "op": {
+        "fen": "4k3/8/8/8/8/8/8/4K3 w - - 7 30",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "constant",
+      "why": "an equal canonical identity with different clocks dedupes to the stored record (no-fork)"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 4
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "merge-under-total-collision",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "constant",
+      "why": "merging stored records with one overlap into a colliding table adds only the new identities"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 3
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "insert-under-corrupt-then-return-oracle",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "corrupt-then-return",
+      "why": "the oracle corrupts the live receiver (record contents and both containers) and then returns a valid key: the successful insert discards the corruption before staging, so every pre-existing record survives unchanged"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 2
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "name": "merge-under-corrupt-then-return-oracle",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "corrupt-then-return",
+      "why": "merge receiver isolation on the success path: the receiver-corrupting oracle returns a valid key, the merge commits, and the pre-existing record keeps its original contents"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 2
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "name": "insert-under-rebind-then-return-oracle",
+      "op": {
+        "fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "rebind-then-return",
+      "why": "the oracle REBINDS both receiver attributes to fresh empty dicts and then returns a valid key: the successful insert restores the original containers before staging, so the pre-existing record and the new one are both stored"
+    },
+    {
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 2
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "name": "merge-under-rebind-then-return-oracle",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "rebind-then-return",
+      "why": "merge receiver isolation against attribute replacement on the success path: the oracle rebinds both containers and returns a valid key; the merge commits over the original containers and the pre-existing record survives"
+    }
+  ],
+  "malformed": [
+    {
+      "defect": "the FEN has seven ranks",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+          "kind": "insert",
+          "variant": "standard"
+        }
+      },
+      "name": "insert-bad-fen",
+      "op": {
+        "fen": "8/8/8/8/8/8/8 w - - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "the variant is not registered",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+          "kind": "insert",
+          "variant": "standard"
+        }
+      },
+      "name": "insert-unknown-variant",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "atomic960"
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "the incoming record is a list of pairs",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "kind": "merge",
+          "records": [
+            {
+              "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          ]
+        }
+      },
+      "name": "merge-record-not-a-dict",
+      "op": {
+        "kind": "merge",
+        "records": [
+          [
+            [
+              "variant",
+              "standard"
+            ],
+            [
+              "digest",
+              "pdv1:0000000000000000000000000000000000000000000000000000000000000000"
+            ],
+            [
+              "snapshot_fen",
+              "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+            ]
+          ]
+        ]
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "the incoming record carries an extra field",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "kind": "merge",
+          "records": [
+            {
+              "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          ]
+        }
+      },
+      "name": "merge-record-extra-field",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "identity": "x",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "the incoming record has no digest",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "kind": "merge",
+          "records": [
+            {
+              "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          ]
+        }
+      },
+      "name": "merge-record-missing-field",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "the incoming record's bucket key comes from another oracle than the receiver's",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "oracle": "real"
+      },
+      "name": "merge-cross-oracle-record",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "constant",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "the incoming record's snapshot is not a legal position",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "kind": "merge",
+          "records": [
+            {
+              "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          ]
+        }
+      },
+      "name": "merge-record-bad-snapshot",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "8/8/8/8/8/8/8/8 w - - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "a bucket key is presented as a record identity",
+      "expect_failure": "accelerator_as_identity",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "kind": "insert",
+          "variant": "standard"
+        }
+      },
+      "name": "lookup-by-bucket-key",
+      "op": {
+        "bucket_key": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+        "kind": "lookup"
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "the oracle hashes the excluded clocks, so an equal identity gets a new key",
+      "expect_failure": "accelerator_inconsistent",
+      "initial": [
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "oracle": "real"
+      },
+      "name": "raw-oracle-clock-divergence",
+      "op": {
+        "fen": "4k3/8/8/8/8/8/8/4K3 w - - 7 30",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "raw",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "the oracle returns a fresh key per call, so an equal identity gets a new key",
+      "expect_failure": "accelerator_inconsistent",
+      "initial": [
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "oracle": "constant"
+      },
+      "name": "stateful-oracle-divergence",
+      "op": {
+        "fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "stateful",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "the oracle raises",
+      "expect_failure": "accelerator_inconsistent",
+      "initial": [],
+      "minimal_repair": {
+        "oracle": "constant"
+      },
+      "name": "raising-oracle",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "raising",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "the oracle raises KeyboardInterrupt",
+      "expect_failure": "accelerator_inconsistent",
+      "initial": [],
+      "minimal_repair": {
+        "oracle": "constant"
+      },
+      "name": "interrupting-oracle",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "interrupt",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "the oracle returns a key outside the digest format",
+      "expect_failure": "accelerator_inconsistent",
+      "initial": [],
+      "minimal_repair": {
+        "oracle": "constant"
+      },
+      "name": "invalid-format-key",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "invalid-format",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "the oracle returns a str subclass",
+      "expect_failure": "accelerator_inconsistent",
+      "initial": [],
+      "minimal_repair": {
+        "oracle": "constant"
+      },
+      "name": "str-subclass-key",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "str-subclass",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "the oracle returns bytes",
+      "expect_failure": "accelerator_inconsistent",
+      "initial": [],
+      "minimal_repair": {
+        "oracle": "constant"
+      },
+      "name": "non-str-key",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "non-str",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "the oracle calls back into the receiver during evaluation",
+      "expect_failure": "accelerator_inconsistent",
+      "initial": [],
+      "minimal_repair": {
+        "oracle": "constant"
+      },
+      "name": "reentrant-oracle",
+      "op": {
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "oracle": "reentrant",
+      "oracle_calls": 1
+    },
+    {
+      "defect": "same-arity renamed key (snapshot for snapshot_fen): the key SET, not the key count, decides the record shape",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "kind": "merge",
+          "records": [
+            {
+              "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          ]
+        }
+      },
+      "name": "merge-record-renamed-key",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "snapshot clocks not normalized to 0 1: an oracle-independent semantic rejection, decided with zero oracle calls",
+      "expect_failure": "malformed_collision_record",
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "minimal_repair": {
+        "op": {
+          "kind": "merge",
+          "records": [
+            {
+              "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+              "variant": "standard"
+            }
+          ]
+        }
+      },
+      "name": "merge-record-unnormalized-clocks",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 3 9",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "constant",
+      "oracle_calls": 0
+    },
+    {
+      "defect": "a semantically malformed merge record under a raising oracle: the semantic rejection comes first (malformed_collision_record, zero oracle calls), never the oracle's accelerator_inconsistent",
+      "expect_failure": "malformed_collision_record",
+      "initial": [],
+      "minimal_repair": {
+        "op": {
+          "kind": "merge",
+          "records": []
+        }
+      },
+      "name": "malformed-merge-record-under-raising-oracle",
+      "op": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 3 9",
+            "variant": "standard"
+          }
+        ]
+      },
+      "oracle": "raising",
+      "oracle_calls": 0
+    }
+  ],
+  "notes": "Closed fixture for the T0158 graph-collision contract: operation scripts under named oracles from a closed registry, with pinned tables computed by the reference table; malformed rows cover every failure class with a single-locus minimal repair (oracle or operation); rollback rows prove a rejected operation leaves the table identical by value and stored-record identity before a valid follow-up succeeds.",
+  "rollback": [
+    {
+      "bad": {
+        "fen": "4k3/8/8/8/8/8/8/4K3 w - - 7 30",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "expect": {
+        "buckets": {
+          "pdv1:8fa14e0cdbd23096c8345b18bfadad1f8d46c402f3986c101dbbe66504dbc8f1": 1,
+          "pdv1:9c620120723f4e47dd0ccf908377f0933b95c37d36e0f33ba44ecddb5532991e": 1,
+          "pdv1:d3ad9796f3d96516d5c0aaeb2753dff47cb253994cd5b476b95334f28f7209a6": 1
+        },
+        "records": [
+          {
+            "digest": "pdv1:d3ad9796f3d96516d5c0aaeb2753dff47cb253994cd5b476b95334f28f7209a6",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:9c620120723f4e47dd0ccf908377f0933b95c37d36e0f33ba44ecddb5532991e",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:8fa14e0cdbd23096c8345b18bfadad1f8d46c402f3986c101dbbe66504dbc8f1",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "expect_failure": "accelerator_inconsistent",
+      "good": {
+        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "raw-divergence-then-insert",
+      "oracle": "raw",
+      "why": "a rejected divergent key under collision leaves the table as it was; a new identity then inserts"
+    },
+    {
+      "bad": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "atomic960"
+          }
+        ]
+      },
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 3
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "expect_failure": "malformed_collision_record",
+      "good": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "merge-rejected-midway",
+      "oracle": "constant",
+      "why": "a merge whose second record is malformed stages nothing, including its valid first record"
+    },
+    {
+      "bad": {
+        "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 3
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "expect_failure": "accelerator_inconsistent",
+      "good": {
+        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "corrupting-oracle-restored",
+      "oracle": "corrupt-then-raise-on-ep",
+      "why": "an oracle that clears the receiver and scribbles on stored records before raising is fully undone"
+    },
+    {
+      "bad": {
+        "bucket_key": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+        "kind": "lookup"
+      },
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 2
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "expect_failure": "accelerator_as_identity",
+      "good": {
+        "fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ]
+      ],
+      "name": "lookup-then-insert",
+      "oracle": "constant",
+      "why": "a bucket-key lookup changes nothing; the same table then inserts"
+    },
+    {
+      "bad": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 3
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "expect_failure": "accelerator_inconsistent",
+      "good": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "merge-corrupting-oracle-restored",
+      "oracle": "corrupt-then-raise-on-ep",
+      "why": "merge receiver isolation on the failure path: the oracle corrupts the live receiver at the second record and raises; the rejected merge restores the exact originals"
+    },
+    {
+      "bad": {
+        "fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 3
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "expect_failure": "accelerator_inconsistent",
+      "good": {
+        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "kind": "insert",
+        "variant": "standard"
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "rebind-oracle-restored",
+      "oracle": "rebind-then-raise",
+      "why": "an oracle that rebinds both receiver attributes to fresh empty dicts before raising is fully undone: the original containers and stored records are back by value and identity"
+    },
+    {
+      "bad": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "expect": {
+        "buckets": {
+          "pdv1:0000000000000000000000000000000000000000000000000000000000000000": 3
+        },
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          },
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "variant": "standard"
+          }
+        ],
+        "view": [
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')"
+        ]
+      },
+      "expect_failure": "accelerator_inconsistent",
+      "good": {
+        "kind": "merge",
+        "records": [
+          {
+            "digest": "pdv1:0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+            "variant": "standard"
+          }
+        ]
+      },
+      "initial": [
+        [
+          "standard",
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ],
+        [
+          "standard",
+          "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+        ]
+      ],
+      "name": "merge-rebind-oracle-restored",
+      "oracle": "rebind-then-raise",
+      "why": "merge receiver isolation against attribute replacement on the failure path: the oracle rebinds both containers at the second record and raises; the rejected merge restores the exact originals"
+    }
+  ],
+  "schema": 1
+}
