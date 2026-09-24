@@ -19,3 +19,10 @@ from-identity and move (conflicting_edge) and an atomic staged merge.
 conflict detection over validated graph states (base, left, right) with
 derived state ids, identity-keyed witnesses in canonical order, the
 divergent-base check, and no automatic resolution.
+
+`graph/en_passant.py` implements `data/contracts/en_passant.yaml`: move
+application with the double-advance target, the en-passant capture with
+its preconditions and the resulting-position pin check, the canonical
+identity value (target only when a legal capture exists), and the turn
+transition; every input is validated as exact types first and fails closed
+as a typed `EnPassantError`.
