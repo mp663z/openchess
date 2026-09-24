@@ -1,0 +1,92 @@
+schema_version: 1
+
+contract:
+  id: privacy-cloud-off
+  role:
+    kind: install-wide-cloud-mode-switch-gating-every-cloud-model-egress
+    serves: hosted-byom-opt-in-only-and-full-loop-offline
+    scope: one-install-cloud-mode-transitions-and-composed-egress-verdict
+    owns: cloud-mode-transition-semantics-and-install-level-egress-verdict
+    not_scope: collection-flag-state-redaction-byom-terms-payload-schema-local-model-choice-delete-and-retry-idempotency
+  record:
+    fields: [install_id, cloud_mode, revision]
+    exact: true
+  identifiers:
+    install_id:
+      kind: opaque-local-install-id
+      grammar: ^ins1:[0-9a-f]{64}$
+      source: caller-supplied-exact-built-in-str-validated-never-trusted
+    cloud_mode:
+      kind: install-cloud-mode
+      grammar: exact-built-in-str-off-or-on
+      source: stored-by-the-switch-default-off
+    revision:
+      kind: monotonic-cloud-mode-revision
+      grammar: exact-built-in-int-0-through-9223372036854775807-never-bool
+      source: derived-by-the-switch-never-caller-chosen
+    opt_in:
+      kind: scoped-user-opt-in-token
+      grammar: ^opt1:[0-9a-f]{64}$
+      binding: sha256-over-install-id-and-expected-revision-and-target-on
+      source: user-settings-surface-only-never-model-or-imported-content
+  semantics:
+    default: unknown-or-unset-install-reads-cloud-mode-off
+    egress: cloud-destination-allowed-only-when-cloud-mode-is-exact-on-and-the-collection-flag-reads-exact-false-local-always-allowed
+    precedence: malformed-then-cloud-mode-then-collection-flag-the-switch-is-checked-before-the-flag
+    composition: collection-flag-read-from-the-sensitive-flag-contract-never-re-owned-unknown-collection-reads-sensitive
+    evaluation: egress-verdict-read-from-current-state-at-send-time-one-verdict-per-send-never-cached
+    turn_off: on-to-off-needs-no-approval-and-applies-before-the-next-egress-verdict
+    turn_on: off-to-on-needs-an-opt-in-bound-to-this-install-and-expected-revision
+    same_value: set-to-the-current-mode-is-a-no-op-revision-unchanged
+    concurrency: compare-and-set-on-expected-revision
+    saturation: transition-at-max-revision-fails-typed-never-saturates-or-wraps
+    rollback: no-history-operation-a-rejected-transition-is-rolled-back-whole-undoing-on-is-turn-off-undoing-off-is-a-fresh-opt-in
+    reregister: registering-a-known-install-is-a-no-op-never-resets-mode-or-revision
+  failures:
+    classes:
+      - malformed_cloud_request
+      - unknown_install
+      - stale_revision
+      - opt_in_missing
+      - cloud_mode_off
+      - collection_sensitive
+      - revision_exhausted
+    triggers:
+      malformed_cloud_request: checked-before-every-other-class-request-grammar-or-exact-type-violation-including-str-dict-list-subclasses-and-non-str-keys
+      unknown_install: well-formed-install-id-with-no-switch-state-on-transition
+      stale_revision: expected-revision-not-equal-to-current-revision
+      opt_in_missing: turn-on-without-a-bound-opt-in
+      cloud_mode_off: cloud-destination-requested-while-cloud-mode-reads-off-including-an-unknown-install
+      collection_sensitive: cloud-destination-requested-with-cloud-mode-on-while-the-collection-flag-reads-sensitive
+      revision_exhausted: transition-at-revision-9223372036854775807-checked-after-malformed-unknown-stale-same-value-noop-and-opt-in
+    mapping:
+      malformed_cloud_request: malformed_request
+      unknown_install: unknown_install
+      stale_revision: conflict
+      opt_in_missing: approval_required
+      cloud_mode_off: cloud_off
+      collection_sensitive: cloud_off
+      revision_exhausted: revision_exhausted
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - unknown_install
+      - conflict
+      - approval_required
+      - cloud_off
+      - revision_exhausted
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    atomic: rejected-transition-or-verdict-leaves-switch-state-flag-state-and-inputs-unchanged
+    fail_closed: any-doubt-about-the-cloud-mode-reads-off
+    kill_switch: turning-cloud-off-never-needs-approval-and-is-never-refused-except-malformed-unknown-stale-or-exhausted
+  versioning:
+    base_path: /privacy/cloud-off/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    sensitive_flag_contract: data/contracts/sensitive_flag.yaml
+    architecture_decision: docs/adr/ADR-0004-asymmetric-architecture.md
