@@ -207,6 +207,30 @@ def _variant_subclass_red(mod):
     return False
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def test_r2_variant_subclass_is_unknown_variant_without_calls():
     assert not _variant_subclass_red(prod)
 
@@ -956,12 +980,12 @@ def _merge_fault_at(mod, fault_at, digest="honest"):
     dst = mod.NodeTable(DOCS, oracle)
     dst.insert("standard", STARTPOS)
     before = (copy.deepcopy(dst.buckets), dst.buckets,
-              {k: (id(v), [id(r) for r in v]) for k, v in dst.buckets.items()})
+              {k: (_Pin(v), [_Pin(r) for r in v]) for k, v in dst.buckets.items()})
     state["armed"] = True
     out = _outcome(lambda: dst.merge(types.SimpleNamespace(
         records=lambda: copy.deepcopy(source))) and "merged")
     after = (copy.deepcopy(dst.buckets), dst.buckets,
-             {k: (id(v), [id(r) for r in v]) for k, v in dst.buckets.items()})
+             {k: (_Pin(v), [_Pin(r) for r in v]) for k, v in dst.buckets.items()})
     unchanged = before[0] == after[0] and before[2] == after[2]
     return out, unchanged, dst.serialize(), state["n"]
 
