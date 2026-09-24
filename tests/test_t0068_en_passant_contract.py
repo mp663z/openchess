@@ -282,13 +282,13 @@ def test_missing_and_wrong_container_family():
         assert str(ei.value).startswith("en-passant contract:"), str(ei.value)
 
 
-def test_cli_boundary_clean_and_failing():
+def test_cli_boundary_clean_and_failing(tmp_path):
     ok = subprocess.run([sys.executable, "tools/en_passant_contract_lint.py"],
                         cwd=ROOT, capture_output=True, text=True)
     assert ok.returncode == 0 and "OK en-passant contract lint" in ok.stdout
     bad_doc = copy.deepcopy(DOC)
     bad_doc["contract"]["turn_linkage"]["halfmove_clock"] = "increment"
-    bad_path = ROOT / "data" / "contracts" ".tmp_bad_en_passant.yaml"
+    bad_path = tmp_path / "tmp_bad_en_passant.yaml"  # never the repo tree (xdist)
     try:
         bad_path.write_text(yaml.safe_dump(bad_doc))
         fail = subprocess.run(

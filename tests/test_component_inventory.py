@@ -1,6 +1,5 @@
 """T3655 v3: SBOM from a locked, per-target release resolution with artifact hashes."""
 
-import contextlib
 import hashlib
 import json
 import re
@@ -182,23 +181,19 @@ def test_engines_models_assets_sections_exist():
     assert isinstance(inv["bundled_assets"], list)
 
 
-def test_discovery_picks_up_weights_and_assets():
+def test_discovery_picks_up_weights_and_assets(tmp_path, monkeypatch):
     """Discovery itself must find files under the declared dirs (not hardcoded).
     Classification of discovered files is fail-closed and tested in
-    tests/test_linkage_classification.py."""
+    tests/test_linkage_classification.py. The probes live in a tmp root, never
+    in the repo tree (parallel workers share it)."""
     import tools.component_inventory as ci
 
+    monkeypatch.setattr(ci, "ROOT", tmp_path)
     for d in (ci.MODEL_DIRS[0], ci.ASSET_DIRS[0]):
-        target = ROOT / d
-        target.mkdir(parents=True, exist_ok=True)
-        probe = target / "probe.bin"
-        probe.write_bytes(b"probe")
-        try:
-            found = ci._discover_files((d,))
-            assert any(
-                f["path"].endswith("probe.bin") and len(f["sha256"]) == 64 for f in found
-            ), d
-        finally:
-            probe.unlink()
-            with contextlib.suppress(OSError):
-                target.rmdir()
+        target = tmp_path / d
+        target.mkdir(parents=True)
+        (target / "probe.bin").write_bytes(b"probe")
+        found = ci._discover_files((d,))
+        assert any(
+            f["path"] == f"{d}/probe.bin" and len(f["sha256"]) == 64 for f in found
+        ), d

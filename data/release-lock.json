@@ -6,6 +6,17 @@
       "python": "3.12",
       "artifacts": [
         {
+          "name": "execnet",
+          "version": "2.1.2",
+          "filename": "execnet-2.1.2-py3-none-any.whl",
+          "sha256": "67fba928dd5a544b783f6056f449e5e3931a5c378b128bc18501f7ea79e296ec",
+          "url": "https://files.pythonhosted.org/packages/ab/84/02fc1827e8cdded4aa65baef11296a9bbe595c474f0d6d758af082d849fd/execnet-2.1.2-py3-none-any.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
           "name": "iniconfig",
           "version": "2.3.0",
           "filename": "iniconfig-2.3.0-py3-none-any.whl",
@@ -105,6 +116,17 @@
           "requirement": "pytest>=8.0"
         },
         {
+          "name": "pytest-xdist",
+          "version": "3.8.0",
+          "filename": "pytest_xdist-3.8.0-py3-none-any.whl",
+          "sha256": "202ca578cfeb7370784a8c33d6d05bc6e13b4f25b5053c30a152269fd10f0b88",
+          "url": "https://files.pythonhosted.org/packages/ca/31/d4e37e9e550c2b92a9cbc2e4d0b7420a27224968580b5a447f420847c975/pytest_xdist-3.8.0-py3-none-any.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": true,
+          "requirement": "pytest-xdist>=3.6"
+        },
+        {
           "name": "PyYAML",
           "version": "6.0.3",
           "filename": "pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
@@ -160,6 +182,17 @@
           "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
           "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
           "license": "BSD-3-Clause",
+          "origin": "PyPI",
+          "direct": false,
+          "requirement": null
+        },
+        {
+          "name": "execnet",
+          "version": "2.1.2",
+          "filename": "execnet-2.1.2-py3-none-any.whl",
+          "sha256": "67fba928dd5a544b783f6056f449e5e3931a5c378b128bc18501f7ea79e296ec",
+          "url": "https://files.pythonhosted.org/packages/ab/84/02fc1827e8cdded4aa65baef11296a9bbe595c474f0d6d758af082d849fd/execnet-2.1.2-py3-none-any.whl",
+          "license": "MIT",
           "origin": "PyPI",
           "direct": false,
           "requirement": null
@@ -262,6 +295,17 @@
           "origin": "PyPI",
           "direct": true,
           "requirement": "pytest>=8.0"
+        },
+        {
+          "name": "pytest-xdist",
+          "version": "3.8.0",
+          "filename": "pytest_xdist-3.8.0-py3-none-any.whl",
+          "sha256": "202ca578cfeb7370784a8c33d6d05bc6e13b4f25b5053c30a152269fd10f0b88",
+          "url": "https://files.pythonhosted.org/packages/ca/31/d4e37e9e550c2b92a9cbc2e4d0b7420a27224968580b5a447f420847c975/pytest_xdist-3.8.0-py3-none-any.whl",
+          "license": "MIT",
+          "origin": "PyPI",
+          "direct": true,
+          "requirement": "pytest-xdist>=3.6"
         },
         {
           "name": "PyYAML",

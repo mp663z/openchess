@@ -257,13 +257,13 @@ def test_missing_and_wrong_container_family():
         assert str(ei.value).startswith("castling contract:"), str(ei.value)
 
 
-def test_cli_boundary_clean_and_failing():
+def test_cli_boundary_clean_and_failing(tmp_path):
     ok = subprocess.run([sys.executable, "tools/castling_contract_lint.py"],
                         cwd=ROOT, capture_output=True, text=True)
     assert ok.returncode == 0 and "OK castling contract lint" in ok.stdout
     bad_doc = copy.deepcopy(DOC)
     bad_doc["contract"]["rights"]["irrevocable"] = False
-    bad_path = ROOT / "data" / "contracts" / ".tmp_bad_castling.yaml"
+    bad_path = tmp_path / "tmp_bad_castling.yaml"  # never the repo tree (xdist)
     bad_path.write_text(yaml.safe_dump(bad_doc))
     try:
         fail = subprocess.run(
