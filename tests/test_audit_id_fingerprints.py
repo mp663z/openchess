@@ -23,6 +23,14 @@ own live inputs (or a class's own namespace), never a temporary:
   over live containers on the current path; _snap pairs the content
   shape with _deep_ids of the live value.
 
+Known id-only fallbacks left without a keep-alive pin, by coordinator
+ruling: test_t0187_conflict_red._snap, test_t0196_migration_red._snap,
+test_t0214_wal_red._snap and test_t0223_backup_red._snap. Each file is
+hash-pinned as merged (RED_AS_MERGED_SHA256 in t0188, t0197, t0215 and
+t0224), so it stays byte-for-byte. None is vacuous: each snapshots the
+caller's live inputs (the (base, left, right) / (request, source) tuple
+held in a local, the live log and request), never a temporary.
+
 No site is vacuous. The rows below pin that each fingerprint really
 separates: an equal but distinct replacement of an id-fingerprinted
 object (the original kept alive, so its id cannot be reused) and a
