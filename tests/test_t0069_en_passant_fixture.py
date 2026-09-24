@@ -199,6 +199,10 @@ def _apply_capture(state: dict, move: dict) -> dict:
         raise EnPassantFailure("target_malformed")
     if target == NONE:
         raise EnPassantFailure("capture_precondition")  # stale/no target
+    if target in state["occupied"]:
+        # the target is the square the pawn passed over: empty in every
+        # consistent position (fen.yaml target_square: empty)
+        raise EnPassantFailure("target_inconsistent")
     if not _rank_ok(target, side):
         raise EnPassantFailure("target_inconsistent")
     m = MOVER[SIDE_NAME[side]]
@@ -556,5 +560,34 @@ def test_pawn_attack_direction_rows():
             assert e.failure_class == failure, (state, e.failure_class)
         else:
             assert failure is None, state
+        assert state == pre
+        assert _identity_value(state) == ident, state
+
+
+# An occupied target square is inconsistent (coordinator ruling, T0072
+# finding): (a) another piece on the target was silently deleted by the
+# capture, (b) the mover's own king on the target left a kingless state.
+# (state, move, expected identity) - every row fails target_inconsistent.
+OCCUPIED_TARGET_ROWS = [
+    (_st("d6", "w", {"e1": "wk", "e8": "bk", "d5": "bp", "e5": "wp", "d6": "bn"}),
+     {"type": "ep-capture", "from": "e5", "to": "d6"}, "-"),
+    (_st("d3", "b", {"e8": "bk", "e1": "wk", "d4": "wp", "e4": "bp", "d3": "wn"}),
+     {"type": "ep-capture", "from": "e4", "to": "d3"}, "-"),
+    (_st("c6", "w", {"c5": "bp", "b5": "wp", "c6": "wk", "d7": "bk"}),
+     {"type": "ep-capture", "from": "b5", "to": "c6"}, "-"),
+    (_st("c3", "b", {"c4": "wp", "b4": "bp", "c3": "bk", "d2": "wk"}),
+     {"type": "ep-capture", "from": "b4", "to": "c3"}, "-"),
+]
+
+
+def test_occupied_target_is_inconsistent():
+    for state, move, ident in OCCUPIED_TARGET_ROWS:
+        pre = copy.deepcopy(state)
+        try:
+            _apply(state, move)
+        except EnPassantFailure as e:
+            assert e.failure_class == "target_inconsistent", (state, e.failure_class)
+        else:
+            raise AssertionError(state)
         assert state == pre
         assert _identity_value(state) == ident, state
