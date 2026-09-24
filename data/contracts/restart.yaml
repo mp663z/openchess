@@ -1,0 +1,83 @@
+schema_version: 1
+
+contract:
+  id: jobs-restart
+  role:
+    kind: pure-worker-restart-lease-release-over-one-queue-state
+    serves: background-job-execution
+    scope: release-every-unexpired-lease-held-by-one-restarted-worker-in-one-queue-state-over-an-explicit-logical-clock
+    owns: restart-lease-release-and-restart-receipts
+    not_scope: claim-ordering-dead-marking-ack-retry-backoff-idempotency-keys-cancellation-or-multi-queue-routing
+  record:
+    fields: [op, worker, restarted_at, released, prior_state_id, state_id, restart_id]
+    exact: true
+    released: job-ids-of-the-released-jobs-in-ascending-seq-order-possibly-empty
+  request:
+    operations:
+      - op: restart
+        fields: [op, worker, now]
+    exact: true
+    closure: no-other-operations-registered
+    state: exactly-one-state-of-the-linked-queue-contract-with-its-state-and-job-fields
+    bounds:
+      now: int-0-through-2-pow-53-minus-1-milliseconds
+      max_jobs: 10000
+      max_attempts: 5
+    bounds_source: linked-queue-contract-state-max-jobs-and-max-attempts-never-caller-supplied
+  identifiers:
+    worker:
+      kind: caller-supplied-lease-holder-id
+      grammar: ^[A-Za-z0-9._:-]{1,64}$
+      source: the-linked-queue-contract-worker-grammar
+    state_id:
+      kind: canonical-queue-state-digest
+      grammar: ^qs1:[0-9a-f]{64}$
+      derivation: the-linked-queue-contract-state-id-sha256-of-utf8-canonical-json-sort-keys-compact-separators-non-ascii-kept-of-the-state
+      source: derived-never-caller-supplied
+    restart_id:
+      kind: canonical-restart-receipt-digest
+      grammar: ^rst1:[0-9a-f]{64}$
+      derivation: sha256-of-ascii-rst1-then-nul-byte-then-utf8-canonical-json-sort-keys-compact-separators-ensure-ascii-of-the-record-without-restart-id
+      source: derived-never-caller-supplied
+  semantics:
+    validation: request-shape-then-full-queue-state-invariants-first-failure-wins
+    integrity: the-state-must-satisfy-every-linked-queue-state-and-job-invariant-or-it-is-corrupt-never-repaired
+    release: every-job-leased-by-the-worker-with-now-strictly-before-its-lease-expiry-returns-to-ready-with-no-lease-owner-or-expiry
+    attempts: fail-closed-reading-attempts-are-kept-as-on-a-queue-nack-a-restart-never-refunds-or-charges-an-attempt
+    expired: fail-closed-reading-a-lease-at-or-past-expiry-is-left-untouched-it-is-already-reclaimable-by-the-queue-claim
+    others: jobs-of-other-workers-and-ready-done-or-dead-jobs-are-never-touched-and-next-seq-and-job-order-are-kept
+    dead: fail-closed-reading-a-released-job-at-max-attempts-returns-to-ready-and-dead-marking-stays-with-the-queue-claim
+    empty: a-worker-holding-no-unexpired-lease-is-a-successful-receipt-with-an-empty-released-list-and-an-unchanged-state
+    idempotent: a-second-restart-of-the-same-worker-at-the-same-now-releases-nothing
+    commit: copy-on-write-new-state-committed-last-in-place
+    purity: a-rejected-restart-leaves-the-state-and-request-bit-identical-and-the-receipt-shares-no-container-with-them
+  failures:
+    classes:
+      - malformed_restart_request
+      - corrupt_queue
+    triggers:
+      malformed_restart_request: request-shape-type-grammar-or-bound-violation
+      corrupt_queue: state-shape-type-grammar-bound-or-invariant-violation-of-the-linked-queue-contract
+    mapping:
+      malformed_restart_request: malformed_request
+      corrupt_queue: corrupt_queue
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - corrupt_queue
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-and-states-fail-closed-typed-never-raw
+    atomic: a-rejected-restart-leaves-state-and-request-bit-identical
+    deterministic: same-state-same-request-same-receipt-and-state
+    idempotent: restarting-twice-releases-nothing-the-second-time
+    rollback: release-returns-each-live-lease-of-the-worker-to-ready
+    conserving: the-set-of-job-ids-seqs-priorities-payloads-and-attempts-is-unchanged
+  versioning:
+    base_path: /jobs/restart/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    queue_contract: data/contracts/queue.yaml
