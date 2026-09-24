@@ -98,7 +98,8 @@ def test_t0150_object_fingerprint_is_stable_and_separates():
 
     stored = [1]
     fp = t0150._object_fingerprint
-    assert fp(stored) == fp(stored) == ("identity", id(stored))
+    assert fp(stored) == fp(stored) and fp(stored)[0] == "identity"
+    assert fp(stored)[1].obj is stored  # pinned: the fingerprint holds the object
     assert fp([1]) != fp(stored)  # a distinct list alive beside it never shares the id
     assert fp(f) == fp(f) and fp(f) != fp(g)
     assert fp(f)[0] == "code"

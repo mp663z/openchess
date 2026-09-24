@@ -274,11 +274,35 @@ def _structure(doc):
     assert {c["expect_failure"] for c in doc["malformed"]} == set(PC["failures"]["classes"])
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _object_fingerprint(value):
     code = getattr(value, "__code__", None)
     if code is not None:
         return ("code", hashlib.sha256(marshal.dumps(code)).hexdigest())
-    return ("identity", id(value))
+    return ("identity", _Pin(value))
 
 
 def _class_fingerprint(cls):
@@ -774,3 +798,14 @@ def test_nested_scalar_and_key_deepcopy_hooks_never_dispatch(error):
 
     table.insert(copy.deepcopy(CASES["happy"][1]["record"]))
     assert len(table.records()) == 2
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original leaf and
+    the second can land on its freed address, which a bare id() would
+    miss. The fingerprint pins the original, so the swap goes red."""
+    cls = type("PinProbe", (), {"tag": [1]})
+    before = _class_fingerprint(cls)
+    cls.tag = [1]
+    cls.tag = [1]
+    assert _class_fingerprint(cls) != before

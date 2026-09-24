@@ -950,27 +950,56 @@ def _case(gen, seed):
     return GEN[gen](seed)
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _deep(value):
     """Value, exact type, key order and object identity at every level."""
     if isinstance(value, dict):
         return (
             "d",
             type(value).__name__,
-            id(value),
+            _Pin(value),
             tuple(
-                (type(k).__name__, id(k) if type(k) is not str else k, _deep(v))
+                (type(k).__name__, _Pin(k) if type(k) is not str else k, _deep(v))
                 for k, v in dict.items(value)
             ),
         )
     if isinstance(value, list):
-        return ("l", type(value).__name__, id(value), tuple(_deep(v) for v in list.__iter__(value)))
+        return (
+            "l",
+            type(value).__name__,
+            _Pin(value),
+            tuple(_deep(v) for v in list.__iter__(value)),
+        )
     if isinstance(value, tuple):
-        return ("t", id(value), tuple(_deep(v) for v in value))
+        return ("t", _Pin(value), tuple(_deep(v) for v in value))
     if isinstance(value, str) and type(value) is not str:
-        return ("s", type(value).__name__, id(value))
+        return ("s", type(value).__name__, _Pin(value))
     if isinstance(value, int) and type(value) not in (int, bool):
-        return ("i", type(value).__name__, id(value))
-    return ("v", type(value).__name__, value if type(value) is not frozenset else id(value))
+        return ("i", type(value).__name__, _Pin(value))
+    return ("v", type(value).__name__, value if type(value) is not frozenset else _Pin(value))
 
 
 def _exact_args(op, payload):
@@ -1523,3 +1552,18 @@ def test_equivalent_edits_stay_green(name):
 @pytest.mark.parametrize("name", sorted(MUTANTS))
 def test_mutant_is_red(name):
     assert _probe(_source_mutant(name, MUTANTS[name])) != [], name
+
+
+class _PinProbeInt(int):
+    pass
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original leaf and
+    the second can land on its freed address, which a bare id() would
+    miss. The fingerprint pins the original, so the swap goes red."""
+    value = {"k": _PinProbeInt(7)}
+    before = _deep(value)
+    value["k"] = _PinProbeInt(7)
+    value["k"] = _PinProbeInt(7)
+    assert _deep(value) != before
