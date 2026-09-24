@@ -6208,10 +6208,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "539c35c4b7a8886e8c37f3efe521c3d97519b581",
+   "evidence_manifest": "evidence/T0287.md"
   },
   {
    "id": "T0288",
