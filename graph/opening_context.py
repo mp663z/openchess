@@ -58,6 +58,23 @@ def _path(value):
     return out
 
 
+def _exact_dict(obj):
+    """Exact dict with exact-str keys (T0140 reference _exact_dict): a key
+    str subclass with a raising or lying __eq__/__hash__ never reaches a
+    set build, membership test or lookup."""
+    return type(obj) is dict and all(type(k) is str for k in dict.keys(obj))
+
+
+def _exact_key(key):
+    return (
+        type(key) is tuple
+        and len(key) == 2
+        and type(key[0]) is str
+        and type(key[1]) is tuple
+        and all(type(move) is str for move in key[1])
+    )
+
+
 def resolve(registry, path):
     moves = _path(path)
     best = None
@@ -94,7 +111,7 @@ class ContextTable:
         return {"variant": variant, "path_moves": moves, "opening_code": code, "opening_name": name}
 
     def _validate(self, record):
-        if type(record) is not dict or set(record) != _FIELDS:
+        if not _exact_dict(record) or set(record) != _FIELDS:
             _fail("malformed_context_record")
         if type(record["variant"]) is not str or record["variant"] not in self.variants:
             _fail("unknown_variant")
@@ -139,8 +156,30 @@ class ContextTable:
             for r in self._records.values()
         )
 
-    def _validated_pairs(self, records):
-        out = []
+    @staticmethod
+    def _typed(record):
+        """Type-only checks (T0140 reference merge preflight): exact dict,
+        exact field set, list path of str moves, str fields."""
+        if not _exact_dict(record) or set(record) != _FIELDS:
+            _fail("malformed_context_record")
+        if type(record["path_moves"]) is not list or not all(
+            type(move) is str for move in record["path_moves"]
+        ):
+            _fail("malformed_context_record")
+        if not all(type(record[f]) is str for f in ("variant", "opening_code", "opening_name")):
+            _fail("malformed_context_record")
+        return {
+            "variant": record["variant"],
+            "path_moves": list(record["path_moves"]),
+            "opening_code": record["opening_code"],
+            "opening_name": record["opening_name"],
+        }
+
+    def _validated_pairs(self, records, check=None):
+        return list(self._iter_pairs(records, check))
+
+    def _iter_pairs(self, records, check=None):
+        check = self._validate if check is None else check
         if type(records) is not dict:
             _fail("malformed_context_record")
         try:
@@ -148,12 +187,14 @@ class ContextTable:
         except BaseException as exc:
             raise ContextError("malformed_context_record") from exc
         for raw_key, raw_record in items:
-            record = self._validate(raw_record)
-            expected_key = (record["variant"], tuple(record["path_moves"]))
-            if type(raw_key) is not tuple or raw_key != expected_key:
+            # exact key schema before any compare/hash: (str, tuple[str, ...])
+            if not _exact_key(raw_key):
                 _fail("malformed_context_record")
-            out.append((expected_key, record))
-        return out
+            record = check(raw_record)
+            expected_key = (record["variant"], tuple(record["path_moves"]))
+            if raw_key != expected_key:
+                _fail("malformed_context_record")
+            yield expected_key, record
 
     def merge(self, other):
         if type(other) is not ContextTable:
@@ -161,13 +202,26 @@ class ContextTable:
         # Validate both sides before staging: existing corruption or key drift
         # is a typed rejection, never carried through a successful merge.
         current = self._validated_pairs(self._records)
-        incoming = self._validated_pairs(other._records)
+        # Incoming records get type checks only, then the same-key comparison
+        # (T0140 reference order): an existing key whose incoming code/name
+        # differs is conflicting_context before any registry validation; only
+        # a NEW key is validated against this table's registry.
+        # One pass over a snapshot of the source, in source order: per record
+        # key check, _typed, same-key compare, then _validate for new keys;
+        # the first failing record decides the class and nothing is committed.
         staged = ContextTable(registry=self.registry, variants=self.variants)
         staged._records = {key: copy.deepcopy(record) for key, record in current}
-        for key, record in incoming:
+        for key, record in self._iter_pairs(other._records, self._typed):
             existing = staged._records.get(key)
-            if existing is not None and existing != record:
-                _fail("conflicting_context")
-            staged._records[key] = copy.deepcopy(record)
+            if existing is not None:
+                if (record["opening_code"], record["opening_name"]) != (
+                    existing["opening_code"],
+                    existing["opening_name"],
+                ):
+                    _fail("conflicting_context")
+                if record != existing:
+                    _fail("malformed_context_record")
+                continue
+            staged._records[key] = copy.deepcopy(self._validate(record))
         self._records = staged._records
         return self
