@@ -27,8 +27,14 @@ def _fail(failure_class):
     raise DiffError(failure_class)
 
 
+def _exact_str_keys(value):
+    # key-type guard before any set/hash comparison: a str subclass or a key
+    # whose hash collides with a field name must fail closed, never compare
+    return all(type(key) is str for key in dict.keys(value))
+
+
 def _record_identity(record):
-    if type(record) is not dict or set(record) != _RECORD:
+    if type(record) is not dict or not _exact_str_keys(record) or set(record) != _RECORD:
         _fail("malformed_diff_record")
     if any(type(record[field]) is not str for field in _RECORD):
         _fail("malformed_diff_record")
@@ -40,8 +46,8 @@ def _record_identity(record):
     try:
         projection = identity(parse_position(record["variant"], record["snapshot_fen"]))
         expected_digest = digest_fen(record["variant"], record["snapshot_fen"])
-    except BaseException as error:
-        raise DiffError("malformed_diff_record") from error
+    except BaseException:
+        raise DiffError("malformed_diff_record") from None
     if record["digest"] != expected_digest:
         _fail("malformed_diff_record")
     return repr(tuple(projection.values()))
@@ -52,8 +58,8 @@ def _validate_state(state):
         _fail("malformed_diff_record")
     try:
         entries = list(dict.items(state))
-    except BaseException as error:
-        raise DiffError("malformed_diff_record") from error
+    except BaseException:
+        raise DiffError("malformed_diff_record") from None
     for key, record in entries:
         if type(key) is not str or _record_identity(record) != key:
             _fail("malformed_diff_record")
@@ -94,7 +100,7 @@ def validate_diff(diff):
     # records can share an identity: changed is future-facing until an additive
     # non-identity field exists. Hostile changed witnesses are still validated
     # and rejected as executable mutants; we do not weaken linked node validity.
-    if type(diff) is not dict or set(diff) != _FIELDS:
+    if type(diff) is not dict or not _exact_str_keys(diff) or set(diff) != _FIELDS:
         _fail("malformed_diff_record")
     if any(
         type(diff[field]) is not str or _STATE_ID.fullmatch(diff[field]) is None
@@ -106,7 +112,8 @@ def validate_diff(diff):
     if type(diff["changed"]) is not dict:
         _fail("malformed_diff_record")
     for key, witness in dict.items(diff["changed"]):
-        if type(key) is not str or type(witness) is not dict or set(witness) != {"base", "target"}:
+        if type(key) is not str or type(witness) is not dict or \
+                not _exact_str_keys(witness) or set(witness) != {"base", "target"}:
             _fail("malformed_diff_record")
         if _record_identity(witness["base"]) != key or _record_identity(witness["target"]) != key:
             _fail("malformed_diff_record")
