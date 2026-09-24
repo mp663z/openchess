@@ -1,0 +1,133 @@
+schema_version: 1
+
+contract:
+  id: contracts-openapi
+  role:
+    kind: pure-derivation-of-one-openapi-3-1-document-from-the-linked-control-plane-contract
+    serves: public-product-http-api-description
+    scope: every-operation-of-the-linked-control-plane-contract-with-its-auth-idempotency-request-response-and-error-schemas
+    owns: the-derivation-rules-and-the-canonical-document-bytes
+    not_scope: serving-routing-validating-live-traffic-webhooks-or-any-operation-absent-from-the-linked-contract
+  source:
+    contract: data/contracts/control-plane.yaml
+    schema_version: 2
+    exact: every-section-read-by-the-derivation-is-validated-with-exact-types-and-exact-keys-first-failure-wins
+    read: [contract.versioning.base_path, contract.transport.auth.public_operations, contract.transport.read_only_operations, contract.transport.errors.shape, contract.transport.errors.closed_enum, areas]
+    top_level: exactly-schema-version-contract-and-areas
+    grammars:
+      base_path: ^/[a-z]+/v([1-9][0-9]{0,2})$
+      area: ^[a-z][a-z_]{0,31}$
+      op: ^[a-z][a-z_]{0,31}$
+      path: ^(/[a-z0-9-]{1,32}){1,8}$
+      field: ^[a-z][a-z0-9_]{0,63}$
+    bounds:
+      object_depth: 8
+      areas: 64
+      ops_per_area: 64
+      fields_per_object: 256
+      example_integer_magnitude: 9007199254740991
+    op_keys: [method, path, auth, mutating, request, response, errors]
+    methods: [GET, POST]
+    auth_values: [public, required]
+    field_keys: [type, required, example, items, fields, write_only]
+    field_types: [string, integer, number, boolean, array, object]
+    item_types: [string, integer, number, boolean]
+    area_extras: fail-closed-reading-an-area-may-carry-notes-besides-ops-only-as-plain-strings
+    errors_rule: an-op-lists-one-or-more-distinct-codes-of-the-source-closed-enum-and-every-closed-enum-code-must-have-a-contract-fixed-mock-or-unmapped-reading
+    rules: an-op-with-method-get-must-be-read-only-and-declare-no-request-fields-an-object-field-has-fields-and-no-example-only-arrays-have-items-an-example-must-have-the-declared-type-a-bool-is-never-an-integer-or-number-fail-closed-reading-an-integer-or-number-example-lies-within-the-example-integer-magnitude-and-a-float-example-is-finite-so-the-document-bytes-stay-interoperable-json-a-string-or-list-example-is-copied
+  document:
+    openapi: 3.1.0
+    top_level: [openapi, info, servers, paths, components, x-unmapped-error-codes]
+    info:
+      title: replaceable-control-plane
+      version: the-major-of-the-source-base-path-as-a-decimal-string
+    servers: exactly-one-server-whose-url-is-the-source-base-path
+    paths: one-path-item-per-operation-in-source-area-order-then-op-order-keyed-by-the-op-path-with-exactly-one-lowercase-method
+    operation_fields: [operationId, security, parameters, requestBody, responses, x-unmapped-errors]
+    operation_id: area-name-dot-op-name
+    request_body: post-operations-only-required-application-json-object-schema-get-operations-have-none-and-must-declare-no-request-fields
+    success: exactly-one-200-response-with-the-application-json-object-schema-of-the-response-fields
+    schema:
+      object: type-object-properties-in-source-field-order-required-lists-the-required-fields-in-source-order-additional-properties-true
+      string: type-string
+      integer: type-integer
+      number: type-number
+      boolean: type-boolean
+      array: type-array-items-of-the-declared-scalar-item-type
+      nested_object: the-object-rule-applied-to-the-nested-fields
+      example: examples-holds-the-one-declared-example-when-present
+      write_only: write-only-fields-carry-write-only-true-and-may-appear-only-in-request-schemas
+    additional_properties:
+      value: true
+      request_grounding: "control-plane.yaml versioning.rule: A server MUST accept any client minor within its major and MUST ignore unknown request fields."
+      response_grounding: "control-plane.yaml versioning.rule: MINOR is additive-only: new optional request fields, new response fields ... conformance never asserts absence of extra response fields; transport.errors.additive_note: Error payloads MAY carry extra fields beyond the declared shape (MINOR additive)."
+    canonical_bytes: utf-8-json-in-the-pinned-key-order-no-key-sorting-compact-separators-non-ascii-kept-no-trailing-newline
+  auth:
+    scheme: components-security-schemes-bearer-auth-type-http-scheme-bearer
+    required: operations-with-auth-required-carry-security-bearer-auth
+    public: operations-listed-in-public-operations-carry-an-empty-security-list
+    rule: an-op-is-public-exactly-when-its-auth-is-public-and-it-is-listed-in-public-operations-else-the-source-is-malformed
+  idempotency:
+    parameter: components-parameters-idempotency-key-in-header-name-idempotency-key-required-true-nonempty-string
+    mutating: every-mutating-operation-references-the-idempotency-key-parameter
+    read_only: an-operation-with-mutating-false-has-an-empty-parameters-list-and-must-be-listed-in-read-only-operations-and-vice-versa
+  error_responses:
+    schema: components-schemas-error-is-exactly-the-source-error-shape-code-message-retryable-all-required-code-enum-is-the-source-closed-enum-in-source-order
+    responses: each-mapped-error-code-of-an-op-lands-under-its-status-grouped-by-status-ascending-codes-in-op-order-in-x-error-codes-schema-ref-error
+    status:
+      contract_fixed:
+        auth_expired: 401
+        auth_invalid: 401
+        idempotency_conflict: 409
+      contract_grounding: "control-plane.yaml transport.auth.rule answers 401 for missing, unknown or expired tokens; transport.idempotency answers 409 idempotency_conflict."
+      mock_reading:
+        quota_exhausted: 429
+        quota_reservation_expired: 409
+        provider_key_invalid: 400
+        malformed_request: 400
+        not_found: 404
+        conflict: 409
+      mock_source:
+        path: tools/control_plane_mock.py
+        sha256: 111605f10523eb4662dc870e2c61ddb7659be46f5374ec3b50e428e7da06bcac
+        reading: the-merged-mock-is-the-executable-reading-of-every-status-the-contract-does-not-fix-taken-from-its-status-literals-inside-declared-operation-handling
+        unknown_route: the-mock-answers-an-unknown-method-and-path-with-malformed-request-404-that-answer-is-outside-every-declared-operation-and-is-not-carried-into-the-document
+      unmapped: [entitlement_missing, provider_unavailable, cost_cap_exceeded, rate_limited, internal]
+      unmapped_rule: fail-closed-reading-a-code-with-no-contract-fixed-status-that-the-mock-never-emits-gets-no-invented-status-it-is-listed-in-the-op-x-unmapped-errors-in-op-order-and-in-the-document-x-unmapped-error-codes-in-closed-enum-order-for-the-owner-batch
+      closed: a-mock-status-literal-for-a-code-outside-the-source-closed-enum-or-two-statuses-for-one-code-inside-declared-operations-fail-the-lint
+  privacy:
+    chess_content: forbidden
+    rule: no-derived-schema-property-name-contains-a-chess-content-token-game-games-move-moves-fen-pgn-san-uci-analysis-note-notes-position-board-eval-split-on-underscore-checked-over-every-source-field-at-every-depth
+    write_only: a-write-only-field-never-appears-in-any-response-schema
+  failures:
+    classes:
+      - malformed_control_plane
+    triggers:
+      malformed_control_plane: source-shape-type-key-grammar-or-cross-reference-violation
+    mapping:
+      malformed_control_plane: malformed_request
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  semantics:
+    validation: source-shape-then-cross-references-first-failure-wins
+    atomic: a-rejected-derivation-returns-no-document-and-leaves-the-source-bit-identical
+    deterministic: same-source-same-document-same-bytes
+    detached: the-document-shares-no-container-with-the-source
+    rollback: fail-closed-reading-a-pure-derivation-has-no-state-to-roll-back-rollback-is-read-as-atomic-rejection-and-an-unchanged-source
+  properties:
+    total: hostile-sources-fail-closed-typed-never-raw
+    atomic: a-rejected-derivation-leaves-the-source-bit-identical-and-returns-nothing
+    deterministic: byte-identical-output-for-equal-sources
+    complete: every-source-operation-appears-exactly-once
+    faithful: every-declared-field-type-required-flag-example-and-error-code-appears-in-the-document
+  versioning:
+    base_path: /contracts/openapi/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    control_plane_contract: data/contracts/control-plane.yaml
+    control_plane_mock: tools/control_plane_mock.py
