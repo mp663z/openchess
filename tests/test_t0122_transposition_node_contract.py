@@ -67,6 +67,41 @@ def _fail(contract, cls):
     raise NodeError(cls, contract["failures"]["mapping"][cls])
 
 
+def _oracle_digest(nc, dc, digest_fn, variant_id, fen_text):
+    """The injected digest oracle is UNTRUSTED: any raised error
+    (forged node/FEN/digest errors and BaseException subclasses
+    included) or an output that is not an exact str in the linked
+    digest format fails closed as a FRESH, unchained
+    malformed_node_record - the failures section classes a digest
+    outside the linked format as a malformed record."""
+    failed = False
+    try:
+        out = digest_fn(variant_id, fen_text)
+    except BaseException:  # noqa: BLE001 - untrusted oracle boundary
+        failed = True
+    if failed:
+        _fail(nc, "malformed_node_record")
+    import re
+    if type(out) is not str or re.fullmatch(
+            dc["digest"]["format"]["regex"], out) is None:
+        _fail(nc, "malformed_node_record")
+    return out
+
+
+def _parse(nc, fc, text, cls):
+    """The linked parser's input rejections - FenError and the raw
+    ValueError int() raises on a clock beyond the interpreter's
+    integer-string limit (4300 digits) - map to the caller's failure
+    class, FRESH and unchained."""
+    failed = False
+    try:
+        return parse_fen(fc, text)
+    except (FenError, ValueError):
+        failed = True
+    if failed:
+        _fail(nc, cls)
+
+
 def _identity_components(nc, vc, dc, ec, fc, variant_id, position):
     """Named serializers for the canonical identity components, each
     derived from the linked contracts: the board is the canonical
@@ -127,14 +162,11 @@ def _make_record(nc, vc, dc, ec, fc, digest_fn, variant_id, fen_text):
         _fail(nc, "unknown_variant")
     if type(fen_text) is not str:
         _fail(nc, "malformed_position")
-    try:
-        position = parse_fen(fc, fen_text)
-    except FenError:
-        _fail(nc, "malformed_position")
+    position = _parse(nc, fc, fen_text, "malformed_position")
     identity = _identity_tuple(nc, vc, dc, ec, fc, variant_id, position)
     return {
         "variant": variant_id,
-        "digest": digest_fn(variant_id, fen_text),
+        "digest": _oracle_digest(nc, dc, digest_fn, variant_id, fen_text),
         "snapshot_fen": _snapshot_fen(nc, vc, fc, identity),
     }
 
@@ -185,10 +217,19 @@ class NodeTable:
         source = other.records()
         if type(source) is not list:
             _fail(self.nc, "malformed_node_record")
+        # FREEZE the source before any oracle call: a detached list of
+        # detached exact-dict copies, so an oracle that rewrites the
+        # caller's live records cannot change what is validated or
+        # inserted
+        frozen = []
+        for rec in list(source):
+            if not _exact_dict(rec):
+                _fail(self.nc, "malformed_node_record")
+            frozen.append(dict(rec))
         # every source record's container, keys and field types are
         # checked BEFORE any lookup or insertion: a hostile record
         # fails closed, never raw, and never after a partial merge
-        for rec in source:
+        for rec in frozen:
             if not _exact_dict(rec) or \
                     set(rec.keys()) != set(self.nc["record"]["fields"]) or \
                     type(rec["variant"]) is not str or \
@@ -200,7 +241,7 @@ class NodeTable:
             # before any insert - never laundered through re-derivation
             validate_record(self.nc, self.vc, self.dc, self.ec, self.fc,
                             rec, self.digest_fn)
-        for rec in source:
+        for rec in frozen:
             self.insert(rec["variant"], rec["snapshot_fen"])
         return self
 
@@ -247,10 +288,8 @@ def validate_record(nc, vc, dc, ec, fc, record, digest_fn=digest_fen):
     import re
     if re.fullmatch(fmt, record["digest"]) is None:
         _fail(nc, "malformed_node_record")
-    try:
-        position = parse_fen(fc, record["snapshot_fen"])
-    except FenError:
-        _fail(nc, "malformed_node_record")
+    position = _parse(nc, fc, record["snapshot_fen"],
+                      "malformed_node_record")
     # Named FEN-field mapping driven by the LINKED FEN contract's
     # field order - no positional index into either representation
     # (the FEN field order itself stays lint-pinned; only the
@@ -266,8 +305,9 @@ def validate_record(nc, vc, dc, ec, fc, record, digest_fn=digest_fen):
     named = _identity_named(vc, identity)
     if fen_named["en_passant"] != named["en_passant"]:
         _fail(nc, "malformed_node_record")  # ep identity value
-    if record["digest"] != digest_fn(record["variant"],
-                                     record["snapshot_fen"]):
+    if record["digest"] != _oracle_digest(nc, dc, digest_fn,
+                                          record["variant"],
+                                          record["snapshot_fen"]):
         _fail(nc, "malformed_node_record")  # digest consistency
     return record
 

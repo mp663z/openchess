@@ -32,6 +32,8 @@ if str(ROOT) not in sys.path:
 import graph.transposition_node as prod  # noqa: E402
 from graph.fen import FenError  # noqa: E402
 from graph.position_digest import DigestError, digest_fen  # noqa: E402
+from tests import test_t0086_fen_contract as ref_fen  # noqa: E402
+from tests import test_t0113_position_digest_contract as ref_digest  # noqa: E402
 from tests import test_t0122_transposition_node_contract as ref  # noqa: E402
 from tests.test_t0123_fixture import CASES, _repaired  # noqa: E402
 from tools.variant_contract_lint import ContractError  # noqa: E402
@@ -675,6 +677,101 @@ def test_r2_clock_beyond_int_string_limit_fails_closed_typed():
 
 def test_r2_merge_inserts_the_frozen_source_not_live_records():
     assert not _live_rewrite_red(prod)
+
+
+# -- R2: reference totality parity (T0122 reference follow-up) ----------------
+
+# The reference module's forge set: its own NodeError per class, the
+# classes in its own except clauses (its linked FenError, ValueError,
+# BaseException subclasses), the assertion drift guards, its linked
+# DigestError per class, and the production-side forges above.
+REF_FORGED = dict(FORGED, **{
+    "ref-node-malformed_node_record": ref.NodeError(
+        "malformed_node_record", "malformed_request"),
+    "ref-node-malformed_position": ref.NodeError(
+        "malformed_position", "malformed_request"),
+    "ref-node-unknown_variant": ref.NodeError("unknown_variant",
+                                              "unknown_variant"),
+    "ref-fen-error": ref_fen.FenError("illegal_position",
+                                      "malformed_request"),
+    "ref-digest-malformed_digest": ref_digest.DigestError(
+        "malformed_digest", "malformed_request"),
+    "ref-digest-unknown_variant": ref_digest.DigestError(
+        "unknown_variant", "unknown_variant"),
+    "runtime-error": RuntimeError("x"),
+    "type-error": TypeError("x"),
+})
+MALFORMED_NODE_RECORD = ("err", "malformed_node_record", "malformed_request")
+
+
+@pytest.mark.parametrize("name", list(REF_FORGED))
+def test_r2_raising_oracle_parity_fails_closed(name):
+    """A raising digest oracle fails closed as a FRESH malformed_node_record
+    in the reference exactly as in production, on insert and validate."""
+    forged = REF_FORGED[name]
+    fn = _raiser(forged)
+    assert _insert_both("standard", STARTPOS, fn) == (MALFORMED_NODE_RECORD,
+                                                      MALFORMED_NODE_RECORD)
+    assert _validate_both(_good_record(), fn) == (MALFORMED_NODE_RECORD,
+                                                  MALFORMED_NODE_RECORD)
+    t = ref.NodeTable(DOCS, fn)
+    for call in (lambda: t.insert("standard", STARTPOS),
+                 lambda: ref.validate_record(*DOCS, _good_record(), fn)):
+        with pytest.raises(ref.NodeError) as err:
+            call()
+        assert err.value is not forged and err.value.__cause__ is None
+    assert t.records() == []
+
+
+@pytest.mark.parametrize("name", list(BAD_OUTPUTS))
+def test_r2_bad_oracle_output_parity_fails_closed(name):
+    out = BAD_OUTPUTS[name]
+    fn = lambda v, f: out  # noqa: E731
+    assert _insert_both("standard", STARTPOS, fn) == (MALFORMED_NODE_RECORD,
+                                                      MALFORMED_NODE_RECORD)
+    assert _validate_both(_good_record(), fn) == (MALFORMED_NODE_RECORD,
+                                                  MALFORMED_NODE_RECORD)
+
+
+@pytest.mark.parametrize("fen", HUGE_CLOCKS, ids=["halfmove", "fullmove"])
+def test_r2_huge_clock_parity_is_typed(fen):
+    """A clock beyond the int-string limit is a typed rejection in the
+    reference exactly as in production (never a raw ValueError)."""
+    a, b = _insert_both("standard", fen)
+    assert a == b == ("err", "malformed_position", "malformed_request")
+    rec = {**_good_record(), "snapshot_fen": fen}
+    assert _validate_both(rec) == (MALFORMED_NODE_RECORD,
+                                   MALFORMED_NODE_RECORD)
+    assert not _huge_clock_red(ref)
+
+
+def test_r2_frozen_source_parity():
+    """Both merges take frozen copies of the source records before any
+    oracle call: an oracle rewriting live source records changes nothing."""
+    assert not _live_rewrite_red(ref)
+
+    def run(mod, snapshot, digest):
+        records = [_good_record(STARTPOS), _good_record(LEGAL_EP)]
+
+        def oracle(v, f):
+            for rec in records:
+                rec["snapshot_fen"] = snapshot
+                rec["digest"] = digest
+            return digest_fen(v, f)
+
+        dst = mod.NodeTable(DOCS, oracle)
+        dst.merge(types.SimpleNamespace(records=lambda: records))
+        return dst.serialize()
+
+    honest = ref.NodeTable(DOCS)
+    honest.insert("standard", STARTPOS)
+    honest.insert("standard", LEGAL_EP)
+    # a valid rewrite (would change what is inserted) and a malformed
+    # rewrite (would change what is validated): both are ignored
+    for snapshot, digest in ((KINGS, digest_fen("standard", KINGS)),
+                             ("not a fen", "junk")):
+        assert run(prod, snapshot, digest) == run(ref, snapshot, digest) \
+            == honest.serialize()
 
 
 def test_r3_every_raise_site_and_except_clause_is_forged():
