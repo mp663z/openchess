@@ -500,17 +500,24 @@ def _violations(mod, cases=None, states=None):
 # -- hostile rows (coordinator rule, 20:47) -----------------------------------------
 
 
+def _tagged(obj, name):
+    """The log entry for a call on one of this battery's hostile objects:
+    (owning row token, method) once the row has claimed the object."""
+    tag = obj.__dict__.get("_hostile_owner")
+    return name if tag is None else (tag, name)
+
+
 class _List(list):
     def __iter__(self):
-        HOSTILE_CALLS.append("list.__iter__")
+        HOSTILE_CALLS.append(_tagged(self, "list.__iter__"))
         return list.__iter__(self)
 
     def __len__(self):
-        HOSTILE_CALLS.append("list.__len__")
+        HOSTILE_CALLS.append(_tagged(self, "list.__len__"))
         return list.__len__(self)
 
     def __getitem__(self, i):
-        HOSTILE_CALLS.append("list.__getitem__")
+        HOSTILE_CALLS.append(_tagged(self, "list.__getitem__"))
         return list.__getitem__(self, i)
 
 
@@ -519,7 +526,7 @@ class _Dict(dict):
         base = getattr(dict, name)
 
         def method(self, *args, **kwargs):
-            HOSTILE_CALLS.append("dict." + name)
+            HOSTILE_CALLS.append(_tagged(self, "dict." + name))
             return base(self, *args, **kwargs)
 
         return method
@@ -619,7 +626,42 @@ def _hostile_rows():
     return rows
 
 
-HOSTILE_ROWS = _hostile_rows()
+def _hostile_objects(value):
+    """Every hostile object (str subclass, _List, _Dict) reachable from
+    VALUE, walked with base methods only so no hostile method runs."""
+    out = []
+    stack = [value]
+    while stack:
+        node = stack.pop()
+        kind = type(node)
+        if isinstance(node, dict):
+            if kind is not dict:
+                out.append(node)
+            for key, val in dict.items(node):
+                stack += [key, val]
+        elif isinstance(node, list):
+            if kind is not list:
+                out.append(node)
+            stack += list(list.__iter__(node))
+        elif isinstance(node, tuple):
+            stack += list(node)
+        elif isinstance(node, str) and kind is not str:
+            out.append(node)
+    return out
+
+
+def _claim(rows):
+    """Give every row's hostile objects that row's own token (its name):
+    the row then fails only on calls carrying its token, while calls from
+    other modules' hostile objects are recorded but cannot fail it."""
+    for name, row in rows.items():
+        for obj in _hostile_objects(row[1:]):
+            assert "_hostile_owner" not in obj.__dict__, (name, "object shared by two rows")
+            obj._hostile_owner = name
+    return rows
+
+
+HOSTILE_ROWS = _claim(_hostile_rows())
 
 
 def _domain_rows():
@@ -676,6 +718,14 @@ def _fingerprint(value):
     return (type(value), id(value))
 
 
+def _inputs(row):
+    """Fingerprint of a row's inputs. Each input is fingerprinted on its
+    own: fingerprinting the transient row[1:] slice would read only that
+    fresh tuple's id - never the inputs' contents - and the id could
+    differ between two slices whenever allocation shifts in between."""
+    return tuple(_fingerprint(value) for value in row[1:])
+
+
 def _hostile_call(mod, row):
     entry, a, b = row
     if entry == "apply":
@@ -685,32 +735,50 @@ def _hostile_call(mod, row):
     return mod.turn_transition(a, b)
 
 
-def _hostile_row_ok(mod, row):
-    """Typed fresh target_malformed, no hostile call, input unchanged."""
-    before = _fingerprint(row[1:])
+EXPECTED_REASON = (
+    "EnPassantError",
+    "target_malformed",
+    MAPPING["target_malformed"],
+    True,
+    [],
+    True,
+)
+
+
+def _hostile_row_reason(mod, token, row):
+    """(reason, foreign): reason is (exception type, failure_class, code,
+    cause-is-None, calls carrying this row's TOKEN, input unchanged) and
+    must equal EXPECTED_REASON; foreign lists every other logged call
+    (legacy untagged names or other rows'/modules' tokens) for visibility
+    only - it never fails the row."""
+    before = _inputs(row)
     HOSTILE_CALLS.clear()
     try:
         _hostile_call(mod, row)
+        kind, failure_class, code, fresh = "accepted", None, None, None
     except prod.EnPassantError as exc:
-        calls = list(HOSTILE_CALLS)
-        return (
-            exc.failure_class == "target_malformed"
-            and exc.code == MAPPING["target_malformed"]
-            and exc.__cause__ is None
-            and calls == []
-            and _fingerprint(row[1:]) == before
-        )
-    except Exception:  # noqa: BLE001 - a raw escape fails the row
-        return False
-    return False
+        kind = type(exc).__name__
+        failure_class, code = exc.failure_class, exc.code
+        fresh = exc.__cause__ is None
+    except Exception as exc:  # noqa: BLE001 - a raw escape fails the row
+        kind, failure_class, code, fresh = "raw:" + type(exc).__name__, None, None, None
+    calls = list(HOSTILE_CALLS)
+    own = [c for c in calls if type(c) is tuple and c[0] == token]
+    foreign = [c for c in calls if not (type(c) is tuple and c[0] == token)]
+    reason = (kind, failure_class, code, fresh, own, _inputs(row) == before)
+    return reason, foreign
+
+
+def _hostile_row_ok(mod, token, row):
+    return _hostile_row_reason(mod, token, row)[0] == EXPECTED_REASON
 
 
 def _hostile_red(mod):
-    return not all(_hostile_row_ok(mod, row) for row in HOSTILE_ROWS.values())
+    return not all(_hostile_row_ok(mod, name, row) for name, row in HOSTILE_ROWS.items())
 
 
 def _domain_red(mod):
-    return not all(_hostile_row_ok(mod, row) for row in DOMAIN_ROWS.values())
+    return not all(_hostile_row_ok(mod, name, row) for name, row in DOMAIN_ROWS.items())
 
 
 # -- tests -----------------------------------------------------------------------
@@ -770,12 +838,68 @@ def test_edge_rows(name):
 
 @pytest.mark.parametrize("name", list(HOSTILE_ROWS))
 def test_hostile_row_fails_closed_without_calls_and_unchanged(name):
-    assert _hostile_row_ok(prod, HOSTILE_ROWS[name])
+    reason, foreign = _hostile_row_reason(prod, name, HOSTILE_ROWS[name])
+    assert reason == EXPECTED_REASON, ("foreign calls", foreign)
 
 
 @pytest.mark.parametrize("name", list(DOMAIN_ROWS))
 def test_malformed_domain_row_fails_closed_unchanged(name):
-    assert _hostile_row_ok(prod, DOMAIN_ROWS[name])
+    reason, foreign = _hostile_row_reason(prod, name, DOMAIN_ROWS[name])
+    assert reason == EXPECTED_REASON, ("foreign calls", foreign)
+
+
+def test_every_hostile_row_owns_its_hostile_objects():
+    for name, row in HOSTILE_ROWS.items():
+        objs = _hostile_objects(row[1:])
+        assert objs, name
+        assert all(obj.__dict__["_hostile_owner"] == name for obj in objs), name
+
+
+def test_input_fingerprint_reads_contents_and_is_allocation_stable():
+    """The unchanged-input check sees the inputs' contents and does not
+    depend on where a transient tuple happens to be allocated."""
+    name = "identity:state-key-occupied-hash-collides"
+    row = HOSTILE_ROWS[name]
+    first = _inputs(row)
+    junk = [tuple(range(i)) for i in range(64)]  # shift the allocator
+    assert _inputs(row) == first
+    del junk
+    state, move = _good()
+    plain = ("apply", state, move)
+    before = _inputs(plain)
+    state["side_to_move"] = "b"
+    assert _inputs(plain) != before
+    move["to"] = "d3"
+    state["side_to_move"] = "w"
+    assert _inputs(plain) != before
+
+
+def test_row_scoping_foreign_calls_do_not_fail_own_calls_do():
+    """Self-test of the scoped log: a call on another owner's hostile
+    object is recorded as foreign and does not fail the row; a call on
+    the row's own hostile object fails it."""
+    token = "self-test-row"
+    state, _move = _good()
+    own_key = hostile_str("hash-collides", "occupied_", collide_with="occupied", owner=token)
+    stranger = hostile_str("plain", "x", owner="some-other-module")
+    legacy = hostile_str("plain", "y")
+    row = ("identity", _rekey(state, "occupied", own_key), None)
+
+    def fake(touch):
+        def identity_value(_state):
+            touch()
+            prod._fail("target_malformed")
+
+        return types.SimpleNamespace(identity_value=identity_value)
+
+    reason, foreign = _hostile_row_reason(fake(lambda: hash(stranger) + hash(legacy)), token, row)
+    assert reason == EXPECTED_REASON
+    assert foreign == [("some-other-module", "__hash__"), "__hash__"]
+    reason, foreign = _hostile_row_reason(fake(lambda: hash(own_key)), token, row)
+    assert reason != EXPECTED_REASON and reason[4] == [(token, "__hash__")]
+    assert foreign == []
+    reason, _ = _hostile_row_reason(prod, token, row)
+    assert reason == EXPECTED_REASON
 
 
 def test_hostile_rows_cover_every_boundary_and_form():

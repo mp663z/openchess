@@ -321,15 +321,21 @@ _LOGGED = (
 )
 
 
-def hostile_str(form, text, collide_with="x"):
+def hostile_str(form, text, collide_with="x", owner=None):
     """A str subclass instance of TEXT in one of three forms: "plain",
-    "eq-raises" or "hash-collides" (hash equal to COLLIDE_WITH's)."""
+    "eq-raises" or "hash-collides" (hash equal to COLLIDE_WITH's).
+
+    OWNER (optional) scopes the log: with no owner a call logs its method
+    name (the original behavior); with an owner - given here or later set
+    as the instance attribute _hostile_owner - it logs (owner, name), so a
+    battery can tell its own objects' calls from other modules'."""
 
     def logged(name):
         base = getattr(str, name)
 
         def method(self, *args, **kwargs):
-            HOSTILE_CALLS.append(name)
+            tag = self.__dict__.get("_hostile_owner", owner)
+            HOSTILE_CALLS.append(name if tag is None else (tag, name))
             if name == "__eq__" and form == "eq-raises":
                 raise AssertionError("hostile __eq__ ran")
             if name == "__hash__" and form == "hash-collides":
