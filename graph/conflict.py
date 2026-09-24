@@ -8,8 +8,10 @@ divergent_base when the base id equals a side id, derives each side's
 identity-keyed changes against the base, and reports every
 incompatible overlap as a witness keyed by canonical identity, in
 canonical order. It never mutates its inputs and never resolves a
-conflict. The record digest is format-checked only: it never decides
-identity or compatibility.
+conflict. The record digest is format-checked only and never keys
+identity: records are matched by canonical identity alone. It is still
+part of the record's content, so a digest-only difference under the
+same identity counts as a change and can witness a conflict.
 
 Links only the shipped graph.node and tools.variant_runtime runtimes
 (the same identity projection graph.node and graph.diff key states by)
