@@ -498,6 +498,17 @@ def test_bounds_are_inclusive():
         _raises("malformed_progress_request", bad)
 
 
+def test_previous_total_bound_is_inclusive():
+    """The previous record's total is bounded like the request's: at
+    2**53 - 1 it validates (and chains), at 2**53 it is corrupt even
+    with a self-consistent recomputed id - never a progress_conflict."""
+    at_bound = _forge(total=MAX, done=2, percent_bp=2 * 10000 // MAX)
+    got = report(req(total=MAX, done=3, now=60, previous=at_bound))
+    assert got["previous_id"] == at_bound["progress_id"]
+    past = _forge(total=MAX + 1, done=2, percent_bp=2 * 10000 // (MAX + 1))
+    _raises("corrupt_previous_record", req(done=3, now=60, previous=past))
+
+
 def test_heartbeat_and_equal_clock_are_accepted():
     prev = _forge(done=2, reported_at=50)
     got = report(req(done=2, now=50, previous=prev))
@@ -828,6 +839,10 @@ REFERENCE_EDITS = {
     "done-is-total": ('"done": req["done"],', '"done": req["total"],'),
     "total-bound-plus": ("_REF_MAX_TOTAL = 2**53 - 1", "_REF_MAX_TOTAL = 2**53"),
     "clock-bound-plus": ("_REF_MAX_NOW = 2**53 - 1", "_REF_MAX_NOW = 2**53"),
+    "prev-total-bound-plus": (
+        '_int_in(prev["total"], 1, _REF_MAX_TOTAL)',
+        '_int_in(prev["total"], 1, _REF_MAX_TOTAL + 1)',
+    ),
     "done-lower-bound": ('_int_in(request["done"], 0,', '_int_in(request["done"], -1,'),
     "retryable-true": ("self.retryable = False", "self.retryable = True"),
     "order-swap": (
