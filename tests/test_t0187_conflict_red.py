@@ -61,8 +61,7 @@ from tools.conflict_contract_lint import (  # noqa: E402
 # -- binding switch: T0188 replaces ONLY these two lines with the
 # graph.conflict production names; _identity/state_id/
 # FAILURE_MAPPING stay contract-derived.
-ConflictDetector = _reference.ConflictDetector
-ConflictError = _reference.ConflictError_
+from graph.conflict import ConflictDetector, ConflictError  # noqa: E402  # isort: skip
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "conflict"
            / "cases.json")

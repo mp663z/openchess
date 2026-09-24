@@ -14,3 +14,8 @@ four-field edges `{variant, move, from_snapshot_fen, to_snapshot_fen}`
 between canonical node snapshots, bucketed by from-digest plus move,
 deduplicated by the canonical four-tuple, with one target per
 from-identity and move (conflicting_edge) and an atomic staged merge.
+
+`graph/conflict.py` implements `data/contracts/conflict.yaml`: three-way
+conflict detection over validated graph states (base, left, right) with
+derived state ids, identity-keyed witnesses in canonical order, the
+divergent-base check, and no automatic resolution.
