@@ -12,7 +12,7 @@ import pkgutil
 import sys
 
 from tools import install_checks
-from tools.install_checks import CheckError
+from tools.install_checks import CheckError, CheckSkipped, in_ci
 
 
 def discover() -> list[str]:
@@ -50,7 +50,11 @@ def nested_cmd() -> list[str]:
 
 
 def run_all(only: set[str] | None = None,
-            exclude: set[str] | None = None) -> list[str]:
+            exclude: set[str] | None = None,
+            skipped: list[str] | None = None) -> list[str]:
+    """Failures, one per deviation. A CheckSkipped in local good mode is
+    appended to SKIPPED and is not a failure; without a SKIPPED list, under
+    CI, or in violation mode it is one."""
     failures: list[str] = []
     known = check_ids()
     if only:
@@ -68,6 +72,18 @@ def run_all(only: set[str] | None = None,
             try:
                 mod.run(mode)
                 ok = True
+            except CheckSkipped as skip:
+                if in_ci() or mode != "good":
+                    failures.append(f"{check_id} ({name}) mode={mode}: "
+                                    f"skip not allowed here: {skip}")
+                elif skipped is None:
+                    # fail closed: a caller that cannot report skips gets
+                    # a failure, never a silent pass
+                    failures.append(f"{check_id} ({name}) mode={mode}: "
+                                    f"skip not recorded (no skipped list): {skip}")
+                else:
+                    skipped.append(f"{check_id} ({name}): {skip}")
+                continue
             except CheckError:
                 ok = False
             if ok != expect_ok:
@@ -86,7 +102,10 @@ def main() -> int:
         exclude = {x for x in args[1].split(",") if x}
         args = args[2:]
     only = set(args) or None
-    failures = run_all(only, exclude)
+    skipped: list[str] = []
+    failures = run_all(only, exclude, skipped)
+    for s in skipped:
+        print(f"SKIP {s}")
     for f in failures:
         print(f"FAIL {f}")
     if failures:

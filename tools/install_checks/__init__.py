@@ -5,7 +5,10 @@ Each check is a module in this package exposing:
   run(mode):   "good" runs the check against the seeded good fixture,
                "violation" against the seeded violation fixture;
                returns None on the expected outcome, raises CheckError
-               otherwise.
+               otherwise. A check may raise CheckSkipped instead, with a
+               reason naming itself, only for local-environment gaps
+               outside CI (GITHUB_ACTIONS != "true"); under CI it must
+               raise CheckError.
 
 CI runs every check in both modes: the good case must pass and the seeded
 violation must be caught. A check that cannot catch its own violation is
@@ -18,3 +21,12 @@ from __future__ import annotations
 
 class CheckError(RuntimeError):
     pass
+
+
+class CheckSkipped(RuntimeError):
+    """Local-only skip: never raised when GITHUB_ACTIONS == "true"."""
+
+
+def in_ci() -> bool:
+    import os
+    return os.environ.get("GITHUB_ACTIONS") == "true"

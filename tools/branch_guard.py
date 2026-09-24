@@ -193,6 +193,9 @@ def verify_setup(root: Path) -> list[str]:
     return problems
 
 
+HOOKS_PATH_UNSET = "core.hooksPath is not configured (pre-push gate not installed)"
+
+
 def verify_hook(root: Path, hooks_path: str | None = None) -> list[str]:
     problems: list[str] = []
     if hooks_path is None:
@@ -202,7 +205,7 @@ def verify_hook(root: Path, hooks_path: str | None = None) -> list[str]:
         )
         hooks_path = out.stdout.strip()
         if out.returncode != 0 or not hooks_path:
-            return ["core.hooksPath is not configured (pre-push gate not installed)"]
+            return [HOOKS_PATH_UNSET]
     if hooks_path != ".githooks":
         problems.append(f"core.hooksPath must be exactly '.githooks', got {hooks_path!r}")
     hook = root / hooks_path / "pre-push"

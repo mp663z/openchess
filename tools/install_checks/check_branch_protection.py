@@ -23,7 +23,7 @@ from pathlib import Path
 import yaml
 
 from tools import branch_guard
-from tools.install_checks import CheckError
+from tools.install_checks import CheckError, CheckSkipped, in_ci
 
 CHECK_ID = "T0036"
 
@@ -153,11 +153,18 @@ CASES = {
 def run(mode: str) -> None:
     if mode == "good":
         problems = branch_guard.verify()
+        if problems == [branch_guard.HOOKS_PATH_UNSET] and not in_ci():
+            # a local clone that never ran tools/setup.sh; CI hard-fails
+            raise CheckSkipped(
+                "check_branch_protection (T0036): core.hooksPath is not "
+                "configured in this local clone (run tools/setup.sh); "
+                "outside CI only")
         if problems:
             raise CheckError(f"real repo branch guard: {problems}")
         return
     uncaught = []
     for label, spec in CASES.items():
+        spec = dict(spec)  # CASES stays intact across repeated runs
         expect = spec.pop("expect")
         root = _fixture(**spec)
         problems = branch_guard.verify(root, hooks_path=".githooks")
