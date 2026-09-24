@@ -105,42 +105,33 @@ def test_generation_fails_closed_without_classification(tmp_path, monkeypatch):
         ci.generate()
 
 
-import contextlib  # noqa: E402
-
 import pytest  # noqa: E402
 
 
 @pytest.mark.parametrize(
     "kind,dirname", [("model_weight", "models"), ("bundled_asset", "assets")]
 )
-def test_unclassified_discovered_file_fails_closed(kind, dirname):
+def test_unclassified_discovered_file_fails_closed(kind, dirname, tmp_path, monkeypatch):
     """A discovered weight/asset with no files: classification aborts generation."""
     import tools.component_inventory as ci
 
-    target = ROOT / dirname
-    target.mkdir(parents=True, exist_ok=True)
-    probe = target / "probe-unclassified.bin"
-    probe.write_bytes(b"probe")
-    try:
-        with pytest.raises(RuntimeError, match=f"no linkage classification for {kind}:"):
-            ci.generate()
-    finally:
-        probe.unlink()
-        with contextlib.suppress(OSError):
-            target.rmdir()
+    monkeypatch.setattr(ci, "ROOT", tmp_path)  # probes never touch the repo tree
+    (tmp_path / dirname).mkdir()
+    (tmp_path / dirname / "probe-unclassified.bin").write_bytes(b"probe")
+    with pytest.raises(RuntimeError, match=f"no linkage classification for {kind}:"):
+        ci.generate()
 
 
 @pytest.mark.parametrize(
     "kind,dirname", [("model_weight", "models"), ("bundled_asset", "assets")]
 )
-def test_classified_discovered_file_joins_all_fields(kind, dirname, monkeypatch):
+def test_classified_discovered_file_joins_all_fields(kind, dirname, tmp_path, monkeypatch):
     """A classified discovered file carries linkage + deployment + distribution."""
     import tools.component_inventory as ci
 
-    target = ROOT / dirname
-    target.mkdir(parents=True, exist_ok=True)
-    probe = target / "probe-classified.bin"
-    probe.write_bytes(b"probe")
+    monkeypatch.setattr(ci, "ROOT", tmp_path)  # probes never touch the repo tree
+    (tmp_path / dirname).mkdir()
+    (tmp_path / dirname / "probe-classified.bin").write_bytes(b"probe")
     real_text = LINKAGE.read_text()
     patched = real_text.replace(
         "files: {}",
@@ -150,18 +141,13 @@ def test_classified_discovered_file_joins_all_fields(kind, dirname, monkeypatch)
         "    distribution: not_distributed",
     )
     monkeypatch.setattr(ci, "LINKAGE", _TmpLinkage(patched))
-    try:
-        inv = ci.generate()
-        key = "model_weights" if kind == "model_weight" else "bundled_assets"
-        entry = next(f for f in inv[key] if f["path"].endswith("probe-classified.bin"))
-        assert entry["linkage"] == "data"
-        assert entry["deployment"] == "local_external"
-        assert entry["distribution"] == "not_distributed"
-        assert len(entry["sha256"]) == 64
-    finally:
-        probe.unlink()
-        with contextlib.suppress(OSError):
-            target.rmdir()
+    inv = ci.generate()
+    key = "model_weights" if kind == "model_weight" else "bundled_assets"
+    entry = next(f for f in inv[key] if f["path"] == f"{dirname}/probe-classified.bin")
+    assert entry["linkage"] == "data"
+    assert entry["deployment"] == "local_external"
+    assert entry["distribution"] == "not_distributed"
+    assert len(entry["sha256"]) == 64
 
 
 class _TmpLinkage:

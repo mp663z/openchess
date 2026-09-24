@@ -19,6 +19,8 @@ components:
   # shipped inside any product artifact.
   PyYAML:        {linkage: dynamic_link, deployment: cli_tooling, distribution: not_distributed}
   pytest:        {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  pytest-xdist:  {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
+  execnet:       {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}
   ruff:          {linkage: subprocess,   deployment: ci_only, distribution: not_distributed}
   zstandard:     {linkage: dynamic_link, deployment: cli_tooling, distribution: not_distributed}
   colorama:      {linkage: dynamic_link, deployment: ci_only, distribution: not_distributed}

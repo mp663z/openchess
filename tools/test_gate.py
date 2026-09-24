@@ -20,6 +20,9 @@ sys.path.insert(0, str(ROOT))  # sibling-tool import when run as a script
 from tools import flake_quarantine  # noqa: E402
 
 PYTEST_TIMEOUT_S = 1800  # a hung test run is a failed gate
+# --max-worker-restart 0: a crashed worker fails the run at once instead of
+# hanging it when -n auto resolves to a single worker
+XDIST_ARGS = ("-n", "auto", "--dist", "loadfile", "--max-worker-restart", "0")
 
 
 def gate_problems(root: Path = ROOT, timeout: int = PYTEST_TIMEOUT_S) -> list[str]:
@@ -38,7 +41,11 @@ def gate_problems(root: Path = ROOT, timeout: int = PYTEST_TIMEOUT_S) -> list[st
         problems.append("gate set is empty: every test is quarantined")
     if problems:
         return problems
-    cmd = [sys.executable, "-m", "pytest", "-q"]
+    # Collection and quarantine validation above ran once, in this process,
+    # before any worker starts. The run itself is parallel (pytest-xdist):
+    # one module per worker at a time, so module-level caches stay whole.
+    # A crashed worker fails its test and the run exits non-zero.
+    cmd = [sys.executable, "-m", "pytest", "-q", *XDIST_ARGS]
     for e in entries:
         cmd += ["--deselect", e["test_id"]]
     try:

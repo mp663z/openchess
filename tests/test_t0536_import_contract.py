@@ -266,13 +266,13 @@ def test_missing_and_wrong_container_family():
         assert str(ei.value).startswith("import contract:"), str(ei.value)
 
 
-def test_cli_boundary_clean_and_failing():
+def test_cli_boundary_clean_and_failing(tmp_path):
     ok = subprocess.run([sys.executable, "tools/import_contract_lint.py"],
                         cwd=ROOT, capture_output=True, text=True)
     assert ok.returncode == 0 and "OK import contract lint" in ok.stdout
     bad_doc = copy.deepcopy(DOC)
     bad_doc["contract"]["sources"]["entries"][5]["rights_class"] = "cc0"
-    bad_path = ROOT / "data" / "contracts" / ".tmp_bad_import.yaml"
+    bad_path = tmp_path / "tmp_bad_import.yaml"  # never the repo tree (xdist)
     try:
         bad_path.write_text(yaml.safe_dump(bad_doc))
         fail = subprocess.run(

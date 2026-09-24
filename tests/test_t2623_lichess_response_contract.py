@@ -220,13 +220,13 @@ def test_missing_and_wrong_container_family():
         assert str(ei.value).startswith("lichess response contract:"), str(ei.value)
 
 
-def test_cli_boundary_clean_and_failing():
+def test_cli_boundary_clean_and_failing(tmp_path):
     ok = subprocess.run([sys.executable, "tools/lichess_response_contract_lint.py"],
                         cwd=ROOT, capture_output=True, text=True)
     assert ok.returncode == 0 and "OK lichess response contract lint" in ok.stdout
     bad_doc = copy.deepcopy(DOC)
     bad_doc["contract"]["game_object"]["status_values"].remove("cheat")
-    bad_path = ROOT / "data" / "contracts" / ".tmp_bad_lichess_response.yaml"
+    bad_path = tmp_path / "tmp_bad_lichess_response.yaml"  # never the repo tree (xdist)
     try:
         bad_path.write_text(yaml.safe_dump(bad_doc))
         fail = subprocess.run(

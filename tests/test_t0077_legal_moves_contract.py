@@ -467,13 +467,13 @@ def test_missing_and_wrong_container_family():
         assert str(ei.value).startswith("legal-moves contract:"), str(ei.value)
 
 
-def test_cli_boundary_clean_and_failing():
+def test_cli_boundary_clean_and_failing(tmp_path):
     ok = subprocess.run([sys.executable, "tools/legal_moves_contract_lint.py"],
                         cwd=ROOT, capture_output=True, text=True)
     assert ok.returncode == 0 and "OK legal-moves contract lint" in ok.stdout
     bad_doc = copy.deepcopy(DOC)
     bad_doc["contract"]["legality"]["filter"] = "pseudo-legal-is-legal"
-    bad_path = ROOT / "data" / "contracts" / ".tmp_bad_legal_moves.yaml"
+    bad_path = tmp_path / "tmp_bad_legal_moves.yaml"  # never the repo tree (xdist)
     try:
         bad_path.write_text(yaml.safe_dump(bad_doc))
         fail = subprocess.run(
