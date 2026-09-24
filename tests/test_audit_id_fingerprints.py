@@ -24,12 +24,19 @@ own live inputs (or a class's own namespace), never a temporary:
   shape with _deep_ids of the live value.
 
 Known id-only fallbacks left without a keep-alive pin, by coordinator
-ruling: test_t0187_conflict_red._snap, test_t0196_migration_red._snap,
-test_t0214_wal_red._snap and test_t0223_backup_red._snap. Each file is
-hash-pinned as merged (RED_AS_MERGED_SHA256 in t0188, t0197, t0215 and
-t0224), so it stays byte-for-byte. None is vacuous: each snapshots the
-caller's live inputs (the (base, left, right) / (request, source) tuple
-held in a local, the live log and request), never a temporary.
+ruling: the _snap (and _containers) helpers of test_t0187_conflict_red,
+test_t0196_migration_red, test_t0214_wal_red, test_t0223_backup_red,
+test_t0232_restore_red, test_t0241_rollback_red, test_t0250_export_red,
+test_t0259_idempotency_red, test_t0268_corruption_red,
+test_t0277_crash_resume_red and test_t0286_queue_red. Each file is
+hash-pinned as merged (RED_AS_MERGED_SHA256 in t0188, t0197, t0215,
+t0224, t0233, t0242, t0251, t0260, t0269, t0278 and t0287), so it stays
+byte-for-byte. None is vacuous: each snapshots the caller's live inputs
+(an inputs tuple held in a local, the live log, ledger, request or
+state, and their live entries), never a temporary. The one temporary,
+the (log, ledger, request) tuple t0259 passes to _containers, only adds
+its own id to the live set, which can make that check fail spuriously
+but never pass vacuously.
 
 No site is vacuous. The rows below pin that each fingerprint really
 separates: an equal but distinct replacement of an id-fingerprinted
