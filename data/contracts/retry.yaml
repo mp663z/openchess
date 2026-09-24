@@ -1,0 +1,86 @@
+schema_version: 1
+
+contract:
+  id: jobs-retry
+  role:
+    kind: pure-job-retry-backoff-decision-function
+    serves: background-job-execution
+    scope: one-retry-decision-for-one-failed-attempt-over-an-explicit-logical-clock
+    owns: retry-eligibility-backoff-delay-and-decision-records
+    not_scope: queue-state-transitions-leases-idempotency-keys-cancellation-or-jitter
+  record:
+    fields: [op, job_id, decision, attempts, delay_ms, retry_at, decision_id]
+    exact: true
+    decisions: [retry, dead]
+  request:
+    operations:
+      - op: decide
+        fields: [op, job_id, attempts, failure, now, policy]
+    exact: true
+    closure: no-other-operations-registered
+    policy_fields: [base_delay_ms, multiplier, max_delay_ms]
+    policy_exact: true
+    failures: [transient, timeout, permanent]
+    bounds:
+      attempts: int-1-through-max-attempts-the-attempts-already-consumed-including-the-failed-one
+      now: int-0-through-2-pow-53-minus-1-milliseconds
+      base_delay_ms: int-1-through-3600000
+      multiplier: int-1-through-10
+      max_delay_ms: int-base-delay-ms-through-86400000
+    max_attempts: 5
+    max_attempts_source: linked-queue-contract-state-max-attempts-never-caller-supplied
+  identifiers:
+    job_id:
+      kind: content-addressed-job-id
+      grammar: ^job1:[0-9a-f]{64}$
+      source: the-linked-queue-contract-job-id-grammar
+    decision_id:
+      kind: canonical-retry-decision-digest
+      grammar: ^rd1:[0-9a-f]{64}$
+      derivation: sha256-over-canonical-json-of-the-request-and-the-record-without-decision-id
+      source: derived-never-caller-supplied
+  semantics:
+    validation: request-shape-then-policy-then-clock-first-failure-wins
+    permanent: a-permanent-failure-is-dead-at-any-attempt-count
+    exhausted: attempts-equal-to-max-attempts-is-dead-matching-the-queue-dead-letter-bound
+    timeout: a-timeout-is-retryable-exactly-like-transient-fail-closed-reading-no-separate-budget
+    delay: min-of-max-delay-ms-and-base-delay-ms-times-multiplier-pow-attempts-minus-1-exact-integer-arithmetic
+    retry_at: now-plus-delay-ms
+    clock: a-retry-at-beyond-2-pow-53-minus-1-fails-closed-as-clock-overflow-never-clamped-never-turned-dead
+    dead_record: dead-decisions-carry-null-delay-ms-and-null-retry-at
+    jitter: none-fail-closed-reading-decisions-are-deterministic-and-replayable
+    purity: inputs-are-never-mutated-and-the-record-shares-no-container-with-them
+  failures:
+    classes:
+      - malformed_retry_request
+      - invalid_retry_policy
+      - clock_overflow
+    triggers:
+      malformed_retry_request: request-shape-type-grammar-enum-or-bound-violation-outside-the-policy-contents
+      invalid_retry_policy: policy-mapping-with-wrong-keys-types-or-bounds-or-max-below-base
+      clock_overflow: a-retry-decision-whose-retry-at-would-exceed-2-pow-53-minus-1
+    mapping:
+      malformed_retry_request: malformed_request
+      invalid_retry_policy: invalid_policy
+      clock_overflow: clock_overflow
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - invalid_policy
+      - clock_overflow
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    deterministic: same-request-same-record
+    pure: rejected-and-accepted-requests-leave-the-request-bit-identical
+    bounded: every-retry-delay-is-at-most-max-delay-ms
+    monotone: retry-delay-never-decreases-as-attempts-grow-under-one-policy
+    terminal: every-job-reaches-dead-by-max-attempts
+  versioning:
+    base_path: /jobs/retry/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    queue_contract: data/contracts/queue.yaml
