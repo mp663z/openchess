@@ -1,0 +1,94 @@
+schema_version: 1
+
+contract:
+  id: jobs-limit
+  role:
+    kind: pure-job-token-bucket-rate-limit-decision-function
+    serves: background-job-execution
+    scope: one-admit-or-deny-decision-for-one-keyed-token-bucket-chained-to-its-previous-bucket-record-over-an-explicit-logical-clock
+    owns: token-refill-admission-retry-after-and-chained-bucket-records
+    not_scope: queue-state-transitions-leases-retry-backoff-idempotency-keys-cancellation-or-fairness-across-keys
+  record:
+    fields: [op, key, capacity, refill_ms, cost, decision, tokens, updated_at, retry_after_ms, previous_id, limit_id]
+    exact: true
+    decisions: [admit, deny]
+  request:
+    operations:
+      - op: admit
+        fields: [op, key, cost, now, policy, previous]
+    exact: true
+    closure: no-other-operations-registered
+    policy_fields: [capacity, refill_ms]
+    policy_exact: true
+    previous: null-for-a-fresh-full-bucket-else-exactly-the-previous-bucket-record
+    bounds:
+      capacity: int-1-through-1000000
+      refill_ms: int-1-through-86400000
+      cost: int-1-through-capacity
+      now: int-0-through-2-pow-53-minus-1-milliseconds
+  identifiers:
+    key:
+      kind: caller-supplied-limit-key
+      grammar: ^[A-Za-z0-9._:-]{1,64}$
+      source: the-linked-queue-contract-worker-grammar
+    limit_id:
+      kind: canonical-chained-bucket-digest
+      grammar: ^lm1:[0-9a-f]{64}$
+      derivation: sha256-of-ascii-lm1-then-nul-byte-then-utf8-canonical-json-sort-keys-compact-separators-ensure-ascii-of-the-record-without-limit-id
+      source: derived-never-caller-supplied
+  semantics:
+    validation: request-shape-then-policy-then-cost-within-capacity-then-previous-record-integrity-then-chain-consistency-then-clock-first-failure-wins
+    fresh: a-null-previous-is-a-full-bucket-with-tokens-equal-capacity-at-now
+    refill: gained-is-floor-of-now-minus-previous-updated-at-over-refill-ms-exact-integer-arithmetic
+    cap: fail-closed-reading-when-previous-tokens-plus-gained-reach-capacity-tokens-are-capacity-and-updated-at-is-now-no-partial-refill-is-banked
+    carry: below-capacity-updated-at-advances-by-gained-times-refill-ms-so-a-partial-refill-is-kept
+    admit: admit-when-refilled-tokens-are-at-least-cost-then-tokens-are-refilled-minus-cost-and-retry-after-ms-is-null
+    deny: deny-when-refilled-tokens-are-below-cost-then-tokens-are-refilled-and-retry-after-ms-is-cost-minus-refilled-times-refill-ms-minus-now-minus-updated-at
+    cost: fail-closed-reading-a-cost-above-capacity-can-never-be-admitted-and-is-a-malformed-request-never-a-deny
+    chain: previous-id-is-null-on-a-fresh-bucket-else-the-previous-record-limit-id
+    integrity: a-previous-record-whose-shape-grammar-bounds-decision-invariants-or-limit-id-do-not-recompute-is-corrupt-never-trusted
+    identity: fail-closed-reading-key-capacity-and-refill-ms-must-equal-the-previous-record-a-policy-change-starts-a-fresh-bucket
+    clock: now-never-precedes-the-previous-updated-at-fail-closed-reading-equal-now-is-accepted
+    overflow: a-deny-whose-now-plus-retry-after-ms-would-exceed-2-pow-53-minus-1-fails-closed-as-clock-overflow-never-clamped
+    purity: inputs-are-never-mutated-and-the-record-shares-no-container-with-them
+  failures:
+    classes:
+      - malformed_limit_request
+      - invalid_limit_policy
+      - corrupt_previous_bucket
+      - limit_conflict
+      - clock_overflow
+    triggers:
+      malformed_limit_request: request-shape-type-grammar-or-bound-violation-including-a-cost-above-capacity
+      invalid_limit_policy: policy-mapping-with-wrong-keys-types-or-bounds
+      corrupt_previous_bucket: previous-record-with-wrong-keys-types-grammar-bounds-decision-invariants-or-a-limit-id-that-does-not-recompute
+      limit_conflict: key-or-policy-mismatch-with-the-previous-record-or-clock-regression
+      clock_overflow: a-deny-whose-now-plus-retry-after-ms-would-exceed-2-pow-53-minus-1
+    mapping:
+      malformed_limit_request: malformed_request
+      invalid_limit_policy: invalid_policy
+      corrupt_previous_bucket: corrupt_record
+      limit_conflict: limit_conflict
+      clock_overflow: clock_overflow
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - invalid_policy
+      - corrupt_record
+      - limit_conflict
+      - clock_overflow
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    deterministic: same-request-same-record
+    pure: rejected-and-accepted-requests-leave-the-request-bit-identical
+    bounded: tokens-stay-within-0-through-capacity
+    conserving: along-a-chain-admitted-cost-never-exceeds-capacity-plus-gained-tokens
+  versioning:
+    base_path: /jobs/limit/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    queue_contract: data/contracts/queue.yaml
