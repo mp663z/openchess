@@ -1072,9 +1072,6 @@ MUTANTS = {
          "        _fail(ec, \"malformed_edge_record\")\n", ""),
         ("if type(move) is not str or not move.isascii():",
          "if not isinstance(move, str) or not move.isascii():")],
-    "insert-fen-isinstance": (
-        "if type(from_fen) is not str or type(to_fen) is not str:",
-        "if not isinstance(from_fen, str) or not isinstance(to_fen, str):"),
     "insert-move-check-wrong-class": (
         "    if not _move_ok(lc, move):\n"
         "        _fail(ec, \"malformed_edge_record\")\n"
@@ -1082,9 +1079,6 @@ MUTANTS = {
         "    if not _move_ok(lc, move):\n"
         "        _fail(ec, \"malformed_position\")\n"
         "    failed = False\n"),
-    "parse-catches-fenerror-only": (
-        "    except (FenError, ValueError):  # ValueError: clock over int-str limit",
-        "    except FenError:"),
     "parse-fails-inside-except-chained": (
         "    except (FenError, ValueError):  # ValueError: clock over int-str limit\n"
         "        failed = True\n",
@@ -1216,6 +1210,18 @@ MUTANTS = {
 
 # one-guard edits no black-box probe can separate (reason per entry)
 EQUIVALENT_EDITS = {
+    # linked parse_fen is total since the T0089 'graph.fen: total parse_fen'
+    # commit (exact str, over-limit counters as FenError); the downstream
+    # guard is defense in depth
+    "insert-fen-isinstance": (
+        "if type(from_fen) is not str or type(to_fen) is not str:",
+        "if not isinstance(from_fen, str) or not isinstance(to_fen, str):"),
+    # linked parse_fen is total since the T0089 'graph.fen: total parse_fen'
+    # commit (exact str, over-limit counters as FenError); the downstream
+    # guard is defense in depth
+    "parse-catches-fenerror-only": (
+        "    except (FenError, ValueError):  # ValueError: clock over int-str limit",
+        "    except FenError:"),
     # a non-ascii character can never be in the linked files/ranks
     # lists, so the grammar check rejects it with the same class
     "move-ascii-off": (
