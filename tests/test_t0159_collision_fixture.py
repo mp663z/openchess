@@ -230,13 +230,37 @@ def _pinned(table):
     }
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _state(table):
     """Value and stored-record identity of both structures."""
     return (
         copy.deepcopy(table.identity_index),
         copy.deepcopy(table.buckets),
-        {repr(k): id(v) for k, v in table.identity_index.items()},
-        {k: [id(r) for r in v] for k, v in table.buckets.items()},
+        {repr(k): _Pin(v) for k, v in table.identity_index.items()},
+        {k: [_Pin(r) for r in v] for k, v in table.buckets.items()},
     )
 
 
@@ -631,3 +655,20 @@ def test_fixture_digest_is_stable():
 
 
 FIXTURE_SHA256 = "37d285f7065ae33e0cfb804dab1d58043b918254ba90cdc47df2f2bdc2ee7623"
+
+
+class _PinProbeTable:
+    def __init__(self):
+        self.identity_index = {"k": {"r": 1}}
+        self.buckets = {"b": []}
+
+
+def test_state_pins_replaced_records():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    table = _PinProbeTable()
+    before = _state(table)
+    table.identity_index["k"] = {"r": 1}
+    table.identity_index["k"] = {"r": 1}
+    assert _state(table) != before

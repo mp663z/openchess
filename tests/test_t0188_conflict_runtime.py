@@ -109,10 +109,34 @@ def _outcome(mod, base, left, right):
     return got
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _refs(obj):
     if type(obj) is dict:
-        return tuple((id(k), id(v), _refs(v)) for k, v in dict.items(obj))
-    return id(obj)
+        return tuple((_Pin(k), _Pin(v), _refs(v)) for k, v in dict.items(obj))
+    return _Pin(obj)
 
 
 def _fixture_rows():
@@ -574,3 +598,18 @@ def test_r4_equivalent_edits_stay_green(name):
     src = PRODUCTION.read_text()
     assert src.count(old) == 1, name
     assert not _kill_suite_red(_load_mutant(src.replace(old, new))), name
+
+
+class _PinProbeLeaf:
+    pass
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": _PinProbeLeaf()}
+    before = _refs(value)
+    value["k"] = _PinProbeLeaf()
+    value["k"] = _PinProbeLeaf()
+    assert _refs(value) != before
