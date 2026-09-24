@@ -117,24 +117,40 @@ def _projection(variant: str, board: str, side: str, castling: str, ep: str) -> 
     return dict(zip(CANONICAL_FIELDS, (variant, board, side, castling, ep), strict=True))
 
 
-def parse_position(variant: object, fen: object) -> Position:
-    """Validate variant id and FEN against the contract; return the
-    canonical Position. Fails closed, never coerces."""
+def _checked_variant(variant: object) -> None:
+    """Registry check mapped to a FRESH VariantError: raised after the
+    except block, so it carries no __cause__ and no __context__."""
+    failed = None
     try:
         check_variant_id(variant, set(_REGISTRY))
     except _ContractError as exc:
-        code = str(exc).split(":", 1)[0]
-        raise VariantError(code=code, message=str(exc)) from exc
-    kind = _REGISTRY[variant]["castling"]
+        failed = str(exc)
+    if failed is not None:
+        raise VariantError(code=failed.split(":", 1)[0], message=failed)
+
+
+def _checked_fen(fen: object, variant: str) -> None:
+    """FEN check mapped to a FRESH VariantError carrying the contract's
+    failure class (no __cause__, no __context__)."""
+    failed = None
     try:
-        _check_fen(fen, variant, kind)
+        _check_fen(fen, variant, _REGISTRY[variant]["castling"])
     except _ContractError as exc:
-        cls = exc.failure_class
+        failed = (exc.failure_class, str(exc))
+    if failed is not None:
+        cls, message = failed
         raise VariantError(
             code=_CODE_FOR_CLASS.get(cls, "malformed_request"),
             failure_class=cls,
-            message=str(exc),
-        ) from exc
+            message=message,
+        )
+
+
+def parse_position(variant: object, fen: object) -> Position:
+    """Validate variant id and FEN against the contract; return the
+    canonical Position. Fails closed, never coerces."""
+    _checked_variant(variant)
+    _checked_fen(fen, variant)
     board, side, castling, ep, _half, _full = fen.split(" ")
     return Position(variant, board, side, castling, ep, _token=_TOKEN)
 
@@ -152,22 +168,8 @@ def _validate_fields(variant: object, board: object, side: object,
                 code="malformed_request",
                 message=f"field {name} must be an exact string",
             )
-    try:
-        check_variant_id(variant, set(_REGISTRY))
-    except _ContractError as exc:
-        code = str(exc).split(":", 1)[0]
-        raise VariantError(code=code, message=str(exc)) from exc
-    kind = _REGISTRY[variant]["castling"]
-    fen = " ".join((board, side, castling, ep, *_SYNTHETIC_COUNTERS.split(" ")))
-    try:
-        _check_fen(fen, variant, kind)
-    except _ContractError as exc:
-        cls = exc.failure_class
-        raise VariantError(
-            code=_CODE_FOR_CLASS.get(cls, "malformed_request"),
-            failure_class=cls,
-            message=str(exc),
-        ) from exc
+    _checked_variant(variant)
+    _checked_fen(" ".join((board, side, castling, ep, *_SYNTHETIC_COUNTERS.split(" "))), variant)
 
 
 def identity(position: object) -> dict:
@@ -204,6 +206,16 @@ def project_additive(record: object) -> dict:
     never launder an invalid position into an identity."""
     if type(record) is not dict:
         raise VariantError(code="malformed_request", message="project_additive: mapping required")
+    # every key must be an exact str BEFORE any membership test: a str
+    # subclass key could stand in for a canonical field, and a key with a
+    # user __eq__/__hash__ would run code during the lookup. Fail-closed
+    # reading: additive fields are ignored only under exact-str names.
+    for key in record:
+        if type(key) is not str:
+            raise VariantError(
+                code="malformed_request",
+                message="project_additive: every field name must be an exact string",
+            )
     missing = [f for f in CANONICAL_FIELDS if f not in record]
     if missing:
         raise VariantError(
