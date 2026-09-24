@@ -1576,10 +1576,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "06e2d4cc1bd3a654bb8f115b932a8d4c05f7fd40",
+   "evidence_manifest": "evidence/T0071.md"
   },
   {
    "id": "T0072",
@@ -3131,10 +3133,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "21d64b756e606c8fad259c49bbad7b7501d49504",
+   "evidence_manifest": "evidence/T0145.md"
   },
   {
    "id": "T0146",
@@ -3322,10 +3326,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "d092b4e2071f1ee7c068e294dc2ffab7f5a67b31",
+   "evidence_manifest": "evidence/T0154.md"
   },
   {
    "id": "T0155",
@@ -3928,10 +3934,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "O2 trusted diagnosis",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "4342528627704c3795efa26dd90d7e316060a83b",
+   "evidence_manifest": "evidence/T0182.md"
   },
   {
    "id": "T0183",
