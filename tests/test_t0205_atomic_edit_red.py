@@ -155,6 +155,30 @@ class _KeyMark:
         self.key = key
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _snap(obj):
     """Exact flat snapshot: type, id, length and key order of every
     container, key identity (text for exact str keys, id otherwise),
@@ -166,30 +190,30 @@ def _snap(obj):
         kind = type(node)
         if kind is dict or kind is list or kind is tuple:
             if id(node) in seen:
-                out.append(("seen", id(node)))
+                out.append(("seen", _Pin(node)))
                 continue
             seen.add(id(node))
             if kind is dict:
                 items = list(dict.items(node))
-                out.append(("dict", id(node), len(items)))
+                out.append(("dict", _Pin(node), len(items)))
                 for key, value in reversed(items):
                     stack.append(value)
                     stack.append(_KeyMark(key))
             else:
                 values = list(kind.__iter__(node))
-                out.append((kind.__name__, id(node), len(values)))
+                out.append((kind.__name__, _Pin(node), len(values)))
                 stack.extend(reversed(values))
         elif kind is _KeyMark:
             key = node.key
             out.append(("key", key if type(key) is str
-                        else (type(key).__name__, id(key))))
+                        else (type(key).__name__, _Pin(key))))
         elif kind is int:
             out.append(("int", node.bit_length(), node & 0xFFFF,
                         node < 0))
         elif kind in (str, bool, float, type(None), bytes):
             out.append((kind.__name__, node))
         else:
-            out.append(("object", kind.__name__, id(node)))
+            out.append(("object", kind.__name__, _Pin(node)))
     return out
 
 
@@ -1381,3 +1405,16 @@ def test_closure_kills_substitution_mutants(with_digests, monkeypatch):
 def test_equivalent_mutants_documented_not_listed():
     assert not set(EQUIVALENT_MUTANTS) & set(MUTANTS)
     assert set(MUTANT_TARGETS) == set(MUTANTS)
+
+
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": {"x": "a"}}
+    before = _snap(value)
+    value["k"] = {"x": "a"}
+    value["k"] = {"x": "a"}
+    assert _snap(value) != before
