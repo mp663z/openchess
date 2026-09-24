@@ -41,9 +41,10 @@ ORACLE_LINES = ("RollbackEngine = _reference.RollbackEngine\n"
 PRODUCTION_LINES = (
     'RollbackEngine = __import__("store.rollback").rollback.RollbackEngine\n'
     'RollbackError = __import__("store.rollback").rollback.RollbackError\n')
-# sha256 of tests/test_t0241_rollback_red.py as merged (20afa72)
+# sha256 of tests/test_t0241_rollback_red.py as merged (bound-error
+# source-mutant rebind)
 RED_AS_MERGED_SHA256 = (
-    "b3b3f5e6b39cf6cc9a1cbee358aff1e39ccc59df7cca5e66160f8d538e6f4517")
+    "f1e0b17dc4c5037f7bf3649b6ed933785b527f15a4e642e2b57ab349d3472321")
 ALLOWED_IMPORTS = {"__future__", "copy", "hashlib", "re", "pathlib", "yaml",
                    "store", "tools.rollback_contract_lint"}
 

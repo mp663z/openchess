@@ -41,9 +41,10 @@ ORACLE_LINES = ("ExportEngine = _reference.ExportEngine\n"
 PRODUCTION_LINES = (
     'ExportEngine = __import__("store.export").export.ExportEngine\n'
     'ExportError = __import__("store.export").export.ExportError\n')
-# sha256 of tests/test_t0250_export_red.py as merged (7ad8b4d)
+# sha256 of tests/test_t0250_export_red.py as merged (bound-error
+# source-mutant rebind)
 RED_AS_MERGED_SHA256 = (
-    "d986a85ea2ad651a01705b82fb0abda058ebe67d54fb394827e400c2a46139af")
+    "49ba1554ecd671bb907e6a0aea9e312f1c4127f551f1698335cf97ccd9041d50")
 ALLOWED_IMPORTS = {"__future__", "hashlib", "json", "pathlib", "yaml",
                    "store", "tools.export_contract_lint"}
 

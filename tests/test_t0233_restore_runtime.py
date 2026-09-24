@@ -40,9 +40,10 @@ ORACLE_LINES = ("RestoreEngine = _reference.RestoreEngine\n"
 PRODUCTION_LINES = (
     'RestoreEngine = __import__("store.restore").restore.RestoreEngine\n'
     'RestoreError = __import__("store.restore").restore.RestoreError\n')
-# sha256 of tests/test_t0232_restore_red.py as merged (32a2a96)
+# sha256 of tests/test_t0232_restore_red.py as merged (bound-error
+# source-mutant rebind)
 RED_AS_MERGED_SHA256 = (
-    "a049f1be7edbde8c6df9332056841b005506ee47e060db949dfe4c314a7e3d7f")
+    "810dddefb05be62747eba97f6dff3a706115071dddb24ec717783b25358a9d0e")
 ALLOWED_IMPORTS = {"__future__", "hashlib", "pathlib", "yaml", "graph.diff",
                    "graph.node", "graph.position_digest", "store",
                    "tools.restore_contract_lint", "tools.variant_runtime"}

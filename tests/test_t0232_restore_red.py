@@ -1300,6 +1300,14 @@ def _source_mutant(name, edits):
             raise AssertionError(f"{name}: edit site missing: {old!r}")
         src = src.replace(old, new, 1)
     namespace = dict(vars(_reference))
+    # the mutant raises the BOUND error class, so a correct rejection
+    # counts as one under any binding (reference or production)
+    namespace["RestoreError"] = RestoreError
+
+    def _bound_fail(cls):
+        raise RestoreError(cls, FAILURE_MAPPING[cls])
+
+    namespace["_fail"] = _bound_fail
     exec(compile(src, f"<mutant {name}>", "exec"), namespace)  # noqa: S102
     return namespace["RestoreEngine"]
 
@@ -1521,6 +1529,14 @@ def test_reference_engine_passes_battery():
 def test_every_mutant_is_red(name):
     assert _probe(MUTANTS[name], first_only=True), \
         f"{name}: mutant passed battery"
+
+
+def test_identity_source_mutant_is_green_under_current_binding():
+    """Structural guard: an unedited reference-source mutant passes
+    the whole battery under the CURRENT binding, so a source mutant
+    dies only for its edit - never because it raises a different
+    error class than the one the probes catch."""
+    assert _probe(_source_mutant("identity", [])) == []
 
 
 def test_mutant_targets_closed():
