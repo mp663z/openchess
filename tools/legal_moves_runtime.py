@@ -117,19 +117,17 @@ class LegalMovesError(Exception):
         retryable: object = False,
     ) -> None:
         if type(code) is not str or code not in ERROR_ENUM:
-            raise ValueError(f"undeclared error code {code!r}")
+            raise ValueError("undeclared error code")
         if type(message) is not str or not message.strip():
             raise ValueError("error message must be a nonempty string")
         if failure_class is not None:
             if (type(failure_class) is not str
                     or failure_class not in FAILURE_CLASSES):
-                raise ValueError(
-                    f"undeclared failure class {failure_class!r}")
+                raise ValueError("undeclared failure class")
             if code != FAILURE_MAPPING[failure_class]["error"]:
                 raise ValueError(
                     f"class {failure_class} must emit code"
-                    f" {FAILURE_MAPPING[failure_class]['error']},"
-                    f" got {code!r}")
+                    f" {FAILURE_MAPPING[failure_class]['error']}")
         if type(retryable) is not bool:
             raise ValueError("retryable must be an exact bool")
         super().__init__(message)
@@ -174,17 +172,22 @@ def _validate_state(state: object) -> None:
     defect is malformed_request with failure_class None, never a raw
     exception. Exactly the two declared fields; occupied maps contract
     squares to side+piece tokens; exactly one king per side."""
-    if type(state) is not dict or set(state) != _STATE_KEYS:
+    if type(state) is not dict:
+        _malformed(f"state must be exactly {sorted(_STATE_KEYS)}")
+    # exact-str keys BEFORE the key-set comparison: a str subclass key
+    # must not stand in for a declared field, and a key with a user
+    # __eq__/__hash__ must never run during the comparison
+    if any(type(key) is not str for key in state) or set(state) != _STATE_KEYS:
         _malformed(f"state must be exactly {sorted(_STATE_KEYS)}")
     occ = state["occupied"]
     if type(occ) is not dict:
         _malformed("occupied must be a mapping")
     for sq, tok in occ.items():
         if not _grammar_ok(sq):
-            _malformed(f"occupied key {sq!r} is not a contract square")
+            _malformed("occupied key is not a contract square")
         if not (type(tok) is str and len(tok) == 2
                 and tok[0] in _SIDES and tok[1] in _PIECE_LETTERS):
-            _malformed(f"bad piece token {tok!r}")
+            _malformed("bad piece token")
     stm = state["side_to_move"]
     if type(stm) is not str or stm not in _SIDES:
         _malformed(f"side_to_move must be one of {list(_SIDES)}")
@@ -342,7 +345,7 @@ def is_attacked(state: object, square: object, attacker: object) -> bool:
     itself is an exact bool."""
     _validate_state(state)
     if not _grammar_ok(square):
-        _malformed(f"square {square!r} is not a contract square")
+        _malformed("square is not a contract square")
     if type(attacker) is not str or attacker not in _SIDES:
         _malformed(f"attacker must be one of {list(_SIDES)}")
     return square in _attacked_squares(state["occupied"], attacker)
@@ -372,6 +375,10 @@ def _validate_move_shape(move: object) -> None:
     string when present. Any violation is malformed_move."""
     if type(move) is not dict:
         _fail("malformed_move", "move must be a mapping")
+    # exact-str member names before any key-set comparison (same reason
+    # as the state keys); a non-str name is a closed-keys violation
+    if any(type(key) is not str for key in move):
+        _fail("malformed_move", "move member names must be exact strings")
     if _CLOSED_KEYS:
         allowed = set(_REQUIRED) | set(_OPTIONAL)
         if not set(move) <= allowed:
