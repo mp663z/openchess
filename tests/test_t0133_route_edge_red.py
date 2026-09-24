@@ -5,8 +5,16 @@ from __future__ import annotations
 import contextlib
 import copy
 
-from tests.test_t0131_route_edge_contract import EdgeError, EdgeTable, _docs
-from tests.test_t0132_route_edge_fixture import CASES, _build_table, _StubTable
+from graph.route_edge import EdgeError, EdgeTable
+from graph.route_edge import load_docs as _docs
+from tests.test_t0132_route_edge_fixture import CASES, _StubTable
+
+
+def _build_table(inserts):
+    table = EdgeTable(_docs())
+    for edge in inserts:
+        table.insert(*edge)
+    return table
 
 
 def _case(section, name):
