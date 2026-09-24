@@ -276,7 +276,24 @@ def _other(tail):
                                                 "snapshot_fen": "x"}}}])
 
 
+def _forged_oracle(error):
+    """An oracle raising a pre-built (forged) typed error: it must fail as
+    the boundary's own class, never surface as the forged one."""
+    def oracle(tail):
+        raise error
+    return oracle
+
+
+FORGED_ERRORS = {
+    **{f"forged-rollback-error-{c}": rollback.RollbackError(c, rollback.FAILURE_MAPPING[c])
+       for c in sorted(rollback.FAILURE_MAPPING) if c != "divergent_archive"},
+    **{f"forged-wal-error-{c}": wal.WalError(c, wal.FAILURE_MAPPING[c])
+       for c in sorted(wal.FAILURE_MAPPING)},
+}
+
+
 HOSTILE_ARCHIVERS = {
+    **{name: _forged_oracle(error) for name, error in FORGED_ERRORS.items()},
     "value-error": _raiser(ValueError),
     "keyboard-interrupt": _raiser(KeyboardInterrupt),
     "system-exit": _raiser(SystemExit),
