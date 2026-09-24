@@ -1,0 +1,1978 @@
+{
+  "schema": 1,
+  "contract": "store-atomic-edit",
+  "contract_base_path": "/store/atomic-edit/v1",
+  "notes": "Atomic edit conformance cases for data/contracts/atomic_edit.yaml. Pinned receipts were computed from the contract-derived reference engine in tests/test_t0203_atomic_edit_contract.py. Every malformed row names a single-locus minimal repair (request or base) that makes the edit commit. Rollback rows pair a rejected edit with a valid follow-up on the same base object.",
+  "happy": [
+    {
+      "name": "put_inserts_into_nonempty_base",
+      "why": "a put of an absent identity inserts it",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:73d64b0d63ac63c92ba041289cfa2ebe6f6c59f77eff70799e1908bb4ed08c06",
+        "base_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+        "target_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "put_replaces_present_identity",
+      "why": "a put of a present identity replaces it (upsert); the derived record is identical so the target equals the base",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:835be624cab53cbb97b0404cb641d1f47de6eba846852b463c0571dc3554a796",
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "target_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "delete_removes_present_identity",
+      "why": "a delete of a present identity removes it",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:bae5cd3497874208df619535a0e87367b2d773b38835dbb57f3e98e66629cc32",
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "target_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "mixed_multi_operation_edit",
+      "why": "put, delete and upsert in one edit commit together",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          },
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:264d6e736d321e36547534a9219b2f6b1c392e49c046d310ab2851e0b0dc3799",
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "target_id": "gs1:67f84bfc261839cc47841e308b1942d1e4bcd244923a897cf44002f294c2a1d5",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          },
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+          }
+        }
+      }
+    }
+  ],
+  "boundary": [
+    {
+      "name": "empty_base_put",
+      "why": "the empty state accepts a first put",
+      "base": {},
+      "request": {
+        "base_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:fdafb5013c5d400402c146d810a6d3cbe28f09cec91c19927847cd6c93f46892",
+        "base_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "target_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "empty_operations_noop",
+      "why": "an edit with no operations commits the base unchanged",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": []
+      },
+      "expect": {
+        "edit_id": "ae1:224e29f2b9e283eb1528f91bbd520937400c59477bbbd674126272baf6958454",
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "target_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "delete_last_identity_to_empty",
+      "why": "deleting the only identity reaches the empty state",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+        "operations": [
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:2211a90a15e0e432ed1e9d5c37f2815d6678f910e15758d0ca8af55bc1faa997",
+        "base_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+        "target_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "state": {}
+      }
+    },
+    {
+      "name": "empty_base_empty_operations",
+      "why": "the empty state with no operations",
+      "base": {},
+      "request": {
+        "base_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "operations": []
+      },
+      "expect": {
+        "edit_id": "ae1:f077af03be88899957956d44004ede24415b6deaccc1000d5bb2d04ae07a6570",
+        "base_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "target_id": "gs1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "state": {}
+      }
+    },
+    {
+      "name": "operation_order_reversed",
+      "why": "the mixed edit in reverse order gives the same receipt",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          },
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:264d6e736d321e36547534a9219b2f6b1c392e49c046d310ab2851e0b0dc3799",
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "target_id": "gs1:67f84bfc261839cc47841e308b1942d1e4bcd244923a897cf44002f294c2a1d5",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          },
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+          }
+        }
+      }
+    }
+  ],
+  "malformed": [
+    {
+      "name": "request_not_a_dict",
+      "defect": "the request is a list, not a dict",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": [
+        "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      ],
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "request_missing_operations",
+      "defect": "the request has no operations field",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c"
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "request_renamed_field",
+      "defect": "the request renames operations to operation at the same arity",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operation": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "request_extra_field",
+      "defect": "the request carries an unknown extra field",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ],
+        "force": true
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "base_id_bad_grammar",
+      "defect": "base_id breaks the gs1 grammar",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "GS1:894CBF7123F68DD757386C8B479F883BB874AB55A9852985A39CEA3D9B49369C",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "base_id_trailing_newline",
+      "defect": "base_id ends in a newline, which the grammar's $ accepts but a full match rejects",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c\n",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "base_id_not_a_string",
+      "defect": "base_id is an int",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": 7,
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "operations_not_a_list",
+      "defect": "operations is a dict, not a list",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": {
+          "0": {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          }
+        }
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "operations_empty_non_list",
+      "defect": "operations is an empty string, not a list",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": ""
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "operation_extra_field",
+      "defect": "an operation carries an extra field",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            },
+            "force": true
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "operation_renamed_field",
+      "defect": "an operation renames record to payload at the same arity",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "payload": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "operation_unknown_kind",
+      "defect": "an operation kind is upsert, not put or delete",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "upsert",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "delete_with_record",
+      "defect": "a delete carries a record instead of null",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            }
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "put_null_record",
+      "defect": "a put carries a null record",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": null
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "put_identity_mismatch",
+      "defect": "a put record derives a different identity than the operation names",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+              "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "put_wrong_digest",
+      "defect": "a put record has a well-formed but wrong digest",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:0a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "put_non_canonical_fen",
+      "defect": "a put record carries a parseable but non-canonical snapshot_fen (clocks 5 9)",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 5 9"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "put_record_missing_field",
+      "defect": "a put record has no digest field",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "duplicate_identity",
+      "defect": "two operations target the same identity",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          },
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+              "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            }
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "base_not_a_dict",
+      "defect": "the base is a list of records, not a map",
+      "expect_failure": "malformed_edit_record",
+      "base": [
+        {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      ],
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "base": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "base_key_mismatch",
+      "defect": "a base key is not its record's identity",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "base": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "base_record_wrong_digest",
+      "defect": "a base record has a well-formed but wrong digest",
+      "expect_failure": "malformed_edit_record",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:036a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "base": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "base_id_names_another_state",
+      "defect": "base_id is the id of a different valid state",
+      "expect_failure": "conflicting_base",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "base_differs_from_base_id",
+      "defect": "the base is missing a record the base_id covers",
+      "expect_failure": "conflicting_base",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "base": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "delete_absent_identity",
+      "defect": "a delete targets an identity absent from the base",
+      "expect_failure": "unknown_identity",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')",
+            "record": null
+          }
+        ]
+      },
+      "minimal_repair": {
+        "request": {
+          "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+          "operations": [
+            {
+              "kind": "put",
+              "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+              "record": {
+                "variant": "standard",
+                "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+                "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+              }
+            },
+            {
+              "kind": "delete",
+              "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+              "record": null
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "rollback": [
+    {
+      "name": "last_operation_unknown_identity",
+      "why": "valid puts then a delete of an absent identity: nothing commits",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+              "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', '8/8/8/8/8/8/8/8', 'w', '-', '-')",
+            "record": null
+          }
+        ]
+      },
+      "expect_failure": "unknown_identity",
+      "follow_up": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+              "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:1e68f5bd4956a315f18e0e288338e3c9b6505f0c3acb8054c2c0276943f83846",
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "target_id": "gs1:e04ee07e987c8f2e10721adc127427db8fa1a6d6d98aa7e16ab78b0e580fc8b9",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          },
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          },
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+          },
+          "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')": {
+            "variant": "standard",
+            "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+            "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "middle_operation_malformed",
+      "why": "a malformed record between valid operations: nothing commits",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:0abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+              "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "expect_failure": "malformed_edit_record",
+      "follow_up": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "put",
+            "identity": "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+              "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+            }
+          },
+          {
+            "kind": "put",
+            "identity": "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')",
+            "record": {
+              "variant": "standard",
+              "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+              "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+            }
+          },
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:7c9d3e98667e255962128c4344f5fd194dfe2760e1fbb1d2bac8a120cdd73131",
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "target_id": "gs1:a7c7e9eb6cb31d8b5e77ab5ea6990b8e0092ca5da7cf2fcbcb6d330f24df461b",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+          },
+          "('standard', '4k3/8/8/8/8/8/8/4K3', 'w', '-', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+            "snapshot_fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+          },
+          "('standard', 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', 'e3')": {
+            "variant": "standard",
+            "digest": "pdv1:2abd69efb99ce1f26f70c1949461f1288256d4ab9a6cf166977dd3af981d882e",
+            "snapshot_fen": "rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+          }
+        }
+      }
+    },
+    {
+      "name": "stale_base_id",
+      "why": "an edit labelled with the pre-edit state id of a different base: nothing commits",
+      "base": {
+        "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        },
+        "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')": {
+          "variant": "standard",
+          "digest": "pdv1:736a6cefc8595ac6eafae7ee667e6490abaa30e2a0969607aee8dce93c2381ff",
+          "snapshot_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        }
+      },
+      "request": {
+        "base_id": "gs1:714c05acf7a590a4cb35438855c64c72f708fb4ffbfd3d0e96f44e062d91b54f",
+        "operations": [
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "expect_failure": "conflicting_base",
+      "follow_up": {
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "operations": [
+          {
+            "kind": "delete",
+            "identity": "('standard', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR', 'b', 'KQkq', '-')",
+            "record": null
+          }
+        ]
+      },
+      "expect": {
+        "edit_id": "ae1:bae5cd3497874208df619535a0e87367b2d773b38835dbb57f3e98e66629cc32",
+        "base_id": "gs1:894cbf7123f68dd757386c8b479f883bb874ab55a9852985a39cea3d9b49369c",
+        "target_id": "gs1:92b2bc73d0eedf92c99fb0853b3bd31701bef018ca39282cc3c5c5eb5888a60a",
+        "state": {
+          "('standard', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', 'w', 'KQkq', '-')": {
+            "variant": "standard",
+            "digest": "pdv1:66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+            "snapshot_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+          }
+        }
+      }
+    }
+  ]
+}
