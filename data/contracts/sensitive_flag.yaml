@@ -1,0 +1,82 @@
+schema_version: 1
+
+contract:
+  id: privacy-sensitive-flag
+  role:
+    kind: per-collection-sensitive-flag-gating-cloud-model-egress
+    serves: collection-scoped-cloud-model-access
+    scope: one-collection-flag-state-transitions-and-egress-verdict
+    owns: flag-state-transition-semantics-and-cloud-egress-verdict
+    not_scope: redaction-byom-terms-local-model-choice-delete-and-retry-idempotency
+  record:
+    fields: [collection_id, sensitive, revision, prior]
+    exact: true
+  identifiers:
+    collection_id:
+      kind: opaque-local-collection-id
+      grammar: ^col1:[0-9a-f]{64}$
+      source: caller-supplied-exact-built-in-str-validated-never-trusted
+    revision:
+      kind: monotonic-flag-revision
+      grammar: exact-built-in-int-0-through-9223372036854775807-never-bool
+      source: derived-by-the-store-never-caller-chosen
+    approval:
+      kind: scoped-user-approval-token
+      grammar: ^apv1:[0-9a-f]{64}$
+      binding: sha256-over-collection-id-and-expected-revision-and-target-false
+      source: user-approval-surface-only-never-model-or-imported-content
+  semantics:
+    default: unknown-or-unset-flag-reads-sensitive-true-cloud-off
+    egress: cloud-destination-allowed-only-when-flag-is-exact-false-local-always-allowed
+    evaluation: egress-verdict-read-from-current-state-at-send-time-never-cached
+    raise: false-to-true-needs-no-approval-and-applies-before-the-next-egress-verdict
+    lower: true-to-false-needs-an-approval-bound-to-this-collection-and-expected-revision
+    same_value: set-to-the-current-value-is-a-no-op-revision-unchanged
+    concurrency: compare-and-set-on-expected-revision
+    history: every-applied-transition-pushes-its-prior-value
+    rollback: pops-one-history-entry-and-restores-it-one-step-back-per-call-never-pushed-empty-history-fails
+  failures:
+    classes:
+      - malformed_flag_request
+      - unknown_collection
+      - stale_revision
+      - approval_missing
+      - egress_blocked
+      - empty_history
+    triggers:
+      malformed_flag_request: checked-before-every-other-class-request-grammar-or-exact-type-violation-including-str-dict-list-subclasses-and-int-for-bool
+      unknown_collection: well-formed-collection-id-with-no-flag-state-on-transition-or-rollback
+      stale_revision: expected-revision-not-equal-to-current-revision
+      approval_missing: lowering-transition-or-rollback-to-false-without-a-bound-approval
+      egress_blocked: cloud-destination-requested-while-flag-reads-true
+      empty_history: rollback-with-no-history-entry-left-to-pop
+    mapping:
+      malformed_flag_request: malformed_request
+      unknown_collection: unknown_collection
+      stale_revision: conflict
+      approval_missing: approval_required
+      egress_blocked: cloud_off
+      empty_history: nothing_to_roll_back
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - unknown_collection
+      - conflict
+      - approval_required
+      - cloud_off
+      - nothing_to_roll_back
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    atomic: rejected-transition-leaves-flag-state-and-inputs-unchanged
+    fail_closed: any-doubt-about-the-flag-reads-sensitive-true
+    rollback: rollback-walks-back-one-step-under-the-same-transition-rules
+  versioning:
+    base_path: /privacy/sensitive-flag/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    control_plane_contract: data/contracts/control-plane.yaml
+    rights_policy_contract: data/contracts/rights_policy.yaml
