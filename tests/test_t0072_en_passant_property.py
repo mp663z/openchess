@@ -698,24 +698,49 @@ def _domain_rows():
 DOMAIN_ROWS = _domain_rows()
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _fingerprint(value):
     """Structure, exact types, identities and text of VALUE, read with base
-    methods only, so no hostile method runs."""
+    methods only, so no hostile method runs. Identities are pinned, so a
+    replaced input cannot pass by landing on its freed address."""
     if isinstance(value, dict):
         return (
             type(value),
-            id(value),
+            _Pin(value),
             tuple((_fingerprint(k), _fingerprint(v)) for k, v in dict.items(value)),
         )
     if isinstance(value, list):
         return (
             type(value),
-            id(value),
+            _Pin(value),
             tuple(_fingerprint(list.__getitem__(value, i)) for i in range(list.__len__(value))),
         )
     if isinstance(value, str):
-        return (type(value), id(value), str.__str__(value))
-    return (type(value), id(value))
+        return (type(value), _Pin(value), str.__str__(value))
+    return (type(value), _Pin(value))
 
 
 def _inputs(row):
@@ -1079,3 +1104,36 @@ def test_every_property_with_a_one_line_defect_has_a_killer():
     # P-atomic and P-deterministic guard defects no one-line edit of the
     # current copy-based source produces; they stay as regression properties
     assert set(PROPERTIES) - hit == {"P-atomic", "P-deterministic"}
+
+
+def test_hostile_check_detects_a_mutating_engine():
+    """The row check sees a typed rejection that mutated an input in place,
+    and passes the same rejection when nothing was touched."""
+    state, move = _good()
+    row = ("apply", state, move)
+
+    def engine(mutate):
+        def apply(a, b):
+            if mutate:
+                dict.__setitem__(b, "zz", 1)
+            prod._fail("target_malformed")
+
+        return types.SimpleNamespace(apply=apply)
+
+    assert _hostile_row_ok(engine(False), "self-test-row", row)
+    assert not _hostile_row_ok(engine(True), "self-test-row", ("apply", *_good()))
+
+
+class _PinProbeLeaf:
+    pass
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": _PinProbeLeaf()}
+    before = _fingerprint(value)
+    value["k"] = _PinProbeLeaf()
+    value["k"] = _PinProbeLeaf()
+    assert _fingerprint(value) != before

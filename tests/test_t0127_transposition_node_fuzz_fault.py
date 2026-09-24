@@ -307,8 +307,32 @@ def _outcome(call, forged=None):
         return ("crash", type(exc).__name__)
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _state(t):
-    return copy.deepcopy(t.buckets), {k: id(v) for k, v in t.buckets.items()}, t.serialize()
+    return copy.deepcopy(t.buckets), {k: _Pin(v) for k, v in t.buckets.items()}, t.serialize()
 
 
 class _Src:
@@ -1012,3 +1036,22 @@ def test_equivalent_edit_stays_green(name):
     log, problems = _campaign(_mutant(old, new))
     assert problems == [], (name, problems[:3])
     assert log == _clean_campaign()[0], name
+
+
+class _PinProbeTable:
+    def __init__(self):
+        self.buckets = {"k": []}
+
+    def serialize(self):
+        return "same"
+
+
+def test_state_pins_replaced_buckets():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    table = _PinProbeTable()
+    before = _state(table)
+    table.buckets["k"] = []
+    table.buckets["k"] = []
+    assert _state(table) != before
