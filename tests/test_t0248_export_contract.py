@@ -527,10 +527,34 @@ def test_exporter_mutating_log_and_request_during_call():
     assert receipt["format"] == "jsonl-v1"
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def test_rejected_export_leaves_inputs_bit_identical():
     log = _three()
     req = _req()
-    entry_refs = [id(e) for e in log]
+    entry_refs = [_Pin(e) for e in log]
     before_log, before_req = copy.deepcopy(log), copy.deepcopy(req)
 
     def meddling_then_raise(state, fmt):
@@ -540,17 +564,17 @@ def test_rejected_export_leaves_inputs_bit_identical():
 
     _raises("divergent_export", _engine(meddling_then_raise).export, log, req)
     assert log == before_log
-    assert [id(e) for e in log] == entry_refs  # reference-preserving
+    assert [_Pin(e) for e in log] == entry_refs  # reference-preserving
     assert req == before_req
 
 
 def test_successful_export_never_mutates_source():
     log = _three()
-    refs = [id(e) for e in log]
+    refs = [_Pin(e) for e in log]
     before = copy.deepcopy(log)
     _engine().export(log, _req())
     assert log == before
-    assert [id(e) for e in log] == refs
+    assert [_Pin(e) for e in log] == refs
 
 
 # -- mutants the battery must kill ---------------------------------------------
@@ -753,3 +777,14 @@ def test_mutant_without_key_type_guard_escapes_raw():
     with pytest.raises(RuntimeError):
         set(request.keys()) != set(_REQUEST_FIELDS)  # noqa: B015 - the unguarded comparison
     _raises("malformed_export_request", _engine().export, _three(), request)
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    log = [{"a": 1}]
+    ids = [_Pin(e) for e in log]
+    log[0] = {"a": 1}
+    log[0] = {"a": 1}
+    assert [_Pin(e) for e in log] != ids
