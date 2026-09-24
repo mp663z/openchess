@@ -18,3 +18,8 @@ License: AGPL (`store: agpl` in licensing-boundary.yaml).
 id `store-corruption`): it scans a WAL log to the longest prefix the linked
 WAL accepts, bounds the loss, and quarantines the corrupt suffix through an
 untrusted sink whose token must match the local canonical encoding.
+
+`store/crash_resume.py` implements `data/contracts/crash_resume.yaml`: after
+a crash it keeps the longest prefix the linked WAL accepts, requires every
+checkpointed entry to survive, and quarantines the torn tail through an
+untrusted sink whose token must match the local canonical tail encoding.
