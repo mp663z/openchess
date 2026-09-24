@@ -15,10 +15,13 @@ import random
 from pathlib import Path
 
 import pytest
+import yaml
 
 from graph import diff
 from graph.node import make_record, record_identity
+from graph.position_digest import DigestError
 from store import wal
+from tools.variant_runtime import VariantError
 
 FENS = (
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -414,9 +417,29 @@ def _forged_oracle(error):
     return oracle
 
 
+_CONTRACTS = Path(__file__).resolve().parents[1] / "data" / "contracts"
+# the linked modules' error classes, forged per class: DigestError per
+# failure class of the digest contract, VariantError per closed error
+# code of the variant contract
+DIGEST_MAPPING = yaml.safe_load(
+    (_CONTRACTS / "position_digest.yaml").read_text())["contract"][
+        "failures"]["mapping"]
+VARIANT_CODES = sorted(yaml.safe_load(
+    (_CONTRACTS / "variant.yaml").read_text())["contract"]["errors"][
+        "closed_enum"])
+
 FORGED_ERRORS = {
     **{f"forged-wal-error-{c}": wal.WalError(c, wal.FAILURE_MAPPING[c])
-       for c in sorted(wal.FAILURE_MAPPING) if c != "divergent_canonicalization"},
+       for c in sorted(wal.FAILURE_MAPPING)},
+    **{f"forged-digest-error-{c}": DigestError(c, code)
+       for c, code in sorted(DIGEST_MAPPING.items())},
+    **{f"forged-variant-error-{code}": VariantError(code=code,
+                                                   message="forged")
+       for code in VARIANT_CODES},
+    # wal names UnicodeEncodeError in its own except clause (the output
+    # check); a RAISED one must fail closed too
+    "forged-unicode-encode-error": UnicodeEncodeError(
+        "utf-8", "\ud800", 0, 1, "surrogates not allowed"),
 }
 
 
@@ -448,7 +471,16 @@ def test_r7_hostile_canonicalizer_fails_closed(name, seed):
             else:
                 engine.replay(log)
         assert exc.value.failure_class == "divergent_canonicalization", label
+        assert exc.value.code == wal.FAILURE_MAPPING[
+            "divergent_canonicalization"], label
         assert _snap(log) == before and request == before_request
+        forged = FORGED_ERRORS.get(name)
+        if forged is not None:
+            # FRESH: never the forged instance (not even a forged
+            # divergent_canonicalization), never explicitly chained
+            assert exc.value is not forged, label
+            assert type(exc.value) is wal.WalError, label
+            assert exc.value.__cause__ is None, label
 
 
 @pytest.mark.parametrize("seed", range(12))
@@ -676,4 +708,6 @@ def test_r12_property_file_uses_no_test_helpers():
             modules.add(node.module)
     assert not any(m == "tests" or m.startswith("tests.") for m in modules)
     assert modules <= {"__future__", "ast", "copy", "hashlib", "random",
-                       "pathlib", "pytest", "graph", "graph.node", "store"}
+                       "pathlib", "pytest", "yaml", "graph", "graph.node",
+                       "graph.position_digest", "tools.variant_runtime",
+                       "store"}
