@@ -944,6 +944,65 @@ def test_r2_fen_subclass_with_bad_move_is_malformed_position():
     assert not _fen_subclass_precedence_red(prod)
 
 
+_VARIANT_CALLS = []
+
+
+class _VarEq(str):
+    """str-subclass variant whose compare must never run."""
+
+    def __eq__(self, other):
+        _VARIANT_CALLS.append("eq")
+        raise RuntimeError("hostile variant compare")
+
+    def __ne__(self, other):
+        _VARIANT_CALLS.append("ne")
+        raise RuntimeError("hostile variant compare")
+
+    __hash__ = str.__hash__
+
+
+class _VarHash(str):
+    """str-subclass variant that hashes like "standard" and logs every call."""
+
+    def __hash__(self):
+        _VARIANT_CALLS.append("hash")
+        return hash("standard")
+
+    def __eq__(self, other):
+        _VARIANT_CALLS.append("eq")
+        raise RuntimeError("hostile variant compare")
+
+    def __ne__(self, other):
+        _VARIANT_CALLS.append("ne")
+        raise RuntimeError("hostile variant compare")
+
+
+def _variant_subclass_red(mod):
+    """A str-subclass variant ("standard", plain / __eq__-raises / hash-
+    colliding) at EdgeTable.insert: unknown_variant, no hostile method
+    runs, arguments unchanged. The module's own exact-str variant guard
+    runs before the registry `in` check, so it is load-bearing."""
+    for form in (_S, _VarEq, _VarHash):
+        args = [form("standard"), "e2e4", STARTPOS, AFTER_E4]
+        snap = [(type(a), str.__str__(a)) for a in args]
+        ids = [id(a) for a in args]
+        _VARIANT_CALLS.clear()
+        try:
+            mod.EdgeTable(DOCS).insert(*args)
+            return True
+        except mod.EdgeError as err:
+            if err.failure_class != "unknown_variant":
+                return True
+        if _VARIANT_CALLS or [id(a) for a in args] != ids or \
+                [(type(a), str.__str__(a)) for a in args] != snap:
+            return True
+    return False
+
+
+def test_r2_variant_subclass_is_unknown_variant_without_calls():
+    assert not _variant_subclass_red(prod)
+
+
 
 # -- verifier-1 gaps: merge key set, precedence, 4-field types, live codes ---
 
@@ -1125,6 +1184,8 @@ MUTANTS = {
         "    if len(move) not in (squares_len, squares_len + 1):\n"
         "        return False\n", "    if len(move) < squares_len:\n"
         "        return False\n"),
+    # killed by _variant_subclass_red (the registry `in` check runs
+    # before digest_fen, so a hostile __eq__ would run)
     "insert-variant-isinstance": (
         "if type(variant) is not str or variant not in [",
         "if not isinstance(variant, str) or variant not in ["),
@@ -1417,7 +1478,7 @@ def _kill_suite_red(mod):
                 _hostile_value_red(mod) or _renamed_key_red(mod) or \
                 _insert_precedence_red(mod) or _validate_precedence_red(mod) or \
                 _non_str_values_red(mod) or _live_codes_red(mod) or \
-                _fen_subclass_precedence_red(mod):
+                _fen_subclass_precedence_red(mod) or _variant_subclass_red(mod):
             return True
     except BaseException:  # noqa: BLE001 - any raw escape is a kill
         return True

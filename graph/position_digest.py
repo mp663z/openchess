@@ -126,8 +126,8 @@ def digest(digest_contract, encoding):
 def digest_fen(variant_id, fen_text):
     dc, vc, ec, fc = _docs()
     ids = [e["id"] for e in vc["variants"]["entries"]]
-    if variant_id not in ids:
-        _fail(dc, "unknown_variant")
+    if type(variant_id) is not str or variant_id not in ids:
+        _fail(dc, "unknown_variant")  # exact str first: no caller __eq__ runs
     try:
         position = parse_fen(fc, fen_text)
     except FenError:
@@ -137,7 +137,7 @@ def digest_fen(variant_id, fen_text):
 
 def parse_digest(text):
     dc, _vc, _ec, _fc = _docs()
-    if re.fullmatch(dc["digest"]["format"]["regex"], text) is None:
+    if type(text) is not str or re.fullmatch(dc["digest"]["format"]["regex"], text) is None:
         _fail(dc, "malformed_digest")
     return text
 

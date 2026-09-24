@@ -150,6 +150,64 @@ def test_r2_str_subclass_inputs_fail_closed():
         with pytest.raises(prod.NodeError):
             prod.NodeTable(DOCS).insert(variant, fen)
 
+_VARIANT_CALLS = []
+
+
+class _VarEq(str):
+    """str-subclass variant whose compare must never run."""
+
+    def __eq__(self, other):
+        _VARIANT_CALLS.append("eq")
+        raise RuntimeError("hostile variant compare")
+
+    def __ne__(self, other):
+        _VARIANT_CALLS.append("ne")
+        raise RuntimeError("hostile variant compare")
+
+    __hash__ = str.__hash__
+
+
+class _VarHash(str):
+    """str-subclass variant that hashes like "standard" and logs every call."""
+
+    def __hash__(self):
+        _VARIANT_CALLS.append("hash")
+        return hash("standard")
+
+    def __eq__(self, other):
+        _VARIANT_CALLS.append("eq")
+        raise RuntimeError("hostile variant compare")
+
+    def __ne__(self, other):
+        _VARIANT_CALLS.append("ne")
+        raise RuntimeError("hostile variant compare")
+
+
+def _variant_subclass_red(mod):
+    """A str-subclass variant ("standard", plain / __eq__-raises / hash-
+    colliding) at NodeTable.insert: unknown_variant, no hostile method
+    runs, arguments unchanged. The module's own exact-str variant guard
+    runs before the registry `in` check, so it is load-bearing."""
+    for form in (_S, _VarEq, _VarHash):
+        args = [form("standard"), STARTPOS]
+        snap = [(type(a), str.__str__(a)) for a in args]
+        ids = [id(a) for a in args]
+        _VARIANT_CALLS.clear()
+        try:
+            mod.NodeTable(DOCS).insert(*args)
+            return True
+        except mod.NodeError as err:
+            if err.failure_class != "unknown_variant":
+                return True
+        if _VARIANT_CALLS or [id(a) for a in args] != ids or \
+                [(type(a), str.__str__(a)) for a in args] != snap:
+            return True
+    return False
+
+
+def test_r2_variant_subclass_is_unknown_variant_without_calls():
+    assert not _variant_subclass_red(prod)
+
 
 def _good_record(fen=STARTPOS):
     return ref.NodeTable(DOCS).insert("standard", fen)
@@ -737,6 +795,8 @@ MUTANTS = {
     "exact-dict-isinstance": (
         "return type(obj) is dict and all(type(k) is str",
         "return isinstance(obj, dict) and all(isinstance(k, str)"),
+    # killed by _variant_subclass_red (the registry `in` check runs
+    # before digest_fen, so a hostile __eq__ would run)
     "variant-isinstance": (
         "if type(variant_id) is not str or variant_id not in",
         "if not isinstance(variant_id, str) or variant_id not in"),
@@ -945,7 +1005,8 @@ def _kill_suite_red(mod):
         if _merge_midway_red(mod) or _source_mutation_red(mod) or \
                 _hostile_container_red(mod) or _docs_shared_red(mod) or \
                 _huge_clock_red(mod) or _live_rewrite_red(mod) or \
-                _collision_merge_red(mod) or _list_subclass_red(mod):
+                _collision_merge_red(mod) or _list_subclass_red(mod) or \
+                _variant_subclass_red(mod):
             return True
         for out in BAD_OUTPUTS.values():
             try:
