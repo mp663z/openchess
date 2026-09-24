@@ -63,8 +63,8 @@ from tests import test_t0284_queue_contract as _reference  # noqa: E402
 from tools.queue_contract_lint import FAILURE_MAPPING, MAX_DEPTH, MAX_INT_DIGITS  # noqa: E402
 
 # -- binding (the production task replaces ONLY these two lines) ---------------
-QueueEngine = _reference.QueueEngine
-QueueError = _reference.QueueError
+QueueEngine = __import__("server.jobs_queue").jobs_queue.QueueEngine
+QueueError = __import__("server.jobs_queue").jobs_queue.QueueError
 
 FIXTURE = Path(__file__).parent / "fixtures" / "queue" / "cases.json"
 CASES = json.loads(FIXTURE.read_text())
