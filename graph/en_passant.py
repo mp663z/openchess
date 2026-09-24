@@ -162,6 +162,10 @@ def _capture(target, occ, side, frm, to):
         _fail("target_malformed")
     if target == NONE:
         _fail("capture_precondition")  # no target: stale or never set
+    if target in occ:
+        # the target is the square the pawn passed over, so it is empty in
+        # every consistent position (fen.yaml target_square: empty)
+        _fail("target_inconsistent")
     # the target is available only to the advancing side's opponent
     if target[1] != _SET_ON[_OTHER[side]]["target_rank"]:
         _fail("target_inconsistent")

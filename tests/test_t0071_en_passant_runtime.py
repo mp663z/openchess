@@ -348,6 +348,41 @@ def test_r2_trusted_non_capture_moves_current_behaviour(name):
         )
 
 
+# Occupied target square (coordinator ruling on the T0072 finding): the
+# target is the square the pawn passed over, so an occupied target is
+# target_inconsistent - (a) another piece on it is never deleted, (b) the
+# mover's own king on it never escapes as a raw StopIteration.
+def _occupied_target_red(mod):
+    for state, move, ident in ref.OCCUPIED_TARGET_ROWS:
+        pre = copy.deepcopy(state)
+        try:
+            mod.apply(state, move)
+        except prod.EnPassantError as exc:
+            if exc.failure_class != "target_inconsistent" or exc.__cause__ is not None:
+                return True
+        else:
+            return True
+        if state != pre or mod.identity_value(copy.deepcopy(state)) != ident:
+            return True
+    return False
+
+
+@pytest.mark.parametrize("index", range(len(ref.OCCUPIED_TARGET_ROWS)))
+def test_r2_occupied_target_is_inconsistent(index):
+    state, move, ident = ref.OCCUPIED_TARGET_ROWS[index]
+    pre = copy.deepcopy(state)
+    with pytest.raises(prod.EnPassantError) as err:
+        prod.apply(state, move)
+    assert err.value.failure_class == "target_inconsistent"
+    assert err.value.code == prod.FAILURE_MAPPING["target_inconsistent"]
+    assert err.value.__cause__ is None
+    assert state == pre
+    assert prod.identity_value(copy.deepcopy(state)) == ident
+    assert _outcome(lambda: prod.apply(copy.deepcopy(state), move)) == _outcome(
+        lambda: ref._apply(copy.deepcopy(state), move)
+    )
+
+
 # -- R3: the T0070 red tests bound to the runtime -----------------------------
 
 
@@ -632,6 +667,10 @@ MUTANTS = {
     "adjacency-off": ("        or abs(ord(frm[0]) - ord(target[0])) != 1\n", ""),
     "mover-piece-off": ('        or occ.get(frm) != side + "p"\n', ""),
     "victim-kept": ("if sq not in (frm, captured)}", "if sq != frm}"),
+    "occupied-target-check-off": (
+        "    if target in occ:\n        # the target is the square",
+        "    if False:\n        # the target is the square",
+    ),
     "pin-check-off": ("if _attacked(result, king, _OTHER[side]):", "if False:"),
     "slider-blocking-off": ("if chr(97 + f) + str(r) in occ:", "if False:"),
     "target-kept-after-capture": (
@@ -724,7 +763,12 @@ def _red(mod):
     """True when MOD fails the fixture rows, the parity sweep, identity or
     turn parity, or the hostile battery."""
     try:
-        if _fixture_red(mod) or _pawn_rows_red(mod) or _attack_rows_red(mod):
+        if (
+            _fixture_red(mod)
+            or _pawn_rows_red(mod)
+            or _attack_rows_red(mod)
+            or _occupied_target_red(mod)
+        ):
             return True
         for state, move in SWEEP:
             if _outcome(lambda s=state, m=move: mod.apply(copy.deepcopy(s), m)) != _outcome(
