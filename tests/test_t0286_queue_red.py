@@ -1585,7 +1585,7 @@ def test_dead_marking_of_an_expired_leased_job_is_pinned():
     ):
         build, _ = PROBES[name]
         state, request = build()
-        receipt = _reference.QueueEngine().apply(state, request)
+        receipt = QueueEngine().apply(state, request)
         jobs = {j["job_id"]: j for j in state["jobs"]}
         dead = jobs[LEASED]
         assert (dead["status"], dead["attempts"]) == ("dead", MAX_ATTEMPTS)
@@ -1603,7 +1603,7 @@ def test_dead_marking_of_an_expired_leased_job_is_pinned():
 def test_claim_scan_continues_past_a_dead_marked_job():
     build, _ = PROBES["claim-continues-past-dead-marked"]
     state, request = build()
-    receipt = _reference.QueueEngine().apply(state, request)
+    receipt = QueueEngine().apply(state, request)
     jobs = {j["job_id"]: j for j in state["jobs"]}
     first, second = jobs[_job_id("a")], jobs[_job_id("e")]
     assert (first["status"], first["lease_owner"], first["lease_expires_at"]) == (
@@ -1620,7 +1620,7 @@ def test_request_errors_take_precedence_over_state_corruption():
     """Each row alone: the corrupt state is corrupt_queue under a valid
     request, and the malformed request wins when both are bad."""
     for label, (edit, _request) in _both_bad_rows().items():
-        _totality_ok(_reference.QueueEngine, f"precedence-{label}")
+        _totality_ok(QueueEngine, f"precedence-{label}")
         state = _base()
         edit(state)
-        _rejects(_reference.QueueEngine(), state, copy.deepcopy(R_CLAIM), CQ)
+        _rejects(QueueEngine(), state, copy.deepcopy(R_CLAIM), CQ)
