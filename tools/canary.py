@@ -66,11 +66,13 @@ def head_sha(root: Path = ROOT) -> str:
 
 
 # a hung gate is a failed gate. Sized from the measured test-gate time
-# (ci.yml "Tests" = tools/test_gate.py) after the contract-parse cache
-# (#211): 7m09s and 7m46s at 13ed690 on the GitHub runner, down from
-# 19m58s and 21m46s at 2845f39. The whole post-merge canary step took
-# 8m18s at 6a4b91d. 900s is ~1.9x headroom over 7m46s.
-GATE_TIMEOUT_S = 900
+# (ci.yml "Tests" = tools/test_gate.py). History: 7m09s and 7m46s at
+# 13ed690 after the contract-parse cache (#211), when this was 900s.
+# At bb3c047 (after the batch A fuzz/fault batteries) the same step took
+# 16m56s and 17m04s on the GitHub runner, and the canary gate timed out
+# at 900s. Aligned with test_gate's own PYTEST_TIMEOUT_S (1800s): a hang
+# still fails, and the canary no longer reds before CI's own bound would.
+GATE_TIMEOUT_S = 1800
 
 
 def check(root: Path = ROOT, gates: list[list[str]] | None = None,
