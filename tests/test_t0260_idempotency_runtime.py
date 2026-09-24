@@ -43,9 +43,10 @@ PRODUCTION_LINES = (
     '.idempotency.IdempotencyEngine\n'
     'IdempotencyError = __import__("store.idempotency")'
     '.idempotency.IdempotencyError\n')
-# sha256 of tests/test_t0259_idempotency_red.py as merged (3667d53)
+# sha256 of tests/test_t0259_idempotency_red.py as merged (bound-error
+# source-mutant rebind)
 RED_AS_MERGED_SHA256 = (
-    "bfa63a0ae126312e59762b2f9784c64e50550b620b2d2256cb0c088ce5e7581a")
+    "cac1c10e4179118dcab2305795a6e535ac8f6c2d6c5fc7c699bd7b523fb4d770")
 ALLOWED_IMPORTS = {"__future__", "copy", "hashlib", "re", "pathlib", "yaml",
                    "store", "tools.idempotency_contract_lint"}
 
