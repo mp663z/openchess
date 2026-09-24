@@ -4375,10 +4375,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "e55ff1b2411afbb34884d900af1a5aac94de4e04",
+   "evidence_manifest": "evidence/T0204.md"
   },
   {
    "id": "T0205",
@@ -4645,10 +4647,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "6dd74481be996cdbb9d8b1d6101bf7fba554b5be",
+   "evidence_manifest": "evidence/T0217.md"
   },
   {
    "id": "T0218",
@@ -5004,10 +5008,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "55b681cc14e0e5fac7570a4a9eae78cf75d71997",
+   "evidence_manifest": "evidence/T0234.md"
   },
   {
    "id": "T0235",
@@ -5192,10 +5198,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "df9c205434b574232a2ae1fa32d2f3a05821c5b6",
+   "evidence_manifest": "evidence/T0243.md"
   },
   {
    "id": "T0244",
@@ -5380,10 +5388,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "87ffd32f73b90e37c432d68300ea71f1eb116e12",
+   "evidence_manifest": "evidence/T0252.md"
   },
   {
    "id": "T0253",
@@ -5734,10 +5744,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "40d0fe1b909f5774fb230678b452cf1e47ab1f9f",
+   "evidence_manifest": "evidence/T0269.md"
   },
   {
    "id": "T0270",
@@ -5898,10 +5910,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "359dccb21708201ddc4ad7e751733ce15d81fa18",
+   "evidence_manifest": "evidence/T0277.md"
   },
   {
    "id": "T0278",
@@ -5918,10 +5932,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "974d96dc9365e4702e8960c72f6447522145306d",
+   "evidence_manifest": "evidence/T0278.md"
   },
   {
    "id": "T0279",
