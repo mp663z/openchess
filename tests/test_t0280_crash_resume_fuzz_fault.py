@@ -546,6 +546,12 @@ class _Pin:
         return f"<pin {id(self.obj):#x}>"
 
 
+def _pins(items):
+    """Keep-alive identity tokens of ITEMS, in order: the one helper every
+    reference-preservation site and its replace-twice probe share."""
+    return [_Pin(item) for item in items]
+
+
 def _shape(value, seen=None):
     """Value, exact type, key order and identity at every level (cycle safe)."""
     seen = set() if seen is None else seen
@@ -569,7 +575,7 @@ def _outcome(module, case):
     calls, forged, why = [], [None], []
     log, request = case["build"]()
     log_before, request_before = _shape(log), _shape(request)
-    kept = [_Pin(e) for e in log[:case.get("keep", 0)]] if type(log) is list else []
+    kept = _pins(log[:case.get("keep", 0)]) if type(log) is list else []
     live = _live_edit(log, request, case["live"]) if "live" in case else None
     engine = module.ResumeEngine(_sink(module, case.get("fault"), calls, forged, live))
     _ARMED[0] = True
@@ -596,7 +602,7 @@ def _outcome(module, case):
         if forged[0] is not None and result is forged[0]:
             why.append("forged error escaped")
         return result.failure_class, why
-    if [_Pin(e) for e in log] != kept or \
+    if _pins(log) != kept or \
             _shape(log)[2] != log_before[2][:case.get("keep", 0)]:
         why.append("surviving prefix not kept in place")
     if type(result) is not dict or list(result) != list(FIELDS):
@@ -855,3 +861,14 @@ def test_fingerprint_pins_replaced_objects():
     value["k"] = {"x": 1}
     value["k"] = {"x": 1}
     assert _shape(value) != before
+
+
+def test_pins_helper_keeps_replaced_entries():
+    """The reference-preservation sites share _pins: a replace-twice engine
+    swaps an entry for an equal one, possibly on the freed address, and the
+    pinned list still sees the swap."""
+    log = [{"a": 1}]
+    before = _pins(log)
+    log[0] = {"a": 1}
+    log[0] = {"a": 1}
+    assert _pins(log) != before

@@ -188,6 +188,12 @@ class _Pin:
         return f"<pin {id(self.obj):#x}>"
 
 
+def _pins(items):
+    """Keep-alive identity tokens of ITEMS, in order: the one helper every
+    reference-preservation site and its replace-twice probe share."""
+    return [_Pin(item) for item in items]
+
+
 def _run(module, text, steps):
     """Load TEXT, run STEPS; a step is replay, append (optionally
     persisted on success) or restart (reload the persisted text)."""
@@ -200,7 +206,7 @@ def _run(module, text, steps):
         forged = [None]
         engine = module.WalEngine(_canonicalizer(module, step.get("canon"),
                                                  forged))
-        before, ids = _dumps(log), [_Pin(entry) for entry in log]
+        before, ids = _dumps(log), _pins(log)
         try:
             if step["do"] == "replay":
                 result = engine.replay(log)
@@ -211,7 +217,7 @@ def _run(module, text, steps):
                         "exact": type(error) is module.WalError,
                         "fresh": forged[0] is None or error is not forged[0],
                         "intact": _dumps(log) == before and
-                        [_Pin(entry) for entry in log] == ids})
+                        _pins(log) == ids})
             continue
         except BaseException as error:  # noqa: BLE001 - raw escape recorded
             out.append({"crash": type(error).__name__})
@@ -811,7 +817,7 @@ def test_fingerprint_pins_replaced_objects():
     second can land on its freed address, which a bare id() would miss.
     The fingerprint pins the original, so the swap goes red."""
     log = [{"a": 1}]
-    ids = [_Pin(entry) for entry in log]
+    ids = _pins(log)
     log[0] = {"a": 1}
     log[0] = {"a": 1}
-    assert [_Pin(entry) for entry in log] != ids
+    assert _pins(log) != ids

@@ -973,10 +973,16 @@ class _Pin:
         return f"<pin {id(self.obj):#x}>"
 
 
+def _pins(items):
+    """Keep-alive identity tokens of ITEMS, in order: the one helper every
+    reference-preservation site and its replace-twice probe share."""
+    return [_Pin(item) for item in items]
+
+
 def _run_scan(oracle_name, log, request, expect):
     work_log = copy.deepcopy(log)
     work_req = copy.deepcopy(request)
-    kept_ids = [_Pin(entry) for entry in work_log]
+    kept_ids = _pins(work_log)
     receipt = CorruptionEngine(ORACLES[oracle_name]).scan(
         work_log, work_req)
     assert receipt == expect
@@ -985,7 +991,7 @@ def _run_scan(oracle_name, log, request, expect):
     # the commit removed EXACTLY the corrupt suffix, nothing
     # else, and kept the surviving entry OBJECTS
     assert work_log == log[:count]
-    assert [_Pin(entry) for entry in work_log] == kept_ids[:count]
+    assert _pins(work_log) == kept_ids[:count]
     assert work_req == request
     assert _wal_verifies(work_log)
     # deterministic: fresh copies re-derive the same receipt
@@ -1633,7 +1639,7 @@ def test_fingerprint_pins_replaced_objects():
     second can land on its freed address, which a bare id() would miss.
     The fingerprint pins the original, so the swap goes red."""
     log = [{"a": 1}]
-    before = [_Pin(e) for e in log]
+    before = _pins(log)
     log[0] = {"a": 1}
     log[0] = {"a": 1}
-    assert [_Pin(e) for e in log] != before
+    assert _pins(log) != before

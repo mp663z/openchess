@@ -155,6 +155,12 @@ class _Pin:
         return f"<pin {id(self.obj):#x}>"
 
 
+def _pins(items):
+    """Keep-alive identity tokens of ITEMS, in order: the one helper every
+    reference-preservation site and its replace-twice probe share."""
+    return [_Pin(item) for item in items]
+
+
 def _deep_ids(value):
     if isinstance(value, dict):
         return [_Pin(value)] + [x for k, v in value.items()
@@ -183,8 +189,8 @@ def _fails(failure, call, *args):
 def _run(log, target, archiver=rollback.archive_tail):
     """Roll LOG back to TARGET and check the receipt and the commit."""
     original = copy.deepcopy(log)
-    entry_ids = [_Pin(e) for e in log]
-    inner = [(_Pin(e["payload"]), _Pin(e["payload"]["record"])) for e in log]
+    entry_ids = _pins(log)
+    inner = _pins(x for e in log for x in (e["payload"], e["payload"]["record"]))
     container = id(log)
     request = {"target_sequence": target}
     req_before = _snap(request)
@@ -204,8 +210,9 @@ def _run(log, target, archiver=rollback.archive_tail):
     # commit: same container, exactly the original prefix, same objects
     assert id(log) == container
     assert log == original[:target]
-    assert [_Pin(e) for e in log] == entry_ids[:target]
-    assert [(_Pin(e["payload"]), _Pin(e["payload"]["record"])) for e in log] == inner[:target]
+    assert _pins(log) == entry_ids[:target]
+    assert _pins(x for e in log
+                 for x in (e["payload"], e["payload"]["record"])) == inner[:2 * target]
     replay = wal.WalEngine(wal.canonical_payload).replay(copy.deepcopy(log))
     assert replay["head"] == out["to_head"] and replay["applied"] == target
     assert _snap(request) == req_before
@@ -358,7 +365,7 @@ def test_r5_live_input_mutation_is_undone(seed, fail):
     target = seed % len(log)
     request = {"target_sequence": target}
     original = copy.deepcopy(log)
-    entry_ids = [_Pin(e) for e in log]
+    entry_ids = _pins(log)
     before, req_before = _snap(log), _snap(request)
 
     def archiver(tail):
@@ -383,7 +390,7 @@ def test_r5_live_input_mutation_is_undone(seed, fail):
         out = _engine(archiver).rollback(log, request)
         assert out == _engine().rollback(copy.deepcopy(original), {"target_sequence": target})
         assert log == original[:target]
-        assert [_Pin(e) for e in log] == entry_ids[:target]
+        assert _pins(log) == entry_ids[:target]
     assert _snap(request) == req_before
 
 
@@ -540,3 +547,14 @@ def test_fingerprint_pins_replaced_objects():
     value["k"] = {"x": 1}
     value["k"] = {"x": 1}
     assert _snap(value) != before
+
+
+def test_pins_helper_keeps_replaced_entries():
+    """The reference-preservation sites share _pins: a replace-twice engine
+    swaps an entry for an equal one, possibly on the freed address, and the
+    pinned list still sees the swap."""
+    log = [{"a": 1}]
+    before = _pins(log)
+    log[0] = {"a": 1}
+    log[0] = {"a": 1}
+    assert _pins(log) != before

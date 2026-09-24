@@ -159,6 +159,12 @@ class _Pin:
         return f"<pin {id(self.obj):#x}>"
 
 
+def _pins(items):
+    """Keep-alive identity tokens of ITEMS, in order: the one helper every
+    reference-preservation site and its replace-twice probe share."""
+    return [_Pin(item) for item in items]
+
+
 def _deep_ids(value):
     if isinstance(value, dict):
         return [_Pin(value)] + [x for k, v in value.items()
@@ -214,8 +220,8 @@ def test_r1_sequences_match_the_key_then_fingerprint_model(seed):
         request = _request(key, op, index)
         fp = _fp(op, request["payload"])
         req_before = _snap(request)
-        old_entry_ids = [_Pin(e) for e in log]
-        old_receipt_ids = [_Pin(r) for r in ledger]
+        old_entry_ids = _pins(log)
+        old_receipt_ids = _pins(ledger)
         log_before, ledger_before = copy.deepcopy(log), copy.deepcopy(ledger)
         calls = []
 
@@ -226,8 +232,8 @@ def test_r1_sequences_match_the_key_then_fingerprint_model(seed):
         if key in model_ledger and model_ledger[key]["request_fingerprint"] != fp:
             _fails("key_conflict", _engine(fingerprinter).apply, log, ledger, request)
             assert log == log_before and ledger == ledger_before
-            assert [_Pin(e) for e in log] == old_entry_ids
-            assert [_Pin(r) for r in ledger] == old_receipt_ids
+            assert _pins(log) == old_entry_ids
+            assert _pins(ledger) == old_receipt_ids
         else:
             out = _engine(fingerprinter).apply(log, ledger, request)
             assert list(out) == ["outcome", "receipt"]
@@ -255,8 +261,8 @@ def test_r1_sequences_match_the_key_then_fingerprint_model(seed):
                 assert ledger == ledger_before + [receipt]
                 assert ledger[-1] is not receipt
                 model_ledger[key] = dict(receipt)
-            assert [_Pin(e) for e in log[:len(old_entry_ids)]] == old_entry_ids
-            assert [_Pin(r) for r in ledger[:len(old_receipt_ids)]] == old_receipt_ids
+            assert _pins(log[:len(old_entry_ids)]) == old_entry_ids
+            assert _pins(ledger[:len(old_receipt_ids)]) == old_receipt_ids
             receipt["sequence"] = -1
             assert all(r["sequence"] > 0 for r in ledger)
         assert calls == [(op, request["payload"])]
@@ -733,7 +739,7 @@ def test_fingerprint_pins_replaced_objects():
     value["k"] = {"x": 1}
     assert _snap(value) != before
     log = [{"a": 1}]
-    ids = [_Pin(e) for e in log]
+    ids = _pins(log)
     log[0] = {"a": 1}
     log[0] = {"a": 1}
-    assert [_Pin(e) for e in log] != ids
+    assert _pins(log) != ids
