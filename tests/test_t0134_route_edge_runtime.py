@@ -883,6 +883,67 @@ def test_r2_hostile_str_subclass_values_fail_closed_without_calls():
     assert not _hostile_value_red(prod)
 
 
+_FEN_CALLS = []
+
+
+class _FenEq(str):
+    """str-subclass FEN whose compare must never run."""
+
+    def __eq__(self, other):
+        _FEN_CALLS.append("eq")
+        raise RuntimeError("hostile fen compare")
+
+    def __ne__(self, other):
+        _FEN_CALLS.append("ne")
+        raise RuntimeError("hostile fen compare")
+
+    __hash__ = str.__hash__
+
+
+class _FenHash(str):
+    """str-subclass FEN that hashes like a real FEN and logs every call."""
+
+    def __hash__(self):
+        _FEN_CALLS.append("hash")
+        return hash(STARTPOS)
+
+    def __eq__(self, other):
+        _FEN_CALLS.append("eq")
+        raise RuntimeError("hostile fen compare")
+
+    def __ne__(self, other):
+        _FEN_CALLS.append("ne")
+        raise RuntimeError("hostile fen compare")
+
+
+def _fen_subclass_precedence_red(mod):
+    """A str-subclass from/to FEN with a malformed move: insert fails as
+    malformed_position (the FEN type check precedes the move check), no
+    hostile method runs, and the arguments are unchanged."""
+    for pos in (2, 3):
+        for form in (_S, _FenEq, _FenHash):
+            for move in ("zzzz", "e2e2", "e2e4qq"):
+                args = ["standard", move, STARTPOS, AFTER_E4]
+                args[pos] = form(args[pos])
+                snap = [(type(a), str.__str__(a)) for a in args]
+                ids = [id(a) for a in args]
+                _FEN_CALLS.clear()
+                try:
+                    mod.EdgeTable(DOCS).insert(*args)
+                    return True
+                except mod.EdgeError as err:
+                    if err.failure_class != "malformed_position":
+                        return True
+                if _FEN_CALLS or [id(a) for a in args] != ids or \
+                        [(type(a), str.__str__(a)) for a in args] != snap:
+                    return True
+    return False
+
+
+def test_r2_fen_subclass_with_bad_move_is_malformed_position():
+    assert not _fen_subclass_precedence_red(prod)
+
+
 
 # -- verifier-1 gaps: merge key set, precedence, 4-field types, live codes ---
 
@@ -1072,6 +1133,8 @@ MUTANTS = {
          "        _fail(ec, \"malformed_edge_record\")\n", ""),
         ("if type(move) is not str or not move.isascii():",
          "if not isinstance(move, str) or not move.isascii():")],
+    # killed by _fen_subclass_precedence_red: with isinstance a str-subclass
+    # FEN passes, _move_ok runs next and a bad move changes the class
     "insert-fen-isinstance": (
         "if type(from_fen) is not str or type(to_fen) is not str:",
         "if not isinstance(from_fen, str) or not isinstance(to_fen, str):"),
@@ -1082,9 +1145,6 @@ MUTANTS = {
         "    if not _move_ok(lc, move):\n"
         "        _fail(ec, \"malformed_position\")\n"
         "    failed = False\n"),
-    "parse-catches-fenerror-only": (
-        "    except (FenError, ValueError):  # ValueError: clock over int-str limit",
-        "    except FenError:"),
     "parse-fails-inside-except-chained": (
         "    except (FenError, ValueError):  # ValueError: clock over int-str limit\n"
         "        failed = True\n",
@@ -1216,6 +1276,12 @@ MUTANTS = {
 
 # one-guard edits no black-box probe can separate (reason per entry)
 EQUIVALENT_EDITS = {
+    # linked parse_fen is total since the T0089 'graph.fen: total parse_fen'
+    # commit (exact str, over-limit counters as FenError); the downstream
+    # guard is defense in depth
+    "parse-catches-fenerror-only": (
+        "    except (FenError, ValueError):  # ValueError: clock over int-str limit",
+        "    except FenError:"),
     # a non-ascii character can never be in the linked files/ranks
     # lists, so the grammar check rejects it with the same class
     "move-ascii-off": (
@@ -1350,7 +1416,8 @@ def _kill_suite_red(mod):
                 _bad_to_square_red(mod) or _bucket_key_red(mod) or \
                 _hostile_value_red(mod) or _renamed_key_red(mod) or \
                 _insert_precedence_red(mod) or _validate_precedence_red(mod) or \
-                _non_str_values_red(mod) or _live_codes_red(mod):
+                _non_str_values_red(mod) or _live_codes_red(mod) or \
+                _fen_subclass_precedence_red(mod):
             return True
     except BaseException:  # noqa: BLE001 - any raw escape is a kill
         return True

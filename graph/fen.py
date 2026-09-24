@@ -104,6 +104,8 @@ def parse_fen(contract, text):
     def fail(cls):
         raise FenError(cls, mapping[cls]["error"])
 
+    if type(text) is not str:
+        fail("malformed_fen")
     parts = text.split(" ")
     if len(parts) != len(contract["fields"]["order"]) or any(part == "" for part in parts):
         fail("malformed_fen")
@@ -153,9 +155,15 @@ def parse_fen(contract, text):
     ):
         if spec["grammar"] == "ascii-digits-0-9-only" and not re.fullmatch(r"[0-9]+", value):
             fail("malformed_fen")
-        if spec["leading_zeros"] == "forbidden" and value != str(int(value)):
+        try:
+            number = int(value)
+        except ValueError:  # beyond the interpreter's int-string limit
+            number = None
+        if number is None:
             fail("malformed_fen")
-        if int(value) < spec["min"]:
+        if spec["leading_zeros"] == "forbidden" and value != str(number):
+            fail("malformed_fen")
+        if number < spec["min"]:
             fail("malformed_fen")
     half_i, full_i = int(half), int(full)
 
