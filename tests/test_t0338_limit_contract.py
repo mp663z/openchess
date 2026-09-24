@@ -753,6 +753,11 @@ MALFORMED = {
     "previous-lying-dict": req(previous=_LyingDict(_forge())),
     "previous-list-subclass": req(previous=_ListSub(_forge().items())),
     "bad-op-and-bad-policy": req(op="x", policy={"capacity": 0}),
+    # the request check runs before the policy check: a cost past its bound
+    # is malformed_limit_request even when the policy is invalid too
+    "cost-past-bound-with-bad-policy": req(
+        cost=1_000_001, policy={"capacity": 0, "refill_ms": 1000}
+    ),
 }
 for _field in _FIELDS:
     for _label, _make in KEY_FORMS.items():
@@ -797,6 +802,11 @@ CORRUPT = {
         decision="deny", tokens=0, retry_after_ms=1000, updated_at=9007199254740991 - 999
     ),
     "updated-past-clock": _forge(updated_at=9007199254740992),
+    "updated-negative": _forge(updated_at=-1),
+    "capacity-past-bound": _forge(capacity=1_000_001),
+    "refill-past-bound": _forge(refill_ms=86_400_001),
+    "cost-zero": _forge(cost=0),
+    "decision-str-subclass": _forge(decision=_StrSub("admit")),
     "retry-bool": _forge(decision="deny", tokens=0, retry_after_ms=True),
     "deny-cost-over-capacity-tokens-3": _forge(
         decision="deny", capacity=3, cost=5, tokens=3, retry_after_ms=1500
@@ -892,6 +902,23 @@ def test_forged_previous_is_otherwise_valid():
     assert admit(req(now=60, previous=_forge()))["previous_id"] == _GOOD_PREV["limit_id"]
     deny = _forge(decision="deny", tokens=0, retry_after_ms=1000)
     assert admit(req(now=60, previous=deny))["previous_id"] == deny["limit_id"]
+    # accepted twins at each previous-record bound: capacity 1000000 and
+    # refill_ms 86400000 (with a matching policy), cost 1
+    top_cap = _forge(capacity=1_000_000)
+    policy_cap = {"capacity": 1_000_000, "refill_ms": 1000}
+    assert (
+        admit(req(now=60, policy=policy_cap, previous=top_cap))["previous_id"]
+        == top_cap["limit_id"]
+    )
+    top_refill = _forge(refill_ms=86_400_000)
+    policy_refill = {"capacity": 3, "refill_ms": 86_400_000}
+    got = admit(req(now=60, policy=policy_refill, previous=top_refill))
+    assert got["previous_id"] == top_refill["limit_id"]
+    at_zero = _forge(updated_at=0)  # the accepted twin of updated-negative
+    assert admit(req(now=60, previous=at_zero))["previous_id"] == at_zero["limit_id"]
+    # the accepted twin of cost-past-bound-with-bad-policy
+    top = {"capacity": 1_000_000, "refill_ms": 1000}
+    assert admit(req(cost=1_000_000, policy=top))["decision"] == "admit"
 
 
 def test_rejections_leave_inputs_bit_identical():
@@ -994,6 +1021,27 @@ REFERENCE_EDITS = {
     "grammar-type-off": ("return type(value) is str and regex.fullmatch", "return regex.fullmatch"),
     "int-type-off": ("return type(value) is int and lo <= value", "return lo <= value"),
     "retryable-true": ("self.retryable = False", "self.retryable = True"),
+    "cost-upper-plus": (
+        'and _int_in(request["cost"], 1, _REF_MAX_CAPACITY)',
+        'and _int_in(request["cost"], 1, _REF_MAX_CAPACITY + 1)',
+    ),
+    "prev-capacity-upper-plus": (
+        'and _int_in(prev["capacity"], 1, _REF_MAX_CAPACITY)',
+        'and _int_in(prev["capacity"], 1, _REF_MAX_CAPACITY + 1)',
+    ),
+    "prev-refill-upper-plus": (
+        'and _int_in(prev["refill_ms"], 1, _REF_MAX_REFILL)',
+        'and _int_in(prev["refill_ms"], 1, _REF_MAX_REFILL + 1)',
+    ),
+    "prev-cost-floor-zero": (
+        'and _int_in(prev["cost"], 1, prev["capacity"])',
+        'and _int_in(prev["cost"], 0, prev["capacity"])',
+    ),
+    "prev-decision-type-off": ('        and type(prev["decision"]) is str\n', ""),
+    "prev-updated-floor-minus": (
+        'and _int_in(prev["updated_at"], 0, _REF_MAX_NOW)',
+        'and _int_in(prev["updated_at"], -1, _REF_MAX_NOW)',
+    ),
     "order-swap": (
         '    elif request["previous"] is not None and not _previous_ok(request["previous"]):\n'
         '        failed = "corrupt_previous_bucket"\n'
@@ -1019,14 +1067,44 @@ EQUIVALENT_EDITS = {
     "not-detached": ("req = json.loads(_canon(request))", "req = request"),
     # tokens <= capacity is implied by the decision invariants: admit
     # needs tokens <= capacity - cost, deny needs tokens < cost <= capacity.
+    # A record past the bound fails those invariants in the same _previous_ok
+    # call, so corrupt_previous_bucket still comes out and nothing between
+    # the guard and the verdict reads the input or fails differently.
     "prev-tokens-bound-to-max-capacity": (
         'and _int_in(prev["tokens"], 0, prev["capacity"])',
         'and _int_in(prev["tokens"], 0, _REF_MAX_CAPACITY)',
     ),
-    # deny tokens < cost is implied by 1 <= retry <= (cost - tokens) * refill.
+    # deny tokens < cost is implied by 1 <= retry <= (cost - tokens) * refill:
+    # tokens >= cost makes the upper bound <= 0, so the same conjunction
+    # rejects with corrupt_previous_bucket, and nothing between the guard and
+    # the verdict reads the input or fails differently.
     "prev-deny-tokens-below-cost-dropped": (
         '        and prev["tokens"] < prev["cost"]\n',
         "",
+    ),
+    # same argument as prev-tokens-bound-to-max-capacity for a bound of
+    # capacity + 1: tokens = capacity + 1 fails the decision invariants in the
+    # same call (corrupt_previous_bucket), with no input read or failure between.
+    "prev-tokens-bound-plus-one": (
+        'and _int_in(prev["tokens"], 0, prev["capacity"])',
+        'and _int_in(prev["tokens"], 0, prev["capacity"] + 1)',
+    ),
+    # cost > capacity checked only once the policy is ok, then the policy
+    # check: the same class comes out for every input (an invalid policy is
+    # invalid_limit_policy either way, a valid one reaches the cost guard).
+    # The extra _policy_ok call runs over an exact dict whose keys are exact
+    # strs checked first, with type-exact int checks, so no user code runs and
+    # nothing between the guard and the verdict fails differently.
+    "policy-ok-gates-cost-check": (
+        '    elif not _policy_ok(request["policy"]):\n'
+        '        failed = "invalid_limit_policy"\n'
+        '    elif request["cost"] > request["policy"]["capacity"]:\n'
+        '        failed = "malformed_limit_request"\n',
+        '    elif _policy_ok(request["policy"])'
+        ' and request["cost"] > request["policy"]["capacity"]:\n'
+        '        failed = "malformed_limit_request"\n'
+        '    elif not _policy_ok(request["policy"]):\n'
+        '        failed = "invalid_limit_policy"\n',
     ),
 }
 
