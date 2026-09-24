@@ -246,6 +246,9 @@ MUTANTS = {
                            "grammar.search(entry[field])")],
     "entry-key-len": [("set(dict.keys(entry)) != set(_FIELDS)",
                        "len(entry) != len(_FIELDS)")],
+    "no-op-type-check": [("    op = entry[\"op\"]\n    if type(op) is not str:\n"
+                          "        _fail(\"malformed_wal_entry\")\n",
+                          "    op = entry[\"op\"]\n")],
 }
 
 # the killed list: every non-identity mutant and the probe it must fail
@@ -265,6 +268,7 @@ MUTANT_TARGETS = {
     "no-rederive-check": "tamper-swap-payload-last",
     "id-grammar-search": "tamper-entry-id-trailing-newline-middle",
     "entry-key-len": "tamper-rename-sequence-middle",
+    "no-op-type-check": "tamper-op-int-middle",
 }
 
 
@@ -370,6 +374,10 @@ def _tampers():
         "malformed_wal_entry")
     add("extra-key", lambda log, p: _t_entry(p, "force", True)(log),
         "malformed_wal_entry")
+    # a non-str op in the durable form: type-checked before the op registry
+    add("op-int", lambda log, p: _t_entry(p, "op", 1)(log), "malformed_wal_entry")
+    add("op-null", lambda log, p: _t_entry(p, "op", None)(log), "malformed_wal_entry")
+    add("op-list", lambda log, p: _t_entry(p, "op", ["put"])(log), "malformed_wal_entry")
 
     def rename(log, p, where, old, new):
         container = {"entry": log[p], "payload": log[p]["payload"],
@@ -483,7 +491,8 @@ def _probe_jobs():
     for name, pos in (("splice-foreign", "last"), ("reforged-sequence", "middle"),
                       ("swap-payload", "last"),
                       ("entry-id-trailing-newline", "middle"),
-                      ("rename-sequence", "middle"), ("flip-entry-id", "last")):
+                      ("rename-sequence", "middle"), ("flip-entry-id", "last"),
+                      ("op-int", "middle"), ("op-list", "first")):
         p[f"tamper-{name}-{pos}"] = {"text": _tampered(name, pos),
                                      "steps": [{"do": "replay"}]}
     n = len(BASE_OPS)
