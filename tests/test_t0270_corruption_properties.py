@@ -239,17 +239,41 @@ def _shape(value, seen=()):
     return (type(value).__name__, value)
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _deep_ids(value, seen=()):
     if id(value) in seen:
-        return [id(value)]
+        return [_Pin(value)]
     if isinstance(value, dict):
         inner = (*seen, id(value))
-        return [id(value)] + [x for k, v in dict.items(value)
-                              for x in (id(k), *_deep_ids(v, inner))]
+        return [_Pin(value)] + [x for k, v in dict.items(value)
+                              for x in (_Pin(k), *_deep_ids(v, inner))]
     if isinstance(value, list):
         inner = (*seen, id(value))
-        return [id(value)] + [x for v in list.__iter__(value) for x in _deep_ids(v, inner)]
-    return [id(value)]
+        return [_Pin(value)] + [x for v in list.__iter__(value) for x in _deep_ids(v, inner)]
+    return [_Pin(value)]
 
 
 def _snap(value):
@@ -758,3 +782,14 @@ def test_r10_property_file_uses_no_test_helpers():
     assert modules <= {"__future__", "ast", "copy", "hashlib", "json", "random",
                        "pathlib", "pytest", "graph", "graph.node", "store",
                        "tools.corruption_contract_lint"}
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original leaf and
+    the second can land on its freed address, which a bare id() would
+    miss. The fingerprint pins the original, so the swap goes red."""
+    value = {"k": [1]}
+    before = _snap(value)
+    value["k"] = [1]
+    value["k"] = [1]
+    assert _snap(value) != before
