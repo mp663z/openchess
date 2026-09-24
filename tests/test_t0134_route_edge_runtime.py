@@ -1064,9 +1064,6 @@ MUTANTS = {
         "    if len(move) not in (squares_len, squares_len + 1):\n"
         "        return False\n", "    if len(move) < squares_len:\n"
         "        return False\n"),
-    "insert-variant-isinstance": (
-        "if type(variant) is not str or variant not in [",
-        "if not isinstance(variant, str) or variant not in ["),
     "move-type-guards-both-off": [
         ("    if type(move) is not str:\n"
          "        _fail(ec, \"malformed_edge_record\")\n", ""),
@@ -1210,6 +1207,12 @@ MUTANTS = {
 
 # one-guard edits no black-box probe can separate (reason per entry)
 EQUIVALENT_EDITS = {
+    # linked position_digest is total since the T0116 'graph.position_digest:
+    # exact-str inputs' commit (str-subclass variants fail as unknown_variant);
+    # the downstream guard is defense in depth
+    "insert-variant-isinstance": (
+        "if type(variant) is not str or variant not in [",
+        "if not isinstance(variant, str) or variant not in ["),
     # linked parse_fen is total since the T0089 'graph.fen: total parse_fen'
     # commit (exact str, over-limit counters as FenError); the downstream
     # guard is defense in depth

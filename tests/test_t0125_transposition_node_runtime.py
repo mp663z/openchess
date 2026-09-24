@@ -737,9 +737,6 @@ MUTANTS = {
     "exact-dict-isinstance": (
         "return type(obj) is dict and all(type(k) is str",
         "return isinstance(obj, dict) and all(isinstance(k, str)"),
-    "variant-isinstance": (
-        "if type(variant_id) is not str or variant_id not in",
-        "if not isinstance(variant_id, str) or variant_id not in"),
     "record-key-set-subset": (
         "if not _exact_dict(record) or set(dict.keys(record)) != set(",
         "if not _exact_dict(record) or not set(dict.keys(record)) >= set("),
@@ -840,6 +837,12 @@ MUTANTS = {
 # itself format-checked, so digest consistency rejects it with the same
 # class (malformed_node_record)
 EQUIVALENT_EDITS = {
+    # linked position_digest is total since the T0116 'graph.position_digest:
+    # exact-str inputs' commit (str-subclass variants fail as unknown_variant);
+    # the downstream guard is defense in depth
+    "variant-isinstance": (
+        "if type(variant_id) is not str or variant_id not in",
+        "if not isinstance(variant_id, str) or variant_id not in"),
     # linked parse_fen is total since the T0089 'graph.fen: total parse_fen'
     # commit (exact str, over-limit counters as FenError); the downstream
     # guard is defense in depth
