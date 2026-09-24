@@ -572,6 +572,41 @@ def test_queue_job_invariants_are_enforced():
         _raises("corrupt_job", req(job=bad))
 
 
+# (corrupt non-dead job, its single-locus repair): the repair is still not
+# dead, so it fails job_not_dead - job integrity is checked for every
+# status before the dead check, at each bound and grammar of _job_ok.
+_NON_DEAD_INTEGRITY = {
+    "ready-attempts-past-max": (
+        job(status="ready", attempts=MAX_ATTEMPTS + 1),
+        job(status="ready", attempts=MAX_ATTEMPTS),
+    ),
+    "ready-attempts-below-floor": (
+        job(status="ready", attempts=-1),
+        job(status="ready", attempts=0),
+    ),
+    "leased-owner-bad-grammar": (
+        job(status="leased", attempts=2, lease_owner="!!", lease_expires_at=9),
+        job(status="leased", attempts=2, lease_owner="w-1", lease_expires_at=9),
+    ),
+    "leased-expiry-past-bound": (
+        job(status="leased", attempts=2, lease_owner="w-1", lease_expires_at=2**53),
+        job(status="leased", attempts=2, lease_owner="w-1", lease_expires_at=2**53 - 1),
+    ),
+    "leased-expiry-zero": (
+        job(status="leased", attempts=2, lease_owner="w-1", lease_expires_at=0),
+        job(status="leased", attempts=2, lease_owner="w-1", lease_expires_at=1),
+    ),
+}
+
+
+def test_non_dead_job_integrity_precedes_the_dead_check():
+    for label, (bad, fix) in _NON_DEAD_INTEGRITY.items():
+        changed = {k for k in fix if bad[k] != fix[k] or type(bad[k]) is not type(fix[k])}
+        assert len(changed) == 1, label
+        _raises("corrupt_job", req(job=bad))
+        _raises("job_not_dead", req(job=fix))
+
+
 def test_permanent_dead_below_max_attempts_is_refused():
     """provisional pending owner ruling on permanent-dead attempt count:
     retry.yaml makes a permanent failure dead at any attempt count, but
@@ -897,6 +932,19 @@ REFERENCE_EDITS = {
         '        failed = "job_not_dead"\n'
         '    elif not _job_ok(request["job"]):\n'
         '        failed = "corrupt_job"\n',
+    ),
+    "attempts-bound-plus": (
+        "_int_in(attempts, 0, MAX_ATTEMPTS)",
+        "_int_in(attempts, 0, MAX_ATTEMPTS + 1)",
+    ),
+    "attempts-floor-minus": (
+        "_int_in(attempts, 0, MAX_ATTEMPTS)",
+        "_int_in(attempts, -1, MAX_ATTEMPTS)",
+    ),
+    "lease-owner-grammar-off": ("_grammar(owner, _WORKER_RE)", "type(owner) is str"),
+    "lease-expiry-bound-plus": (
+        "_int_in(expires, 1, _REF_MAX_NOW)",
+        "_int_in(expires, 1, _REF_MAX_NOW + 1)",
     ),
     "chained-error": (
         "        raise DeadLetterError(failed)",
