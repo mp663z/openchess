@@ -92,6 +92,10 @@ def _canonical_sources(sources: object) -> list[dict]:
     for entry in sources:
         if type(entry) is not dict or set(entry) != _SOURCE_FIELDS:
             _fail("malformed_provenance_record", "source entry has the wrong shape")
+        # exact-str type BEFORE membership (T0149 reference): an unhashable or
+        # str-subclass id never reaches a hash/== compare.
+        if type(entry["source_id"]) is not str:
+            _fail("malformed_provenance_record", "source_id must be a str")
         if entry["source_id"] not in _SOURCE_IDS:
             _fail("unknown_source", f"unknown source {entry['source_id']!r}")
         if not _valid_game_id(entry["game_id"]):
@@ -213,9 +217,19 @@ class ProvenanceTable:
         return copy.deepcopy(self._records[key])
 
     def merge(self, other: object) -> ProvenanceTable:
-        if not hasattr(other, "records") or not callable(other.records):
-            _fail("malformed_provenance_record", "merge source must expose records()")
-        incoming = other.records()
+        # Untrusted merge source: any failure while reading records() is a
+        # fresh, unchained typed rejection (flag pattern, raised outside the
+        # except block), and the batch must be an exact list (T0149 reference).
+        failed = False
+        try:
+            reader = getattr(other, "records", None)
+            incoming = reader() if callable(reader) else None
+        except BaseException:
+            failed = True
+        if failed:
+            _fail("malformed_provenance_record", "merge source records() failed")
+        if type(incoming) is not list:
+            _fail("malformed_provenance_record", "merge source must expose records() -> list")
         staged = copy.deepcopy(self._records)
         candidate = ProvenanceTable()
         candidate._records = staged
