@@ -8,3 +8,9 @@ graph heuristics to the user.
 `graph/transposition_node.py` implements `data/contracts/transposition_node.yaml`:
 the digest-bucketed node table where every path to one position identity
 reaches one node; the injectable digest oracle is untrusted and fails closed.
+
+`graph/route_edge.py` implements `data/contracts/route_edge.yaml`: exact
+four-field edges `{variant, move, from_snapshot_fen, to_snapshot_fen}`
+between canonical node snapshots, bucketed by from-digest plus move,
+deduplicated by the canonical four-tuple, with one target per
+from-identity and move (conflicting_edge) and an atomic staged merge.
