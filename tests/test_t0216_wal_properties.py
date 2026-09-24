@@ -126,9 +126,33 @@ def _shape(value):
     return value
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _snap(log):
-    return (_shape(log), [id(entry) for entry in log],
-            [id(entry["payload"]) for entry in log
+    return (_shape(log), [_Pin(entry) for entry in log],
+            [_Pin(entry["payload"]) for entry in log
              if type(entry) is dict and type(entry.get("payload")) is dict])
 
 
@@ -589,9 +613,9 @@ def _live_mutator(request, log, fail_on_call):
 
 def _deep_ids(value):
     if type(value) is dict:
-        return [id(value)] + [x for v in value.values() for x in _deep_ids(v)]
+        return [_Pin(value)] + [x for v in value.values() for x in _deep_ids(v)]
     if type(value) is list:
-        return [id(value)] + [x for v in value for x in _deep_ids(v)]
+        return [_Pin(value)] + [x for v in value for x in _deep_ids(v)]
     return []
 
 
@@ -711,3 +735,21 @@ def test_r12_property_file_uses_no_test_helpers():
                        "pathlib", "pytest", "yaml", "graph", "graph.node",
                        "graph.position_digest", "tools.variant_runtime",
                        "store"}
+
+
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    log = [{"payload": {"x": 1}}]
+    before = _snap(log)
+    log[0] = {"payload": {"x": 1}}
+    log[0] = {"payload": {"x": 1}}
+    assert _snap(log) != before
+    value = {"k": {"x": 1}}
+    ids = _deep_ids(value)
+    value["k"] = {"x": 1}
+    value["k"] = {"x": 1}
+    assert _deep_ids(value) != ids
