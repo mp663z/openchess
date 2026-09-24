@@ -5,12 +5,8 @@ import copy
 
 import pytest
 
-from tests.test_t0122_transposition_node_contract import (
-    NodeError,
-    NodeTable,
-    _docs,
-    validate_record,
-)
+from graph.transposition_node import NodeError, NodeTable, validate_record
+from graph.transposition_node import load_docs as _docs
 from tests.test_t0123_fixture import CASES, _repaired
 
 DOCS = _docs()
