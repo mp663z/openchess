@@ -296,10 +296,8 @@ def _forged(error):
 FORGED_ERRORS = {
     **{f"forged-export-error-{c}": export.ExportError(c, export.FAILURE_MAPPING[c])
        for c in sorted(export.FAILURE_MAPPING) if c != "divergent_export"},
-    "forged-wal-error-corrupt-chain": wal.WalError(
-        "corrupt_chain", wal.FAILURE_MAPPING["corrupt_chain"]),
-    "forged-wal-error-malformed-entry": wal.WalError(
-        "malformed_wal_entry", wal.FAILURE_MAPPING["malformed_wal_entry"]),
+    **{f"forged-wal-error-{c}": wal.WalError(c, wal.FAILURE_MAPPING[c])
+       for c in sorted(wal.FAILURE_MAPPING)},
 }
 
 

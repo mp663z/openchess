@@ -248,7 +248,24 @@ def _raiser(kind):
     return serializer
 
 
+def _forged_oracle(error):
+    """An oracle raising a pre-built (forged) typed error: it must fail as
+    the boundary's own class, never surface as the forged one."""
+    def oracle(state):
+        raise error
+    return oracle
+
+
+FORGED_ERRORS = {
+    **{f"forged-backup-error-{c}": backup.BackupError(c, backup.FAILURE_MAPPING[c])
+       for c in sorted(backup.FAILURE_MAPPING) if c != "divergent_snapshot"},
+    **{f"forged-wal-error-{c}": wal.WalError(c, wal.FAILURE_MAPPING[c])
+       for c in sorted(wal.FAILURE_MAPPING)},
+}
+
+
 HOSTILE_SERIALIZERS = {
+    **{name: _forged_oracle(error) for name, error in FORGED_ERRORS.items()},
     "value-error": _raiser(ValueError),
     "keyboard-interrupt": _raiser(KeyboardInterrupt),
     "system-exit": _raiser(SystemExit),
