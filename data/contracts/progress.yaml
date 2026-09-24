@@ -1,0 +1,84 @@
+schema_version: 1
+
+contract:
+  id: jobs-progress
+  role:
+    kind: pure-job-progress-report-function
+    serves: background-job-execution
+    scope: one-progress-report-for-one-leased-job-chained-to-its-previous-report-over-an-explicit-logical-clock
+    owns: progress-monotonicity-completion-percent-and-chained-progress-records
+    not_scope: queue-state-transitions-lease-validity-retry-idempotency-keys-cancellation-or-eta
+  record:
+    fields: [op, job_id, worker, done, total, percent_bp, reported_at, previous_id, progress_id]
+    exact: true
+  request:
+    operations:
+      - op: report
+        fields: [op, job_id, worker, done, total, now, previous]
+    exact: true
+    closure: no-other-operations-registered
+    previous: null-for-the-first-report-else-exactly-the-previous-progress-record
+    bounds:
+      total: int-1-through-2-pow-53-minus-1-work-units
+      done: int-0-through-total
+      now: int-0-through-2-pow-53-minus-1-milliseconds
+  identifiers:
+    job_id:
+      kind: content-addressed-job-id
+      grammar: ^job1:[0-9a-f]{64}$
+      source: the-linked-queue-contract-job-id-grammar
+    worker:
+      kind: caller-supplied-lease-holder-id
+      grammar: ^[A-Za-z0-9._:-]{1,64}$
+      source: the-linked-queue-contract-worker-grammar
+    progress_id:
+      kind: canonical-chained-progress-digest
+      grammar: ^pg1:[0-9a-f]{64}$
+      derivation: sha256-of-ascii-pg1-then-nul-byte-then-utf8-canonical-json-sort-keys-compact-separators-ensure-ascii-of-the-record-without-progress-id
+      source: derived-never-caller-supplied
+  semantics:
+    validation: request-shape-then-previous-record-integrity-then-chain-consistency-first-failure-wins
+    percent: percent-bp-is-floor-of-done-times-10000-over-total-exact-integer-arithmetic-10000-only-when-done-equals-total
+    chain: previous-id-is-null-on-the-first-report-else-the-previous-record-progress-id
+    integrity: a-previous-record-whose-shape-grammar-bounds-percent-or-progress-id-do-not-recompute-is-corrupt-never-trusted
+    identity: job-id-and-worker-must-equal-the-previous-record-fail-closed-reading-a-new-worker-starts-a-new-chain
+    total: total-is-fixed-by-the-first-report-fail-closed-reading-a-changed-total-is-a-conflict-never-rescaled
+    monotone: done-never-decreases-fail-closed-reading-an-equal-done-is-a-heartbeat-that-advances-reported-at
+    completion: no-report-follows-a-previous-record-with-done-equal-total-fail-closed-reading-completion-is-terminal
+    clock: now-never-precedes-the-previous-reported-at-fail-closed-reading-equal-now-is-accepted
+    first: the-first-report-may-carry-any-done-in-bounds-including-done-equal-total
+    purity: inputs-are-never-mutated-and-the-record-shares-no-container-with-them
+  failures:
+    classes:
+      - malformed_progress_request
+      - corrupt_previous_record
+      - progress_conflict
+    triggers:
+      malformed_progress_request: request-shape-type-grammar-or-bound-violation-outside-the-previous-record-contents
+      corrupt_previous_record: previous-record-with-wrong-keys-types-grammar-bounds-percent-or-a-progress-id-that-does-not-recompute
+      progress_conflict: job-or-worker-mismatch-changed-total-done-regression-report-after-completion-or-clock-regression
+    mapping:
+      malformed_progress_request: malformed_request
+      corrupt_previous_record: corrupt_record
+      progress_conflict: progress_conflict
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - corrupt_record
+      - progress_conflict
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    deterministic: same-request-same-record
+    pure: rejected-and-accepted-requests-leave-the-request-bit-identical
+    bounded: percent-bp-is-within-0-through-10000
+    monotone: along-an-accepted-chain-done-percent-and-reported-at-never-decrease
+    terminal: a-chain-accepts-no-report-after-completion
+  versioning:
+    base_path: /jobs/progress/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    queue_contract: data/contracts/queue.yaml
