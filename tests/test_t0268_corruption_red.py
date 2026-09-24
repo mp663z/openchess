@@ -122,8 +122,8 @@ from tools.corruption_contract_lint import (  # noqa: E402
 )
 
 # -- binding (the production task replaces ONLY these two lines) ---------------
-CorruptionEngine = _reference.CorruptionEngine
-CorruptionError = _reference.CorruptionError
+CorruptionEngine = __import__("store.corruption").corruption.CorruptionEngine
+CorruptionError = __import__("store.corruption").corruption.CorruptionError
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "corruption"
            / "cases.json")

@@ -13,3 +13,8 @@ append or replay leaves every input unchanged. Production code never
 imports `tests.*`.
 
 License: AGPL (`store: agpl` in licensing-boundary.yaml).
+
+`store/corruption.py` implements `data/contracts/corruption.yaml` (contract
+id `store-corruption`): it scans a WAL log to the longest prefix the linked
+WAL accepts, bounds the loss, and quarantines the corrupt suffix through an
+untrusted sink whose token must match the local canonical encoding.
