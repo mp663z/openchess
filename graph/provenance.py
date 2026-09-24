@@ -17,6 +17,7 @@ import yaml
 
 from graph.node import make_record as make_node_record
 from graph.node import record_identity as node_identity
+from graph.position_digest import DigestError
 from tools.provenance_contract_lint import CONTRACT, IMPORT, lint
 from tools.variant_runtime import VariantError
 
@@ -67,6 +68,13 @@ def _fail(failure_class: str, message: str | None = None) -> None:
     raise ProvenanceError(failure_class, message)
 
 
+def _exact_dict(obj: object) -> bool:
+    """Exact dict with exact-str keys (T0149 reference _exact_dict): a key
+    str subclass with a raising or lying __eq__/__hash__ never reaches a
+    set build, membership test or lookup."""
+    return type(obj) is dict and all(type(k) is str for k in dict.keys(obj))
+
+
 def _source_key(entry: dict) -> tuple[str, str, str]:
     return entry["source_id"], entry["game_id"], entry["first_observed_at"]
 
@@ -90,8 +98,12 @@ def _canonical_sources(sources: object) -> list[dict]:
         _fail("malformed_provenance_record", "sources must be a nonempty list")
     unique = {}
     for entry in sources:
-        if type(entry) is not dict or set(entry) != _SOURCE_FIELDS:
+        if not _exact_dict(entry) or set(entry) != _SOURCE_FIELDS:
             _fail("malformed_provenance_record", "source entry has the wrong shape")
+        # exact-str type BEFORE membership (T0149 reference): an unhashable or
+        # str-subclass id never reaches a hash/== compare.
+        if type(entry["source_id"]) is not str:
+            _fail("malformed_provenance_record", "source_id must be a str")
         if entry["source_id"] not in _SOURCE_IDS:
             _fail("unknown_source", f"unknown source {entry['source_id']!r}")
         if not _valid_game_id(entry["game_id"]):
@@ -118,27 +130,31 @@ def _move_text_valid(move: object) -> bool:
 
 
 def _node_target_identity(target: object) -> tuple:
-    if type(target) is not dict or set(target) != {"variant", "snapshot_fen"}:
+    if not _exact_dict(target) or set(target) != {"variant", "snapshot_fen"}:
         _fail("malformed_target_identity")
     if type(target["variant"]) is not str or type(target["snapshot_fen"]) is not str:
         _fail("malformed_target_identity")
+    failed = False
     try:
         record = make_node_record(target["variant"], target["snapshot_fen"])
         if record["snapshot_fen"] != target["snapshot_fen"]:
             _fail("malformed_target_identity", "node snapshot is not canonical")
         identity = ast.literal_eval(node_identity(record))
         return "transposition_node", target["variant"], identity
-    except (VariantError, TypeError, ValueError, KeyError, IndexError) as exc:
-        _fail("malformed_target_identity", str(exc))
+    except (VariantError, DigestError, TypeError, ValueError, KeyError, IndexError):
+        failed = True
+    if failed:  # fresh, unchained: raised outside the except block
+        _fail("malformed_target_identity", "linked node derivation rejected the snapshot")
 
 
 def _edge_target_identity(target: object) -> tuple:
     fields = {"variant", "move", "from_snapshot_fen", "to_snapshot_fen"}
-    if type(target) is not dict or set(target) != fields:
+    if not _exact_dict(target) or set(target) != fields:
         _fail("malformed_target_identity")
     if (not all(type(target[field]) is str for field in fields)
             or not _move_text_valid(target["move"])):
         _fail("malformed_target_identity")
+    failed = False
     try:
         before = make_node_record(target["variant"], target["from_snapshot_fen"])
         after = make_node_record(target["variant"], target["to_snapshot_fen"])
@@ -152,12 +168,14 @@ def _edge_target_identity(target: object) -> tuple:
             ast.literal_eval(node_identity(before)),
             ast.literal_eval(node_identity(after)),
         )
-    except (VariantError, TypeError, ValueError, KeyError, IndexError) as exc:
-        _fail("malformed_target_identity", str(exc))
+    except (VariantError, DigestError, TypeError, ValueError, KeyError, IndexError):
+        failed = True
+    if failed:  # fresh, unchained: raised outside the except block
+        _fail("malformed_target_identity", "linked node derivation rejected a snapshot")
 
 
 def _context_target_identity(target: object) -> tuple:
-    if type(target) is not dict or set(target) != {"variant", "path_moves"}:
+    if not _exact_dict(target) or set(target) != {"variant", "path_moves"}:
         _fail("malformed_target_identity")
     variant, path = target["variant"], target["path_moves"]
     if type(variant) is not str or variant not in _VARIANT_IDS:
@@ -179,7 +197,7 @@ def _target_identity(kind: str, target: object) -> tuple:
 
 def validate_record(record: object) -> dict:
     """Validate and return a detached canonical provenance record."""
-    if type(record) is not dict or set(record) != _RECORD_FIELDS:
+    if not _exact_dict(record) or set(record) != _RECORD_FIELDS:
         _fail("malformed_provenance_record", "record has the wrong shape")
     kind = record["target_kind"]
     if type(kind) is not str or kind not in _TARGET_KINDS:
@@ -213,13 +231,23 @@ class ProvenanceTable:
         return copy.deepcopy(self._records[key])
 
     def merge(self, other: object) -> ProvenanceTable:
-        if not hasattr(other, "records") or not callable(other.records):
-            _fail("malformed_provenance_record", "merge source must expose records()")
-        incoming = other.records()
+        # Untrusted merge source: any failure while reading records() is a
+        # fresh, unchained typed rejection (flag pattern, raised outside the
+        # except block), and the batch must be an exact list (T0149 reference).
+        failed = False
+        try:
+            reader = getattr(other, "records", None)
+            incoming = reader() if callable(reader) else None
+        except BaseException:
+            failed = True
+        if failed:
+            _fail("malformed_provenance_record", "merge source records() failed")
+        if type(incoming) is not list:
+            _fail("malformed_provenance_record", "merge source must expose records() -> list")
         staged = copy.deepcopy(self._records)
         candidate = ProvenanceTable()
         candidate._records = staged
-        for record in incoming:
+        for record in list(incoming):
             candidate.insert(record)
         self._records = candidate._records
         return self
