@@ -639,8 +639,32 @@ def test_malformed_param_ids_equal_fixture_names():
 # -- rollback ----------------------------------------------------------------
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _deep_ids(obj, out):
-    out.append((id(obj), type(obj)))
+    out.append((_Pin(obj), type(obj)))
     if type(obj) is dict:
         for value in obj.values():
             _deep_ids(value, out)
@@ -679,3 +703,16 @@ def test_rollback_expect_matches_happy_pin_for_same_log():
 def test_rollback_exporters_are_all_exercised():
     assert {r["rejected_exporter"] for r in CASES["rollback"]} == set(
         ROLLBACK_EXPORTERS)
+
+
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": {"x": 1}}
+    before = _deep_ids(value, [])
+    value["k"] = {"x": 1}
+    value["k"] = {"x": 1}
+    assert _deep_ids(value, []) != before
