@@ -4252,10 +4252,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "6d586dc3f2c225fcb9bba6259e2ebac8809b26ef",
+   "evidence_manifest": "evidence/T0198.md"
   },
   {
    "id": "T0199",
@@ -4397,10 +4399,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "9aa646bde149d9a556a9d0819486ab42580ff1b0",
+   "evidence_manifest": "evidence/T0205.md"
   },
   {
    "id": "T0206",
@@ -4669,10 +4673,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "180bc4d4586d986200ae43c66b05fe14a4a1ccf5",
+   "evidence_manifest": "evidence/T0218.md"
   },
   {
    "id": "T0219",
@@ -5766,10 +5772,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "a222c0fdddf2bef87b72a6f635fd8d3f3a2d168b",
+   "evidence_manifest": "evidence/T0270.md"
   },
   {
    "id": "T0271",
