@@ -71,8 +71,8 @@ from tools.migration_contract_lint import (  # noqa: E402
 
 # -- binding switch: the production task replaces ONLY these two
 # lines; the helpers above stay contract-derived.
-MigrationEngine = _reference.MigrationEngine
-MigrationError = _reference.MigrationError
+MigrationEngine = __import__("store.migration").migration.MigrationEngine
+MigrationError = __import__("store.migration").migration.MigrationError
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "migration"
            / "cases.json")
