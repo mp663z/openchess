@@ -121,18 +121,27 @@ class IdempotencyEngine:
 
     def _fingerprint(self, frozen_req):
         payload = frozen_req["payload"]
+        # flag pattern: the typed error is raised outside the except block,
+        # so it is fresh (no __cause__, no __context__ from the untrusted
+        # fingerprinter)
+        failed = False
+        out = None
         try:
             out = self.fingerprinter(
                 frozen_req["op"],
                 {"identity": payload["identity"],
                  "record": dict(payload["record"])})
         except BaseException:
+            failed = True
+        if failed:
             _fail("divergent_fingerprint")
         if type(out) is not str or _FP_RE.fullmatch(out) is None:
             _fail("divergent_fingerprint")
         try:
             out.encode("utf-8")
         except UnicodeEncodeError:
+            failed = True
+        if failed:
             _fail("divergent_fingerprint")
         if out != request_fingerprint(frozen_req["op"], payload):
             _fail("divergent_fingerprint")
@@ -151,10 +160,13 @@ class IdempotencyEngine:
         # public append on an empty scratch log (the trusted canonicalizer
         # cannot fail, so any rejection is the request's; the WAL restores
         # the payload on every exit)
+        rejected = False
         try:
             self._wal.append([], {"op": request["op"],
                                   "payload": request["payload"]})
         except _wal.WalError:
+            rejected = True
+        if rejected:
             _fail("malformed_idempotency_request")
 
     @staticmethod
@@ -195,9 +207,12 @@ class IdempotencyEngine:
         self._validate_request(request)
         if not _log_str_keyed(log):
             _fail("corrupt_source")
+        rejected = False
         try:
             self._wal.replay(log)
         except _wal.WalError:
+            rejected = True
+        if rejected:
             _fail("corrupt_source")
         self._validate_ledger(ledger, log)
         container, saved = _wal.snapshot(log)
