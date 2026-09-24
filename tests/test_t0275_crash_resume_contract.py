@@ -913,11 +913,17 @@ class _Pin:
         return f"<pin {id(self.obj):#x}>"
 
 
+def _pins(items):
+    """Keep-alive identity tokens of ITEMS, in order: the one helper every
+    reference-preservation site and its replace-twice probe share."""
+    return [_Pin(item) for item in items]
+
+
 def test_rejected_resume_is_reference_preserving():
     log = _three() + [{"torn": {"deep": [1]}}]
     req = _req(3)
-    refs = [_Pin(e) for e in log]
-    payload_refs = [_Pin(e["payload"]) for e in log[:3]]
+    refs = _pins(log)
+    payload_refs = _pins(e["payload"] for e in log[:3])
     deep = log[3]["torn"]
     before_log, before_req = copy.deepcopy(log), copy.deepcopy(req)
 
@@ -931,8 +937,8 @@ def test_rejected_resume_is_reference_preserving():
     _raises("divergent_quarantine", _engine(meddle_then_raise).resume, log, req)
     assert log == before_log
     assert req == before_req
-    assert [_Pin(e) for e in log] == refs
-    assert [_Pin(e["payload"]) for e in log[:3]] == payload_refs
+    assert _pins(log) == refs
+    assert _pins(e["payload"] for e in log[:3]) == payload_refs
     assert log[3]["torn"] is deep
 
 
@@ -1163,7 +1169,7 @@ def test_fingerprint_pins_replaced_objects():
     second can land on its freed address, which a bare id() would miss.
     The fingerprint pins the original, so the swap goes red."""
     log = [{"a": 1}]
-    before = [_Pin(e) for e in log]
+    before = _pins(log)
     log[0] = {"a": 1}
     log[0] = {"a": 1}
-    assert [_Pin(e) for e in log] != before
+    assert _pins(log) != before

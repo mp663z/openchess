@@ -551,10 +551,16 @@ class _Pin:
         return f"<pin {id(self.obj):#x}>"
 
 
+def _pins(items):
+    """Keep-alive identity tokens of ITEMS, in order: the one helper every
+    reference-preservation site and its replace-twice probe share."""
+    return [_Pin(item) for item in items]
+
+
 def test_rejected_export_leaves_inputs_bit_identical():
     log = _three()
     req = _req()
-    entry_refs = [_Pin(e) for e in log]
+    entry_refs = _pins(log)
     before_log, before_req = copy.deepcopy(log), copy.deepcopy(req)
 
     def meddling_then_raise(state, fmt):
@@ -564,17 +570,17 @@ def test_rejected_export_leaves_inputs_bit_identical():
 
     _raises("divergent_export", _engine(meddling_then_raise).export, log, req)
     assert log == before_log
-    assert [_Pin(e) for e in log] == entry_refs  # reference-preserving
+    assert _pins(log) == entry_refs  # reference-preserving
     assert req == before_req
 
 
 def test_successful_export_never_mutates_source():
     log = _three()
-    refs = [_Pin(e) for e in log]
+    refs = _pins(log)
     before = copy.deepcopy(log)
     _engine().export(log, _req())
     assert log == before
-    assert [_Pin(e) for e in log] == refs
+    assert _pins(log) == refs
 
 
 # -- mutants the battery must kill ---------------------------------------------
@@ -784,7 +790,7 @@ def test_fingerprint_pins_replaced_objects():
     second can land on its freed address, which a bare id() would miss.
     The fingerprint pins the original, so the swap goes red."""
     log = [{"a": 1}]
-    ids = [_Pin(e) for e in log]
+    ids = _pins(log)
     log[0] = {"a": 1}
     log[0] = {"a": 1}
-    assert [_Pin(e) for e in log] != ids
+    assert _pins(log) != ids
