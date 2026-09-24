@@ -143,13 +143,37 @@ def _shape(value):
     return value
 
 
+class _Pin:
+    """Identity token for id()-only fingerprint fallbacks: it holds a
+    strong reference, so the object stays alive (its address cannot be
+    freed and reused) for as long as the fingerprint does. It compares by
+    identity only, so no user code runs."""
+
+    __slots__ = ("obj",)
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def __eq__(self, other):
+        return type(other) is _Pin and other.obj is self.obj
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __repr__(self):
+        return f"<pin {id(self.obj):#x}>"
+
+
 def _deep_ids(value):
     if isinstance(value, dict):
-        return [id(value)] + [x for k, v in value.items()
-                              for x in (id(k), *_deep_ids(v))]
+        return [_Pin(value)] + [x for k, v in value.items()
+                              for x in (_Pin(k), *_deep_ids(v))]
     if isinstance(value, list):
-        return [id(value)] + [x for v in value for x in _deep_ids(v)]
-    return [id(value)]
+        return [_Pin(value)] + [x for v in value for x in _deep_ids(v)]
+    return [_Pin(value)]
 
 
 def _snap(value):
@@ -603,3 +627,16 @@ def test_r11_property_file_uses_no_test_helpers():
     assert modules <= {"__future__", "ast", "copy", "hashlib", "random",
                        "pathlib", "pytest", "graph", "graph.node",
                        "graph.position_digest", "store", "tools.variant_runtime"}
+
+
+
+
+def test_fingerprint_pins_replaced_objects():
+    """A replace-twice engine: the first swap frees the original and the
+    second can land on its freed address, which a bare id() would miss.
+    The fingerprint pins the original, so the swap goes red."""
+    value = {"k": {"x": 1}}
+    before = _snap(value)
+    value["k"] = {"x": 1}
+    value["k"] = {"x": 1}
+    assert _snap(value) != before
