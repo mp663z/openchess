@@ -24,6 +24,16 @@ contract:
       kind: scoped-user-approval-token
       grammar: ^apv1:[0-9a-f]{64}$
       binding: sha256-over-collection-id-and-expected-revision-and-target-false
+      preimage:
+        fields: [collection_id, expected_revision, target]
+        separator: "|"
+        trailing_separator: false
+        encoding: utf-8
+        collection_id: the-validated-collection-id-verbatim
+        expected_revision: ascii-decimal-no-sign-no-leading-zeros-zero-is-0
+        target: "false"
+        example: "col1:<64-lowercase-hex>|0|false"
+      digest: sha256-of-the-preimage-bytes-as-64-lowercase-hex-after-the-apv1-prefix
       source: user-approval-surface-only-never-model-or-imported-content
   semantics:
     default: unknown-or-unset-flag-reads-sensitive-true-cloud-off
