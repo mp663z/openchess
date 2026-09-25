@@ -311,3 +311,37 @@ def test_hydration_boundary_rejects_hostile_values_before_sql_and_preserves_stat
     assert spy.calls == [] and Hostile.calls == 0
     ledger.close()
     assert_state(events.Ledger(tmp_path / "ledger.sqlite"), [prior])
+
+
+def test_seen_hydration_preflights_caller_owned_values_before_storage(tmp_path):
+    path = tmp_path / "ledger.sqlite"
+    ledger = events.Ledger(path)
+    prior = row("identity.login", "succeeded", "prior")
+    assert ledger.publish([prior]) == 1
+    spy = DBSpy(ledger._db)
+    ledger._db = spy
+    valid = copy.deepcopy(prior)
+    malformed = {**prior, "correlation_id": Hostile()}
+    for candidate in (
+        Hostile(),
+        {"prior": Hostile()},
+        {"prior": malformed},
+        {"wrong_key": prior},
+        {"prior": prior, "extra": Hostile()},
+    ):
+        before = ([(id(k), id(v)) for k, v in candidate.items()]
+                  if type(candidate) is dict else id(candidate))
+        assert_refusal(lambda candidate=candidate: setattr(ledger, "seen", candidate),
+                       "malformed_event")
+        after = ([(id(k), id(v)) for k, v in candidate.items()]
+                 if type(candidate) is dict else id(candidate))
+        assert after == before
+        assert spy.calls == [] and Hostile.calls == 0
+    # The historical fixture's matching derived index is still accepted.
+    ledger.seen = {"prior": valid}
+    assert valid == prior
+    assert spy.calls == ["SELECT event_id, envelope FROM outbox ORDER BY ordinal"]
+    spy.calls.clear()
+    assert_state(ledger, [prior])
+    ledger.close()
+    assert_state(events.Ledger(path), [prior])
