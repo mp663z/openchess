@@ -65,8 +65,9 @@ def _identity(tags, movetext):
     return hashlib.sha256(digest_input).hexdigest()[:16]
 
 
-def reference_import(text, store, *, source_id="pgn-multi", retrieval_detail="in.pgn"):
-    if source_id != SCENARIO["sources"][0]:
+def reference_import(text, store, *, source_id="pgn-multi", retrieval_detail="in.pgn",
+                     scenario=SCENARIO):
+    if source_id not in scenario["sources"]:
         raise Refusal("unknown_rights")
     store.telemetry.append("import.started")
     imported = already = updated = 0
