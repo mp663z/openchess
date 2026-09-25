@@ -1,0 +1,70 @@
+schema_version: 1
+contract:
+  id: contracts-control-plane-events
+  role:
+    kind: control-plane-operation-metadata-events
+    scope: replaceable-control-plane-boundary
+    excludes: [adr-0003-offline-log, import-telemetry, hosted-send, oauth-sync]
+    source: data/contracts/control-plane.yaml
+    source_schema_version: 2
+    status: contract-only-no-shipped-emission-claimed
+  versioning:
+    envelope_version: 1
+    major_rule: unknown-versions-refused-before-publication
+    additions: new-operation-names-require-a-reviewed-contract-version
+  catalog:
+    operation_ids:
+    - billing.create_checkout
+    - billing.get_subscription
+    - entitlements.get
+    - identity.delete_account
+    - identity.login
+    - identity.logout
+    - identity.refresh
+    - identity.register
+    - provider_routing.register_key
+    - provider_routing.revoke_key
+    - provider_routing.route
+    - quota.commit
+    - quota.release
+    - quota.reserve
+    baseline_sha256: 7d856c1dc2f965d8c1f5f1db1593e7d38354e9560630eba60e41dd4448191ab9
+    name_rule: exactly-control_plane.<catalog-operation-id>.<succeeded-or-failed>
+    source_addition: reject-new-source-operation-until-catalog-and-version-reviewed
+  envelope:
+    closed: true
+    fields: [version, name, operation_id, event_id, occurred_at, correlation_id, outcome, error_code]
+    required: [version, name, operation_id, event_id, occurred_at, correlation_id, outcome]
+    error_code_rule: required-only-on-error-forbidden-on-success
+    version: exact-integer-1-not-boolean
+    name: 'control_plane.<declared operation_id>.<outcome>'
+    operation_id: exact-declared-area-dot-operation-from-source
+    event_id: opaque-identifier-not-a-request-id-or-secret
+    correlation_id: opaque-identifier-not-a-request-id-or-secret
+    identifier_grammar: 'ASCII [A-Za-z0-9_-]{1,64}; generated identifiers only; no raw email, IP, credentials, key reference, user identifier, or body-derived value'
+    occurred_at: exact-integer-unix-milliseconds-from-0-through-253402300799999-not-boolean
+    outcome: [succeeded, failed]
+    error_code: exact-declared-error-for-that-operation-on-failed
+    prohibited: [chess-content, game-data, FEN, moves, notes, provider-key-material, credentials, request-body, response-body, raw-free-text, account-id, email, IP]
+    value_policy: 'Only the listed scalar fields may be emitted; identifier generators must use independent random/opaque tokens, never encode private input. Field validation alone cannot prove identifier provenance.'
+  ordering:
+    creation: terminal-outcome-after-effect-commit-or-terminal-error-decision
+    batch: validate-entire-batch-before-any-state-change-then-preserve-input-order
+    replay: same-event-id-and-identical-envelope-is-a-no-op-even-across-restart
+    conflict: same-event-id-with-different-envelope-refused-as-a-whole-batch
+    relation: no-global-order-guarantee-between-independent-batches
+  failure:
+    classes: [malformed_event, unsupported_version, unknown_name, duplicate_conflict, publication_failure]
+    mapping:
+      malformed_event: malformed_request
+      unsupported_version: malformed_request
+      unknown_name: malformed_request
+      duplicate_conflict: conflict
+      publication_failure: internal
+    rollback: 'Validation, replay conflict, or transactional publish failure leaves the published sequence and dedupe ledger unchanged. Retry uses the same event IDs and envelopes; no partial batch publication.'
+    publication: 'Transactional outbox or equivalent atomic ledger-and-event publication required; nontransactional sinks may only consume committed outbox rows. Fail closed when atomicity is unavailable.'
+    no_http_mapping: true
+  links:
+    operation_source: data/contracts/control-plane.yaml
+    excludes_offline: docs/adr/ADR-0003-offline-authority.md
+    excludes_import: data/contracts/import.yaml
