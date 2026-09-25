@@ -1,0 +1,70 @@
+schema_version: 1
+
+contract:
+  id: privacy-redaction
+  role:
+    kind: whole-message-redaction-of-free-text-bound-for-a-log-or-error-sink
+    serves: server-never-content-or-keys-and-hosted-byom-never-receives-keys-on-every-diagnostic-path
+    scope: one-text-one-secret-set-redaction-verdict-and-the-sink-fallback
+    owns: the-redaction-rules-and-the-redaction-marker
+    not_scope: hosted-byom-payload-schema-provider-terms-cloud-mode-collection-flags-provider-key-storage-telemetry-collection-policy-local-model-delete-and-retry-idempotency
+  request:
+    fields: [text, secrets]
+    exact: true
+  identifiers:
+    text:
+      kind: free-text-bound-for-a-log-line-or-error-message
+      grammar: exact-built-in-str-of-any-length-the-content-rules-decide-redaction
+      source: caller-supplied-never-trusted
+    secrets:
+      kind: secret-values-the-caller-holds
+      grammar: exact-built-in-list-of-0-through-64-items-each-an-exact-built-in-str-of-1-through-4096-characters
+      source: caller-supplied-from-key-storage-never-stored-never-returned-never-logged
+    marker:
+      kind: fixed-redaction-marker
+      value: redacted
+      source: a-constant-never-derived-from-the-input
+  semantics:
+    outcome: whole-message-the-output-is-the-text-verbatim-or-exactly-the-marker-never-a-partial-mask
+    length: a-text-longer-than-1024-characters-is-redacted-1024-is-kept
+    charset: a-text-with-any-character-outside-0x20-through-0x7e-is-redacted
+    secret: a-text-whose-casefold-contains-the-casefold-of-any-secret-is-redacted
+    token_run: "a-text-with-a-run-of-32-or-more-characters-each-in-[A-Za-z0-9+/=_%-]-is-redacted-31-is-kept"
+    precedence: malformed-then-content-rules-the-content-rules-are-order-free-any-one-hit-redacts
+    evaluation: stateless-one-verdict-per-call-never-cached-secrets-never-stored
+    disclosure: the-output-never-says-which-rule-fired-or-which-secret-matched
+    sink_fallback: a-malformed-request-at-a-sink-emits-the-marker-never-the-raw-text
+    rollback: no-state-to-roll-back-a-malformed-call-raises-typed-with-inputs-unchanged-and-the-sink-emits-only-the-marker
+    readings:
+      whole_message: spec-silent-a-partial-mask-leaks-length-position-and-neighbours-so-the-whole-text-is-replaced
+      charset: spec-silent-non-ascii-text-including-legitimate-unicode-names-and-line-breaks-is-redacted-whole
+      secret_case: spec-silent-case-insensitive-casefold-matching-over-redacts-by-design
+      token_run: spec-silent-unregistered-keys-base64-hex-digests-and-install-ids-are-redacted-too
+      encoded_secret: a-short-secret-split-by-other-characters-or-encoded-outside-the-run-charset-is-not-detected-callers-must-pass-every-secret-they-hold
+      marker: the-marker-is-a-public-constant-it-is-emitted-even-when-it-contains-a-short-secret-and-leaks-nothing
+  failures:
+    classes:
+      - malformed_redaction_request
+    triggers:
+      malformed_redaction_request: checked-before-every-content-rule-request-shape-or-exact-type-violation-including-str-dict-list-subclasses-non-str-keys-and-out-of-range-secret-counts-or-lengths
+    mapping:
+      malformed_redaction_request: malformed_request
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    atomic: a-malformed-call-leaves-the-inputs-unchanged-and-calls-no-caller-method
+    fail_closed: any-doubt-redacts
+    stable: redacting-an-output-again-with-the-same-secrets-returns-it-unchanged
+    never_raw: no-path-returns-or-emits-text-that-hit-a-rule
+  versioning:
+    base_path: /privacy/redaction/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    architecture_decision: docs/adr/ADR-0004-asymmetric-architecture.md
+    control_plane_precedent: requirements/tasks/T0476.md
