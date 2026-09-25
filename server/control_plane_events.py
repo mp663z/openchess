@@ -266,6 +266,8 @@ class Ledger:
             raise Refusal("malformed_event")
 
     def publish(self, batch: list[dict], *, fail_commit: bool = False) -> int:
+        if type(fail_commit) is not bool:
+            raise Refusal("malformed_event")
         if type(batch) is not list:
             raise Refusal("malformed_event")
         proposed = [validate(event) for event in batch]
