@@ -320,6 +320,34 @@ LINT_MUTATIONS = {
     "revision_unbounded": lambda c: c["identifiers"]["revision"].__setitem__(
         "grammar", "exact-built-in-int-zero-or-greater-never-bool"
     ),
+    "preimage_separator": lambda c: c["identifiers"]["opt_in"]["preimage"].__setitem__(
+        "separator", ":"
+    ),
+    "preimage_trailing": lambda c: c["identifiers"]["opt_in"]["preimage"].__setitem__(
+        "trailing_separator", True
+    ),
+    "preimage_trailing_int": lambda c: c["identifiers"]["opt_in"]["preimage"].__setitem__(
+        "trailing_separator", 0
+    ),
+    "preimage_order": lambda c: c["identifiers"]["opt_in"]["preimage"].__setitem__(
+        "fields", ["expected_revision", "install_id", "target"]
+    ),
+    "preimage_encoding": lambda c: c["identifiers"]["opt_in"]["preimage"].__setitem__(
+        "encoding", "utf-16"
+    ),
+    "preimage_revision_padded": lambda c: c["identifiers"]["opt_in"]["preimage"].__setitem__(
+        "expected_revision", "ascii-decimal-zero-padded-to-20"
+    ),
+    "preimage_target": lambda c: c["identifiers"]["opt_in"]["preimage"].__setitem__(
+        "target", "off"
+    ),
+    "preimage_example": lambda c: c["identifiers"]["opt_in"]["preimage"].__setitem__(
+        "example", "ins1:<64-lowercase-hex>:0:on"
+    ),
+    "preimage_dropped": lambda c: c["identifiers"]["opt_in"].pop("preimage"),
+    "digest_uppercase": lambda c: c["identifiers"]["opt_in"].__setitem__(
+        "digest", "sha256-of-the-preimage-bytes-as-64-uppercase-hex-after-the-opt1-prefix"
+    ),
     "schema_version_bool": lambda c: None,  # envelope mutation, see below
 }
 
@@ -492,6 +520,87 @@ def test_an_old_opt_in_is_never_reusable():
     _set(s, "off", 1)
     _raises("opt_in_missing", _set, s, "on", 2, INS, old)
     assert _set(s, "on", 2)["revision"] == 3  # a fresh opt-in works
+
+
+_PRE = DOC["contract"]["identifiers"]["opt_in"]["preimage"]
+
+# sha256 of the literal bytes "ins1:" + "1" * 64 + "|0|on", computed
+# outside the reference; split so no long hex literal sits on one line
+_KAT_HEX = "940b83dfef69fddad4552b0da0103ac3" + "fba89c2274924a1f83df537480a9ac26"
+
+
+def _spec_bytes(iid, rev):
+    """The preimage built only from the contract text, never opt_in_for."""
+    assert _PRE["fields"] == ["install_id", "expected_revision", "target"]
+    assert _PRE["trailing_separator"] is False
+    enc = _PRE["encoding"]
+    sep = _PRE["separator"].encode(enc)
+    parts = [iid.encode(enc), str(rev).encode("ascii"), _PRE["target"].encode(enc)]
+    return sep.join(parts)
+
+
+def test_opt_in_preimage_known_answer():
+    raw = ("ins1:" + "1" * 64 + "|0|on").encode("ascii")
+    assert _spec_bytes(INS, 0) == raw
+    assert hashlib.sha256(raw).hexdigest() == _KAT_HEX
+    assert opt_in_for(INS, 0) == "opt1:" + _KAT_HEX
+    assert _PRE["example"] == "ins1:<64-lowercase-hex>|0|on"
+
+
+@pytest.mark.parametrize("rev", [0, 1, 9, 10, 100, _MAX_REV - 1])
+def test_opt_in_matches_the_contract_preimage(rev):
+    want = "opt1:" + hashlib.sha256(_spec_bytes(INS, rev)).hexdigest()
+    assert opt_in_for(INS, rev) == want
+    m, _ = _world()
+    _at(m, rev)
+    assert _set(m, "on", rev, INS, want)["cloud_mode"] == "on"
+
+
+def _variant(tag, iid, rev):
+    return {
+        "colon_sep": f"{iid}:{rev}:on",
+        "no_sep": f"{iid}{rev}on",
+        "trailing_sep": f"{iid}|{rev}|on|",
+        "leading_sep": f"|{iid}|{rev}|on",
+        "order_swapped": f"{rev}|{iid}|on",
+        "target_first": f"on|{iid}|{rev}",
+        "rev_padded": f"{iid}|{rev:03d}|on",
+        "rev_signed": f"{iid}|+{rev}|on",
+        "rev_hex": f"{iid}|{rev:#x}|on",
+        "space_sep": f"{iid} | {rev} | on",
+    }[tag]
+
+
+@pytest.mark.parametrize(
+    "tag",
+    [
+        "colon_sep",
+        "no_sep",
+        "trailing_sep",
+        "leading_sep",
+        "order_swapped",
+        "target_first",
+        "rev_padded",
+        "rev_signed",
+        "rev_hex",
+        "space_sep",
+    ],
+)
+@pytest.mark.parametrize("rev", [0, 7])
+def test_opt_in_from_another_preimage_is_refused(tag, rev):
+    m, _ = _world()
+    _at(m, rev)
+    wrong = "opt1:" + hashlib.sha256(_variant(tag, INS, rev).encode()).hexdigest()
+    assert wrong != opt_in_for(INS, rev)
+    before = m.record(INS)
+    _raises("opt_in_missing", _set, m, "on", rev, INS, wrong)
+    assert m.record(INS) == before
+
+
+def test_opt_in_utf16_preimage_is_refused():
+    m, _ = _world()
+    wrong = "opt1:" + hashlib.sha256(f"{INS}|0|on".encode("utf-16")).hexdigest()
+    _raises("opt_in_missing", _set, m, "on", 0, INS, wrong)
 
 
 @pytest.mark.parametrize("rev", [1, 2, _MAX_REV])
@@ -830,6 +939,26 @@ def test_register_hostile_ids(bad):
 # (minus this section) must go red. The identity edit must stay green.
 
 MUTANTS = {
+    "opt_sep": (
+        '    raw = f"{install_id}|{expected_revision}|{target}".encode()',
+        '    raw = f"{install_id}:{expected_revision}:{target}".encode()',
+    ),
+    "opt_trailing_sep": (
+        '    raw = f"{install_id}|{expected_revision}|{target}".encode()',
+        '    raw = f"{install_id}|{expected_revision}|{target}|".encode()',
+    ),
+    "opt_field_order": (
+        '    raw = f"{install_id}|{expected_revision}|{target}".encode()',
+        '    raw = f"{expected_revision}|{install_id}|{target}".encode()',
+    ),
+    "opt_rev_padded": (
+        '    raw = f"{install_id}|{expected_revision}|{target}".encode()',
+        '    raw = f"{install_id}|{expected_revision:03d}|{target}".encode()',
+    ),
+    "opt_encoding": (
+        '    raw = f"{install_id}|{expected_revision}|{target}".encode()',
+        '    raw = f"{install_id}|{expected_revision}|{target}".encode("utf-16")',
+    ),
     "bump_saturates": ("    if rev >= _MAX_REV:", "    if rev > _MAX_REV:"),
     "local_before_malformed": (
         "        if not _exact_str(cid) or _COL_RE.fullmatch(cid) is None:\n",
@@ -954,7 +1083,7 @@ _SELF = Path(__file__)
 
 # the battery without this section: every test above, parametrized rows
 # expanded; a green copy must run exactly this many and pass them all
-EXPECTED_BATTERY = 248
+EXPECTED_BATTERY = 286
 
 
 def _battery(tmp_dir, source):

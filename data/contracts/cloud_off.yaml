@@ -28,6 +28,16 @@ contract:
       kind: scoped-user-opt-in-token
       grammar: ^opt1:[0-9a-f]{64}$
       binding: sha256-over-install-id-and-expected-revision-and-target-on
+      preimage:
+        fields: [install_id, expected_revision, target]
+        separator: "|"
+        trailing_separator: false
+        encoding: utf-8
+        install_id: the-validated-install-id-verbatim
+        expected_revision: ascii-decimal-no-sign-no-leading-zeros-zero-is-0
+        target: "on"
+        example: "ins1:<64-lowercase-hex>|0|on"
+      digest: sha256-of-the-preimage-bytes-as-64-lowercase-hex-after-the-opt1-prefix
       source: user-settings-surface-only-never-model-or-imported-content
   semantics:
     default: unknown-or-unset-install-reads-cloud-mode-off
