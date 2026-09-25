@@ -218,6 +218,34 @@ def test_error_model_is_closed_and_consistent():
 
 
 LINT_MUTATIONS = {
+    "preimage_separator": lambda c: c["identifiers"]["approval"]["preimage"].__setitem__(
+        "separator", ":"
+    ),
+    "preimage_trailing": lambda c: c["identifiers"]["approval"]["preimage"].__setitem__(
+        "trailing_separator", True
+    ),
+    "preimage_trailing_int": lambda c: c["identifiers"]["approval"]["preimage"].__setitem__(
+        "trailing_separator", 0
+    ),
+    "preimage_order": lambda c: c["identifiers"]["approval"]["preimage"].__setitem__(
+        "fields", ["expected_revision", "collection_id", "target"]
+    ),
+    "preimage_encoding": lambda c: c["identifiers"]["approval"]["preimage"].__setitem__(
+        "encoding", "utf-16"
+    ),
+    "preimage_revision_padded": lambda c: c["identifiers"]["approval"]["preimage"].__setitem__(
+        "expected_revision", "ascii-decimal-zero-padded-to-20"
+    ),
+    "preimage_target": lambda c: c["identifiers"]["approval"]["preimage"].__setitem__(
+        "target", "true"
+    ),
+    "preimage_example": lambda c: c["identifiers"]["approval"]["preimage"].__setitem__(
+        "example", "col1:<64-lowercase-hex>:0:false"
+    ),
+    "preimage_dropped": lambda c: c["identifiers"]["approval"].pop("preimage"),
+    "digest_uppercase": lambda c: c["identifiers"]["approval"].__setitem__(
+        "digest", "sha256-of-the-preimage-bytes-as-64-uppercase-hex-after-the-apv1-prefix"
+    ),
     "default_flipped": lambda c: c["semantics"].__setitem__(
         "default", "unknown-or-unset-flag-reads-sensitive-false-cloud-on"
     ),
@@ -352,6 +380,98 @@ def test_lower_without_bound_approval_is_refused(approval):
         {"collection_id": A, "sensitive": False, "expected_revision": 0, "approval": approval},
     )
     assert s.record(A) == before
+
+
+_PRE = DOC["contract"]["identifiers"]["approval"]["preimage"]
+
+# sha256 of the literal bytes "col1:" + "a" * 64 + "|0|false", computed
+# outside the reference; split so no long hex literal sits on one line
+_KAT_HEX = "10de3c993bc04182d7f3045a54ca8fa0" + "7c7afd741d604997103cdd7ddaf210af"
+
+
+def _spec_bytes(cid, rev):
+    """The preimage built only from the contract text, never approval_for."""
+    assert _PRE["fields"] == ["collection_id", "expected_revision", "target"]
+    assert _PRE["trailing_separator"] is False
+    enc = _PRE["encoding"]
+    sep = _PRE["separator"].encode(enc)
+    parts = [cid.encode(enc), str(rev).encode("ascii"), _PRE["target"].encode(enc)]
+    return sep.join(parts)
+
+
+def _at(s, rev):
+    s._state[A] = (True, rev, [])
+
+
+def _lower_with(s, rev, approval):
+    req = {"collection_id": A, "sensitive": False, "expected_revision": rev, "approval": approval}
+    return s.transition(req)
+
+
+def test_approval_preimage_known_answer():
+    raw = ("col1:" + "a" * 64 + "|0|false").encode("ascii")
+    assert _spec_bytes(A, 0) == raw
+    assert hashlib.sha256(raw).hexdigest() == _KAT_HEX
+    assert approval_for(A, 0) == "apv1:" + _KAT_HEX
+    assert _PRE["example"] == "col1:<64-lowercase-hex>|0|false"
+
+
+@pytest.mark.parametrize("rev", [0, 1, 9, 10, 100, _MAX_REV - 1])
+def test_approval_matches_the_contract_preimage(rev):
+    want = "apv1:" + hashlib.sha256(_spec_bytes(A, rev)).hexdigest()
+    assert approval_for(A, rev) == want
+    s = _store()
+    _at(s, rev)
+    assert _lower_with(s, rev, want)["sensitive"] is False
+
+
+def _variant(tag, cid, rev):
+    return {
+        "colon_sep": f"{cid}:{rev}:false",
+        "no_sep": f"{cid}{rev}false",
+        "trailing_sep": f"{cid}|{rev}|false|",
+        "leading_sep": f"|{cid}|{rev}|false",
+        "order_swapped": f"{rev}|{cid}|false",
+        "target_first": f"false|{cid}|{rev}",
+        "rev_padded": f"{cid}|{rev:03d}|false",
+        "rev_signed": f"{cid}|+{rev}|false",
+        "rev_hex": f"{cid}|{rev:#x}|false",
+        "space_sep": f"{cid} | {rev} | false",
+        "target_capitalised": f"{cid}|{rev}|False",
+    }[tag]
+
+
+@pytest.mark.parametrize(
+    "tag",
+    [
+        "colon_sep",
+        "no_sep",
+        "trailing_sep",
+        "leading_sep",
+        "order_swapped",
+        "target_first",
+        "rev_padded",
+        "rev_signed",
+        "rev_hex",
+        "space_sep",
+        "target_capitalised",
+    ],
+)
+@pytest.mark.parametrize("rev", [0, 7])
+def test_approval_from_another_preimage_is_refused(tag, rev):
+    s = _store()
+    _at(s, rev)
+    wrong = "apv1:" + hashlib.sha256(_variant(tag, A, rev).encode()).hexdigest()
+    assert wrong != approval_for(A, rev)
+    before = s.record(A)
+    _raises("approval_missing", _lower_with, s, rev, wrong)
+    assert s.record(A) == before
+
+
+def test_approval_utf16_preimage_is_refused():
+    s = _store()
+    wrong = "apv1:" + hashlib.sha256(f"{A}|0|false".encode("utf-16")).hexdigest()
+    _raises("approval_missing", _lower_with, s, 0, wrong)
 
 
 @pytest.mark.parametrize("rev", [1, 5])
@@ -734,6 +854,30 @@ def test_register_hostile_ids():
 # (minus this section) must go red. The identity edit must stay green.
 
 MUTANTS = {
+    "apv_sep": (
+        '    raw = f"{collection_id}|{expected_revision}|false".encode()',
+        '    raw = f"{collection_id}:{expected_revision}:false".encode()',
+    ),
+    "apv_trailing_sep": (
+        '    raw = f"{collection_id}|{expected_revision}|false".encode()',
+        '    raw = f"{collection_id}|{expected_revision}|false|".encode()',
+    ),
+    "apv_field_order": (
+        '    raw = f"{collection_id}|{expected_revision}|false".encode()',
+        '    raw = f"{expected_revision}|{collection_id}|false".encode()',
+    ),
+    "apv_rev_padded": (
+        '    raw = f"{collection_id}|{expected_revision}|false".encode()',
+        '    raw = f"{collection_id}|{expected_revision:03d}|false".encode()',
+    ),
+    "apv_encoding": (
+        '    raw = f"{collection_id}|{expected_revision}|false".encode()',
+        '    raw = f"{collection_id}|{expected_revision}|false".encode("utf-16")',
+    ),
+    "apv_target_case": (
+        '    raw = f"{collection_id}|{expected_revision}|false".encode()',
+        '    raw = f"{collection_id}|{expected_revision}|False".encode()',
+    ),
     "approval_unbound": (
         'return apv == approval_for(cid, req["expected_revision"])',
         "return True",
@@ -901,7 +1045,7 @@ _SELF = Path(__file__)
 
 # the battery without this section: every test above, parametrized rows
 # expanded; a green copy must run exactly this many and pass them all
-EXPECTED_BATTERY = 149
+EXPECTED_BATTERY = 189
 
 
 def _battery(tmp_dir, source):

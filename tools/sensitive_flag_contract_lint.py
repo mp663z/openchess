@@ -44,6 +44,17 @@ IDENTIFIERS = {
         "kind": "scoped-user-approval-token",
         "grammar": "^apv1:[0-9a-f]{64}$",
         "binding": "sha256-over-collection-id-and-expected-revision-and-target-false",
+        "preimage": {
+            "fields": ["collection_id", "expected_revision", "target"],
+            "separator": "|",
+            "trailing_separator": False,
+            "encoding": "utf-8",
+            "collection_id": "the-validated-collection-id-verbatim",
+            "expected_revision": "ascii-decimal-no-sign-no-leading-zeros-zero-is-0",
+            "target": "false",
+            "example": "col1:<64-lowercase-hex>|0|false",
+        },
+        "digest": "sha256-of-the-preimage-bytes-as-64-lowercase-hex-after-the-apv1-prefix",
         "source": "user-approval-surface-only-never-model-or-imported-content",
     },
 }
@@ -154,6 +165,9 @@ def lint(path=None):
     if type((cc.get("record") or {}).get("exact")) is not bool:
         raise ContractError("record.exact must be an exact bool")
     check("identifiers", IDENTIFIERS, cc.get("identifiers"))
+    preimage = ((cc.get("identifiers") or {}).get("approval") or {}).get("preimage") or {}
+    if type(preimage.get("trailing_separator")) is not bool:
+        raise ContractError("approval.preimage.trailing_separator must be an exact bool")
     check("semantics", SEMANTICS, cc.get("semantics"))
     failures = cc["failures"]
     close_failures(failures)
