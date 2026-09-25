@@ -980,12 +980,12 @@ def _merge_fault_at(mod, fault_at, digest="honest"):
     dst = mod.NodeTable(DOCS, oracle)
     dst.insert("standard", STARTPOS)
     before = (copy.deepcopy(dst.buckets), dst.buckets,
-              {k: (_Pin(v), [_Pin(r) for r in v]) for k, v in dst.buckets.items()})
+              _bucket_identity_snapshot(dst))
     state["armed"] = True
     out = _outcome(lambda: dst.merge(types.SimpleNamespace(
         records=lambda: copy.deepcopy(source))) and "merged")
     after = (copy.deepcopy(dst.buckets), dst.buckets,
-             {k: (_Pin(v), [_Pin(r) for r in v]) for k, v in dst.buckets.items()})
+             _bucket_identity_snapshot(dst))
     unchanged = before[0] == after[0] and before[2] == after[2]
     return out, unchanged, dst.serialize(), state["n"]
 
@@ -1341,3 +1341,18 @@ def test_r4_equivalent_edits_stay_green(name):
     src = PRODUCTION.read_text()
     assert src.count(old) == 1, name
     assert not _kill_suite_red(_load_mutant(src.replace(old, new))), name
+
+
+def _bucket_identity_snapshot(table):
+    return {key: (_Pin(bucket), [_Pin(record) for record in bucket])
+            for key, bucket in table.buckets.items()}
+
+
+def test_merge_fingerprint_pins_replaced_bucket():
+    """Exercise the same bucket identity shape as the merge rollback probe.
+    A bare id() could miss two replacements if an address is reused."""
+    table = types.SimpleNamespace(buckets={"k": []})
+    before = _bucket_identity_snapshot(table)
+    table.buckets["k"] = []
+    table.buckets["k"] = []
+    assert _bucket_identity_snapshot(table) != before
