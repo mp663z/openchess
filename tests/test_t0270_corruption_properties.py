@@ -36,8 +36,14 @@ FENS = (
 )
 RECORDS = tuple(make_record("standard", fen) for fen in FENS)
 IDENTITIES = tuple(record_identity(record) for record in RECORDS)
-FIELDS = ("scan_id", "verdict", "verified_head", "verified_count",
-          "quarantined_count", "quarantine_token")
+FIELDS = (
+    "scan_id",
+    "verdict",
+    "verified_head",
+    "verified_count",
+    "quarantined_count",
+    "quarantine_token",
+)
 GENESIS = "wal0:" + "0" * 64
 SEEDS = range(40)
 Q = corruption.quarantine_suffix
@@ -113,15 +119,19 @@ def _engine(sink=Q):
 
 
 def _ops(rng, low, high):
-    return [(rng.choice(("put", "put", "delete")), rng.randrange(len(FENS)))
-            for _ in range(rng.randrange(low, high))]
+    return [
+        (rng.choice(("put", "put", "delete")), rng.randrange(len(FENS)))
+        for _ in range(rng.randrange(low, high))
+    ]
 
 
 def _build(ops):
     log, engine = [], wal.WalEngine(wal.canonical_payload)
     for op, index in ops:
-        engine.append(log, {"op": op, "payload": {
-            "identity": IDENTITIES[index], "record": dict(RECORDS[index])}})
+        engine.append(
+            log,
+            {"op": op, "payload": {"identity": IDENTITIES[index], "record": dict(RECORDS[index])}},
+        )
     return log
 
 
@@ -152,12 +162,17 @@ CORRUPTIONS = {
     "drop-key": lambda e: {k: v for k, v in e.items() if k != "prior_entry_id"},
     "extra-key": lambda e: {**e, "zz": 1},
     "sequence-shift": lambda e: {**e, "sequence": e["sequence"] + 1},
-    "sequence-bool": lambda e: {**e, "sequence": True} if e["sequence"] != 1
-    else {**e, "sequence": False},
+    "sequence-bool": lambda e: (
+        {**e, "sequence": True} if e["sequence"] != 1 else {**e, "sequence": False}
+    ),
     "unknown-op": lambda e: {**e, "op": "move"},
-    "digest-swap": lambda e: {**e, "payload": {
-        "identity": e["payload"]["identity"],
-        "record": {**e["payload"]["record"], "digest": _other_digest(e)}}},
+    "digest-swap": lambda e: {
+        **e,
+        "payload": {
+            "identity": e["payload"]["identity"],
+            "record": {**e["payload"]["record"], "digest": _other_digest(e)},
+        },
+    },
     "partial-write": lambda e: json.dumps(e)[:40],
     "none": lambda e: None,
     "empty-dict": lambda e: {},
@@ -197,8 +212,7 @@ def _enc(value):
         return b"l" + str(len(value)).encode() + b":" + b"".join(_enc(v) for v in value)
     assert type(value) is dict
     keys = sorted(value)
-    return b"d" + str(len(keys)).encode() + b":" + b"".join(
-        _enc(k) + _enc(value[k]) for k in keys)
+    return b"d" + str(len(keys)).encode() + b":" + b"".join(_enc(k) + _enc(value[k]) for k in keys)
 
 
 def _token(suffix):
@@ -206,9 +220,12 @@ def _token(suffix):
 
 
 def _scan_id(verdict, head, count, lost, token):
-    return "crp1:" + hashlib.sha256(
-        f"{verdict}\n{head}\n{count}\n{lost}\n{'-' if token is None else token}"
-        .encode()).hexdigest()
+    return (
+        "crp1:"
+        + hashlib.sha256(
+            f"{verdict}\n{head}\n{count}\n{lost}\n{'-' if token is None else token}".encode()
+        ).hexdigest()
+    )
 
 
 def _longest(log):
@@ -229,8 +246,10 @@ def _shape(value, seen=()):
         return ("cycle",)
     if type(value) in (dict, _Dict):
         inner = (*seen, id(value))
-        return (type(value).__name__, [(type(key).__name__, key, _shape(item, inner))
-                                       for key, item in dict.items(value)])
+        return (
+            type(value).__name__,
+            [(type(key).__name__, key, _shape(item, inner)) for key, item in dict.items(value)],
+        )
     if type(value) in (list, _List):
         inner = (*seen, id(value))
         return (type(value).__name__, [_shape(item, inner) for item in list.__iter__(value)])
@@ -268,8 +287,9 @@ def _deep_ids(value, seen=()):
         return [_Pin(value)]
     if isinstance(value, dict):
         inner = (*seen, id(value))
-        return [_Pin(value)] + [x for k, v in dict.items(value)
-                              for x in (_Pin(k), *_deep_ids(v, inner))]
+        return [_Pin(value)] + [
+            x for k, v in dict.items(value) for x in (_Pin(k), *_deep_ids(v, inner))
+        ]
     if isinstance(value, list):
         inner = (*seen, id(value))
         return [_Pin(value)] + [x for v in list.__iter__(value) for x in _deep_ids(v, inner)]
@@ -299,8 +319,7 @@ def _check(out, ops_prefix, original, n):
     suffix = original[n:]
     replay = wal.WalEngine(wal.canonical_payload).replay(copy.deepcopy(original[:n]))
     assert list(out) == list(FIELDS)
-    assert out["verified_head"] == replay["head"] == (
-        original[n - 1]["entry_id"] if n else GENESIS)
+    assert out["verified_head"] == replay["head"] == (original[n - 1]["entry_id"] if n else GENESIS)
     assert replay["state_id"] == diff.state_id(_fold(ops_prefix))
     assert type(out["verified_count"]) is int and out["verified_count"] == n
     assert type(out["quarantined_count"]) is int and out["quarantined_count"] == len(suffix)
@@ -309,13 +328,16 @@ def _check(out, ops_prefix, original, n):
         assert out["quarantine_token"] == _token(suffix) == Q(copy.deepcopy(suffix))
     else:
         assert out["verdict"] == "clean" and out["quarantine_token"] is None
-    assert out["scan_id"] == _scan_id(out["verdict"], out["verified_head"], n,
-                                      len(suffix), out["quarantine_token"])
+    assert out["scan_id"] == _scan_id(
+        out["verdict"], out["verified_head"], n, len(suffix), out["quarantine_token"]
+    )
     assert out["scan_id"] == corruption.derive_scan_id(
-        out["verdict"], out["verified_head"], n, len(suffix), out["quarantine_token"])
+        out["verdict"], out["verified_head"], n, len(suffix), out["quarantine_token"]
+    )
 
 
 # -- R2/R3: honest scans ----------------------------------------------------------------
+
 
 @pytest.mark.parametrize("seed", SEEDS)
 def test_r1_scan_matches_model_and_derivations(seed):
@@ -376,11 +398,11 @@ def test_r2b_empty_log_all_corrupt_log_and_emptied_state():
     assert (out["verified_count"], out["quarantined_count"]) == (0, 0)
     assert out["quarantine_token"] is None and sink.calls == [] and log == []
     assert out["scan_id"] == _scan_id("clean", GENESIS, 0, 0, None)
-    bad = ["{\"entry_", None, {"a": [1, True, "\u00e9"]}]
+    bad = ['{"entry_', None, {"a": [1, True, "\u00e9"]}]
     out2 = _engine(sink).scan(bad, {"max_loss": 3})
     assert bad == [] and out2["verified_head"] == GENESIS and out2["verdict"] == "salvaged"
     assert out2["quarantined_count"] == 3
-    assert sink.calls == [["{\"entry_", None, {"a": [1, True, "\u00e9"]}]]
+    assert sink.calls == [['{"entry_', None, {"a": [1, True, "\u00e9"]}]]
     honest = _build([("put", 0), ("delete", 0)])
     out3 = _engine().scan(honest, {"max_loss": 0})
     assert out3["verdict"] == "clean" and out3["verified_head"] == honest[-1]["entry_id"]
@@ -389,12 +411,13 @@ def test_r2b_empty_log_all_corrupt_log_and_emptied_state():
 
 # -- R4: loss bound ------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("seed", range(24))
 def test_r3_loss_bound_is_inclusive(seed):
     log, ops_prefix, n = _corrupt(seed)
     original = copy.deepcopy(log)
     lost = len(original) - n
-    for max_loss in (lost, lost + 1, 10 ** 30):
+    for max_loss in (lost, lost + 1, 10**30):
         work = copy.deepcopy(original)
         _check(_engine().scan(work, {"max_loss": max_loss}), ops_prefix, original, n)
     for max_loss in range(0, lost):
@@ -408,9 +431,23 @@ def test_r3_loss_bound_is_inclusive(seed):
 
 # -- R5: public encoding and derivations --------------------------------------------
 
-ENCODABLE = [None, True, False, 0, -1, 2 ** MAX_INT_BITS - 1, -(2 ** MAX_INT_BITS - 1),
-             "", "\u00e9", "\U0001d11e", "q\"\\\n", [], {}, [1, [2, [3]]],
-             {"b": 1, "a": [None, "x"], "\u00e9": {"z": False}, "B": 2}]
+ENCODABLE = [
+    None,
+    True,
+    False,
+    0,
+    -1,
+    2**MAX_INT_BITS - 1,
+    -(2**MAX_INT_BITS - 1),
+    "",
+    "\u00e9",
+    "\U0001d11e",
+    'q"\\\n',
+    [],
+    {},
+    [1, [2, [3]]],
+    {"b": 1, "a": [None, "x"], "\u00e9": {"z": False}, "B": 2},
+]
 
 
 def test_r4_canonical_encoding_vectors():
@@ -428,14 +465,24 @@ def test_r4_canonical_encoding_vectors():
     assert corruption.canonical_encoding("\u00e9")[1] == b"s2:\xc3\xa9"
     assert corruption.canonical_encoding([True, None, -12])[1] == b"l3:tni3:-12"
     # distinct values never share an encoding
-    raws = [corruption.canonical_encoding(v)[1] for v in
-            (["1", "2"], ["12"], [1, 2], ["1|2"], "1", 1, True, [[]], [[], []])]
+    raws = [
+        corruption.canonical_encoding(v)[1]
+        for v in (["1", "2"], ["12"], [1, 2], ["1|2"], "1", 1, True, [[]], [[], []])
+    ]
     assert len(set(raws)) == len(raws)
 
 
 def test_r4b_quarantine_suffix_and_scan_id_vectors():
-    suffixes = [[None], ["a"], [{"b": 1, "a": [True, "\u00e9"]}],
-                ["\U0001d11e", {"\u00fc": "q\"\\\n"}], [1, 2], [2, 1], ["1", "2"], ["12"]]
+    suffixes = [
+        [None],
+        ["a"],
+        [{"b": 1, "a": [True, "\u00e9"]}],
+        ["\U0001d11e", {"\u00fc": 'q"\\\n'}],
+        [1, 2],
+        [2, 1],
+        ["1", "2"],
+        ["12"],
+    ]
     tokens = set()
     for suffix in suffixes:
         before = _snap(suffix)
@@ -446,11 +493,15 @@ def test_r4b_quarantine_suffix_and_scan_id_vectors():
     assert Q([None]) == "qrn1:" + hashlib.sha256(b"qrn1|l1:n").hexdigest()
     assert Q(("a",)) == Q(["a"])
     head = "wal1:" + "a" * 64
-    for args in (("clean", GENESIS, 0, 0, None), ("salvaged", head, 3, 2, Q(["a"])),
-                 ("salvaged", head, 3, 2, Q(["b"]))):
+    for args in (
+        ("clean", GENESIS, 0, 0, None),
+        ("salvaged", head, 3, 2, Q(["a"])),
+        ("salvaged", head, 3, 2, Q(["b"])),
+    ):
         assert corruption.derive_scan_id(*args) == _scan_id(*args)
-    assert corruption.derive_scan_id("clean", head, 1, 0, None) != \
-        corruption.derive_scan_id("clean", head, 1, 0, "-x")
+    assert corruption.derive_scan_id("clean", head, 1, 0, None) != corruption.derive_scan_id(
+        "clean", head, 1, 0, "-x"
+    )
 
 
 @pytest.mark.parametrize("seed", range(12))
@@ -482,23 +533,31 @@ def test_r5_sink_argument_is_detached(seed):
 
 # -- R6: sink boundary -------------------------------------------------------------------
 
+
 def _raiser(kind):
     def sink(suffix):
         raise kind()
+
     return sink
 
 
 def _forged(error):
     def sink(suffix):
         raise error
+
     return sink
 
 
 FORGED_ERRORS = {
-    **{f"forged-corruption-error-{c}": CorruptionError(c, corruption.FAILURE_MAPPING[c])
-       for c in sorted(corruption.FAILURE_MAPPING) if c != "divergent_quarantine"},
-    **{f"forged-wal-error-{c}": wal.WalError(c, wal.FAILURE_MAPPING[c])
-       for c in sorted(wal.FAILURE_MAPPING)},
+    **{
+        f"forged-corruption-error-{c}": CorruptionError(c, corruption.FAILURE_MAPPING[c])
+        for c in sorted(corruption.FAILURE_MAPPING)
+        if c != "divergent_quarantine"
+    },
+    **{
+        f"forged-wal-error-{c}": wal.WalError(c, wal.FAILURE_MAPPING[c])
+        for c in sorted(wal.FAILURE_MAPPING)
+    },
 }
 
 HOSTILE_SINKS = {
@@ -521,12 +580,13 @@ HOSTILE_SINKS = {
     "flipped-token": lambda suffix: _flip(Q(suffix)),
     "shorter-suffix-token": lambda suffix: Q(suffix[:-1]),
     "longer-suffix-token": lambda suffix: Q([*suffix, None]),
-    "reversed-suffix-token": lambda suffix: Q(suffix[::-1]) if len(suffix) > 1
-    else _flip(Q(suffix)),
-    "json-token": lambda suffix: "qrn1:" + hashlib.sha256(
-        b"qrn1|" + json.dumps(suffix, sort_keys=True).encode()).hexdigest(),
-    "undomained-token": lambda suffix: "qrn1:" + hashlib.sha256(
-        _enc(list(suffix))).hexdigest(),
+    "reversed-suffix-token": lambda suffix: (
+        Q(suffix[::-1]) if len(suffix) > 1 else _flip(Q(suffix))
+    ),
+    "json-token": lambda suffix: (
+        "qrn1:" + hashlib.sha256(b"qrn1|" + json.dumps(suffix, sort_keys=True).encode()).hexdigest()
+    ),
+    "undomained-token": lambda suffix: "qrn1:" + hashlib.sha256(_enc(list(suffix))).hexdigest(),
 }
 
 
@@ -619,7 +679,7 @@ REQUEST_TAMPERS = [
     ("list", [("max_loss", 0)]),
     ("none", None),
     ("max-loss-negative", {"max_loss": -1}),
-    ("max-loss-huge-negative", {"max_loss": -(10 ** 30)}),
+    ("max-loss-huge-negative", {"max_loss": -(10**30)}),
     ("max-loss-bool", {"max_loss": False}),
     ("max-loss-true", {"max_loss": True}),
     ("max-loss-int-subclass", {"max_loss": _Int(5)}),
@@ -652,6 +712,7 @@ def test_r8b_non_list_log_is_malformed(bad):
 
 # -- R9: the scan domain ------------------------------------------------------------
 
+
 def _deep(total):
     """An entry whose deepest node sits at depth TOTAL (the log is depth 1)."""
     node = 0
@@ -681,8 +742,8 @@ def _alias():
 IN_DOMAIN = {
     "depth-max": lambda: _deep(MAX_DEPTH),
     "key-depth-max": lambda: _deep_key(MAX_DEPTH),
-    "int-max-bits": lambda: {"n": 2 ** MAX_INT_BITS - 1},
-    "negative-int-max-bits": lambda: {"n": -(2 ** MAX_INT_BITS - 1)},
+    "int-max-bits": lambda: {"n": 2**MAX_INT_BITS - 1},
+    "negative-int-max-bits": lambda: {"n": -(2**MAX_INT_BITS - 1)},
     "multi-byte": lambda: {"\u00e9": "\U0001d11e"},
     "scalars": lambda: [None, True, False, 0, ""],
     "bare-string": lambda: "partial",
@@ -692,9 +753,9 @@ IN_DOMAIN = {
 OUT_OF_DOMAIN = {
     "depth-over": lambda: _deep(MAX_DEPTH + 1),
     "key-depth-over": lambda: _deep_key(MAX_DEPTH + 1),
-    "int-over-bits": lambda: {"n": 2 ** MAX_INT_BITS},
-    "negative-int-over-bits": lambda: {"n": -(2 ** MAX_INT_BITS)},
-    "huge-int": lambda: {"n": 2 ** 20000},
+    "int-over-bits": lambda: {"n": 2**MAX_INT_BITS},
+    "negative-int-over-bits": lambda: {"n": -(2**MAX_INT_BITS)},
+    "huge-int": lambda: {"n": 2**20000},
     "float": lambda: {"f": 1.5},
     "integral-float": lambda: {"f": 1.0},
     "nan": lambda: {"f": float("nan")},
@@ -743,16 +804,18 @@ def test_r9b_out_of_domain_value_anywhere_is_malformed(name):
         log.insert(where, OUT_OF_DOMAIN[name]())
         for max_loss in (0, len(log)):
             before, sink = _snap(log), _Sink()
-            _fails("malformed_corruption_record", _engine(sink).scan, log,
-                   {"max_loss": max_loss})
+            _fails("malformed_corruption_record", _engine(sink).scan, log, {"max_loss": max_loss})
             assert sink.calls == [] and _snap(log) == before
 
 
 def test_r9c_out_of_domain_inside_an_honest_entry_and_across_entries():
     for spot in ("record", "payload", "entry"):
         log = _build([("put", 0), ("put", 1), ("put", 2)])
-        target = {"record": log[1]["payload"]["record"], "payload": log[1]["payload"],
-                  "entry": log[1]}[spot]
+        target = {
+            "record": log[1]["payload"]["record"],
+            "payload": log[1]["payload"],
+            "entry": log[1],
+        }[spot]
         target["zz"] = 1.5
         before = _snap(log)
         _fails("malformed_corruption_record", _engine(_Sink()).scan, log, {"max_loss": 3})
@@ -779,9 +842,20 @@ def test_r10_property_file_uses_no_test_helpers():
             assert node.level == 0
             modules.add(node.module)
     assert not any(m == "tests" or m.startswith("tests.") for m in modules)
-    assert modules <= {"__future__", "ast", "copy", "hashlib", "json", "random",
-                       "pathlib", "pytest", "graph", "graph.node", "store",
-                       "tools.corruption_contract_lint"}
+    assert modules <= {
+        "__future__",
+        "ast",
+        "copy",
+        "hashlib",
+        "json",
+        "random",
+        "pathlib",
+        "pytest",
+        "graph",
+        "graph.node",
+        "store",
+        "tools.corruption_contract_lint",
+    }
 
 
 def test_fingerprint_pins_replaced_objects():

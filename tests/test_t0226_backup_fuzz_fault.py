@@ -47,7 +47,7 @@ RECORDS = tuple(make_record("standard", fen) for fen in FENS)
 IDENTITIES = tuple(record_identity(record) for record in RECORDS)
 GENESIS = "wal0:" + "0" * 64
 FIELDS = ("backup_id", "head", "state_id", "entry_count", "bundle")
-COUNT_MAX = 2 ** 63 - 1
+COUNT_MAX = 2**63 - 1
 BACKUP_CLASSES = tuple(sorted(backup.FAILURE_MAPPING))
 WAL_CLASSES = tuple(sorted(wal.FAILURE_MAPPING))
 OK = "ok"
@@ -55,22 +55,25 @@ OK = "ok"
 
 # -- independent model --------------------------------------------------------
 
+
 def _entry_id(sequence, op, identity, record, prior):
-    canonical = (f"{identity}\n{record['variant']}\n{record['digest']}\n"
-                 f"{record['snapshot_fen']}")
-    return "wal1:" + hashlib.sha256(
-        f"{sequence}\n{op}\n{canonical}\n{prior}".encode()).hexdigest()
+    canonical = f"{identity}\n{record['variant']}\n{record['digest']}\n{record['snapshot_fen']}"
+    return "wal1:" + hashlib.sha256(f"{sequence}\n{op}\n{canonical}\n{prior}".encode()).hexdigest()
 
 
 def _model_log(ops):
     log, prior = [], GENESIS
     for sequence, (op, index) in enumerate(ops, 1):
-        entry_id = _entry_id(sequence, op, IDENTITIES[index], RECORDS[index],
-                             prior)
-        log.append({"entry_id": entry_id, "sequence": sequence, "op": op,
-                    "payload": {"identity": IDENTITIES[index],
-                                "record": dict(RECORDS[index])},
-                    "prior_entry_id": prior})
+        entry_id = _entry_id(sequence, op, IDENTITIES[index], RECORDS[index], prior)
+        log.append(
+            {
+                "entry_id": entry_id,
+                "sequence": sequence,
+                "op": op,
+                "payload": {"identity": IDENTITIES[index], "record": dict(RECORDS[index])},
+                "prior_entry_id": prior,
+            }
+        )
         prior = entry_id
     return log
 
@@ -79,9 +82,13 @@ def _rechain(log, start):
     prior = log[start - 1]["entry_id"] if start else GENESIS
     for entry in log[start:]:
         entry["prior_entry_id"] = prior
-        entry["entry_id"] = _entry_id(entry["sequence"], entry["op"],
-                                      entry["payload"]["identity"],
-                                      entry["payload"]["record"], prior)
+        entry["entry_id"] = _entry_id(
+            entry["sequence"],
+            entry["op"],
+            entry["payload"]["identity"],
+            entry["payload"]["record"],
+            prior,
+        )
         prior = entry["entry_id"]
     return log
 
@@ -98,13 +105,13 @@ def _fold(ops):
 
 def _bundle(state):
     return "".join(
-        f"{key}\n" + "|".join(f"{f}={state[key][f]}" for f in sorted(state[key]))
-        + "\n" for key in sorted(state))
+        f"{key}\n" + "|".join(f"{f}={state[key][f]}" for f in sorted(state[key])) + "\n"
+        for key in sorted(state)
+    )
 
 
 def _backup_id(head, sid, count, bundle):
-    return "bck1:" + hashlib.sha256(
-        f"{head}\n{sid}\n{count}\n{bundle}".encode()).hexdigest()
+    return "bck1:" + hashlib.sha256(f"{head}\n{sid}\n{count}\n{bundle}".encode()).hexdigest()
 
 
 def _receipt(ops, bundle=None):
@@ -113,13 +120,20 @@ def _receipt(ops, bundle=None):
     head = log[-1]["entry_id"] if log else GENESIS
     sid = diff.state_id(state)
     bundle = _bundle(state) if bundle is None else bundle
-    return {"backup_id": _backup_id(head, sid, len(ops), bundle), "head": head,
-            "state_id": sid, "entry_count": len(ops), "bundle": bundle}
+    return {
+        "backup_id": _backup_id(head, sid, len(ops), bundle),
+        "head": head,
+        "state_id": sid,
+        "entry_count": len(ops),
+        "bundle": bundle,
+    }
 
 
 def _ops(rng, low=0, high=24):
-    return tuple((rng.choice(("put", "put", "delete")), rng.randrange(len(FENS)))
-                 for _ in range(rng.randrange(low, high + 1)))
+    return tuple(
+        (rng.choice(("put", "put", "delete")), rng.randrange(len(FENS)))
+        for _ in range(rng.randrange(low, high + 1))
+    )
 
 
 # -- hostile values -----------------------------------------------------------
@@ -195,9 +209,11 @@ class _Pin:
 def _shape(value):
     """Value, exact type, key order and identity at every level."""
     if isinstance(value, dict):
-        return (type(value), _Pin(value),
-                [(type(k), k if type(k) is str else _Pin(k), _shape(v))
-                 for k, v in dict.items(value)])
+        return (
+            type(value),
+            _Pin(value),
+            [(type(k), k if type(k) is str else _Pin(k), _shape(v)) for k, v in dict.items(value)],
+        )
     if isinstance(value, list):
         return (type(value), _Pin(value), [_shape(v) for v in list.__iter__(value)])
     return (type(value), value if not isinstance(value, _Colliding) else _Pin(value))
@@ -205,9 +221,11 @@ def _shape(value):
 
 # -- the serializer ------------------------------------------------------------
 
+
 def _serializer(module, fault, calls, forged, live=None):
     """Honest serializer (independent), or FAULT; LIVE edits the caller's
     log first."""
+
     def serialize(state):
         calls.append(copy.deepcopy(state))
         if live is not None:
@@ -230,18 +248,26 @@ def _serializer(module, fault, calls, forged, live=None):
             return honest
         if kind == "value":
             return arg
-        return {"none": None, "bytes": honest.encode(), "int": 7,
-                "strsub": _Str(honest), "surrogate": honest + "\ud800",
-                "list": [honest]}[kind]
+        return {
+            "none": None,
+            "bytes": honest.encode(),
+            "int": 7,
+            "strsub": _Str(honest),
+            "surrogate": honest + "\ud800",
+            "list": [honest],
+        }[kind]
+
     return serialize
 
 
 # -- cases ---------------------------------------------------------------------
 
+
 def _t(pos, key, value):
     def edit(log):
         log[pos][key] = value
         return log
+
     return edit
 
 
@@ -258,55 +284,103 @@ SOURCE_TAMPERS = {
     "op-strsub": lambda log, p: _t(p, "op", _Str(log[p]["op"]))(log),
     "entry-id-flip": lambda log, p: _t(p, "entry_id", _flip(log[p]["entry_id"]))(log),
     "entry-id-newline": lambda log, p: _t(p, "entry_id", log[p]["entry_id"] + "\n")(log),
-    "prior-flip": lambda log, p: _t(p, "prior_entry_id",
-                                    _flip(log[p]["prior_entry_id"]))(log),
+    "prior-flip": lambda log, p: _t(p, "prior_entry_id", _flip(log[p]["prior_entry_id"]))(log),
     "extra-key": lambda log, p: _t(p, "force", True)(log),
     "rename-sequence": lambda log, p: (_rekey(log[p], "sequence", "sequencx"), log)[1],
-    "rename-identity": lambda log, p: (_rekey(log[p]["payload"], "identity",
-                                              "identitx"), log)[1],
-    "rename-digest": lambda log, p: (_rekey(log[p]["payload"]["record"], "digest",
-                                            "digesx"), log)[1],
+    "rename-identity": lambda log, p: (_rekey(log[p]["payload"], "identity", "identitx"), log)[1],
+    "rename-digest": lambda log, p: (_rekey(log[p]["payload"]["record"], "digest", "digesx"), log)[
+        1
+    ],
     "strsub-key": lambda log, p: (_rekey(log[p], "op", _Str("op")), log)[1],
     "colliding-key": lambda log, p: (_rekey(log[p], "op", _Colliding("op")), log)[1],
-    "record-colliding-key": lambda log, p: (_rekey(log[p]["payload"]["record"],
-                                                   "digest", _Colliding("digest")),
-                                            log)[1],
-    "digest-swap": lambda log, p: (log[p]["payload"]["record"].update(
-        digest=RECORDS[(IDENTITIES.index(log[p]["payload"]["identity"]) + 1)
-                       % len(RECORDS)]["digest"]), log)[1],
-    "identity-strsub": lambda log, p: (log[p]["payload"].update(
-        identity=_Str(log[p]["payload"]["identity"])), log)[1],
-    "identity-other": lambda log, p: (log[p]["payload"].update(
-        identity=IDENTITIES[(IDENTITIES.index(log[p]["payload"]["identity"]) + 1)
-                            % len(IDENTITIES)]), log)[1],
-    "record-dict-subclass": lambda log, p: (log[p]["payload"].update(
-        record=_Dict(log[p]["payload"]["record"])), log)[1],
+    "record-colliding-key": lambda log, p: (
+        _rekey(log[p]["payload"]["record"], "digest", _Colliding("digest")),
+        log,
+    )[1],
+    "digest-swap": lambda log, p: (
+        log[p]["payload"]["record"].update(
+            digest=RECORDS[(IDENTITIES.index(log[p]["payload"]["identity"]) + 1) % len(RECORDS)][
+                "digest"
+            ]
+        ),
+        log,
+    )[1],
+    "identity-strsub": lambda log, p: (
+        log[p]["payload"].update(identity=_Str(log[p]["payload"]["identity"])),
+        log,
+    )[1],
+    "identity-other": lambda log, p: (
+        log[p]["payload"].update(
+            identity=IDENTITIES[
+                (IDENTITIES.index(log[p]["payload"]["identity"]) + 1) % len(IDENTITIES)
+            ]
+        ),
+        log,
+    )[1],
+    "record-dict-subclass": lambda log, p: (
+        log[p]["payload"].update(record=_Dict(log[p]["payload"]["record"])),
+        log,
+    )[1],
     "entry-dict-subclass": lambda log, p: (log.__setitem__(p, _Dict(log[p])), log)[1],
     "entry-none": lambda log, p: (log.__setitem__(p, None), log)[1],
     "entry-list": lambda log, p: (log.__setitem__(p, list(log[p])), log)[1],
     "duplicate": lambda log, p: (log.insert(p + 1, copy.deepcopy(log[p])), log)[1],
-    "payload-swap": lambda log, p: (log[p].update(payload={
-        "identity": IDENTITIES[(IDENTITIES.index(log[p]["payload"]["identity"]) + 1)
-                               % len(IDENTITIES)],
-        "record": dict(RECORDS[(IDENTITIES.index(log[p]["payload"]["identity"]) + 1)
-                               % len(IDENTITIES)])}), log)[1],
+    "payload-swap": lambda log, p: (
+        log[p].update(
+            payload={
+                "identity": IDENTITIES[
+                    (IDENTITIES.index(log[p]["payload"]["identity"]) + 1) % len(IDENTITIES)
+                ],
+                "record": dict(
+                    RECORDS[(IDENTITIES.index(log[p]["payload"]["identity"]) + 1) % len(IDENTITIES)]
+                ),
+            }
+        ),
+        log,
+    )[1],
 }
-NON_LIST_SOURCES = {"none": None, "tuple": (), "dict": {}, "str": "log", "int": 0,
-                    "list-subclass": "SUB"}
+NON_LIST_SOURCES = {
+    "none": None,
+    "tuple": (),
+    "dict": {},
+    "str": "log",
+    "int": 0,
+    "list-subclass": "SUB",
+}
 
 SERIALIZER_FAULTS = (
     [("forge-backup", cls) for cls in BACKUP_CLASSES]
     + [("forge-wal", cls) for cls in WAL_CLASSES]
-    + [("raise", exc) for exc in ("ValueError", "KeyboardInterrupt", "SystemExit",
-                                  "GeneratorExit", "MemoryError", "RecursionError")]
-    + [(kind, None) for kind in ("none", "bytes", "int", "strsub", "surrogate",
-                                 "list")])
+    + [
+        ("raise", exc)
+        for exc in (
+            "ValueError",
+            "KeyboardInterrupt",
+            "SystemExit",
+            "GeneratorExit",
+            "MemoryError",
+            "RecursionError",
+        )
+    ]
+    + [(kind, None) for kind in ("none", "bytes", "int", "strsub", "surrogate", "list")]
+)
 # any exact UTF-8 str is bound into the id as the bundle, never re-serialized
 ACCEPTED_OUTPUTS = ("", "x", "\u00e9\u4e2d\U0001f600", "a\nb\n")
 
-LIVE_EDITS = ("add-entry-key", "add-payload-key", "add-record-key", "change-op",
-              "drop-record-field", "clear-record", "clear-entry", "append-entry",
-              "insert-entry", "delete-entry", "reverse", "clear-log")
+LIVE_EDITS = (
+    "add-entry-key",
+    "add-payload-key",
+    "add-record-key",
+    "change-op",
+    "drop-record-field",
+    "clear-record",
+    "clear-entry",
+    "append-entry",
+    "insert-entry",
+    "delete-entry",
+    "reverse",
+    "clear-log",
+)
 LIVE_ENDINGS = ("honest", "raise", "bytes")
 
 
@@ -340,6 +414,7 @@ def _live_edit(log, name):
             log.reverse()
         else:
             log.clear()
+
     return edit
 
 
@@ -352,8 +427,7 @@ def _verify_tampers():
         t[name] = (edit, cls)
 
     def reforge(r):
-        r["backup_id"] = _backup_id(r["head"], r["state_id"], r["entry_count"],
-                                    r["bundle"])
+        r["backup_id"] = _backup_id(r["head"], r["state_id"], r["entry_count"], r["bundle"])
         return r
 
     for name, value in (("none", None), ("list", []), ("str", "r"), ("int", 0)):
@@ -366,46 +440,71 @@ def _verify_tampers():
         add(f"missing-{field}", lambda r, f=field: (r.pop(f), r)[1], mer)
         add(f"rename-{field}", lambda r, f=field: _rekey(r, f, f[:-1] + "x"), mer)
         add(f"strsub-key-{field}", lambda r, f=field: _rekey(r, f, _Str(f)), mer)
-        add(f"colliding-key-{field}",
-            lambda r, f=field: _rekey(r, f, _Colliding(f)), mer)
+        add(f"colliding-key-{field}", lambda r, f=field: _rekey(r, f, _Colliding(f)), mer)
     for field in ("backup_id", "head", "state_id"):
-        for name, fn in (("strsub", _Str), ("int", lambda v: 1), ("none", lambda v: None),
-                         ("bytes", lambda v: v.encode()),
-                         ("newline", lambda v: v + "\n"),
-                         ("leading-space", lambda v: " " + v),
-                         ("upper", lambda v: v[:5] + v[5:].upper()),
-                         ("short", lambda v: v[:-1]), ("long", lambda v: v + "0")):
-            add(f"{field}-{name}", lambda r, f=field, fn=fn: (r.update({f: fn(r[f])}), r)[1],
-                mer)
+        for name, fn in (
+            ("strsub", _Str),
+            ("int", lambda v: 1),
+            ("none", lambda v: None),
+            ("bytes", lambda v: v.encode()),
+            ("newline", lambda v: v + "\n"),
+            ("leading-space", lambda v: " " + v),
+            ("upper", lambda v: v[:5] + v[5:].upper()),
+            ("short", lambda v: v[:-1]),
+            ("long", lambda v: v + "0"),
+        ):
+            add(f"{field}-{name}", lambda r, f=field, fn=fn: (r.update({f: fn(r[f])}), r)[1], mer)
         add(f"{field}-flip", lambda r, f=field: (r.update({f: _flip(r[f])}), r)[1], div)
-    for name, value in (("true", True), ("float", 1.0), ("str", "1"), ("intsub", _Int(1)),
-                        ("minus-one", -1), ("over-max", COUNT_MAX + 1),
-                        ("double-max", 2 * COUNT_MAX), ("huge", 2 ** 200),
-                        ("none", None)):
+    for name, value in (
+        ("true", True),
+        ("float", 1.0),
+        ("str", "1"),
+        ("intsub", _Int(1)),
+        ("minus-one", -1),
+        ("over-max", COUNT_MAX + 1),
+        ("double-max", 2 * COUNT_MAX),
+        ("huge", 2**200),
+        ("none", None),
+    ):
         add(f"count-{name}", lambda r, v=value: (r.update(entry_count=v), r)[1], mer)
-    add("count-max-reforged",
-        lambda r: reforge((r.update(entry_count=COUNT_MAX), r)[1]) if r["entry_count"]
-        else r, OK)
+    add(
+        "count-max-reforged",
+        lambda r: reforge((r.update(entry_count=COUNT_MAX), r)[1]) if r["entry_count"] else r,
+        OK,
+    )
     add("count-changed", lambda r: (r.update(entry_count=r["entry_count"] + 1), r)[1], div)
-    add("count-reforged",
-        lambda r: reforge((r.update(entry_count=r["entry_count"] + 1), r)[1])
-        if r["entry_count"] else r, OK)
+    add(
+        "count-reforged",
+        lambda r: (
+            reforge((r.update(entry_count=r["entry_count"] + 1), r)[1]) if r["entry_count"] else r
+        ),
+        OK,
+    )
     for name, value in (("int", 1), ("none", None), ("bytes", b"x")):
         add(f"bundle-{name}", lambda r, v=value: (r.update(bundle=v), r)[1], mer)
     add("bundle-strsub", lambda r: (r.update(bundle=_Str(r["bundle"])), r)[1], mer)
     add("bundle-surrogate", lambda r: (r.update(bundle=r["bundle"] + "\ud800"), r)[1], mer)
     add("bundle-changed", lambda r: (r.update(bundle=r["bundle"] + "x"), r)[1], div)
-    add("bundle-reforged", lambda r: reforge((r.update(bundle=r["bundle"] + "x"), r)[1]),
-        OK)
-    add("genesis-positive-reforged",
-        lambda r: reforge((r.update(head=GENESIS, entry_count=max(r["entry_count"], 1)),
-                           r)[1]), div)
-    add("zero-count-non-genesis-reforged",
-        lambda r: reforge((r.update(entry_count=0, head="wal1:" + "a" * 64,
-                                    state_id=backup.EMPTY_STATE_ID), r)[1]), div)
-    add("zero-count-non-empty-state-reforged",
-        lambda r: reforge((r.update(entry_count=0, head=GENESIS,
-                                    state_id="gs1:" + "b" * 64), r)[1]), div)
+    add("bundle-reforged", lambda r: reforge((r.update(bundle=r["bundle"] + "x"), r)[1]), OK)
+    add(
+        "genesis-positive-reforged",
+        lambda r: reforge((r.update(head=GENESIS, entry_count=max(r["entry_count"], 1)), r)[1]),
+        div,
+    )
+    add(
+        "zero-count-non-genesis-reforged",
+        lambda r: reforge(
+            (r.update(entry_count=0, head="wal1:" + "a" * 64, state_id=backup.EMPTY_STATE_ID), r)[1]
+        ),
+        div,
+    )
+    add(
+        "zero-count-non-empty-state-reforged",
+        lambda r: reforge(
+            (r.update(entry_count=0, head=GENESIS, state_id="gs1:" + "b" * 64), r)[1]
+        ),
+        div,
+    )
     add("reordered", lambda r: dict(reversed(list(r.items()))), OK)
     return t
 
@@ -429,48 +528,78 @@ def _case(gen, seed):
     rng = random.Random(f"t0226:{gen}:{seed}")
     if gen == "happy":
         ops = _ops(rng) if seed else ()
-        return {"label": f"happy:{len(ops)}", "kind": "backup",
-                "log": lambda: _model_log(ops), "expect": _receipt(ops),
-                "state": _fold(ops)}
+        return {
+            "label": f"happy:{len(ops)}",
+            "kind": "backup",
+            "log": lambda: _model_log(ops),
+            "expect": _receipt(ops),
+            "state": _fold(ops),
+        }
     if gen == "accepted":
         out = ACCEPTED_OUTPUTS[seed % len(ACCEPTED_OUTPUTS)]
         ops = _ops(rng)
-        return {"label": f"accepted:{seed % len(ACCEPTED_OUTPUTS)}", "kind": "backup",
-                "log": lambda: _model_log(ops), "fault": ("value", out),
-                "expect": _receipt(ops, bundle=out), "state": _fold(ops)}
+        return {
+            "label": f"accepted:{seed % len(ACCEPTED_OUTPUTS)}",
+            "kind": "backup",
+            "log": lambda: _model_log(ops),
+            "fault": ("value", out),
+            "expect": _receipt(ops, bundle=out),
+            "state": _fold(ops),
+        }
     if gen == "source":
         names = sorted(SOURCE_TAMPERS)
         name = names[seed % len(names)]
         where = ("first", "middle", "last")[(seed // len(names)) % 3]
         ops = _ops(rng, 3, 10)
         pos = {"first": 0, "middle": len(ops) // 2, "last": len(ops) - 1}[where]
-        return {"label": f"source:{name}@{where}", "kind": "backup",
-                "log": lambda: SOURCE_TAMPERS[name](_model_log(ops), pos),
-                "expect": "corrupt_source", "calls": 0}
+        return {
+            "label": f"source:{name}@{where}",
+            "kind": "backup",
+            "log": lambda: SOURCE_TAMPERS[name](_model_log(ops), pos),
+            "expect": "corrupt_source",
+            "calls": 0,
+        }
     if gen == "container":
         name = sorted(NON_LIST_SOURCES)[seed]
         value = NON_LIST_SOURCES[name]
         ops = _ops(rng, 1, 5)
-        return {"label": f"container:{name}", "kind": "backup",
-                "log": (lambda: _List(_model_log(ops))) if value == "SUB"
-                else (lambda: copy.copy(value)),
-                "expect": "malformed_backup_record", "calls": 0}
+        return {
+            "label": f"container:{name}",
+            "kind": "backup",
+            "log": (lambda: _List(_model_log(ops)))
+            if value == "SUB"
+            else (lambda: copy.copy(value)),
+            "expect": "malformed_backup_record",
+            "calls": 0,
+        }
     if gen == "serializer":
         fault = SERIALIZER_FAULTS[seed % len(SERIALIZER_FAULTS)]
         ops = () if seed // len(SERIALIZER_FAULTS) == 0 else _ops(rng, 1, 12)
-        return {"label": f"serializer:{fault[0]}:{fault[1]}", "kind": "backup",
-                "log": lambda: _model_log(ops), "fault": fault,
-                "expect": "divergent_snapshot", "calls": 1}
+        return {
+            "label": f"serializer:{fault[0]}:{fault[1]}",
+            "kind": "backup",
+            "log": lambda: _model_log(ops),
+            "fault": fault,
+            "expect": "divergent_snapshot",
+            "calls": 1,
+        }
     if gen == "live":
         edit = LIVE_EDITS[seed % len(LIVE_EDITS)]
         ending = LIVE_ENDINGS[(seed // len(LIVE_EDITS)) % len(LIVE_ENDINGS)]
         ops = _ops(rng, 1, 10)
-        fault = {"honest": None, "raise": ("raise", "KeyboardInterrupt"),
-                 "bytes": ("bytes", None)}[ending]
-        return {"label": f"live:{edit}:{ending}", "kind": "backup",
-                "log": lambda: _model_log(ops), "fault": fault, "live": edit,
-                "expect": _receipt(ops) if ending == "honest" else "divergent_snapshot",
-                "state": _fold(ops), "calls": 1}
+        fault = {"honest": None, "raise": ("raise", "KeyboardInterrupt"), "bytes": ("bytes", None)}[
+            ending
+        ]
+        return {
+            "label": f"live:{edit}:{ending}",
+            "kind": "backup",
+            "log": lambda: _model_log(ops),
+            "fault": fault,
+            "live": edit,
+            "expect": _receipt(ops) if ending == "honest" else "divergent_snapshot",
+            "state": _fold(ops),
+            "calls": 1,
+        }
     names = sorted(VERIFY_TAMPERS)
     name = names[seed % len(names)]
     # a genesis head has no hex to flip or upper-case: head tampers use a
@@ -478,11 +607,16 @@ def _case(gen, seed):
     empty = (seed // len(names)) == 0 and not name.startswith("head-")
     ops = () if empty else _ops(rng, 1, 12)
     edit, cls = VERIFY_TAMPERS[name]
-    return {"label": f"verify:{name}", "kind": "verify",
-            "receipt": lambda: edit(_receipt(ops)), "expect": cls}
+    return {
+        "label": f"verify:{name}",
+        "kind": "verify",
+        "receipt": lambda: edit(_receipt(ops)),
+        "expect": cls,
+    }
 
 
 # -- running a case --------------------------------------------------------------
+
 
 def _outcome(module, case):
     """(outcome, reasons) of CASE through MODULE."""
@@ -491,8 +625,7 @@ def _outcome(module, case):
         log = case["log"]()
         before = _shape(log)
         live = _live_edit(log, case["live"]) if "live" in case else None
-        engine = module.BackupEngine(_serializer(module, case.get("fault"), calls,
-                                                 forged, live))
+        engine = module.BackupEngine(_serializer(module, case.get("fault"), calls, forged, live))
         _ARMED[0] = True
         try:
             result = engine.backup(log)
@@ -526,13 +659,17 @@ def _outcome(module, case):
         if calls:
             why.append("verify called the serializer")
         if type(result) is dict:
-            if result is receipt or list(result) != list(FIELDS) or \
-                    any(type(result[f]) is not type(receipt[f]) for f in FIELDS):
+            if (
+                result is receipt
+                or list(result) != list(FIELDS)
+                or any(type(result[f]) is not type(receipt[f]) for f in FIELDS)
+            ):
                 why.append("verify output not detached, typed and ordered")
             result = OK if result == receipt else result
     if isinstance(result, BaseException):
-        if type(result) is not module.BackupError or \
-                result.code != backup.FAILURE_MAPPING.get(result.failure_class):
+        if type(result) is not module.BackupError or result.code != backup.FAILURE_MAPPING.get(
+            result.failure_class
+        ):
             why.append("untyped failure")
         if forged[0] is not None and result is forged[0]:
             why.append("forged error escaped")
@@ -564,6 +701,7 @@ def _all_cases():
 
 # -- tests: fuzz -----------------------------------------------------------------
 
+
 @pytest.mark.parametrize("gen", sorted(GENERATORS))
 def test_fuzz_cases_hold(gen):
     bad = {}
@@ -593,8 +731,11 @@ def test_no_poisoning_after_rejections():
 
 def test_corpus_reaches_every_class_and_position():
     labels = {_case(gen, seed)["label"] for gen, seed in _all_cases()}
-    expects = {_case(gen, seed)["expect"] for gen, seed in _all_cases()
-               if type(_case(gen, seed)["expect"]) is str}
+    expects = {
+        _case(gen, seed)["expect"]
+        for gen, seed in _all_cases()
+        if type(_case(gen, seed)["expect"]) is str
+    }
     assert set(BACKUP_CLASSES) | {OK} <= expects
     for name in SOURCE_TAMPERS:
         for where in ("first", "middle", "last"):
@@ -609,18 +750,19 @@ def test_corpus_reaches_every_class_and_position():
 
 
 def test_every_boundary_error_class_is_forged():
-    assert {a for k, a in SERIALIZER_FAULTS if k == "forge-backup"} == \
-        set(backup.FAILURE_MAPPING)
-    assert {a for k, a in SERIALIZER_FAULTS if k == "forge-wal"} == \
-        set(wal.FAILURE_MAPPING)
+    assert {a for k, a in SERIALIZER_FAULTS if k == "forge-backup"} == set(backup.FAILURE_MAPPING)
+    assert {a for k, a in SERIALIZER_FAULTS if k == "forge-wal"} == set(wal.FAILURE_MAPPING)
     assert set(FORGE_TARGETS) <= set(MUTANTS)
 
 
 def test_count_bound_from_both_sides():
     ops = (("put", 0),)
     engine = backup.BackupEngine(backup.serialize_bundle)
-    for count, cls in ((COUNT_MAX, None), (COUNT_MAX + 1, "malformed_backup_record"),
-                       (-1, "malformed_backup_record")):
+    for count, cls in (
+        (COUNT_MAX, None),
+        (COUNT_MAX + 1, "malformed_backup_record"),
+        (-1, "malformed_backup_record"),
+    ):
         r = _receipt(ops)
         r["entry_count"] = count
         r["backup_id"] = _backup_id(r["head"], r["state_id"], count, r["bundle"])
@@ -633,6 +775,7 @@ def test_count_bound_from_both_sides():
 
 
 # -- mutation check --------------------------------------------------------------
+
 
 def _source_mutant(name, edits):
     """store/backup.py with EDITS (each matching exactly once) as a fresh
@@ -653,58 +796,71 @@ def _source_mutant(name, edits):
     return module
 
 
-_BOUNDARY = ("        except BaseException:\n"
-             "            _fail(\"divergent_snapshot\")\n"
-             "        if type(out) is not str:\n")
+_BOUNDARY = (
+    "        except BaseException:\n"
+    '            _fail("divergent_snapshot")\n'
+    "        if type(out) is not str:\n"
+)
 
 
 def _passthrough(error, cls):
-    guard = "" if cls is None else (
-        f"            if error.failure_class != {cls!r}:\n"
-        "                _fail(\"divergent_snapshot\")\n")
-    return [(_BOUNDARY, f"        except {error} as error:\n" + guard +
-             "            raise\n" + _BOUNDARY)]
+    guard = (
+        ""
+        if cls is None
+        else (
+            f"            if error.failure_class != {cls!r}:\n"
+            '                _fail("divergent_snapshot")\n'
+        )
+    )
+    return [
+        (
+            _BOUNDARY,
+            f"        except {error} as error:\n" + guard + "            raise\n" + _BOUNDARY,
+        )
+    ]
 
 
 def _isinstance(expr, kind):
     return (f"type({expr}) is not {kind}", f"not isinstance({expr}, {kind})")
 
 
-_ZERO = ('        if count == 0 and (receipt["head"] != GENESIS or\n'
-         '                           receipt["state_id"] != EMPTY_STATE_ID):\n')
+_ZERO = (
+    '        if count == 0 and (receipt["head"] != GENESIS or\n'
+    '                           receipt["state_id"] != EMPTY_STATE_ID):\n'
+)
 
 MUTANTS = {
     "except-exception": [(_BOUNDARY, _BOUNDARY.replace("BaseException", "Exception"))],
     "backup-error-passthrough": _passthrough("BackupError", None),
-    **{f"backup-error-passthrough-{c}": _passthrough("BackupError", c)
-       for c in BACKUP_CLASSES},
+    **{f"backup-error-passthrough-{c}": _passthrough("BackupError", c) for c in BACKUP_CLASSES},
     "wal-error-passthrough": _passthrough("_wal.WalError", None),
-    **{f"wal-error-passthrough-{c}": _passthrough("_wal.WalError", c)
-       for c in WAL_CLASSES},
+    **{f"wal-error-passthrough-{c}": _passthrough("_wal.WalError", c) for c in WAL_CLASSES},
     "serializer-output-isinstance": [_isinstance("out", "str")],
     "log-type-isinstance": [_isinstance("log", "list")],
-    "no-log-type-check": [("        if type(log) is not list:\n"
-                           "            _fail(\"malformed_backup_record\")\n", "")],
-    "wal-rejection-narrowed": [("        except _wal.WalError:\n"
-                                "            _fail(\"corrupt_source\")\n",
-                                "        except _wal.WalError as error:\n"
-                                "            if error.failure_class != \"corrupt_chain\":\n"
-                                "                raise\n"
-                                "            _fail(\"corrupt_source\")\n")],
-    "no-log-restore": [("            _wal.restore(log, container, saved)\n",
-                        "            pass\n")],
+    "no-log-type-check": [
+        ('        if type(log) is not list:\n            _fail("malformed_backup_record")\n', "")
+    ],
+    "wal-rejection-narrowed": [
+        (
+            '        except _wal.WalError:\n            _fail("corrupt_source")\n',
+            "        except _wal.WalError as error:\n"
+            '            if error.failure_class != "corrupt_chain":\n'
+            "                raise\n"
+            '            _fail("corrupt_source")\n',
+        )
+    ],
+    "no-log-restore": [("            _wal.restore(log, container, saved)\n", "            pass\n")],
     "no-key-guard": [("not _exact_str_keys(receipt) or \\\n                ", "")],
-    "receipt-key-len": [("set(dict.keys(receipt)) != set(_FIELDS)",
-                         "len(receipt) != len(_FIELDS)")],
-    "receipt-key-superset": [("set(dict.keys(receipt)) != set(_FIELDS)",
-                              "not set(dict.keys(receipt)) >= set(_FIELDS)")],
-    "receipt-isinstance": [("if type(receipt) is not dict",
-                            "if not isinstance(receipt, dict)")],
+    "receipt-key-len": [
+        ("set(dict.keys(receipt)) != set(_FIELDS)", "len(receipt) != len(_FIELDS)")
+    ],
+    "receipt-key-superset": [
+        ("set(dict.keys(receipt)) != set(_FIELDS)", "not set(dict.keys(receipt)) >= set(_FIELDS)")
+    ],
+    "receipt-isinstance": [("if type(receipt) is not dict", "if not isinstance(receipt, dict)")],
     "id-isinstance": [_isinstance("receipt[field]", "str")],
-    "id-grammar-match": [("grammar.fullmatch(receipt[field])",
-                          "grammar.match(receipt[field])")],
-    "id-grammar-search": [("grammar.fullmatch(receipt[field])",
-                           "grammar.search(receipt[field])")],
+    "id-grammar-match": [("grammar.fullmatch(receipt[field])", "grammar.match(receipt[field])")],
+    "id-grammar-search": [("grammar.fullmatch(receipt[field])", "grammar.search(receipt[field])")],
     "count-isinstance": [_isinstance("count", "int")],
     "bundle-isinstance": [_isinstance('receipt["bundle"]', "str")],
     "no-count-max": [("not 0 <= count <= _COUNT_MAX", "not 0 <= count")],
@@ -712,20 +868,33 @@ MUTANTS = {
     "no-count-min": [("not 0 <= count <= _COUNT_MAX", "not count <= _COUNT_MAX")],
     "no-zero-count-check": [(_ZERO, "        if False:\n")],
     "zero-count-head-only": [(_ZERO, '        if count == 0 and receipt["head"] != GENESIS:\n')],
-    "zero-count-state-only": [(_ZERO, "        if count == 0 and "
-                               'receipt["state_id"] != EMPTY_STATE_ID:\n')],
-    "no-genesis-positive-check": [('        if count > 0 and receipt["head"] == GENESIS:\n',
-                                   "        if False:\n")],
-    "no-backup-id-check": [('                receipt["backup_id"]:\n'
-                            '            _fail("divergent_backup")\n',
-                            '                receipt["backup_id"]:\n'
-                            "            pass\n")],
-    "no-derive-utf8-check": [('            value.encode("utf-8")\n',
-                              '            value.encode("utf-8", "surrogatepass")\n')],
-    "verify-returns-input": [("        return {field: receipt[field] for field in _FIELDS}",
-                              "        return receipt")],
-    "verify-input-order": [("        return {field: receipt[field] for field in _FIELDS}",
-                            "        return dict(receipt)")],
+    "zero-count-state-only": [
+        (_ZERO, '        if count == 0 and receipt["state_id"] != EMPTY_STATE_ID:\n')
+    ],
+    "no-genesis-positive-check": [
+        ('        if count > 0 and receipt["head"] == GENESIS:\n', "        if False:\n")
+    ],
+    "no-backup-id-check": [
+        (
+            '                receipt["backup_id"]:\n            _fail("divergent_backup")\n',
+            '                receipt["backup_id"]:\n            pass\n',
+        )
+    ],
+    "no-derive-utf8-check": [
+        (
+            '            value.encode("utf-8")\n',
+            '            value.encode("utf-8", "surrogatepass")\n',
+        )
+    ],
+    "verify-returns-input": [
+        ("        return {field: receipt[field] for field in _FIELDS}", "        return receipt")
+    ],
+    "verify-input-order": [
+        (
+            "        return {field: receipt[field] for field in _FIELDS}",
+            "        return dict(receipt)",
+        )
+    ],
 }
 
 # the killed list for the oracle boundary: each forge pass-through mutant and
@@ -733,8 +902,7 @@ MUTANTS = {
 FORGE_TARGETS = {
     "except-exception": "serializer:raise:KeyboardInterrupt",
     "backup-error-passthrough": f"serializer:forge-backup:{BACKUP_CLASSES[0]}",
-    **{f"backup-error-passthrough-{c}": f"serializer:forge-backup:{c}"
-       for c in BACKUP_CLASSES},
+    **{f"backup-error-passthrough-{c}": f"serializer:forge-backup:{c}" for c in BACKUP_CLASSES},
     "wal-error-passthrough": f"serializer:forge-wal:{WAL_CLASSES[0]}",
     **{f"wal-error-passthrough-{c}": f"serializer:forge-wal:{c}" for c in WAL_CLASSES},
 }
@@ -743,12 +911,16 @@ FORGE_TARGETS = {
 # _derive UTF-8 check behind the serializer boundary catches an unchecked
 # surrogate as divergent_snapshot too
 EQUIVALENT_EDITS = {
-    "no-serializer-utf8-check": [('            out.encode("utf-8")\n'
-                                  "        except UnicodeEncodeError:\n"
-                                  '            _fail("divergent_snapshot")\n',
-                                  "            pass\n"
-                                  "        except UnicodeEncodeError:\n"
-                                  '            _fail("divergent_snapshot")\n')],
+    "no-serializer-utf8-check": [
+        (
+            '            out.encode("utf-8")\n'
+            "        except UnicodeEncodeError:\n"
+            '            _fail("divergent_snapshot")\n',
+            "            pass\n"
+            "        except UnicodeEncodeError:\n"
+            '            _fail("divergent_snapshot")\n',
+        )
+    ],
 }
 
 

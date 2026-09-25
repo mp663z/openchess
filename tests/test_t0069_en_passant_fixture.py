@@ -36,8 +36,7 @@ FILES = list(GRAMMAR["files"])
 RANKS = list(GRAMMAR["ranks"])
 SET_ON = {k: v for k, v in C["target"]["set_on"].items() if k != "rule"}
 LIFETIME = {k: v for k, v in C["target"]["lifetime"].items() if k != "rule"}
-SVI = {k: v for k, v in C["target"]["storage_vs_identity"].items()
-       if k != "rule"}
+SVI = {k: v for k, v in C["target"]["storage_vs_identity"].items() if k != "rule"}
 MOVER = {k: v for k, v in C["capture"]["mover"].items() if k != "rule"}
 TURN = dict(C["turn_linkage"])
 IDENTITY_PARTICIPATES = C["identity"]["participates"]
@@ -57,22 +56,49 @@ MOVE_KEY_SETS = {
     "quiet": {"type", "from", "to"},
 }
 
-TOP_KEYS = {"schema", "contract", "contract_schema_version", "notes",
-            "happy", "boundary", "malformed", "rollback"}
+TOP_KEYS = {
+    "schema",
+    "contract",
+    "contract_schema_version",
+    "notes",
+    "happy",
+    "boundary",
+    "malformed",
+    "rollback",
+}
 KIND_KEYS = {
-    "set-target": {"name", "kind", "state", "move", "expect_target",
-                   "expect_occupied", "expect_turn"},
-    "ep-capture": {"name", "kind", "state", "move", "expect_target",
-                   "expect_occupied", "expect_turn"},
-    "other-move": {"name", "kind", "state", "move", "expect_target",
-                   "expect_occupied", "expect_turn"},
-    "identity": {"name", "kind", "state", "expect_identity_value",
-                 "expect_stored_target"},
+    "set-target": {
+        "name",
+        "kind",
+        "state",
+        "move",
+        "expect_target",
+        "expect_occupied",
+        "expect_turn",
+    },
+    "ep-capture": {
+        "name",
+        "kind",
+        "state",
+        "move",
+        "expect_target",
+        "expect_occupied",
+        "expect_turn",
+    },
+    "other-move": {
+        "name",
+        "kind",
+        "state",
+        "move",
+        "expect_target",
+        "expect_occupied",
+        "expect_turn",
+    },
+    "identity": {"name", "kind", "state", "expect_identity_value", "expect_stored_target"},
 }
 HAPPY_KINDS = {"set-target", "ep-capture"}
 BOUNDARY_KINDS = {"ep-capture", "other-move", "identity"}
-MALFORMED_REQUIRED = {"name", "kind", "state", "move", "defect",
-                      "expect_failure"}
+MALFORMED_REQUIRED = {"name", "kind", "state", "move", "defect", "expect_failure"}
 ROLLBACK_REQUIRED = MALFORMED_REQUIRED | {"expect_state_after"}
 MOVE_DOMAIN = {
     "set-target": {"pawn-advance"},
@@ -83,8 +109,12 @@ MOVE_DOMAIN = {
 SECTION_COUNTS = {"happy": 4, "boundary": 5, "malformed": 7, "rollback": 2}
 HAPPY_KIND_COUNTS = {"set-target": 2, "ep-capture": 2}
 BOUNDARY_KIND_COUNTS = {"ep-capture": 2, "other-move": 1, "identity": 2}
-FAILURE_CLASS_COUNTS = {"target_malformed": 1, "target_inconsistent": 2,
-                        "capture_precondition": 3, "pinned_capture": 1}
+FAILURE_CLASS_COUNTS = {
+    "target_malformed": 1,
+    "target_inconsistent": 2,
+    "capture_precondition": 3,
+    "pinned_capture": 1,
+}
 
 
 class EnPassantFailure(Exception):
@@ -111,24 +141,23 @@ def _grammar_ok(target) -> bool:
 
 def _validate_state(state: dict, where: str) -> None:
     assert type(state) is dict, f"{where}: state must be a mapping"
-    assert set(state) == STATE_KEYS, (
-        f"{where}: state keys {sorted(state)} != {sorted(STATE_KEYS)}")
+    assert set(state) == STATE_KEYS, f"{where}: state keys {sorted(state)} != {sorted(STATE_KEYS)}"
     t = state["ep_target"]
     assert type(t) is str, f"{where}: ep_target must be a string"
     occ = state["occupied"]
     assert type(occ) is dict, f"{where}: occupied must be a mapping"
     for sq, tok in occ.items():
         assert type(sq) is str and sq in ALL_SQUARES, (
-            f"{where}: occupied key {sq!r} is not a square")
-        assert (type(tok) is str and len(tok) == 2
-                and tok[0] in "wb" and tok[1] in "pnbrqk"), (
-            f"{where}: bad piece token {tok!r}")
+            f"{where}: occupied key {sq!r} is not a square"
+        )
+        assert type(tok) is str and len(tok) == 2 and tok[0] in "wb" and tok[1] in "pnbrqk", (
+            f"{where}: bad piece token {tok!r}"
+        )
     stm = state["side_to_move"]
     assert type(stm) is str and stm in SIDES, f"{where}: bad side_to_move"
     for side in SIDES:
         kings = [sq for sq, tok in occ.items() if tok == side + "k"]
-        assert len(kings) == 1, (
-            f"{where}: exactly one {side} king required, found {len(kings)}")
+        assert len(kings) == 1, f"{where}: exactly one {side} king required, found {len(kings)}"
 
 
 def _validate_move(move: dict, where: str) -> None:
@@ -136,11 +165,11 @@ def _validate_move(move: dict, where: str) -> None:
     t = move.get("type")
     assert type(t) is str and t in MOVE_TYPES, f"{where}: bad move type {t!r}"
     assert set(move) == MOVE_KEY_SETS[t], (
-        f"{where}: move keys {sorted(move)} != {sorted(MOVE_KEY_SETS[t])}")
+        f"{where}: move keys {sorted(move)} != {sorted(MOVE_KEY_SETS[t])}"
+    )
     for k in ("from", "to"):
         sq = move[k]
-        assert type(sq) is str and sq in ALL_SQUARES, (
-            f"{where}: bad square {sq!r}")
+        assert type(sq) is str and sq in ALL_SQUARES, f"{where}: bad square {sq!r}"
 
 
 def _rank_ok(target: str, side: str) -> bool:
@@ -173,7 +202,8 @@ def _attacked(occ: dict, square: str, by_side: str) -> bool:
             if max(abs(df), abs(dr)) == 1 and (df, dr) != (0, 0):
                 return True
         elif (piece in "rq" and (df == 0 or dr == 0) and (df, dr) != (0, 0)) or (
-                piece in "bq" and abs(df) == abs(dr) and df != 0):
+            piece in "bq" and abs(df) == abs(dr) and df != 0
+        ):
             step_f = (df > 0) - (df < 0)
             step_r = (dr > 0) - (dr < 0)
             if _clear(occ, square, sq, step_f, step_r):
@@ -219,11 +249,9 @@ def _apply_capture(state: dict, move: dict) -> dict:
         raise EnPassantFailure("capture_precondition")
     if occ.get(frm) != side + "p":
         raise EnPassantFailure("capture_precondition")
-    new_occ = {sq: tok for sq, tok in occ.items()
-               if sq not in (frm, captured_sq)}
+    new_occ = {sq: tok for sq, tok in occ.items() if sq not in (frm, captured_sq)}
     new_occ[to] = side + "p"
-    king_sq = next((sq for sq, tok in new_occ.items() if tok == side + "k"),
-                   None)
+    king_sq = next((sq for sq, tok in new_occ.items() if tok == side + "k"), None)
     if king_sq is not None and _attacked(new_occ, king_sq, OTHER[side]):
         raise EnPassantFailure("pinned_capture")
     out = copy.deepcopy(state)
@@ -253,8 +281,7 @@ def _apply(state: dict, move: dict) -> dict:
     out["occupied"] = new_occ
     if t == "pawn-advance" and tok[1] == "p":
         so = SET_ON[SIDE_NAME[side]]
-        if (frm[1] == so["from_rank"] and to[1] == so["to_rank"]
-                and frm[0] == to[0]):
+        if frm[1] == so["from_rank"] and to[1] == so["to_rank"] and frm[0] == to[0]:
             out["ep_target"] = to[0] + so["target_rank"]
     return out
 
@@ -271,8 +298,7 @@ def _legal_capture_exists(state: dict) -> bool:
         if 0 <= f <= 7:
             frm = chr(97 + f) + m["mover_rank"]
             try:
-                _apply_capture(state, {"type": "ep-capture", "from": frm,
-                                       "to": target})
+                _apply_capture(state, {"type": "ep-capture", "from": frm, "to": target})
                 return True
             except EnPassantFailure:
                 continue
@@ -295,25 +321,24 @@ def _expected_turn(move_type: str, side: str) -> dict:
     return {
         "halfmove_clock": ("reset" if (pawnish and reset) else "increment"),
         "fullmove_number": (
-            "increment" if (TURN["fullmove_number"] == "increment-when-black"
-                            and side == "b") else "same"),
+            "increment"
+            if (TURN["fullmove_number"] == "increment-when-black" and side == "b")
+            else "same"
+        ),
     }
 
 
 def _strict(case: dict, required: set, where: str) -> None:
     assert type(case) is dict
     unknown = set(case) - required
-    assert not unknown, (
-        f"{where} case {case.get('name')!r}: unknown keys {sorted(unknown)}")
+    assert not unknown, f"{where} case {case.get('name')!r}: unknown keys {sorted(unknown)}"
     missing = required - set(case)
-    assert not missing, (
-        f"{where} case {case.get('name')!r}: missing keys {sorted(missing)}")
+    assert not missing, f"{where} case {case.get('name')!r}: missing keys {sorted(missing)}"
 
 
 def _check_name(case: dict, where: str) -> None:
     name = case["name"]
-    assert type(name) is str and name.strip(), (
-        f"{where}: name must be a nonempty exact string")
+    assert type(name) is str and name.strip(), f"{where}: name must be a nonempty exact string"
 
 
 def _check_case_common(case: dict, where: str) -> None:
@@ -334,23 +359,25 @@ def _check_case_common(case: dict, where: str) -> None:
         t = case["move"].get("type")
         assert t in allowed, (
             f"{where} case {case['name']!r}: move type {t!r} outside"
-            f" declared domain {sorted(allowed)}")
+            f" declared domain {sorted(allowed)}"
+        )
         _validate_move(case["move"], f"{where} case {case['name']!r}")
         et = case.get("expect_turn")
         if et is not None:
-            assert type(et) is dict and set(et) == {"halfmove_clock",
-                                                    "fullmove_number"}, (
-                case["name"])
+            assert type(et) is dict and set(et) == {"halfmove_clock", "fullmove_number"}, case[
+                "name"
+            ]
             assert all(type(v) is str for v in et.values()), case["name"]
         eo = case.get("expect_occupied")
         if eo is not None:
-            _validate_state({**case["state"], "occupied": eo},
-                            f"{where} case {case['name']!r} expect_occupied")
+            _validate_state(
+                {**case["state"], "occupied": eo}, f"{where} case {case['name']!r} expect_occupied"
+            )
         xt = case.get("expect_target")
         if xt is not None:
             assert type(xt) is str and _grammar_ok(xt), (
-                f"{where} case {case['name']!r}: expect_target {xt!r}"
-                " not canonical")
+                f"{where} case {case['name']!r}: expect_target {xt!r} not canonical"
+            )
 
 
 def test_contract_premises():
@@ -400,16 +427,16 @@ def test_fixture_shape():
         _check_case_common(case, "rollback")
         ef = case["expect_failure"]
         assert type(ef) is str and ef in FAILURE_MAPPING, case["name"]
-        _validate_state(case["expect_state_after"],
-                        f"rollback case {case['name']!r} expect_state_after")
+        _validate_state(
+            case["expect_state_after"], f"rollback case {case['name']!r} expect_state_after"
+        )
     for section in SECTION_COUNTS:
         assert CASES[section], f"{section} section empty"
 
 
 def test_count_pins():
     for section, n in SECTION_COUNTS.items():
-        assert len(CASES[section]) == n, (
-            f"{section}: {len(CASES[section])} cases, pinned {n}")
+        assert len(CASES[section]) == n, f"{section}: {len(CASES[section])} cases, pinned {n}"
     hk = {}
     for c in CASES["happy"]:
         hk[c["kind"]] = hk.get(c["kind"], 0) + 1
@@ -431,24 +458,20 @@ def test_happy():
         assert out["ep_target"] == case["expect_target"], case["name"]
         assert out["occupied"] == case["expect_occupied"], case["name"]
         assert out["side_to_move"] == OTHER[side], case["name"]
-        assert _expected_turn(case["move"]["type"], side) == case["expect_turn"], (
-            case["name"])
+        assert _expected_turn(case["move"]["type"], side) == case["expect_turn"], case["name"]
 
 
 def test_boundary():
     for case in CASES["boundary"]:
         if case["kind"] == "identity":
-            assert _identity_value(case["state"]) == case["expect_identity_value"], (
-                case["name"])
-            assert case["state"]["ep_target"] == case["expect_stored_target"], (
-                case["name"])
+            assert _identity_value(case["state"]) == case["expect_identity_value"], case["name"]
+            assert case["state"]["ep_target"] == case["expect_stored_target"], case["name"]
         else:
             out = _apply(case["state"], case["move"])
             side = case["state"]["side_to_move"]
             assert out["ep_target"] == case["expect_target"], case["name"]
             assert out["occupied"] == case["expect_occupied"], case["name"]
-            assert _expected_turn(case["move"]["type"], side) == case["expect_turn"], (
-                case["name"])
+            assert _expected_turn(case["move"]["type"], side) == case["expect_turn"], case["name"]
 
 
 def test_malformed():
@@ -457,7 +480,8 @@ def test_malformed():
             _apply(case["state"], case["move"])
         except EnPassantFailure as e:
             assert e.failure_class == case["expect_failure"], (
-                f"{case['name']}: {e.failure_class} != {case['expect_failure']}")
+                f"{case['name']}: {e.failure_class} != {case['expect_failure']}"
+            )
             assert e.error in ERROR_ENUM, case["name"]
         else:
             raise AssertionError(f"{case['name']}: defect did not fire")
@@ -495,7 +519,8 @@ def test_malformed_discriminating():
         except EnPassantFailure as e:
             raise AssertionError(
                 f"{case['name']}: repairing only the declared defect"
-                f" still fails with {e.failure_class}") from e
+                f" still fails with {e.failure_class}"
+            ) from e
         assert fc in FAILURE_MAPPING
 
 
@@ -518,31 +543,61 @@ def _st(target: str, side: str, occupied: dict) -> dict:
 
 # A pawn attacks the two diagonal squares in front of it: white up, black down.
 PAWN_ATTACK_GEOMETRY = [
-    ("wp", "e4", "d5", True), ("wp", "e4", "f5", True),
-    ("wp", "e4", "d3", False), ("wp", "e4", "f3", False), ("wp", "e4", "e5", False),
-    ("bp", "e5", "d4", True), ("bp", "e5", "f4", True),
-    ("bp", "e5", "d6", False), ("bp", "e5", "f6", False), ("bp", "e5", "e4", False),
+    ("wp", "e4", "d5", True),
+    ("wp", "e4", "f5", True),
+    ("wp", "e4", "d3", False),
+    ("wp", "e4", "f3", False),
+    ("wp", "e4", "e5", False),
+    ("bp", "e5", "d4", True),
+    ("bp", "e5", "f4", True),
+    ("bp", "e5", "d6", False),
+    ("bp", "e5", "f6", False),
+    ("bp", "e5", "e4", False),
 ]
 
 # (state, move, expected failure or None for accepted, expected identity)
 PAWN_ATTACK_ROWS = [
     # black pawn d3 attacks c2/e2, not the white king on e4: legal capture
-    (_st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "d3": "bp", "f5": "bp"}),
-     {"type": "ep-capture", "from": "e5", "to": "f6"}, None, "f6"),
+    (
+        _st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "d3": "bp", "f5": "bp"}),
+        {"type": "ep-capture", "from": "e5", "to": "f6"},
+        None,
+        "f6",
+    ),
     # mirror: white pawn d6 attacks c7/e7, not the black king on e5
-    (_st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "d6": "wp", "f4": "wp"}),
-     {"type": "ep-capture", "from": "e4", "to": "f3"}, None, "f3"),
+    (
+        _st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "d6": "wp", "f4": "wp"}),
+        {"type": "ep-capture", "from": "e4", "to": "f3"},
+        None,
+        "f3",
+    ),
     # black pawn d5 checks the white king on e4 and still does after the capture
-    (_st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "d5": "bp", "f5": "bp"}),
-     {"type": "ep-capture", "from": "e5", "to": "f6"}, "pinned_capture", "-"),
+    (
+        _st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "d5": "bp", "f5": "bp"}),
+        {"type": "ep-capture", "from": "e5", "to": "f6"},
+        "pinned_capture",
+        "-",
+    ),
     # mirror: white pawn d4 checks the black king on e5
-    (_st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "d4": "wp", "f4": "wp"}),
-     {"type": "ep-capture", "from": "e4", "to": "f3"}, "pinned_capture", "-"),
+    (
+        _st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "d4": "wp", "f4": "wp"}),
+        {"type": "ep-capture", "from": "e4", "to": "f3"},
+        "pinned_capture",
+        "-",
+    ),
     # the double-advanced pawn itself gives check: capturing it is legal
-    (_st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "f5": "bp"}),
-     {"type": "ep-capture", "from": "e5", "to": "f6"}, None, "f6"),
-    (_st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "f4": "wp"}),
-     {"type": "ep-capture", "from": "e4", "to": "f3"}, None, "f3"),
+    (
+        _st("f6", "w", {"e4": "wk", "e5": "wp", "h8": "bk", "f5": "bp"}),
+        {"type": "ep-capture", "from": "e5", "to": "f6"},
+        None,
+        "f6",
+    ),
+    (
+        _st("f3", "b", {"e5": "bk", "e4": "bp", "a1": "wk", "f4": "wp"}),
+        {"type": "ep-capture", "from": "e4", "to": "f3"},
+        None,
+        "f3",
+    ),
 ]
 
 
@@ -569,14 +624,26 @@ def test_pawn_attack_direction_rows():
 # capture, (b) the mover's own king on the target left a kingless state.
 # (state, move, expected identity) - every row fails target_inconsistent.
 OCCUPIED_TARGET_ROWS = [
-    (_st("d6", "w", {"e1": "wk", "e8": "bk", "d5": "bp", "e5": "wp", "d6": "bn"}),
-     {"type": "ep-capture", "from": "e5", "to": "d6"}, "-"),
-    (_st("d3", "b", {"e8": "bk", "e1": "wk", "d4": "wp", "e4": "bp", "d3": "wn"}),
-     {"type": "ep-capture", "from": "e4", "to": "d3"}, "-"),
-    (_st("c6", "w", {"c5": "bp", "b5": "wp", "c6": "wk", "d7": "bk"}),
-     {"type": "ep-capture", "from": "b5", "to": "c6"}, "-"),
-    (_st("c3", "b", {"c4": "wp", "b4": "bp", "c3": "bk", "d2": "wk"}),
-     {"type": "ep-capture", "from": "b4", "to": "c3"}, "-"),
+    (
+        _st("d6", "w", {"e1": "wk", "e8": "bk", "d5": "bp", "e5": "wp", "d6": "bn"}),
+        {"type": "ep-capture", "from": "e5", "to": "d6"},
+        "-",
+    ),
+    (
+        _st("d3", "b", {"e8": "bk", "e1": "wk", "d4": "wp", "e4": "bp", "d3": "wn"}),
+        {"type": "ep-capture", "from": "e4", "to": "d3"},
+        "-",
+    ),
+    (
+        _st("c6", "w", {"c5": "bp", "b5": "wp", "c6": "wk", "d7": "bk"}),
+        {"type": "ep-capture", "from": "b5", "to": "c6"},
+        "-",
+    ),
+    (
+        _st("c3", "b", {"c4": "wp", "b4": "bp", "c3": "bk", "d2": "wk"}),
+        {"type": "ep-capture", "from": "b4", "to": "c3"},
+        "-",
+    ),
 ]
 
 

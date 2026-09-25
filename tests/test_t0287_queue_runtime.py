@@ -38,7 +38,7 @@ PRODUCTION_LINES = (
     'QueueEngine = __import__("server.jobs_queue").jobs_queue.QueueEngine\n'
     'QueueError = __import__("server.jobs_queue").jobs_queue.QueueError\n'
 )
-# sha256 of tests/test_t0286_queue_red.py as amended at 30f371e
+# sha256 of tests/test_t0286_queue_red.py as amended at c10a450
 RED_AS_MERGED_SHA256 = "5581e0af4e43fe773ba4ac470c83ba5344adb04926372a142b39cfc694b92d20"
 ALLOWED_IMPORTS = {
     "__future__",

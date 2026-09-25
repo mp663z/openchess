@@ -449,6 +449,16 @@ def test_r4_inputs_unchanged_and_outputs_detached():
             assert s == state
 
 
+def test_r4_fingerprint_pins_replaced_occupied():
+    """The held occupied dict changes identity twice without a value change.
+    A bare id() could mistake address reuse for the original object."""
+    state = {"occupied": {}}
+    before = (_Pin(state["occupied"]), list(state), list(state["occupied"]))
+    state["occupied"] = {}
+    state["occupied"] = {}
+    assert (_Pin(state["occupied"]), list(state), list(state["occupied"])) != before
+
+
 # -- R5: hostile inputs fail closed ---------------------------------------------
 
 CALLS = []
