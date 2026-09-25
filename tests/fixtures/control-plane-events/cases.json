@@ -1,0 +1,2968 @@
+{
+ "boundary": [
+  {
+   "event": {
+    "correlation_id": "Cyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+    "event_id": "evt-4ac852ef9cab64edd10d84de",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 4,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "correlation-id-max-length"
+  },
+  {
+   "event": {
+    "correlation_id": "c",
+    "event_id": "evt-06b0a9899e48eb46b72cddaf",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 3,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "correlation-id-min-length"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-243a77a23c856b8a07514a9b",
+    "event_id": "Exxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 2,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-max-length"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-1bd5dccdf53fd4a57fb340ef",
+    "event_id": "e",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-min-length"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-342221668f13b84e5f08049c",
+    "error_code": "not_found",
+    "event_id": "evt-90ad30c9917b1d4554361190",
+    "name": "control_plane.quota.commit.failed",
+    "occurred_at": 253402300799999,
+    "operation_id": "quota.commit",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "failed-at-max-timestamp"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-5700f6badeaebdb5ed10e6fd",
+    "error_code": "auth_expired",
+    "event_id": "evt-3b2d4e153f4f86be9c25f23a",
+    "name": "control_plane.identity.refresh.failed",
+    "occurred_at": 0,
+    "operation_id": "identity.refresh",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "failed-at-zero-timestamp"
+  },
+  {
+   "event": {
+    "correlation_id": "-_90zaZA-_90zaZA-_90zaZA-_90zaZA-_90zaZA-_90zaZA-_90zaZA-_90zaZA",
+    "event_id": "AZaz09_-AZaz09_-AZaz09_-AZaz09_-AZaz09_-AZaz09_-AZaz09_-AZaz09_-",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 5,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "identifier-all-classes"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-95469d099130d35069a7f308",
+    "event_id": "evt-0750e87fdb8790bc3c8e6a9c",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 253402300799999,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "occurred-at-max"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-76c5271e0a6c25f5ed19a4e1",
+    "event_id": "evt-80f4b5096f907a4c191c08d7",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 0,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "occurred-at-zero"
+  }
+ ],
+ "contract": "data/contracts/events.yaml",
+ "contract_schema_version": 1,
+ "happy": [
+  {
+   "event": {
+    "correlation_id": "cor-8349243f3afe0ce7c4178c44",
+    "error_code": "auth_expired",
+    "event_id": "evt-47c816d5ac1e6a4237e561e2",
+    "name": "control_plane.billing.create_checkout.failed",
+    "occurred_at": 1758000001000,
+    "operation_id": "billing.create_checkout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.create_checkout-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-d52b153a598023897a44863f",
+    "error_code": "auth_invalid",
+    "event_id": "evt-6b0b326e69e4d0dca5067d13",
+    "name": "control_plane.billing.create_checkout.failed",
+    "occurred_at": 1758000002000,
+    "operation_id": "billing.create_checkout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.create_checkout-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-c079f87899a6c67a07f7a583",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-a31d279622ef7e22fdc0949e",
+    "name": "control_plane.billing.create_checkout.failed",
+    "occurred_at": 1758000005000,
+    "operation_id": "billing.create_checkout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.create_checkout-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-fb4f69b1245714f6daf5d537",
+    "error_code": "internal",
+    "event_id": "evt-ea3ae6add669870043bde6e1",
+    "name": "control_plane.billing.create_checkout.failed",
+    "occurred_at": 1758000006000,
+    "operation_id": "billing.create_checkout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.create_checkout-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-289f7a09cfbb5582309b001e",
+    "error_code": "malformed_request",
+    "event_id": "evt-465e5e0a87fe137bd98d03af",
+    "name": "control_plane.billing.create_checkout.failed",
+    "occurred_at": 1758000003000,
+    "operation_id": "billing.create_checkout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.create_checkout-failed-malformed_request"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-754373b965db7cf2827cb557",
+    "error_code": "provider_unavailable",
+    "event_id": "evt-0717ce9d2bc26734c7bcab28",
+    "name": "control_plane.billing.create_checkout.failed",
+    "occurred_at": 1758000004000,
+    "operation_id": "billing.create_checkout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.create_checkout-failed-provider_unavailable"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-99ca9d86b11e9c644de17141",
+    "event_id": "evt-712ade1bfea3bdb790ddb13e",
+    "name": "control_plane.billing.create_checkout.succeeded",
+    "occurred_at": 1758000000000,
+    "operation_id": "billing.create_checkout",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "billing.create_checkout-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-ac4b8f97043850e67264c504",
+    "error_code": "auth_expired",
+    "event_id": "evt-388179816f5b5b08ee404c8c",
+    "name": "control_plane.billing.get_subscription.failed",
+    "occurred_at": 1758000008000,
+    "operation_id": "billing.get_subscription",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.get_subscription-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-9ca3477c6049573dd61369e2",
+    "error_code": "auth_invalid",
+    "event_id": "evt-5f612884f577dc2056131967",
+    "name": "control_plane.billing.get_subscription.failed",
+    "occurred_at": 1758000009000,
+    "operation_id": "billing.get_subscription",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.get_subscription-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-59a4c585a42b5c6cb9f8d932",
+    "error_code": "internal",
+    "event_id": "evt-42bbf1707f716b579f3da8bc",
+    "name": "control_plane.billing.get_subscription.failed",
+    "occurred_at": 1758000011000,
+    "operation_id": "billing.get_subscription",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.get_subscription-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-e7527ca6e3bcb5d65d9add54",
+    "error_code": "not_found",
+    "event_id": "evt-db1b45b1627c4aa209e40a9e",
+    "name": "control_plane.billing.get_subscription.failed",
+    "occurred_at": 1758000010000,
+    "operation_id": "billing.get_subscription",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "billing.get_subscription-failed-not_found"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-39b391446c09a5bc81c4708f",
+    "event_id": "evt-2405aa493fb40dd3bf72703f",
+    "name": "control_plane.billing.get_subscription.succeeded",
+    "occurred_at": 1758000007000,
+    "operation_id": "billing.get_subscription",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "billing.get_subscription-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-5499841027071216a5b15d1c",
+    "error_code": "auth_expired",
+    "event_id": "evt-6d86f0fd6a774929553e9b8d",
+    "name": "control_plane.entitlements.get.failed",
+    "occurred_at": 1758000013000,
+    "operation_id": "entitlements.get",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "entitlements.get-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-b7dba40ad59221ca630f839c",
+    "error_code": "auth_invalid",
+    "event_id": "evt-2baef7cc1371ca8eccb62dcf",
+    "name": "control_plane.entitlements.get.failed",
+    "occurred_at": 1758000014000,
+    "operation_id": "entitlements.get",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "entitlements.get-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-8ec91a030c4292cd68b9420f",
+    "error_code": "internal",
+    "event_id": "evt-eaf9d0e343586242679c8c8a",
+    "name": "control_plane.entitlements.get.failed",
+    "occurred_at": 1758000015000,
+    "operation_id": "entitlements.get",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "entitlements.get-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-41cc790629f31cb4d0f74fc3",
+    "event_id": "evt-c723a43bd25ce903803a3170",
+    "name": "control_plane.entitlements.get.succeeded",
+    "occurred_at": 1758000012000,
+    "operation_id": "entitlements.get",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "entitlements.get-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-cfcd76f473eca7d99d070cd8",
+    "error_code": "auth_invalid",
+    "event_id": "evt-0a9d21a6751223280fce46e5",
+    "name": "control_plane.identity.delete_account.failed",
+    "occurred_at": 1758000017000,
+    "operation_id": "identity.delete_account",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.delete_account-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-b65b0310bab7b5c0efc5f1b2",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-055d746eca3146f8db40acaa",
+    "name": "control_plane.identity.delete_account.failed",
+    "occurred_at": 1758000019000,
+    "operation_id": "identity.delete_account",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.delete_account-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-120cf7f35f1edd67fcaaea85",
+    "error_code": "internal",
+    "event_id": "evt-70d151eedce6e10cfe9f4df8",
+    "name": "control_plane.identity.delete_account.failed",
+    "occurred_at": 1758000020000,
+    "operation_id": "identity.delete_account",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.delete_account-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-adaa40761dde204afc310bc0",
+    "error_code": "malformed_request",
+    "event_id": "evt-0096a06919cf729a654209ec",
+    "name": "control_plane.identity.delete_account.failed",
+    "occurred_at": 1758000018000,
+    "operation_id": "identity.delete_account",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.delete_account-failed-malformed_request"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-7815773522ce4524393e95b4",
+    "event_id": "evt-66397abca7d05510ec7f6cfd",
+    "name": "control_plane.identity.delete_account.succeeded",
+    "occurred_at": 1758000016000,
+    "operation_id": "identity.delete_account",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "identity.delete_account-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-857f9c46f60392d6ac464d8a",
+    "error_code": "auth_invalid",
+    "event_id": "evt-ef453c87faeecb5c22fbb248",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1758000023000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.login-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-b095f7a81bc130e8d24705ed",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-e3f630dc574b2d403b3c62f1",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1758000025000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.login-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-8df28115f7bedef36294ff02",
+    "error_code": "internal",
+    "event_id": "evt-f6ed84458bf4cb6fd752254e",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1758000026000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.login-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-62a2a7fce7ddabb3a46da89f",
+    "error_code": "malformed_request",
+    "event_id": "evt-ca4b05b0a42f5e26bab16ea0",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1758000022000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.login-failed-malformed_request"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-395e23c859ebcc4ff9cfdb6a",
+    "error_code": "rate_limited",
+    "event_id": "evt-69f06fafbaec6a36544cedb6",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1758000024000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.login-failed-rate_limited"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-4835a0580ae4631c15d41085",
+    "event_id": "evt-bdb6a433a61a7ceaa5b2690d",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1758000021000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "identity.login-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-a71b032077980843d8982be2",
+    "error_code": "auth_invalid",
+    "event_id": "evt-de4ccf38db5333885072f611",
+    "name": "control_plane.identity.logout.failed",
+    "occurred_at": 1758000028000,
+    "operation_id": "identity.logout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.logout-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-66f3e0ebac139b1f17af940c",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-af952e05f4bdc1be4d67f14d",
+    "name": "control_plane.identity.logout.failed",
+    "occurred_at": 1758000029000,
+    "operation_id": "identity.logout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.logout-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-bacb6b60eb4b98f9101bd7a0",
+    "error_code": "internal",
+    "event_id": "evt-71de2322337f67944391fa23",
+    "name": "control_plane.identity.logout.failed",
+    "occurred_at": 1758000030000,
+    "operation_id": "identity.logout",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.logout-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-81f84a3667ffc794057c6709",
+    "event_id": "evt-7edbfe273f25fdbd8b744486",
+    "name": "control_plane.identity.logout.succeeded",
+    "occurred_at": 1758000027000,
+    "operation_id": "identity.logout",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "identity.logout-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-32df569c1656290ce8cf6e78",
+    "error_code": "auth_expired",
+    "event_id": "evt-ab895af875d5e6b7d1cb3cb5",
+    "name": "control_plane.identity.refresh.failed",
+    "occurred_at": 1758000032000,
+    "operation_id": "identity.refresh",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.refresh-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-dccb537430fbca67461ec044",
+    "error_code": "auth_invalid",
+    "event_id": "evt-1c643ba5cbed60e8ecb9eb9c",
+    "name": "control_plane.identity.refresh.failed",
+    "occurred_at": 1758000033000,
+    "operation_id": "identity.refresh",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.refresh-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-49a21e973ea265e2837ec66f",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-bebdf2ee43ad7590f3b37ac7",
+    "name": "control_plane.identity.refresh.failed",
+    "occurred_at": 1758000034000,
+    "operation_id": "identity.refresh",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.refresh-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-a3c701baf3872183899f8548",
+    "error_code": "internal",
+    "event_id": "evt-347df95ea71229b83cf71e0b",
+    "name": "control_plane.identity.refresh.failed",
+    "occurred_at": 1758000035000,
+    "operation_id": "identity.refresh",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.refresh-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-9d476f2db494d510aee8e609",
+    "event_id": "evt-6f42334b06b01fc705cbf794",
+    "name": "control_plane.identity.refresh.succeeded",
+    "occurred_at": 1758000031000,
+    "operation_id": "identity.refresh",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "identity.refresh-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-ee520960da79d7cdb3ee5c0c",
+    "error_code": "conflict",
+    "event_id": "evt-5646d4bdbb3513916babb9f4",
+    "name": "control_plane.identity.register.failed",
+    "occurred_at": 1758000038000,
+    "operation_id": "identity.register",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.register-failed-conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-34e0871b5482657378f86ac4",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-5f23c43b698772582eb9a3f6",
+    "name": "control_plane.identity.register.failed",
+    "occurred_at": 1758000040000,
+    "operation_id": "identity.register",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.register-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-f5927708364224f71929be42",
+    "error_code": "internal",
+    "event_id": "evt-5d3a8377e43deaf74ca6e2d3",
+    "name": "control_plane.identity.register.failed",
+    "occurred_at": 1758000041000,
+    "operation_id": "identity.register",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.register-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-0347c82b40a2e54d5dda59a9",
+    "error_code": "malformed_request",
+    "event_id": "evt-5120e57b7f98765ab4b00592",
+    "name": "control_plane.identity.register.failed",
+    "occurred_at": 1758000037000,
+    "operation_id": "identity.register",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.register-failed-malformed_request"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-04aa2de5f59a84f698f47f6a",
+    "error_code": "rate_limited",
+    "event_id": "evt-5c5bf379dcecb990269cc278",
+    "name": "control_plane.identity.register.failed",
+    "occurred_at": 1758000039000,
+    "operation_id": "identity.register",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "identity.register-failed-rate_limited"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-ac6b7bbdc77424cd5cd912db",
+    "event_id": "evt-3cabc50bd6c1f1f69de1ea23",
+    "name": "control_plane.identity.register.succeeded",
+    "occurred_at": 1758000036000,
+    "operation_id": "identity.register",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "identity.register-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-e86175cb0f446ee4b33f0d8c",
+    "error_code": "auth_expired",
+    "event_id": "evt-b9485ebfd106e0d784af1b52",
+    "name": "control_plane.provider_routing.register_key.failed",
+    "occurred_at": 1758000043000,
+    "operation_id": "provider_routing.register_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.register_key-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-090884b12735a1129fca2001",
+    "error_code": "auth_invalid",
+    "event_id": "evt-08484803e0c54abf524fac9c",
+    "name": "control_plane.provider_routing.register_key.failed",
+    "occurred_at": 1758000044000,
+    "operation_id": "provider_routing.register_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.register_key-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-3344753abb091a6e061dff1e",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-86ad0089ef3f86b74978b8c0",
+    "name": "control_plane.provider_routing.register_key.failed",
+    "occurred_at": 1758000047000,
+    "operation_id": "provider_routing.register_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.register_key-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-ce50d2e4af4294b87d7300c4",
+    "error_code": "internal",
+    "event_id": "evt-5d2686e216aaee7804cd2a1d",
+    "name": "control_plane.provider_routing.register_key.failed",
+    "occurred_at": 1758000048000,
+    "operation_id": "provider_routing.register_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.register_key-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-27d42bb58d09efb8b24e6d4d",
+    "error_code": "malformed_request",
+    "event_id": "evt-bd003a871cd131a1c6f69bd3",
+    "name": "control_plane.provider_routing.register_key.failed",
+    "occurred_at": 1758000046000,
+    "operation_id": "provider_routing.register_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.register_key-failed-malformed_request"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-5e912f0487e964046f3961db",
+    "error_code": "provider_key_invalid",
+    "event_id": "evt-74b06b01842066e6aa3e3dd4",
+    "name": "control_plane.provider_routing.register_key.failed",
+    "occurred_at": 1758000045000,
+    "operation_id": "provider_routing.register_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.register_key-failed-provider_key_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-717fbc0687d9d64b3093f189",
+    "event_id": "evt-08b0e4d33af88364ce70cec2",
+    "name": "control_plane.provider_routing.register_key.succeeded",
+    "occurred_at": 1758000042000,
+    "operation_id": "provider_routing.register_key",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "provider_routing.register_key-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-aba9b50f75c7c1424a2ce95f",
+    "error_code": "auth_expired",
+    "event_id": "evt-467bc179cdf3789f54e2f3c8",
+    "name": "control_plane.provider_routing.revoke_key.failed",
+    "occurred_at": 1758000050000,
+    "operation_id": "provider_routing.revoke_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.revoke_key-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-cb5938e8f57419db370de2a8",
+    "error_code": "auth_invalid",
+    "event_id": "evt-67144216f1abbd019a3c8f8e",
+    "name": "control_plane.provider_routing.revoke_key.failed",
+    "occurred_at": 1758000051000,
+    "operation_id": "provider_routing.revoke_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.revoke_key-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-f5b5b545e0b9a27658b89fcc",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-8b3ac0942dcca0b6cb88aac4",
+    "name": "control_plane.provider_routing.revoke_key.failed",
+    "occurred_at": 1758000053000,
+    "operation_id": "provider_routing.revoke_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.revoke_key-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-45368410226d2415758242fa",
+    "error_code": "internal",
+    "event_id": "evt-23047975876312e36caff861",
+    "name": "control_plane.provider_routing.revoke_key.failed",
+    "occurred_at": 1758000054000,
+    "operation_id": "provider_routing.revoke_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.revoke_key-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-31ed778f935644c6093fab0d",
+    "error_code": "not_found",
+    "event_id": "evt-63ffc492b76a3f1f5e9ab54d",
+    "name": "control_plane.provider_routing.revoke_key.failed",
+    "occurred_at": 1758000052000,
+    "operation_id": "provider_routing.revoke_key",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.revoke_key-failed-not_found"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-c2126a79db153d8c2affb162",
+    "event_id": "evt-868eac1b2eb3ec789c7e5f8b",
+    "name": "control_plane.provider_routing.revoke_key.succeeded",
+    "occurred_at": 1758000049000,
+    "operation_id": "provider_routing.revoke_key",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "provider_routing.revoke_key-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-9ec91dc2abf008bad7d17155",
+    "error_code": "auth_expired",
+    "event_id": "evt-1d1da05d26c905dfc8b6c4c7",
+    "name": "control_plane.provider_routing.route.failed",
+    "occurred_at": 1758000056000,
+    "operation_id": "provider_routing.route",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.route-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-952ec10cec3c2e1e644c2f79",
+    "error_code": "auth_invalid",
+    "event_id": "evt-fd77ec5666866018d7a2f849",
+    "name": "control_plane.provider_routing.route.failed",
+    "occurred_at": 1758000057000,
+    "operation_id": "provider_routing.route",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.route-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-dcfdf7af5114c53d1b3298e4",
+    "error_code": "cost_cap_exceeded",
+    "event_id": "evt-5b69c4bc03a09e419f66bc66",
+    "name": "control_plane.provider_routing.route.failed",
+    "occurred_at": 1758000059000,
+    "operation_id": "provider_routing.route",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.route-failed-cost_cap_exceeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-fbedf2f6fef2cbe4a6260182",
+    "error_code": "entitlement_missing",
+    "event_id": "evt-3965c88dd10ce0e6cebc4072",
+    "name": "control_plane.provider_routing.route.failed",
+    "occurred_at": 1758000058000,
+    "operation_id": "provider_routing.route",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.route-failed-entitlement_missing"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-9d90412c49576a4fbc4cb15a",
+    "error_code": "internal",
+    "event_id": "evt-13e1734d0cc8644a8983e610",
+    "name": "control_plane.provider_routing.route.failed",
+    "occurred_at": 1758000062000,
+    "operation_id": "provider_routing.route",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.route-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-4af9d2243f2125b3e570d2b1",
+    "error_code": "malformed_request",
+    "event_id": "evt-8e2dd7620cb52cfaee66c38e",
+    "name": "control_plane.provider_routing.route.failed",
+    "occurred_at": 1758000061000,
+    "operation_id": "provider_routing.route",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.route-failed-malformed_request"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-7fbe1f7f28d6dce82cc89924",
+    "error_code": "provider_unavailable",
+    "event_id": "evt-a16fe0f96fb22a8dd6395386",
+    "name": "control_plane.provider_routing.route.failed",
+    "occurred_at": 1758000060000,
+    "operation_id": "provider_routing.route",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "provider_routing.route-failed-provider_unavailable"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-7ea7de3e0968bea616c4cfef",
+    "event_id": "evt-add7148e7fd07570793cd441",
+    "name": "control_plane.provider_routing.route.succeeded",
+    "occurred_at": 1758000055000,
+    "operation_id": "provider_routing.route",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "provider_routing.route-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-68bdcc5de5e0b147de5ba54b",
+    "error_code": "auth_expired",
+    "event_id": "evt-8d7a05a149c3661e8f5769c9",
+    "name": "control_plane.quota.commit.failed",
+    "occurred_at": 1758000064000,
+    "operation_id": "quota.commit",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.commit-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-b34f61545e40cd64c040477e",
+    "error_code": "auth_invalid",
+    "event_id": "evt-b7d9e96e4429dbb2dfddb548",
+    "name": "control_plane.quota.commit.failed",
+    "occurred_at": 1758000065000,
+    "operation_id": "quota.commit",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.commit-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-29dcefecbaaffc62b0a66c88",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-a38ba641ff452b0c0a485df7",
+    "name": "control_plane.quota.commit.failed",
+    "occurred_at": 1758000069000,
+    "operation_id": "quota.commit",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.commit-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-27dd67d5c14f92c113c2e6e4",
+    "error_code": "internal",
+    "event_id": "evt-9b1928bdd8f8a993aaf860be",
+    "name": "control_plane.quota.commit.failed",
+    "occurred_at": 1758000070000,
+    "operation_id": "quota.commit",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.commit-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-ca134195836dbcd1d9f08d13",
+    "error_code": "malformed_request",
+    "event_id": "evt-0d0e4ae1a67368af36eb8091",
+    "name": "control_plane.quota.commit.failed",
+    "occurred_at": 1758000068000,
+    "operation_id": "quota.commit",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.commit-failed-malformed_request"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-bc329d65041b2b6d90a08a2f",
+    "error_code": "not_found",
+    "event_id": "evt-748661a3976b616a892d041f",
+    "name": "control_plane.quota.commit.failed",
+    "occurred_at": 1758000067000,
+    "operation_id": "quota.commit",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.commit-failed-not_found"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-65f087d273b98eb4942694f7",
+    "error_code": "quota_reservation_expired",
+    "event_id": "evt-619ab74779d1827c0d740e48",
+    "name": "control_plane.quota.commit.failed",
+    "occurred_at": 1758000066000,
+    "operation_id": "quota.commit",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.commit-failed-quota_reservation_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-d67e1ad218bc7ec2f742de9a",
+    "event_id": "evt-67bfcbec87a6a0c753d148e9",
+    "name": "control_plane.quota.commit.succeeded",
+    "occurred_at": 1758000063000,
+    "operation_id": "quota.commit",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "quota.commit-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-e675a41b2922fcadef290867",
+    "error_code": "auth_expired",
+    "event_id": "evt-0802eddd1a25b6cba7353bd4",
+    "name": "control_plane.quota.release.failed",
+    "occurred_at": 1758000072000,
+    "operation_id": "quota.release",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.release-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-e5894e99c0bec8ba49dea280",
+    "error_code": "auth_invalid",
+    "event_id": "evt-bdd82103e574a43dd52f2c7d",
+    "name": "control_plane.quota.release.failed",
+    "occurred_at": 1758000073000,
+    "operation_id": "quota.release",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.release-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-411d58cd1dc2af3b69c39b12",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-9c10f23277c0017abec138b1",
+    "name": "control_plane.quota.release.failed",
+    "occurred_at": 1758000075000,
+    "operation_id": "quota.release",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.release-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-0bbdad6de445a3224fde00e0",
+    "error_code": "internal",
+    "event_id": "evt-6f46a0678f57a907462ac9d4",
+    "name": "control_plane.quota.release.failed",
+    "occurred_at": 1758000076000,
+    "operation_id": "quota.release",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.release-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-085a871ed334191ee4cc04a6",
+    "error_code": "not_found",
+    "event_id": "evt-cd2289102334bba2de5cc247",
+    "name": "control_plane.quota.release.failed",
+    "occurred_at": 1758000074000,
+    "operation_id": "quota.release",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.release-failed-not_found"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-b336537da9a7caa2f12e5a8f",
+    "event_id": "evt-d75554922350b0e24d33d0db",
+    "name": "control_plane.quota.release.succeeded",
+    "occurred_at": 1758000071000,
+    "operation_id": "quota.release",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "quota.release-succeeded"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-7c4970310384fde03239aa89",
+    "error_code": "auth_expired",
+    "event_id": "evt-752674c7cbdc77271c4144ec",
+    "name": "control_plane.quota.reserve.failed",
+    "occurred_at": 1758000078000,
+    "operation_id": "quota.reserve",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.reserve-failed-auth_expired"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-892f598c3662813118fb983a",
+    "error_code": "auth_invalid",
+    "event_id": "evt-856f41e870e9d269f1195b8f",
+    "name": "control_plane.quota.reserve.failed",
+    "occurred_at": 1758000079000,
+    "operation_id": "quota.reserve",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.reserve-failed-auth_invalid"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-1f74e5247148f232bb48d145",
+    "error_code": "idempotency_conflict",
+    "event_id": "evt-6ef130f891423b47e2e04fba",
+    "name": "control_plane.quota.reserve.failed",
+    "occurred_at": 1758000082000,
+    "operation_id": "quota.reserve",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.reserve-failed-idempotency_conflict"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-61a7ead8567cea95e0c77763",
+    "error_code": "internal",
+    "event_id": "evt-f8ce28a2ef5ee36f8ca30ebc",
+    "name": "control_plane.quota.reserve.failed",
+    "occurred_at": 1758000083000,
+    "operation_id": "quota.reserve",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.reserve-failed-internal"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-098880ab6a5dd2d1cc863847",
+    "error_code": "malformed_request",
+    "event_id": "evt-f06ad569f75302afc8a14418",
+    "name": "control_plane.quota.reserve.failed",
+    "occurred_at": 1758000081000,
+    "operation_id": "quota.reserve",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.reserve-failed-malformed_request"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-34fccae2a362e1f5e7c635a7",
+    "error_code": "quota_exhausted",
+    "event_id": "evt-35fbd19b53f9b7c939d2dc35",
+    "name": "control_plane.quota.reserve.failed",
+    "occurred_at": 1758000080000,
+    "operation_id": "quota.reserve",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "quota.reserve-failed-quota_exhausted"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-069002792cf2fae8d0456c77",
+    "event_id": "evt-fef82b14abd0b1176fd2d2b5",
+    "name": "control_plane.quota.reserve.succeeded",
+    "occurred_at": 1758000077000,
+    "operation_id": "quota.reserve",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "quota.reserve-succeeded"
+  }
+ ],
+ "malformed": [
+  {
+   "event": {
+    "chess_content": "1. e4 e5 2. Nf3 Nc6",
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "chess-content-field",
+   "why": "chess content is prohibited in every field"
+  },
+  {
+   "event": {
+    "correlation_id": false,
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "correlation-id-bool",
+   "why": "correlation_id must be a string"
+  },
+  {
+   "event": {
+    "correlation_id": "",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "correlation-id-empty",
+   "why": "correlation_id is 1-64 identifier characters"
+  },
+  {
+   "event": {
+    "correlation_id": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "correlation-id-too-long",
+   "why": "correlation_id caps at 64 characters"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "password": "hunter2-fixture",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "credentials-field",
+   "why": "credentials are prohibited and must not echo"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "email": "user@example.com",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "email-field",
+   "why": "a raw email is prohibited and must not echo"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "x@y",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-at-sign",
+   "why": "event_id allows no @"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-empty",
+   "why": "event_id is 1-64 identifier characters"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "événement",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-non-ascii",
+   "why": "event_id is ASCII only"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": 1,
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-nonstring",
+   "why": "event_id must be a string"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "has space",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-space",
+   "why": "event_id allows no spaces"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-too-long",
+   "why": "event_id caps at 64 characters"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "abc\n",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-id-trailing-newline",
+   "why": "event_id must fullmatch; a trailing newline is refused"
+  },
+  {
+   "event": [],
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-list",
+   "why": "the event is a list, not an object"
+  },
+  {
+   "event": null,
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-null",
+   "why": "the event is not an object"
+  },
+  {
+   "event": "control_plane.identity.login.succeeded",
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "event-string",
+   "why": "the event is a bare string, not an object"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "trace_id": "trace-1",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "extra-trace-field",
+   "why": "the envelope is closed; undeclared fields are refused"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-edd81dd2996a47d944181565",
+    "error_code": 7,
+    "event_id": "evt-5566242b6b18d0f9b321ef8d",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-edd81dd2996a47d944181565",
+    "error_code": "auth_invalid",
+    "event_id": "evt-5566242b6b18d0f9b321ef8d",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "failed-error-code-nonstring",
+   "why": "error_code must be a declared string"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-edd81dd2996a47d944181565",
+    "event_id": "evt-5566242b6b18d0f9b321ef8d",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-edd81dd2996a47d944181565",
+    "error_code": "auth_invalid",
+    "event_id": "evt-5566242b6b18d0f9b321ef8d",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "failed-missing-error-code",
+   "why": "a failed outcome requires error_code"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-edd81dd2996a47d944181565",
+    "error_code": "quota_exhausted",
+    "event_id": "evt-5566242b6b18d0f9b321ef8d",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-edd81dd2996a47d944181565",
+    "error_code": "auth_invalid",
+    "event_id": "evt-5566242b6b18d0f9b321ef8d",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "failed-undeclared-error-code",
+   "why": "quota_exhausted is not a declared error for identity.login"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "fen-field",
+   "why": "a FEN is chess content and prohibited"
+  },
+  {
+   "event": {
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "missing-correlation-id",
+   "why": "required field correlation_id is absent"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "missing-event-id",
+   "why": "required field event_id is absent"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "missing-name",
+   "why": "required field name is absent"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "missing-occurred-at",
+   "why": "required field occurred_at is absent"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "missing-operation-id",
+   "why": "required field operation_id is absent"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "missing-outcome",
+   "why": "required field outcome is absent"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded"
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "missing-version",
+   "why": "required field version is absent"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": 1,
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "unknown_name",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "name-nonstring",
+   "why": "name must be a string"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.logout.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "unknown_name",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "name-operation-mismatch",
+   "why": "name names a different operation than operation_id"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-edd81dd2996a47d944181565",
+    "error_code": "auth_invalid",
+    "event_id": "evt-5566242b6b18d0f9b321ef8d",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "expect_failure": "unknown_name",
+   "minimal_repair": {
+    "correlation_id": "cor-edd81dd2996a47d944181565",
+    "error_code": "auth_invalid",
+    "event_id": "evt-5566242b6b18d0f9b321ef8d",
+    "name": "control_plane.identity.login.failed",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "failed",
+    "version": 1
+   },
+   "name": "name-outcome-mismatch",
+   "why": "name claims succeeded while the outcome is failed"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "import.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "unknown_name",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "name-wrong-prefix",
+   "why": "name must use the control_plane prefix"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": true,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "occurred-at-bool",
+   "why": "occurred_at must be an exact int, not bool"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1.0,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "occurred-at-float",
+   "why": "occurred_at must be an exact int, not float"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": -1,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "occurred-at-minus-one",
+   "why": "occurred_at below 0"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 253402300800000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "occurred-at-past-max",
+   "why": "occurred_at past the 253402300799999 ceiling"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": "0",
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "occurred-at-string",
+   "why": "occurred_at must be an exact int, not str"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": 7,
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "unknown_name",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "operation-nonstring",
+   "why": "operation_id must be a declared string"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-bd89f9ed2bba393c02420349",
+    "event_id": "evt-10223dfb61ec8fe47c406f79",
+    "name": "control_plane.import.run.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "import.run",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "unknown_name",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "operation-outside-scope",
+   "why": "import.run belongs to the excluded import telemetry surface"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-5ba40b4079bd2a311e831263",
+    "event_id": "evt-485f856b5ea7cc4aa44fabea",
+    "name": "control_plane.identity.restore.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.restore",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "unknown_name",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "operation-unknown",
+   "why": "identity.restore is not in the pinned v1 catalog"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": 1,
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "outcome-nonstring",
+   "why": "outcome must be a string"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-5d6c3100eaaf1bcae74fda94",
+    "event_id": "evt-94585410c1410f353dc47bab",
+    "name": "control_plane.identity.login.queued",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "queued",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "outcome-queued",
+   "why": "outcome is closed to succeeded/failed; name matches, so only the outcome check can refuse"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "pgn": "[Event \"x\"] 1. d4 d5 1-0",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "pgn-field",
+   "why": "a PGN movetext is chess content and prohibited"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "provider_key": "sk-live-9f8e7d6c5b4a-fixture",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "provider-key-field",
+   "why": "provider key material is prohibited and must not echo"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "request_body": "{\"operation_kind\": \"analysis\"}",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "request-body-field",
+   "why": "request bodies are prohibited"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "error_code": "internal",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "succeeded-with-error-code",
+   "why": "error_code is forbidden on success"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": true
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "version-bool-true",
+   "why": "version must be an exact int, not bool"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1.0
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "version-float",
+   "why": "version must be an exact int, not float"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": "1"
+   },
+   "expect_failure": "malformed_event",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "version-string",
+   "why": "version must be an exact int, not str"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 2
+   },
+   "expect_failure": "unsupported_version",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "version-two",
+   "why": "envelope version 2 is not declared; refused before publication"
+  },
+  {
+   "event": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 0
+   },
+   "expect_failure": "unsupported_version",
+   "minimal_repair": {
+    "correlation_id": "cor-36cb2d74a59936f3cc17bdba",
+    "event_id": "evt-b8eb3ce47449e5f3e7e9c9ba",
+    "name": "control_plane.identity.login.succeeded",
+    "occurred_at": 1000,
+    "operation_id": "identity.login",
+    "outcome": "succeeded",
+    "version": 1
+   },
+   "name": "version-zero",
+   "why": "envelope version 0 is not declared; refused before publication"
+  }
+ ],
+ "notes": "Closed fixture for the v1 control-plane operation metadata event contract (data/contracts/events.yaml), contract-only: no shipped event emission is claimed or exercised. All event_id/correlation_id values are independent synthetic identifiers derived only from the case name via sha256 labels; they are not runtime values, user values or body-derived values, and nothing here claims runtime provenance detection (contract envelope.value_policy). Secret-looking payloads in malformed rows exist only to prove typed refusal without echo.",
+ "rollback": [
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 11,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 2,
+   "expect_failure": "duplicate_conflict",
+   "expect_published": 1,
+   "follow_up": [
+    {
+     "correlation_id": "cor-09415bc77282d48c4e08fad6",
+     "error_code": "quota_exhausted",
+     "event_id": "evt-527401dcedf1017d9455d2d1",
+     "name": "control_plane.quota.reserve.failed",
+     "occurred_at": 20,
+     "operation_id": "quota.reserve",
+     "outcome": "failed",
+     "version": 1
+    }
+   ],
+   "inject_fault": false,
+   "name": "conflict-after-restart",
+   "published": [
+    [
+     {
+      "correlation_id": "cor-576030d7fa6759b393ee489d",
+      "event_id": "evt-1d1bc832ced0da2007bd854b",
+      "name": "control_plane.identity.register.succeeded",
+      "occurred_at": 10,
+      "operation_id": "identity.register",
+      "outcome": "succeeded",
+      "version": 1
+     }
+    ]
+   ],
+   "restart": true,
+   "why": "the replay ledger still refuses a conflicting envelope after restart"
+  },
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 11,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 2,
+   "expect_failure": "duplicate_conflict",
+   "expect_published": 1,
+   "follow_up": [
+    {
+     "correlation_id": "cor-09415bc77282d48c4e08fad6",
+     "error_code": "quota_exhausted",
+     "event_id": "evt-527401dcedf1017d9455d2d1",
+     "name": "control_plane.quota.reserve.failed",
+     "occurred_at": 20,
+     "operation_id": "quota.reserve",
+     "outcome": "failed",
+     "version": 1
+    }
+   ],
+   "inject_fault": false,
+   "name": "conflict-with-ledger",
+   "published": [
+    [
+     {
+      "correlation_id": "cor-576030d7fa6759b393ee489d",
+      "event_id": "evt-1d1bc832ced0da2007bd854b",
+      "name": "control_plane.identity.register.succeeded",
+      "occurred_at": 10,
+      "operation_id": "identity.register",
+      "outcome": "succeeded",
+      "version": 1
+     }
+    ]
+   ],
+   "restart": false,
+   "why": "same event_id, different envelope: refused, nothing changes"
+  },
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 11,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 1,
+   "expect_failure": "duplicate_conflict",
+   "expect_published": 0,
+   "follow_up": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "inject_fault": false,
+   "name": "conflict-within-batch",
+   "published": [],
+   "restart": false,
+   "why": "same event_id twice with different envelopes: whole batch refused"
+  },
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 2,
+   "expect_failure": null,
+   "expect_published": 1,
+   "follow_up": [
+    {
+     "correlation_id": "cor-09415bc77282d48c4e08fad6",
+     "error_code": "quota_exhausted",
+     "event_id": "evt-527401dcedf1017d9455d2d1",
+     "name": "control_plane.quota.reserve.failed",
+     "occurred_at": 20,
+     "operation_id": "quota.reserve",
+     "outcome": "failed",
+     "version": 1
+    }
+   ],
+   "inject_fault": false,
+   "name": "duplicate-within-batch-identical",
+   "published": [],
+   "restart": false,
+   "why": "the same envelope twice inside one batch publishes once"
+  },
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-2221a20d890d80641a336d80",
+     "event_id": "evt-af8226b113cea3b7df56b392",
+     "name": "control_plane.entitlements.get.succeeded",
+     "occurred_at": 30,
+     "operation_id": "entitlements.get",
+     "outcome": "succeeded",
+     "trace_id": "trace-undeclared",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 2,
+   "expect_failure": "malformed_event",
+   "expect_published": 0,
+   "follow_up": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-2221a20d890d80641a336d80",
+     "event_id": "evt-af8226b113cea3b7df56b392",
+     "name": "control_plane.entitlements.get.succeeded",
+     "occurred_at": 30,
+     "operation_id": "entitlements.get",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "inject_fault": false,
+   "name": "mixed-valid-invalid-all-or-none",
+   "published": [],
+   "restart": false,
+   "why": "one invalid event rolls back the whole batch; both then commit"
+  },
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-09415bc77282d48c4e08fad6",
+     "error_code": "quota_exhausted",
+     "event_id": "evt-527401dcedf1017d9455d2d1",
+     "name": "control_plane.quota.reserve.failed",
+     "occurred_at": 20,
+     "operation_id": "quota.reserve",
+     "outcome": "failed",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 2,
+   "expect_failure": "publication_failure",
+   "expect_published": 0,
+   "follow_up": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-09415bc77282d48c4e08fad6",
+     "error_code": "quota_exhausted",
+     "event_id": "evt-527401dcedf1017d9455d2d1",
+     "name": "control_plane.quota.reserve.failed",
+     "occurred_at": 20,
+     "operation_id": "quota.reserve",
+     "outcome": "failed",
+     "version": 1
+    }
+   ],
+   "inject_fault": true,
+   "name": "publication-fault-rolls-back",
+   "published": [],
+   "restart": false,
+   "why": "an injected publication fault leaves no partial batch; the same ids and envelopes then commit on retry"
+  },
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-09415bc77282d48c4e08fad6",
+     "error_code": "quota_exhausted",
+     "event_id": "evt-527401dcedf1017d9455d2d1",
+     "name": "control_plane.quota.reserve.failed",
+     "occurred_at": 20,
+     "operation_id": "quota.reserve",
+     "outcome": "failed",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 3,
+   "expect_failure": null,
+   "expect_published": 2,
+   "follow_up": [
+    {
+     "correlation_id": "cor-2221a20d890d80641a336d80",
+     "event_id": "evt-af8226b113cea3b7df56b392",
+     "name": "control_plane.entitlements.get.succeeded",
+     "occurred_at": 30,
+     "operation_id": "entitlements.get",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "inject_fault": false,
+   "name": "replay-across-restart",
+   "published": [
+    [
+     {
+      "correlation_id": "cor-576030d7fa6759b393ee489d",
+      "event_id": "evt-1d1bc832ced0da2007bd854b",
+      "name": "control_plane.identity.register.succeeded",
+      "occurred_at": 10,
+      "operation_id": "identity.register",
+      "outcome": "succeeded",
+      "version": 1
+     },
+     {
+      "correlation_id": "cor-09415bc77282d48c4e08fad6",
+      "error_code": "quota_exhausted",
+      "event_id": "evt-527401dcedf1017d9455d2d1",
+      "name": "control_plane.quota.reserve.failed",
+      "occurred_at": 20,
+      "operation_id": "quota.reserve",
+      "outcome": "failed",
+      "version": 1
+     }
+    ]
+   ],
+   "restart": true,
+   "why": "the dedupe ledger survives a restart: identical replay stays a no-op"
+  },
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-09415bc77282d48c4e08fad6",
+     "error_code": "quota_exhausted",
+     "event_id": "evt-527401dcedf1017d9455d2d1",
+     "name": "control_plane.quota.reserve.failed",
+     "occurred_at": 20,
+     "operation_id": "quota.reserve",
+     "outcome": "failed",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 3,
+   "expect_failure": null,
+   "expect_published": 2,
+   "follow_up": [
+    {
+     "correlation_id": "cor-2221a20d890d80641a336d80",
+     "event_id": "evt-af8226b113cea3b7df56b392",
+     "name": "control_plane.entitlements.get.succeeded",
+     "occurred_at": 30,
+     "operation_id": "entitlements.get",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "inject_fault": false,
+   "name": "replay-identical-noop",
+   "published": [
+    [
+     {
+      "correlation_id": "cor-576030d7fa6759b393ee489d",
+      "event_id": "evt-1d1bc832ced0da2007bd854b",
+      "name": "control_plane.identity.register.succeeded",
+      "occurred_at": 10,
+      "operation_id": "identity.register",
+      "outcome": "succeeded",
+      "version": 1
+     },
+     {
+      "correlation_id": "cor-09415bc77282d48c4e08fad6",
+      "error_code": "quota_exhausted",
+      "event_id": "evt-527401dcedf1017d9455d2d1",
+      "name": "control_plane.quota.reserve.failed",
+      "occurred_at": 20,
+      "operation_id": "quota.reserve",
+      "outcome": "failed",
+      "version": 1
+     }
+    ]
+   ],
+   "restart": false,
+   "why": "replaying the same ids with identical envelopes is a no-op"
+  },
+  {
+   "batch": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    },
+    {
+     "correlation_id": "cor-43f4474910a88d5e6c302409",
+     "event_id": "evt-5262bfe5f5ec98782078bc9e",
+     "name": "control_plane.identity.restore.succeeded",
+     "occurred_at": 40,
+     "operation_id": "identity.restore",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "expect_after_follow_up": 1,
+   "expect_failure": "unknown_name",
+   "expect_published": 0,
+   "follow_up": [
+    {
+     "correlation_id": "cor-576030d7fa6759b393ee489d",
+     "event_id": "evt-1d1bc832ced0da2007bd854b",
+     "name": "control_plane.identity.register.succeeded",
+     "occurred_at": 10,
+     "operation_id": "identity.register",
+     "outcome": "succeeded",
+     "version": 1
+    }
+   ],
+   "inject_fault": false,
+   "name": "unknown-name-batch-all-or-none",
+   "published": [],
+   "restart": false,
+   "why": "an undeclared operation in a batch rolls the valid events back too"
+  }
+ ],
+ "schema_version": 1,
+ "section_manifests": {
+  "boundary": {
+   "correlation-id-max-length": "68f26252d2814d95f509f61a1cf32c756887cb9807250893e27013e5d14e7ce9",
+   "correlation-id-min-length": "2a3ae10a2aa6e03cdfcec328249bdfe66ba25da8135072c341a86c2bd5a0bd4e",
+   "event-id-max-length": "63616e0ac7ea843287d46fd651ee43b4acd8f8534c730e40a312207f5d1c576e",
+   "event-id-min-length": "6a0a6ef85244ff41745d7bdf9313392cfd9e5134f9002b825e1676458537d451",
+   "failed-at-max-timestamp": "b1869b3916633ff3f15b86c116469021816059ac75808d95f7ce8d4e6a96eb50",
+   "failed-at-zero-timestamp": "0cffa711c9210517fac0caecb8d80f527fbc5a3f6e80ad1629c953a2fd65079e",
+   "identifier-all-classes": "e0c6172e1f1404118aa76a42adaa279db38178e7c9905eb2b6671cef2b2d8a5d",
+   "occurred-at-max": "a800b7083595229ac8696467fbf7cc8013eb6c1ff717366f7546df551c9e9066",
+   "occurred-at-zero": "bfd7ed73c656f4b17d2bd61c419cd96e986b49f6ac2842436f7fe1b8459304e3"
+  },
+  "happy": {
+   "billing.create_checkout-failed-auth_expired": "7f931a05eb879a9f41f3956dbbabea561c8e6bb168f2e05dec1d65f114e145a2",
+   "billing.create_checkout-failed-auth_invalid": "b3fc4f134162070a8ff8a471b38e60e71891fc11159bf983b9af7343a05c0fdb",
+   "billing.create_checkout-failed-idempotency_conflict": "9ca8b12296cb31857f77189136e44ee9a4b806b691d39aea0c091427cb41397b",
+   "billing.create_checkout-failed-internal": "78d1017edb0004cc2466b2baf7ab0c002f1c1c40c15a784177dbd559e499448f",
+   "billing.create_checkout-failed-malformed_request": "02c3a8e13d87eff7c15709a5032367a3b68f2e28dcad92504dcbfa7b20e7c289",
+   "billing.create_checkout-failed-provider_unavailable": "ec515e45fddaf5dae8731ade1e20d4fc33fa99d5034315ee5fceb729cc16f71c",
+   "billing.create_checkout-succeeded": "3bb8796a132e8f22657fba991780487b446fd5ea282f84aab3d48d8444014699",
+   "billing.get_subscription-failed-auth_expired": "4ba20959bae03aaec8d618b3fc4506845ea94b49249820751c392408071d6c99",
+   "billing.get_subscription-failed-auth_invalid": "9072b33b4d7a7bab8a98942c9d0f02ff453785e3e2a52e96eb3cde2f94ca0cbf",
+   "billing.get_subscription-failed-internal": "6d520257fe7f94589a79ba14057be61dfc0d99d5a6f13a36a5ddb95c49fdbfc6",
+   "billing.get_subscription-failed-not_found": "01bea12b027046e8dc7cb6380e1682af84207866c859a525d092b97b466c2180",
+   "billing.get_subscription-succeeded": "8e81b10226e15f6b9936e2edc081f88b78bf1c4cd61bb3ec09d61a20a6551bf6",
+   "entitlements.get-failed-auth_expired": "d38a665635a38a85c3d1c53c9004e4829853c9b2c3e16ad371372da15c26b5de",
+   "entitlements.get-failed-auth_invalid": "98246ea97caab0bc4f77eaef82498f345488fa4d0395ca8a4eeacbf86267f928",
+   "entitlements.get-failed-internal": "5adb77d6b9d8a021b3ee8715674aeb975df005c691fa144971752b654d45d508",
+   "entitlements.get-succeeded": "09aad4677373010dfa273e6ebf15667501a4ce8a4c76c3dc393f7f6fe5d1d2d6",
+   "identity.delete_account-failed-auth_invalid": "c2e1a124d26651ccf0eb402fc4e02cb11ade5e88e3b20da5aa239be7f228d558",
+   "identity.delete_account-failed-idempotency_conflict": "9a24927ec04602691d2a5332abcef48831582a6ed44d265bbf8782bc5adc4654",
+   "identity.delete_account-failed-internal": "b216bb08dd99ce31d7e374dd0e1e9e57131a5cc66a3a53126e648158b390a4cb",
+   "identity.delete_account-failed-malformed_request": "95ab3c72f0b30ac0c87cfdcc3265db3da917619062ad9ef24c2c74c55ebc1bb5",
+   "identity.delete_account-succeeded": "e720519978c3a1f62447a83ad14833521b0875a9cd084abf3af3ad3db0fa3077",
+   "identity.login-failed-auth_invalid": "fddf4f0efb62001e41e5ca54e20d3c6dbff9d87f2230b13c44f501aee0c1d00e",
+   "identity.login-failed-idempotency_conflict": "c9fd5c86993e2361c98e436e3fc338f32b998d4bf933c4fa1d0d17f80a3db4ee",
+   "identity.login-failed-internal": "fb16e4c8c6752dd1655f9067152795f535cf9f62fcc8cd51629124829d8ab6e3",
+   "identity.login-failed-malformed_request": "e6d85a6b80f199fd626988d9f6c6b853cf8137b94910e79fc9d4734ca26863b6",
+   "identity.login-failed-rate_limited": "c489754012a0fa2e56f30bf29ebe731ca6bc5e8a54824c8b7d68e2ea1a744037",
+   "identity.login-succeeded": "8b6ddeb4d70fd6ba76101ed6e1ac16f7e62d021c81c755caa3498d4d2a3dfa9a",
+   "identity.logout-failed-auth_invalid": "3caac0eb18f556ddc36d171b45d21f1780e5255322f02b5855ef369ef25eb3e8",
+   "identity.logout-failed-idempotency_conflict": "13599cdf0576f5c575498b7f1c4bf736fda0de5ce848b842dd668e64e6da0f9e",
+   "identity.logout-failed-internal": "ec3cfd4e6f3c1f9050af2d1d1332a94e1e4ea337f1fed36137d4f153d0c94681",
+   "identity.logout-succeeded": "ba705a3d5f6e1d205fffcf8fd49966e3d227f61a024fed7638d81019d9c5cee2",
+   "identity.refresh-failed-auth_expired": "3dbe446464be878124fb23869aec0a9f04b52c8b79fa6e78bf214dbaaf12fe46",
+   "identity.refresh-failed-auth_invalid": "bc86f07090c0fddd5cbb7aa597fc9254efeaf56d416ad525e1c9ccc7188b8fdb",
+   "identity.refresh-failed-idempotency_conflict": "cb2eb1137c88686883e18b1e7376e7df64f3335efa9a4f16e03aee3ca27869bc",
+   "identity.refresh-failed-internal": "e514308f23df1f4d387aa0397b4502aa628f6651445abe39cc3b250843961dc4",
+   "identity.refresh-succeeded": "2b4371490791ad3d22324c24e8a1888558af34dde20eb8d608e7b33c2187aa12",
+   "identity.register-failed-conflict": "6daca15c096554861c1332170e9ccbe0a6665c03d9037d4b4ca1c3b566b01539",
+   "identity.register-failed-idempotency_conflict": "776c05e13a1702b0828cb8eaade59f861fa73084f21d4fa41271b119b830c49d",
+   "identity.register-failed-internal": "9e93625f772c64f17a3e81f75dc305969d5b68fdc4a07716fbeb07cd80a37565",
+   "identity.register-failed-malformed_request": "f42d321d9296653c81eb222c9884fdbc75a7b0e01388d89c395e2ecd940d876c",
+   "identity.register-failed-rate_limited": "2eef132d11d94d7c8ced80afaa4f766284cf78f30a5138287ba588aaaf0eb0aa",
+   "identity.register-succeeded": "912a1e85facb198776d536d204cb57881bfd59c25137f9e94d619add252c4be5",
+   "provider_routing.register_key-failed-auth_expired": "81ccae9cfdbfe794b0108eec25126ec59ed263a3ac67c1d949d078973583e662",
+   "provider_routing.register_key-failed-auth_invalid": "e19e34be80be2a58e33ea275807a2b683544904774ab4c5e9cd9a5dac53ca142",
+   "provider_routing.register_key-failed-idempotency_conflict": "f6e3c1b05b13e0ed49343ac64d1acc56c18298c1316dbac889514c2f1ff2aee6",
+   "provider_routing.register_key-failed-internal": "cf072bcd492185d5d7ac286a44002e8fe99f640463ade97e6886536c72a31025",
+   "provider_routing.register_key-failed-malformed_request": "e5fc8f3055eda660b35809803d77a064cf9e363f2a86c60a65487cad103a4218",
+   "provider_routing.register_key-failed-provider_key_invalid": "df70c78617f31b5da5ccf18df7edbb6782e952b2a40a3c7d9f7f831ced627467",
+   "provider_routing.register_key-succeeded": "761b7b48a406f35501c29a13d0ef747545458419ffcbeb1818d8b54f8766e44e",
+   "provider_routing.revoke_key-failed-auth_expired": "566a51682cc5533df3fb995f47b49e94bc0ce3d40741cd033c15388c8407cc76",
+   "provider_routing.revoke_key-failed-auth_invalid": "87a1e4f6b90459dee722e42e18d0772d3c4046c8e22d624d071b1a64b68f828a",
+   "provider_routing.revoke_key-failed-idempotency_conflict": "fad0e496d3eb1b5bb21eb1fd91ac199f034e90144572df3cc311003d1a0d7005",
+   "provider_routing.revoke_key-failed-internal": "ed9dd392549e98d137749b2de5384aa624549e5384b3cc5cb69158a86b09c5ec",
+   "provider_routing.revoke_key-failed-not_found": "1dd01d7d46cea0e8d7ce9ae4677732961ec53c5b5c7bcdab4ac01c047b6f10f5",
+   "provider_routing.revoke_key-succeeded": "0acac1208a685e002f72a7f0ea52ee143e3f9a0858feb974b6db960b7a9dfb69",
+   "provider_routing.route-failed-auth_expired": "5dc481531a3c99d691df84a6e16a6aa1895277ae314aa8e56825e32657ea2150",
+   "provider_routing.route-failed-auth_invalid": "effaa79e93d77c815317264b562bb5c9895f5aa58c8473d67df3373b15c110ca",
+   "provider_routing.route-failed-cost_cap_exceeded": "f088f4b56d1861e3fb71c8bba4e8d82ccc72fa53dd08d22456e7b87fd3919a49",
+   "provider_routing.route-failed-entitlement_missing": "bd54eced5c4701fdb3986c0cbee78912217f0f52b22759ccefd27362f1d09058",
+   "provider_routing.route-failed-internal": "3a4c05225f6b2e096ed2849a5bfe232b3304a05b00b3c4e9af4ef3146cd4dc89",
+   "provider_routing.route-failed-malformed_request": "273ef86fef8138188504fd738513faa6bdf07ce1372c598554e18b0c2fb5fff1",
+   "provider_routing.route-failed-provider_unavailable": "9a73f07da6a83bba8ee89245854c525fca94536cbab732bce3a15b680e86756a",
+   "provider_routing.route-succeeded": "ed503162caa85851fb64e94bbf93bf6e8d2ed389d6e7cecbccf3b50eb5bc1435",
+   "quota.commit-failed-auth_expired": "33285c0eeec3db8188e2e27f8fe8e2983a75073c8bc17611f9efeb842337dfe2",
+   "quota.commit-failed-auth_invalid": "27ee24fd4e6d6512c929a963766a40b1c66f69e718abc835e4adbfc02d0e342e",
+   "quota.commit-failed-idempotency_conflict": "2dc2970236f66cbc7da0e3e788eed5e4ed4fb99c8ce634f2fe9686078e5d4a6d",
+   "quota.commit-failed-internal": "f112e4436d6a87581693269f4b45e03b14a7e0bb6179f32575fac1653694fb9b",
+   "quota.commit-failed-malformed_request": "73ed3d40e776c56d21cccb7e9e85859483ae2ebf9961054f8377ed7e6ba443f4",
+   "quota.commit-failed-not_found": "9aa29b86681ad9580eaba5801f049910b7cc242d8a26d9597e307fedee63a79d",
+   "quota.commit-failed-quota_reservation_expired": "1affe2eee34f45cbbd4238db6cfadc72e351a25697e3c9a540aa9b2cb0b30abc",
+   "quota.commit-succeeded": "4f46588a76213f963c32c37eee1b789a5113d41405685fff00c79e4df343f6c7",
+   "quota.release-failed-auth_expired": "c3b8ca3872653c624c794a99a2f2e3cada3b1fd6f3596b03ec7476af6cd12900",
+   "quota.release-failed-auth_invalid": "f6cdfc7d6f7770fb5599d41147eef5db0e9e8600ed7254295459deec5874bccc",
+   "quota.release-failed-idempotency_conflict": "50d01511409b2df8fc1df8fcdddf29d6985c9c9558414fbd64055ee06a1ff0ee",
+   "quota.release-failed-internal": "f4b26615c4dce41a4b70658a263753f47da93f8e68ff43b9b4182a482ddf019d",
+   "quota.release-failed-not_found": "24b39bc0cce3d4cbd831488f29c22265a4a31301980319f23d80283c837b48f7",
+   "quota.release-succeeded": "8f91610ee1bfc003d3df6b46547531716c5d9a17e34321c587db2b062c7fdd17",
+   "quota.reserve-failed-auth_expired": "2cb4c188e8402e7319ab756ba3dc88dc353843d01ea87c643f6ec29b81d19636",
+   "quota.reserve-failed-auth_invalid": "c3059205bed369ad4df94b31f55725d4f33993027117d439593d991fa6c153f3",
+   "quota.reserve-failed-idempotency_conflict": "74456d6fd40ceeac89cdba86d9f20c51bc03fd28c716b43ec9ee7113f6588e59",
+   "quota.reserve-failed-internal": "9959aa6c56a7b419e3c228279fe59fefb7fab3b878dafee847aed9e035b0f896",
+   "quota.reserve-failed-malformed_request": "05fbf48a831824bf5e5c5ea7d219be5fa4b8cef8b0cf77fea9151dbe3ed7f18f",
+   "quota.reserve-failed-quota_exhausted": "a4f716b395a273dc2ee685d116bd2f8b10c364216576f9ee21609ff3bbfd33b4",
+   "quota.reserve-succeeded": "2502b0ae631a204d08759b89a3b426cdecbbefe3e14f65c4d8afeeef2930dd40"
+  },
+  "malformed": {
+   "chess-content-field": "ba1bfbc5eda0e4103dc778ef2c5429dc6abdfe5901ab423e44a2f0ef840a9f2c",
+   "correlation-id-bool": "dc816a1fb367984a4002bf26d4980558f4b87cba8ef8f070fd8e646d7f345be8",
+   "correlation-id-empty": "a697dfabe999632af520dc05adbd508c27069136dfe93cf745b48572645e2283",
+   "correlation-id-too-long": "a81bc57248f288f2bba28752e3a1f01d0466e62c1541aa122d57b765d22daeff",
+   "credentials-field": "53dcb36777b91859c78920c1413eb66913986085f0d59d0413b2cec8b5c0cd95",
+   "email-field": "050275fafb0c53bf67b4e7884f142e5a11138a33a892cf7951b103eb35b089f1",
+   "event-id-at-sign": "cc6ae1e54ecb5c28b4b54408d518e1e4488d3a89a7931c0f3f903fa532505773",
+   "event-id-empty": "34ac7af6274b91fe5239b911e700d3a1ed4122f46c59d258c7c247ef1319255e",
+   "event-id-non-ascii": "83a0372fae580b13a4bd39cb26e40b60b23183da1775b0bd6e2fb4596b273795",
+   "event-id-nonstring": "001c433f24193f812db3b2aaeb6a6c47f008d53563085e875f116f618a4b1437",
+   "event-id-space": "3eb6e8f0a69c45cc8c179483e76fbda27778aabbbc9ec5a5cb8098f57cdd0fc6",
+   "event-id-too-long": "7a97d2d1aeef55e96c93087a04d49b81a02949381798b798e61c2f0029b5d83d",
+   "event-id-trailing-newline": "d8a9a58c069ed9a4c5e682b03e6f1b09f477a3c1a4d6e03c4a3725f8ac2f95b6",
+   "event-list": "ca63f17725dbf6a350f458ea7da1d1f41bf9ef2a9fd3de1dd63a16ec5d2da44b",
+   "event-null": "960a211c2b1553f889f9a62a1bb3837188ef85ef6da69691dedf5981054afcef",
+   "event-string": "3429cc9becb3ce1fe24f46dde61f77e34ce7c33f084f5dff07d2b41d8584a1f6",
+   "extra-trace-field": "61e97f18a0a9147c5cce88213263c31050bba47043f395a9a142758f983512f5",
+   "failed-error-code-nonstring": "842979a03783c5a2b3222ade6ae58758a495dd15dc5ec93328743e1087754f05",
+   "failed-missing-error-code": "9350f86c9ad703867ee0b1bc6ec488096ce68c2ef36d25a53e0119fd5e63f604",
+   "failed-undeclared-error-code": "a0d47287af6e3c7cf402ed7265d82f53204e3721484d6a13d498fe2173ab9c4f",
+   "fen-field": "2a5d66b2c57fff22cc7e14607eb907406b500885af8a8045dca3f8cf8f078fc1",
+   "missing-correlation-id": "f9a793397c0ccf1ef4dd00bc9938ca1aa555112f88c6a4337583d406b52fb8c9",
+   "missing-event-id": "3bd82f4bae22bf455125d64f768beca1a04b002677ccef4df67634fa5f39e080",
+   "missing-name": "c8aa98a5ece24c37b445b5cafcfcc548d6f7f5f2a0ddee7b3c0034b23f17e9bf",
+   "missing-occurred-at": "33009df7e41a09d3fbfd98ab5e02b08c05f575aa5e6cf0c4e5885c140e9f8d25",
+   "missing-operation-id": "ccb7ade3c22d3fb5fdd3dab7bb4daed9070ef3f8311dd7f3d8c3d5c4843e09ab",
+   "missing-outcome": "0533ca7ecb53ae1d85e36ae5f045a353e0bd44c3237a1ee25e8e2b5550b16ff2",
+   "missing-version": "113445a3eb171bc25f77928b2d92d39bf8bef22194ec61c3242c36c16af904ca",
+   "name-nonstring": "2a7bc47711b1fb95da9e67e6768c8af65a7e2d866e972a83eef4cc54bacf3d47",
+   "name-operation-mismatch": "4352ca58f06c2ab882a543506eb769e688213436b765817fba300e3504d7863b",
+   "name-outcome-mismatch": "1043c4a006049856a3ab9c28bf1daffead8d79ac47ecaf760d42f760df34d2d6",
+   "name-wrong-prefix": "3f3f475c5256f470cee0fdfecd60e174b66954e0cdc81ad7a5f5713dbd4e46cf",
+   "occurred-at-bool": "dbed6bff43c76fe621e0d17fcf31908aab188cf2add80a909753b66bb81e930f",
+   "occurred-at-float": "4ded46701f60efbbc42e36a8ba01b5eceb69f1902e43f4758119115fac9fdeda",
+   "occurred-at-minus-one": "507ac4c8ff9369fbfaeebaf23ae14254264c82acc55a85ad4b92d32028d80255",
+   "occurred-at-past-max": "ce02dc619d22fada261fc1f7827b7c691f5d52fce4cea6b7fb2721507b1e0666",
+   "occurred-at-string": "9cce230d92239730a716ef0e4a0beb7c20cf991a481479e8cac38f354b6afe90",
+   "operation-nonstring": "9737ea76b700905abdac3f1c1c55932d96e0824cd6364c4f3386d03427905ae7",
+   "operation-outside-scope": "04fd5e29a4ccb6aa8902c5673b1f4f0b6910d3ea216a980477b1a809e21a494c",
+   "operation-unknown": "5a7f4fa54e72ee173e489e5a0bbd534396f2f241f2169ff8f02b49849b3171f9",
+   "outcome-nonstring": "7cf30fa4a4308377c74b3f097c1da0c1038a50370a73d8c00cc26e295a263f68",
+   "outcome-queued": "a84b291babd79800cd428c9c5ac74e5b906e423b3e16cb116bfa2828d72d5be7",
+   "pgn-field": "27f66b5cf43069dfbf911239d134fa5b662f76138481960f31e65d25f6833f07",
+   "provider-key-field": "dab072fa8db6dafd90193d475d7aa2e1f98b0fd6b5abec6ad5a12a0a0f38ca6e",
+   "request-body-field": "c4607d5a702612081326f542fba5086337a9ea588279e32ec486ee1e8637f632",
+   "succeeded-with-error-code": "79f7ba55874a4178bd04d9449024eea64365cb6199a43f4bbd7b866c24602175",
+   "version-bool-true": "69ffd86cab133c67d77d06cd7df6155b3d4b4b62933bbefa871f4925671cdce8",
+   "version-float": "7876d8f06e15c1d28701ec1e7eb58234a1af835fe64b80d6ff89f39a7df774cd",
+   "version-string": "276ab578306f0ab48fef317878153172eddf922aa0adb12443c0b658312eee1a",
+   "version-two": "ce59df85405fcce42ff2ad5d8e27054110ad36f50227acab9017784255b40978",
+   "version-zero": "038f198893cb9bda77f7e3a5c869773e654f2632dccda0a51c998f57a9935ffb"
+  },
+  "rollback": {
+   "conflict-after-restart": "82ef8956085b84efb11fcb3257c3897e32f4e7cc7720d032ef38cb46da721fbd",
+   "conflict-with-ledger": "243fecaef246c5aa3821a24ef617cf811ee5815abcca9287fcf4953fa117376d",
+   "conflict-within-batch": "2e99238f3c2152ccba74520b1a4b9fb5c2bdb0cfff7f382d7c584e5a275ca4f0",
+   "duplicate-within-batch-identical": "ebb4552324d1f5668e9bd8c40bd130b29933504bf4d02ffb34361f303e6f6752",
+   "mixed-valid-invalid-all-or-none": "33399cedd29221aa83d4e8ead806057c04ff07d50d046220452cf1f05140a6d8",
+   "publication-fault-rolls-back": "4fd9f163471f699b27815d1883d18758751f3bde511c56669915f16dee2ba057",
+   "replay-across-restart": "01e9a6fc35430527e892b7267897c1d8bb98afd394fd493aaead2d832bf8fb2e",
+   "replay-identical-noop": "c602472d7e3be56c5142085c9d1a17d609ed51470062ca2569c82eaf899d1352",
+   "unknown-name-batch-all-or-none": "edfc01948dba13304a43a21fbad6bae654bbc121d7ba79bbc9dd6924ca3c5f72"
+  }
+ }
+}

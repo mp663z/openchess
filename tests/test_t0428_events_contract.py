@@ -42,7 +42,13 @@ class Refusal(ValueError):
 
 def validate(event):
     """Pure reference for the declared envelope, not production instrumentation."""
-    if type(event) is not dict or set(event) - FIELDS or FIELDS - {"error_code"} - set(event):
+    if type(event) is not dict:
+        raise Refusal("malformed_event")
+    # Key types are checked before any set algebra: a hostile key object
+    # never reaches a hash or comparison (typed refusal, no user code).
+    if any(type(key) is not str for key in event):
+        raise Refusal("malformed_event")
+    if set(event) - FIELDS or FIELDS - {"error_code"} - set(event):
         raise Refusal("malformed_event")
     if type(event["version"]) is not int:
         raise Refusal("malformed_event")
