@@ -72,6 +72,33 @@ def test_same_id_changed_content_replaces_indexed_record(source_id):
     _probe(PRODUCTION_BINDING, source_id)
 
 
+def _probe_first_of_two(binding):
+    store = ReferenceStore()
+    second_game = FULL_HEADER_PGN.replace('[White "a"]', '[White "other"]')
+    reference_updated(FULL_HEADER_PGN + "\n" + second_game, store)  # test-owned seed
+    old_index = copy.deepcopy(store.index)
+    old_records = copy.deepcopy(store.records)
+    assert len(old_index) == 2 and old_index[0]["game_id"] != old_index[1]["game_id"]
+    before_events = len(store.telemetry)
+    result = binding(NEW_PGN, store)
+    assert result == {"kind": "updated-summary", "source_id": "pgn-file",
+                      "games_imported": 0, "games_already_imported": 0, "games_updated": 1}
+    assert store.summary == result
+    assert store.telemetry[before_events:] == SCENARIO["telemetry"]
+    assert len(store.index) == len({entry["game_id"] for entry in store.index}) == 2
+    assert store.index[0]["game_id"] == old_index[0]["game_id"]
+    assert store.index[0]["record"] != old_index[0]["record"]
+    assert store.index[1] == old_index[1]
+    assert set(store.records) == set(old_records) | {store.index[0]["record"]}
+    assert all(store.records[name] == record for name, record in old_records.items())
+    assert store.records[store.index[0]["record"]]["movetext"] != (
+        old_records[old_index[0]["record"]]["movetext"])
+
+
+def test_update_first_of_two_keeps_index_order():
+    _probe_first_of_two(PRODUCTION_BINDING)
+
+
 def _wrong_kind(text, store, **kw):
     result = reference_updated(text, store, **kw)
     result["kind"] = "import-summary"
@@ -105,12 +132,25 @@ def _junk_record(text, store, **kw):
     return result
 
 
+def _move_updated_to_end(text, store, **kw):
+    result = reference_updated(text, store, **kw)
+    entry = store.index.pop(0)
+    store.index.append(entry)
+    return result
+
+
 @pytest.mark.parametrize("mutant", [_wrong_kind, _same_hash, _drop_event,
                                      _upd_fake, _junk_record])
 def test_black_box_mutants_red(mutant):
     _probe(PRODUCTION_BINDING)
     with pytest.raises(AssertionError):
         _probe(mutant)
+
+
+def test_move_updated_to_end_mutant_red():
+    _probe_first_of_two(PRODUCTION_BINDING)
+    with pytest.raises(AssertionError):
+        _probe_first_of_two(_move_updated_to_end)
 
 
 def test_wrong_source_refused_before_any_state():
