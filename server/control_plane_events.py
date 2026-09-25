@@ -262,7 +262,16 @@ class Ledger:
     def seen(self, values: dict[str, dict]) -> None:
         # The dedupe index is derived atomically from the unique outbox rows.
         # The historical fixture sets this after restoring events.
-        if type(values) is not dict or values != self.seen:
+        if type(values) is not dict:
+            raise Refusal("malformed_event")
+        # Validate and detach all caller-owned values before reading storage or
+        # comparing dictionaries. An untrusted __eq__/__hash__ must not run.
+        if any(type(key) is not str for key in values):
+            raise Refusal("malformed_event")
+        validated = {key: validate(value) for key, value in values.items()}
+        if any(key != value["event_id"] for key, value in validated.items()):
+            raise Refusal("malformed_event")
+        if validated != self.seen:
             raise Refusal("malformed_event")
 
     def publish(self, batch: list[dict], *, fail_commit: bool = False) -> int:
