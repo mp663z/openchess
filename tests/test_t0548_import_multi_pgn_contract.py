@@ -100,7 +100,7 @@ def reference_import(text, store, *, source_id="pgn-multi", retrieval_detail="in
         store.records[filename] = record
         entry = {"game_id": record["game_id"], "record": filename}
         if old:
-            store.index[store.index(old)] = entry
+            store.index[store.index.index(old)] = entry
             updated += 1
             store.telemetry.append("import.game_updated")
         else:
