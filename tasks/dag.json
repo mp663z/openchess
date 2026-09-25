@@ -8156,10 +8156,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "19b9379a53239f7018a99a7ada852c746223a9c7",
+   "evidence_manifest": "evidence/T0383.md"
   },
   {
    "id": "T0384",
