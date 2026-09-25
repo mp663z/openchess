@@ -102,6 +102,47 @@ def reference_refusal(text, store: ReferenceStore, *, source_id="pgn-file", scen
                         line = open_variations[-1] if open_variations else None
                     if line is None:
                         raise AssertionError("unlocatable unmatched opener") from None
+                elif detail in ("unbalanced comment close", "unbalanced variation close"):
+                    # Locate the first illegal closer using the same state
+                    # changes as _strip_movetext; tag values are not movetext.
+                    expected = "}" if detail == "unbalanced comment close" else ")"
+                    depth = 0
+                    in_tags = True
+                    comment = False
+                    found = None
+                    for line_number, value in enumerate(lines, start=1):
+                        trimmed = value.strip()
+                        if not trimmed:
+                            continue
+                        if in_tags and trimmed.startswith("["):
+                            continue
+                        in_tags = False
+                        cursor = 0
+                        while cursor < len(value):
+                            ch = value[cursor]
+                            if comment:
+                                if ch == "}":
+                                    comment = False
+                            elif ch == "{" and depth == 0:
+                                comment = True
+                            elif ch == ";" and depth == 0:
+                                break
+                            elif ch == "(":
+                                depth += 1
+                            elif ch == ")":
+                                if depth == 0:
+                                    found = (ch, line_number)
+                                    break
+                                depth -= 1
+                            elif ch == "}" and depth == 0:
+                                found = (ch, line_number)
+                                break
+                            cursor += 1
+                        if found is not None:
+                            break
+                    if found is None or found[0] != expected:
+                        raise AssertionError("unlocatable stray closer") from None
+                    line = found[1]
                 marker = {"game_number": seq, "line": line or len(lines)}
             else:
                 san = detail.rsplit("'", 2)[1]

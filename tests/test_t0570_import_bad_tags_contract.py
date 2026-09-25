@@ -1,6 +1,9 @@
 """T0570 import-bad-tags pure reference contract; T0572 swaps binding."""
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -153,3 +156,62 @@ def test_semicolon_inside_variation_does_not_hide_later_unclosed_comment():
     result = PRODUCTION_BINDING(text, store, scenario=SCENARIO)
     assert result.marker["location"] == {"game_number": 1, "line": 11}
     assert store.rejections == [result] and store.index == [] and store.records == {}
+
+
+@pytest.mark.parametrize("movetext,line,detail", [
+    ("1. e4 }\ne5\n2. Nf3 Nc6 1-0", 11, "unbalanced comment close"),
+    ("1. e4 )\ne5\n2. Nf3 Nc6 1-0", 11, "unbalanced variation close"),
+    ("1. e4 e5\n2. Nf3 Nc6 }", 12, "unbalanced comment close"),
+    ("1. e4 e5\n2. Nf3 Nc6 )", 12, "unbalanced variation close"),
+    ("1. e4 ; } ignored\ne5 )\n2. Nf3 Nc6 1-0", 12,
+     "unbalanced variation close"),
+    ("1. e4 {) ignored} e5\n2. Nf3 Nc6 }", 12,
+     "unbalanced comment close"),
+    ("1. e4 {\n} e5\n2. Nf3 Nc6 }", 13,
+     "unbalanced comment close"),
+    ("1. e4 (1. d4 } d5) e5\n2. Nf3 Nc6 )", 12,
+     "unbalanced variation close"),
+    ("1. e4 {\n) ignored\n} e5\n2. Nf3 Nc6 }", 14,
+     "unbalanced comment close"),
+    ("1. e4 (1. d4 {) e5\n2. Nf3 Nc6 }", 12,
+     "unbalanced comment close"),
+    ("1. e4 (1. d4 ; )\n) e5\n2. Nf3 Nc6 1-0", 12,
+     "unbalanced variation close"),
+    ("1. e4 }\ne5 }\n2. Nf3 Nc6 1-0", 11,
+     "unbalanced comment close"),
+    ("1. e4 (1. d4 (1. c4) d5)\ne5 )\n2. Nf3 Nc6 1-0", 12,
+     "unbalanced variation close"),
+])
+def test_stray_closer_reports_its_own_line_after_comment_skips(movetext, line, detail):
+    code = r'''import json
+import sys
+from tests.test_t0537_import_pgn_contract import FULL_HEADER_PGN
+from tests.test_t0548_import_multi_pgn_contract import ReferenceStore
+from tests.test_t0570_import_bad_tags_contract import PRODUCTION_BINDING, SCENARIO
+movetext, line, detail = json.loads(sys.stdin.read())
+fixture = FULL_HEADER_PGN.split("\n\n", 1)[0] + "\n\n" + movetext + "\n"
+store = ReferenceStore()
+result = PRODUCTION_BINDING(fixture, store, scenario=SCENARIO)
+assert result.detail == detail
+assert result.marker["location"] == {"game_number": 1, "line": line}
+assert store.rejections == [result] and store.index == [] and store.records == {}
+'''
+    subprocess.run([sys.executable, "-c", code], input=json.dumps([movetext, line, detail]),
+                   cwd=ROOT, capture_output=True, text=True, timeout=5, check=True)
+
+
+def test_stray_brace_locator_and_folder_marker_have_the_closer_line():
+    code = r'''from tests.test_t0548_import_multi_pgn_contract import ReferenceStore
+from tests.test_t0570_import_bad_tags_contract import PRODUCTION_BINDING, SCENARIO
+from tests.test_t0636_import_folder_contract import _valid, reference_folder
+
+game = _valid(2).replace("1. e4 e5 2. Nf3 Nc6 1-0", "1. e4 } e5 1-0")
+store = ReferenceStore()
+result = PRODUCTION_BINDING(game, store, scenario=SCENARIO)
+assert result.marker["location"] == {"game_number": 1, "line": 11}
+folder = ReferenceStore()
+reference_folder({"a.pgn": _valid(1) + "\n" + game + "\n" + _valid(3)}, folder)
+assert folder.rejections[0].location == {"file": "a.pgn", "game_number": 2, "line": 11}
+'''
+    subprocess.run([sys.executable, "-c", code], cwd=ROOT,
+                   capture_output=True, text=True, timeout=5, check=True)
