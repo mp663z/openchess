@@ -122,10 +122,11 @@ def test_validator_tokenization_locates_first_illegal_ply(movetext, ply, san):
     assert result.code == "illegal_move" and store.rejections == [result]
 
 
-def test_no_untyped_assertion_error_escapes_bad_input():
-    from tests.test_t0548_import_multi_pgn_contract import Refusal
-
+@pytest.mark.parametrize("fixture", [VALID_PGN, VALID_PGN + "\n" + VALID_PGN])
+def test_all_valid_fixture_is_harness_error_before_any_state(fixture):
     store = ReferenceStore()
-    with pytest.raises(Refusal) as error:
-        PRODUCTION_BINDING(VALID_PGN, store, scenario=SCENARIO)
-    assert error.value.code == "malformed_request"
+    with pytest.raises(AssertionError, match="refusal fixture has no rejected game") as error:
+        PRODUCTION_BINDING(fixture, store, scenario=SCENARIO)
+    assert type(error.value) is AssertionError
+    assert store.index == [] and store.records == {} and store.telemetry == []
+    assert store.summary is None and not hasattr(store, "rejections")

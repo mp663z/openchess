@@ -33,6 +33,16 @@ class Rejection:
 def reference_refusal(text, store: ReferenceStore, *, source_id="pgn-file", scenario):
     if source_id not in scenario["sources"]:
         raise Refusal("unknown_rights")
+    # This model only accepts fixtures containing a rejected game. Detect an
+    # all-valid fixture before any prefix can be committed or telemetry emitted.
+    for game in _split(text):
+        try:
+            validate_pgn_game(game)
+        except (MalformedPGN, IllegalMove):
+            break
+    else:
+        raise AssertionError("refusal fixture has no rejected game")
+
     store.telemetry.append("import.started")
     for seq, game in enumerate(_split(text), start=1):
         try:
@@ -89,4 +99,3 @@ def reference_refusal(text, store: ReferenceStore, *, source_id="pgn-file", scen
         reference_import(game, store, source_id=source_id, scenario=scenario)
         store.telemetry[prior_events:] = ["import.game_stored"]
         store.summary = None
-    raise Refusal("malformed_request")
