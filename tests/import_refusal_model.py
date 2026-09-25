@@ -33,6 +33,8 @@ def reference_refusal(text, store: ReferenceStore, *, source_id="pgn-file", scen
             needle = str(error).split(": ")[-1].strip("'")
             line = next((i for i, value in enumerate(game.splitlines(), start=1)
                          if needle in value), None)
+            if marker_name == "location" and line is None:
+                line = len(game.splitlines())
             marker = {"game_number": seq, "line": line} if marker_name == "location" else {
                 "game_number": seq, "san": str(error).rsplit("'", 2)[1]}
             rejection = Rejection(scenario["visible_output"], source_id, seq,
