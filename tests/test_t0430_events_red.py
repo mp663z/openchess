@@ -20,9 +20,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+from server import control_plane_events as _production
 from tests import test_t0428_events_contract as _reference
 
-PRODUCTION_BINDING = (_reference.validate, _reference.Ledger, _reference.Refusal)
+PRODUCTION_BINDING = (_production.validate, _production.Ledger, _production.Refusal)
 ROOT = Path(__file__).resolve().parents[1]
 CASES = json.loads((ROOT / "tests/fixtures/control-plane-events/cases.json").read_text())
 EVENTS = yaml.safe_load((ROOT / "data/contracts/events.yaml").read_text())["contract"]
