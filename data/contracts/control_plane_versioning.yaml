@@ -1,0 +1,59 @@
+schema_version: 1
+
+contract:
+  id: contracts-control-plane-versioning
+  role:
+    kind: pure-compatibility-verdict-for-two-control-plane-snapshots
+    serves: replaceable-control-plane-consumers
+    scope: same-major-minor-upgrades-and-major-base-path-transitions
+    owns: compatibility-of-declared-operation-and-field-shapes
+    not_scope: runtime-routing-openapi-derivation-graph-content-versions-or-undeclared-provider-behavior
+  source:
+    contract: data/contracts/control-plane.yaml
+    schema_version: 2
+    rule_path: contract.versioning.rule
+    base_path: contract.versioning.base_path
+    scheme: semver
+    source_structure: control-plane-schema-v2-validated-by-t0419-strict-derivation-with-additive-comparison-of-operations-and-fields
+  request:
+    arguments: [old, new, old_minor, new_minor]
+    minors: exact-built-in-nonnegative-integers-at-most-2147483647-old-minor-at-most-new-minor-within-same-major
+    snapshots: independent-validated-control-plane-contract-documents
+  compatibility:
+    major: same-major-requires-the-same-base-path-a-higher-major-requires-a-new-base-path-and-allows-breaking-shape-changes
+    minor: only-enumerated-additions-are-minor-any-other-change-is-major
+    request: existing-request-fields-unchanged-new-fields-optional-only
+    response: existing-response-fields-unchanged-new-fields-optional-only
+    operations: new-operations-allowed-only-at-new-method-and-path-pairs-existing-operations-unchanged-except-permitted-field-additions
+    provider_kind: open-provider-kind-values-are-consumer-tolerated-not-a-fixed-list-of-values-to-pin
+    unknown_request_fields: servers-ignore-unknown-request-fields
+    response_extras: consumers-do-not-assert-absence-of-extra-response-fields
+    rollback: a-client-on-an-earlier-minor-can-consume-a-later-same-major-server-no-data-migration-required
+    reading: "control-plane.yaml lines 13-19: MINOR is additive-only followed by a closed list; a new response field is optional because servers MUST accept any client minor within its major; optional-to-required is not in the list and needs a new MAJOR base path. The same applies to optional request fields. Rollback permits extras, not guaranteed presence."
+    excluded: runtime-behavior-and-semantic-changes-cannot-be-proven-from-schema-snapshots
+  result:
+    compatible: true-for-valid-minor-addition-or-higher-major-with-new-base-path
+    incompatible: false-on-same-major-breaking-change-or-major-without-new-base-path
+    output: exact-built-in-boolean
+  failures:
+    classes: [malformed_version_request]
+    triggers:
+      malformed_version_request: hostile-type-missing-key-bad-source-contract-or-minor-bound-violation
+    mapping:
+      malformed_version_request: malformed_request
+    closed: true
+  errors:
+    closed_enum: [malformed_request, internal]
+    shape:
+      retryable_true_only_for: [internal]
+  semantics:
+    purity: source-documents-and-nested-containers-unchanged
+    determinism: identical-documents-and-minors-give-identical-verdict
+    validation: validate-both-snapshots-and-minors-before-comparing-first-failure-wins
+    rollback: rejected-comparison-has-no-effects-on-either-snapshot
+  versioning:
+    base_path: /contracts/control-plane-versioning/v1
+    rule: 'Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place.'
+  links:
+    control_plane_contract: data/contracts/control-plane.yaml
+    openapi_derivation: data/contracts/openapi.yaml
