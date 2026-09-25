@@ -3,7 +3,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ingest.pgn import Board, IllegalMove, MalformedPGN, _match_san, validate_pgn_game
+from ingest.pgn import (
+    Board,
+    IllegalMove,
+    MalformedPGN,
+    _match_san,
+    _parse_tags,
+    _strip_movetext,
+    validate_pgn_game,
+)
 from tests.test_t0548_import_multi_pgn_contract import (
     ReferenceStore,
     Refusal,
@@ -51,23 +59,24 @@ def reference_refusal(text, store: ReferenceStore, *, source_id="pgn-file", scen
                 marker = {"game_number": seq, "line": line or len(lines)}
             else:
                 san = detail.rsplit("'", 2)[1]
-                # Count occurrences in mainline movetext up through the rejected
-                # token; the last occurrence identifies its one-based ply.
-                moves = game.split("\n\n", 1)[-1].split()
-                tokens = [token for token in moves if not token.rstrip(".").isdigit()
-                          and token not in ("1-0", "0-1", "1/2-1/2", "*")]
-                # The PGN validator stops at the first illegal SAN. Match
-                # its failing prefix rather than the last textual repeat.
-                board = Board.initial()
-                ply = None
-                for index, token in enumerate(tokens, start=1):
-                    try:
-                        move = _match_san(board, token)
-                    except (IllegalMove, MalformedPGN):
-                        ply = index
-                        break
-                    board = board.apply(move)
-                assert ply is not None and tokens[ply - 1] == san
+                # Reuse the validator's own mainline tokenization so comments,
+                # NAGs, variations and glued move numbers do not shift ply.
+                try:
+                    tokens = [token for token in _strip_movetext(_parse_tags(game)[1])
+                              if token not in ("1-0", "0-1", "1/2-1/2", "*")]
+                    board = Board.initial()
+                    ply = None
+                    for index, token in enumerate(tokens, start=1):
+                        try:
+                            move = _match_san(board, token)
+                        except (IllegalMove, MalformedPGN):
+                            ply = index
+                            break
+                        board = board.apply(move)
+                    if ply is None or tokens[ply - 1] != san:
+                        raise ValueError("unlocatable rejected SAN")
+                except (MalformedPGN, IllegalMove, ValueError, IndexError, TypeError):
+                    raise Refusal("malformed_request") from None
                 marker = {"game_number": seq, "ply": ply, "san": san}
             rejection = Rejection(scenario["visible_output"], source_id, seq,
                                   code, str(error), {marker_name: marker})
@@ -80,4 +89,4 @@ def reference_refusal(text, store: ReferenceStore, *, source_id="pgn-file", scen
         reference_import(game, store, source_id=source_id, scenario=scenario)
         store.telemetry[prior_events:] = ["import.game_stored"]
         store.summary = None
-    raise AssertionError("fixture must contain a rejected game")
+    raise Refusal("malformed_request")
