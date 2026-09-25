@@ -24,7 +24,7 @@ contract:
     error: a-4xx-or-5xx-requires-error-object-code-message-retryable-with-declared-types
     enum: error-code-must-be-in-the-source-closed-enum
     additive: unknown-extra-fields-are-permitted-in-error-and-top-level-payload
-    privacy: chess-content-checks-key-tokens-and-fen-values-apply-to-every-response-secret-name-checks-apply-to-all-but-declared-fields-san-move-text-and-key-shaped-values-are-stated-gaps
+    privacy: chess-content-checks-key-tokens-and-fen-values-apply-to-every-response-secret-name-checks-apply-to-all-but-declared-fields-short-san-move-text-and-key-shaped-values-remain-gaps-token-run-32-applies-to-errors
     detached: returned-classification-is-a-fresh-dict-not-a-reference-to-payload
   readings:
     unsupported_status: fail-closed-reading-1xx-and-3xx-have-no-declared-payload-semantics
@@ -32,7 +32,7 @@ contract:
     extra: fail-closed-reading-extra-values-must-be-json-like-utf8-encodable-and-privacy-safe
     reference: t0419-source-derivation-gates-error-shape-and-owns-status-grouping-while-this-classifier-reads-its-pinned-chess-token-rule
     fen: every-response-string-value-refused-if-any-substring-at-any-start-and-end-offset-is-valid-eight-rank-placement-linear-time-no-edge-exclusions-derived-from-fen-yaml
-    san_move_gap: san-and-move-text-values-not-closed-until-t0392-token-run-rule-lands
+    token_run: "error-response-string-values-and-keys-including-nested-refused-for-32-or-more-contiguous-[A-Za-z0-9+/=_%-]-characters-short-san-remains-an-owner-gap"
     key_value_gap: key-shaped-string-values-not-closed-without-owner-pattern
   failures:
     classes: [malformed_error_result]

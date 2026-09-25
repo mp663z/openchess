@@ -23,6 +23,7 @@ TOKENS = CHESS_TOKENS
 FEN_PLACEMENT = yaml.safe_load((ROOT / "data/contracts/fen.yaml").read_text())["contract"]["placement"]
 FEN_PIECES = frozenset(FEN_PLACEMENT["piece_letters"])
 FEN_DIGITS = {int(n) for n in FEN_PLACEMENT["empty_run_digits"]}
+TOKEN_RUN = re.compile(r"[A-Za-z0-9+/=_%-]{32}")
 
 
 
@@ -110,19 +111,22 @@ def _safe_key(key, declared=False):
                               and not ({"provider", "key"} <= set(_tokens(key))))))
 
 
-def _json_safe(value, depth=0, allowed=frozenset()):
+def _json_safe(value, depth=0, allowed=frozenset(), error_response=False):
     if depth > 8:
         return False
     if value is None or type(value) in (bool, int):
         return True
     if type(value) is str:
-        return _text(value) and not _fen_placement_in(value)
+        return _text(value) and not _fen_placement_in(value) and not (
+            error_response and TOKEN_RUN.search(value))
     if type(value) is float:
         return value == value and abs(value) != float("inf")
     if type(value) is list:
-        return len(value) <= 256 and all(_json_safe(v, depth + 1) for v in value)
+        return len(value) <= 256 and all(_json_safe(v, depth + 1, error_response=error_response) for v in value)
     if type(value) is dict:
-        return len(value) <= 256 and all(_safe_key(k, k in allowed) and _json_safe(v, depth + 1) for k, v in value.items())
+        return len(value) <= 256 and all(_safe_key(k, k in allowed) and not (error_response and TOKEN_RUN.search(k))
+                                     and _json_safe(v, depth + 1, error_response=error_response)
+                                     for k, v in value.items())
     return False
 
 
@@ -140,7 +144,7 @@ def classify(source, status, payload, operation=None):
             declared = frozenset(source["areas"][area]["ops"][name]["response"]["fields"]) if status < 300 else frozenset()
         except Exception:
             _fail("operation")
-    if type(payload) is not dict or not _json_safe(payload, allowed=declared):
+    if type(payload) is not dict or not _json_safe(payload, allowed=declared, error_response=status >= 400):
         _fail("payload")
     if status < 300:
         return {"kind": "success"}
@@ -274,9 +278,9 @@ REFERENCE_MUTANTS = {
     "case-message-accepted": ('error["message"].lower()', 'error["message"]', "case_message"),
     "hyphenated-chess-key-accepted": ('r"[._-]"', 'r"[._]"', "hyphen"),
     "int-subclass-accepted": ("type(value) in (bool, int)", "isinstance(value, int)", "int_subclass"),
-    "success-payload-validation-skipped": ("if type(payload) is not dict or not _json_safe(payload, allowed=declared):", "if status >= 400 and (type(payload) is not dict or not _json_safe(payload, allowed=declared)):", "hostile_2xx"),
+    "success-payload-validation-skipped": ("if type(payload) is not dict or not _json_safe(payload, allowed=declared, error_response=status >= 400):", "if status >= 400 and (type(payload) is not dict or not _json_safe(payload, allowed=declared, error_response=status >= 400)):", "hostile_2xx"),
     "low-surrogate-allowed": ('"\\udfff"', '"\\udbff"', "low_surrogate"),
-    "extra-string-surrogate-allowed": ("return _text(value) and not _fen_placement_in(value)", "return not _fen_placement_in(value)", "extra_surrogate"),
+    "extra-string-surrogate-allowed": ("_text(value) and not _fen_placement_in(value)", "not _fen_placement_in(value)", "extra_surrogate"),
     "key-surrogate-allowed": ("type(key) is str and _text(key)", "type(key) is str", "key_surrogate"),
     "secret-extra-allowed": ('"secret"}', '}', "secret_extra"),
     "password-extra-allowed": ('"password_hash_client", ', '', "password_extra"),
@@ -286,12 +290,15 @@ REFERENCE_MUTANTS = {
     "string-error-accepted": ("if type(error) is not dict:", "if error is None:", "string_error"),
     "retryable-forced-false": ('"retryable": error["retryable"]', '"retryable": False', "retryable_true"),
     "null-extra-refused": ("if value is None or type(value) in (bool, int):", "if type(value) in (bool, int):", "json_null"),
-    "nested-declared-exemption": ("_json_safe(v, depth + 1) for k, v", "_json_safe(v, depth + 1, allowed) for k, v", "nested_declared"),
+    "nested-declared-exemption": ("_json_safe(v, depth + 1, error_response=error_response)\n                                     for k, v", "_json_safe(v, depth + 1, allowed, error_response=error_response)\n                                     for k, v", "nested_declared"),
     "operation-extra-segment": ('operation.split(".")', 'operation.split(".")[:2]', "operation_extra"),
     "camelcase-boundary-lost": ('re.sub(r"([a-z0-9])([A-Z])", r"\\1_\\2", separated)', 'separated', "camelcase"),
     "fen-value-check-lost": ("and not _fen_placement_in(value)", "", "fen"),
+    "error-token-run-check-lost": ("error_response and TOKEN_RUN.search(value)", "False", "token_run"),
+    "error-key-token-run-check-lost": ("error_response and TOKEN_RUN.search(k)", "False", "key_token_run"),
+    "success-key-token-run-check-ungated": ("error_response and TOKEN_RUN.search(k)", "TOKEN_RUN.search(k)", "success_key_token_run"),
     "dot-chess-key-accepted": ('r"[._-]"', 'r"[_-]"', "dot"),
-    "list-fen-check-lost": ("_json_safe(v, depth + 1) for v in value", "_text(v) if type(v) is str else _json_safe(v, depth + 1) for v in value", "list_fen"),
+    "list-fen-check-lost": ("_json_safe(v, depth + 1, error_response=error_response) for v in value", "_text(v) if type(v) is str else _json_safe(v, depth + 1, error_response=error_response) for v in value", "list_fen"),
     "rank-sum-nine": ('return total == FEN_PLACEMENT["rank_sum"]', 'return total == 9', "rank_nine"),
     "rank-sum-at-most": ('return total == FEN_PLACEMENT["rank_sum"]', 'return total <= FEN_PLACEMENT["rank_sum"]', "rank_seven"),
     "split-spaces-only": ('segments = text.split(FEN_PLACEMENT["rank_separator"])', 'segments = text.split(":")[0].split(FEN_PLACEMENT["rank_separator"])', "punctuation"),
@@ -424,6 +431,7 @@ def test_reference_mutant_red(name):
         return
     elif name == "first-window-only":
         body["extra"] = "x/rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+        status = 200
     elif name == "middle-rank-off-by-one":
         body["extra"] = "8/8/8/8/8/8/x/8"
         assert classify(source, status, body)["kind"] == "error"
@@ -434,8 +442,10 @@ def test_reference_mutant_red(name):
         body["extra"] = "4k3/8/8/8/8/8/8/4K3p"
     elif name == "left-edge-digit-skip":
         body["extra"] = "1rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+        status = 200
     elif name == "right-edge-digit-skip":
         body["extra"] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR9"
+        status = 200
     elif name == "rank-count-less-than":
         body["extra"] = "8/8/8/8/8/8/8"
         assert classify(source, status, body)["kind"] == "error"
@@ -450,6 +460,7 @@ def test_reference_mutant_red(name):
         return
     elif name == "split-spaces-only":
         body["extra"] = "fen:rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+        status = 200
     elif name == "digit-camelcase-boundary-lost":
         body["top3Moves"] = "private"
     elif name == "provider-key-intersection":
@@ -460,8 +471,19 @@ def test_reference_mutant_red(name):
         return
     elif name == "acronym-boundary-lost":
         body["FENString"] = "private"
+    elif name == "error-token-run-check-lost":
+        body["error"]["message"] = "a" * 32
+    elif name == "error-key-token-run-check-lost":
+        body["k" * 32] = "ok"
+    elif name == "success-key-token-run-check-ungated":
+        body = {"token": "ok", "k" * 32: 1}
+        assert classify(source, 200, body, "identity.login") == {"kind": "success"}
+        with pytest.raises(ErrorsError):
+            target(source, 200, body, "identity.login")
+        return
     elif name == "fen-value-check-lost":
         body["extra"] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+        status = 200
     elif name == "operation-extra-segment":
         body = {}
         with pytest.raises(ErrorsError):
@@ -515,7 +537,10 @@ def test_reference_mutant_red(name):
         source["contract"]["transport"]["errors"]["shape"]["error"]["fields"]["code"]["required"] = False
     with pytest.raises(ErrorsError):
         classify(source, status, body)
-    assert target(source, status, body) == {"kind": "error", "code": body.get("error", {}).get("code", "not_found"), "message": body.get("error", {}).get("message", "missing"), "retryable": body.get("error", {}).get("retryable", False)}
+    if status == 200:
+        assert target(source, status, body) == {"kind": "success"}
+    else:
+        assert target(source, status, body) == {"kind": "error", "code": body.get("error", {}).get("code", "not_found"), "message": body.get("error", {}).get("message", "missing"), "retryable": body.get("error", {}).get("retryable", False)}
 
 
 def test_every_declared_operation_success_example_is_allowed():
@@ -658,7 +683,7 @@ def test_fen_placement_nested_extra_refused_and_seven_rank_near_miss_allowed():
     body["extra"] = {"detail": ["x", placement]}
     with pytest.raises(ErrorsError):
         classify(SOURCE, 400, body)
-    body["extra"]["detail"][1] = "/".join(placement.split("/")[:7])
+    body["extra"]["detail"][1] = "8/8/8/8/8/8/8"
     assert classify(SOURCE, 400, body)["kind"] == "error"
 
 
@@ -753,3 +778,66 @@ def test_one_invalid_middle_rank_at_each_position_allowed(bad, position):
 ])
 def test_middle_rank_near_miss_allowed(placement):
     assert classify(SOURCE, 200, {"extra": placement}) == {"kind": "success"}
+
+
+@pytest.mark.parametrize("message", [
+    "A" * 32, "prefix " + "Ab9_" * 8 + " suffix",
+    "camelCase" + "X" * 23, "top3Moves" + "Z" * 23,
+])
+def test_error_token_run_32_refused(message):
+    assert TOKEN_RUN.search(message)
+    with pytest.raises(ErrorsError):
+        classify(SOURCE, 400, envelope(message=message))
+
+
+@pytest.mark.parametrize("message", [
+    "A" * 31, "prefix " + "X" * 31 + " suffix", "Nf3", "e4", "ordinary status update",
+])
+def test_error_token_run_near_miss_passes(message):
+    assert TOKEN_RUN.search(message) is None
+    assert classify(SOURCE, 400, envelope(message=message))["kind"] == "error"
+
+
+def test_token_run_checks_nested_error_values_but_not_clean_success():
+    body = envelope()
+    body["extra"] = {"detail": ["a" * 32]}
+    with pytest.raises(ErrorsError):
+        classify(SOURCE, 500, body)
+    assert classify(SOURCE, 200, {"token": "a" * 32}, "identity.login") == {"kind": "success"}
+
+
+@pytest.mark.parametrize("character", "+/=_%-")
+def test_each_token_run_character_joins_32_char_error_run(character):
+    message = "a" * 16 + character + "a" * 15
+    assert len(message) == 32
+    with pytest.raises(ErrorsError):
+        classify(SOURCE, 400, envelope(message=message))
+
+
+@pytest.mark.parametrize("character", [".", ":", " ", "é", "@"])
+def test_non_run_character_breaks_error_run(character):
+    message = "a" * 16 + character + "a" * 16
+    assert classify(SOURCE, 400, envelope(message=message))["kind"] == "error"
+
+
+@pytest.mark.parametrize("body,operation", [
+    (lambda: {"error": envelope()["error"], "k" * 32: "ok"}, None),
+    (lambda: {"error": envelope()["error"], "x." + "k" * 32: "ok"}, None),
+    (lambda: {"error": envelope()["error"], "extra": {"a" * 32: 1}}, None),
+    (lambda: {"error": envelope()["error"], "extra": {"a" * 32: 1}}, "identity.login"),
+])
+def test_error_token_run_in_keys_refused(body, operation):
+    with pytest.raises(ErrorsError):
+        classify(SOURCE, 400, body(), operation)
+
+
+def test_error_key_31_character_run_passes():
+    assert classify(SOURCE, 400, {**envelope(), "k" * 31: "ok"})["kind"] == "error"
+
+
+@pytest.mark.parametrize("body", [
+    {"token": "a" * 32, "k" * 32: 1},
+    {"token": "x", "extra": {"a" * 32: 1}},
+])
+def test_success_token_run_in_keys_allowed(body):
+    assert classify(SOURCE, 200, body, "identity.login") == {"kind": "success"}
