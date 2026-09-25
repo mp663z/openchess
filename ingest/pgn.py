@@ -330,6 +330,8 @@ def _strip_movetext(movetext: str) -> list[str]:
                 continue
             i += 1
             continue
+        if ch == "}" and depth == 0:
+            raise MalformedPGN("unbalanced comment close")
         if ch == ";" and depth == 0:
             j = movetext.find("\n", i + 1)
             i = n if j == -1 else j + 1
@@ -361,6 +363,9 @@ def _strip_movetext(movetext: str) -> list[str]:
         j = i
         while j < n and not movetext[j].isspace() and movetext[j] not in "{}();()":
             j += 1
+        if j == i:
+            # Defensive guard: every stop character must advance or reject.
+            raise MalformedPGN("unrecognized movetext delimiter")
         tok = movetext[i:j]
         i = j
         if re.fullmatch(r"\d+\.(\.\.)?", tok):
