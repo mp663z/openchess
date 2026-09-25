@@ -406,13 +406,42 @@ def events_refusal_classes():
     return set(CONTRACT["failure"]["classes"])
 
 
+_IDENT_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789_-")
+
+
+def _contract_identifier(value):
+    """Independent restatement of the contract's identifier
+    grammar - ASCII [A-Za-z0-9_-]{1,64} per events.yaml -
+    deliberately NOT the production regex, so a production
+    grammar drift cannot drag the oracle along with it."""
+    return (type(value) is str
+            and 1 <= len(value) <= 64
+            and value.isascii()
+            and all(char in _IDENT_CHARS for char in value))
+
+
+def test_contract_identifier_predicate_edges():
+    """The independent predicate is pinned against the contract
+    grammar (events.yaml: ASCII [A-Za-z0-9_-]{1,64}) with
+    explicit edges before any fuzz comparison trusts it."""
+    for good in ("A", "z", "0", "_", "-", "A" * 64,
+                 "aB09_-", "x" * 64):
+        assert _contract_identifier(good)
+    for bad in ("", "A" * 65, "x.y", "\u00e9", "x\n",
+                "has space", "user@example.com", "a/b", "."):
+        assert not _contract_identifier(bad)
+
+
 @pytest.mark.parametrize("seed", SEEDS)
 def test_identifier_grammar_fuzz_matches_pinned_grammar(seed):
     """Seeded identifier strings over a hostile alphabet are
-    accepted IFF the pinned ASCII grammar accepts them - length
-    edges 0/1/64/65 included deterministically."""
+    accepted IFF the independently restated contract grammar
+    accepts them - length edges 0/1/64/65 included
+    deterministically."""
     rng = random.Random(seed)
-    grammar = events._IDENTIFIER
     base = row("identity.login", "succeeded", "base")
     candidates = ["", "A", "z", "0", "_", "-", "A" * 64,
                   "A" * 65, "-" * 64, "_" * 65]
@@ -422,7 +451,7 @@ def test_identifier_grammar_fuzz_matches_pinned_grammar(seed):
         for _ in range(60)
     ]
     for ident in candidates:
-        expected = grammar.fullmatch(ident) is not None
+        expected = _contract_identifier(ident)
         for field in ("event_id", "correlation_id"):
             candidate = {**base, field: ident}
             before = copy.deepcopy(candidate)
@@ -479,6 +508,44 @@ def test_catalog_name_consistency_fuzz(seed):
                 lambda event=event: events.validate(event),
                 *classes)
         assert event == before
+
+
+def _identifier_fuzz_check(validate_fn, candidates):
+    """Run the identifier fuzz comparison against any validate
+    callable: returns the first identifier where the callable
+    disagrees with the independent contract predicate, else
+    None."""
+    base = row("identity.login", "succeeded", "base")
+    for ident in candidates:
+        candidate = {**base, "event_id": ident}
+        try:
+            validate_fn(candidate)
+            accepted = True
+        except events.Refusal:
+            accepted = False
+        if accepted != _contract_identifier(ident):
+            return ident
+    return None
+
+
+def _widened_grammar_validate(event):
+    """Behavioral mutant: the identifier grammar silently
+    widens to accept dots inside event_id."""
+    if type(event) is dict and \
+            type(event.get("event_id")) is str and \
+            "." in event["event_id"]:
+        return dict(event)
+    return events.validate(event)
+
+
+def test_identifier_fuzz_kills_grammar_widening_mutant():
+    """The fuzz comparison is measured against a regex-widening
+    mutant: the shipped validator shows NO disagreement; the
+    widened mutant is caught at the exact widened identifier."""
+    assert _identifier_fuzz_check(
+        events.validate, ["x.y", "ok_id", "A" * 65]) is None
+    assert _identifier_fuzz_check(
+        _widened_grammar_validate, ["ok_id", "x.y"]) == "x.y"
 
 
 # -- injected SQLite transaction faults at every publish stage -----------------
@@ -626,6 +693,10 @@ def test_hostile_fields_inside_combinations_never_invoke_caller(
 
 
 # -- measured behavioral mutant kills ------------------------------------------
+# Every mutant faces the SAME scenario built on fresh IDs, and the
+# harness returns the classified witness tag of the FIRST contract
+# violation it observes. A kill is counted only when the observed
+# witness is exactly the behavior the mutant violates.
 
 
 def _fault_trigger(db):
@@ -637,77 +708,131 @@ def _fault_trigger(db):
     """)
 
 
-def _publish_contract_harness(make_ledger, path):
-    """The publication contract as an executable harness: fault
-    rollback, ordered retry, replay, dedupe conflict. Any
-    contract-violating implementation fails inside it."""
+_FAULT_BATCH = [row("identity.login", "succeeded", "new_a"),
+                row("quota.reserve", "succeeded", "faulty"),
+                row("quota.commit", "succeeded", "new_c")]
+_EXPECTED_IDS = ["prior", "new_a", "faulty", "new_c"]
+
+
+def _harness_outcome(make_ledger, path):
+    """The publication contract as an executable, classifying
+    harness. Returns "survived" when every checkpoint holds;
+    otherwise the witness tag of the first observed violation."""
     ledger = make_ledger(path)
-    batch = [row("identity.login", "succeeded", "ok"),
-             row("quota.reserve", "succeeded", "faulty"),
-             row("quota.commit", "succeeded", "after")]
-    assert ledger.publish([batch[0]]) == 1
+    try:
+        if ledger.publish(
+                [row("identity.login", "succeeded",
+                     "prior")]) != 1:
+            return "initial-publish"
+    except Exception:
+        return "initial-publish"
     _fault_trigger(ledger._db)
-    with pytest.raises(events.Refusal):
-        ledger.publish(batch)
-    # no partial publication after the storage fault
-    assert [e["event_id"] for e in ledger.events] == ["ok"]
+    try:
+        ledger.publish(_FAULT_BATCH)
+        return "fault-swallowed"  # the storage fault was hidden
+    except events.Refusal as caught:
+        if caught.failure_class != "publication_failure":
+            return "fault-misclassified"
+    except Exception:
+        return "fault-raw-escape"
+    # checkpoint 1: no partial publication after the fault
+    if [event["event_id"] for event in ledger.events] != \
+            ["prior"]:
+        return "partial"
     ledger._db.execute("DROP TRIGGER reject_faulty")
-    # same IDs and envelopes commit in exact input order
-    assert ledger.publish(batch) == 3
-    assert [e["event_id"] for e in ledger.events] == \
-        ["ok", "faulty", "after"]
-    # replay no-op
-    assert ledger.publish(batch) == 3
-    # same event_id, different envelope: whole-batch conflict
-    conflict = {**batch[1], "occurred_at": 99}
-    with pytest.raises(events.Refusal) as caught:
+    # checkpoint 2: the SAME IDs and envelopes commit whole
+    try:
+        if ledger.publish(_FAULT_BATCH) != 4:
+            return "retry-count"
+    except Exception:
+        return "retry-refusal"
+    # checkpoint 3: exact input order in the committed outbox
+    if [event["event_id"] for event in ledger.events] != \
+            _EXPECTED_IDS:
+        return "order"
+    # checkpoint 4: identical replay is a no-op
+    try:
+        if ledger.publish(_FAULT_BATCH) != 4:
+            return "replay-count"
+    except Exception:
+        return "replay-refusal"
+    if [event["event_id"] for event in ledger.events] != \
+            _EXPECTED_IDS:
+        return "replay-state"
+    # checkpoint 5: same event_id, different envelope is a
+    # whole-batch conflict
+    conflict = {**_FAULT_BATCH[1], "occurred_at": 99}
+    try:
         ledger.publish([conflict])
-    assert caught.value.failure_class == "duplicate_conflict"
-    assert [e["event_id"] for e in ledger.events] == \
-        ["ok", "faulty", "after"]
+        return "conflict"  # the conflict was accepted
+    except events.Refusal as caught:
+        if caught.failure_class != "duplicate_conflict":
+            return "conflict-misclassified"
+    except Exception:
+        return "conflict-raw-escape"
+    if [event["event_id"] for event in ledger.events] != \
+            _EXPECTED_IDS:
+        return "conflict-state"
     ledger.close()
-    reopened = make_ledger(path)
-    assert [e["event_id"] for e in reopened.events] == \
-        ["ok", "faulty", "after"]
+    # checkpoint 6: reopen preserves the exact committed
+    # sequence
+    try:
+        reopened = make_ledger(path)
+        if [event["event_id"] for event in reopened.events] \
+                != _EXPECTED_IDS:
+            return "reopen"
+    except Exception:
+        return "reopen-failure"
+    return "survived"
 
 
 class _PartialPublishMutant(events.Ledger):
-    """Behavioral mutant: autocommits rows one at a time and
-    swallows storage faults - partial publication leaks."""
+    """Behavioral mutant: attempts EVERY row in autocommit and
+    only then reports the storage fault - the rows after the
+    failure leak into the committed outbox."""
 
     def publish(self, batch, *, fail_commit=False):
+        failure = None
         for event in batch:
             proposed = events.validate(event)
             try:
                 self._db.execute(
-                    "INSERT INTO outbox(event_id, envelope) "
-                    "VALUES (?, ?)",
+                    "INSERT OR IGNORE INTO outbox(event_id, "
+                    "envelope) VALUES (?, ?)",
                     (proposed["event_id"],
                      events._encode(proposed)))
             except sqlite3.Error:
-                raise events.Refusal("publication_failure") \
-                    from None
+                failure = events.Refusal("publication_failure")
+        if failure is not None:
+            raise failure
         return self._db.execute(
             "SELECT COUNT(*) FROM outbox").fetchone()[0]
 
 
 class _OrderSwapMutant(events.Ledger):
-    """Behavioral mutant: commits the batch in reverse order."""
+    """Behavioral mutant: dedupes against existing rows and
+    survives the injected trigger, but commits NEW rows in
+    reverse order."""
 
     def publish(self, batch, *, fail_commit=False):
         proposed = [events.validate(event) for event in batch]
         try:
             self._db.execute("BEGIN IMMEDIATE")
+            existing = {key for (key,) in self._db.execute(
+                "SELECT event_id FROM outbox")}
             for event in reversed(proposed):
-                self._db.execute(
-                    "INSERT INTO outbox(event_id, envelope) "
-                    "VALUES (?, ?)",
-                    (event["event_id"], events._encode(event)))
+                if event["event_id"] not in existing:
+                    self._db.execute(
+                        "INSERT INTO outbox(event_id, envelope)"
+                        " VALUES (?, ?)",
+                        (event["event_id"],
+                         events._encode(event)))
             self._db.execute("COMMIT")
         except sqlite3.Error:
             if self._db.in_transaction:
                 self._db.execute("ROLLBACK")
-            raise events.Refusal("publication_failure") from None
+            raise events.Refusal(
+                "publication_failure") from None
         return self._db.execute(
             "SELECT COUNT(*) FROM outbox").fetchone()[0]
 
@@ -724,33 +849,38 @@ class _DedupeBlindMutant(events.Ledger):
                 self._db.execute(
                     "INSERT OR REPLACE INTO outbox(event_id, "
                     "envelope) VALUES (?, ?)",
-                    (event["event_id"], events._encode(event)))
+                    (event["event_id"],
+                     events._encode(event)))
             self._db.execute("COMMIT")
         except sqlite3.Error:
             if self._db.in_transaction:
                 self._db.execute("ROLLBACK")
-            raise events.Refusal("publication_failure") from None
+            raise events.Refusal(
+                "publication_failure") from None
         return self._db.execute(
             "SELECT COUNT(*) FROM outbox").fetchone()[0]
 
 
 def test_publication_harness_accepts_shipped_ledger(tmp_path):
     """Control: the harness itself is not vacuously strict - the
-    shipped ledger satisfies it end to end."""
-    _publish_contract_harness(events.Ledger,
-                              tmp_path / "real.sqlite")
+    shipped ledger satisfies every checkpoint end to end."""
+    assert _harness_outcome(events.Ledger,
+                            tmp_path / "real.sqlite") == "survived"
 
 
-@pytest.mark.parametrize("mutant", [
-    _PartialPublishMutant, _OrderSwapMutant, _DedupeBlindMutant])
-def test_behavioral_mutants_measured_kills(tmp_path, mutant):
-    """Each behavioral mutant is KILLED by the harness - the kill
-    is measured by executing the same contract scenario against
-    the mutant, never assumed."""
-    try:
-        _publish_contract_harness(
-            mutant, tmp_path / f"{mutant.__name__}.sqlite")
-    except BaseException:
-        return  # kill measured: the harness executed and failed
-    raise AssertionError(
-        f"{mutant.__name__} survived the publication harness")
+@pytest.mark.parametrize("mutant,witness", [
+    (_PartialPublishMutant, "partial"),
+    (_OrderSwapMutant, "order"),
+    (_DedupeBlindMutant, "conflict"),
+])
+def test_behavioral_mutants_measured_kills(tmp_path, mutant,
+                                           witness):
+    """Each behavioral mutant is KILLED at exactly its own
+    behavioral checkpoint: the partial mutant is observed
+    leaking committed rows after the fault, the order mutant is
+    observed committing fresh rows out of order, the dedupe
+    mutant is observed accepting a conflicting duplicate. The
+    witness is measured by the harness, never assumed."""
+    outcome = _harness_outcome(
+        mutant, tmp_path / f"{mutant.__name__}.sqlite")
+    assert outcome == witness
