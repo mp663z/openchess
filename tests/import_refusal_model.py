@@ -66,6 +66,42 @@ def reference_refusal(text, store: ReferenceStore, *, source_id="pgn-file", scen
                 line = next((i for i, value in enumerate(lines, start=1)
                              if needle in value), None)
             if marker_name == "location":
+                if scenario["id"] == "import-truncated":
+                    # T0581's separate EOF reading deliberately reports
+                    # the last line, even for an earlier unmatched opener.
+                    line = len(lines)
+                elif detail in ("unterminated comment", "unbalanced variation open"):
+                    # Only movetext is parsed for openers: tag values are
+                    # data. Match the validator's semicolon/comment and
+                    # variation handling, retaining original game line bases.
+                    open_variations = []
+                    comment_start = None
+                    in_tags = True
+                    for line_number, value in enumerate(lines, start=1):
+                        trimmed = value.strip()
+                        if not trimmed:
+                            continue
+                        if in_tags and trimmed.startswith("["):
+                            continue
+                        in_tags = False
+                        for ch in value:
+                            if comment_start is not None:
+                                if ch == "}":
+                                    comment_start = None
+                            elif ch == "{" and not open_variations:
+                                comment_start = line_number
+                            elif ch == ";" and not open_variations:
+                                break
+                            elif ch == "(":
+                                open_variations.append(line_number)
+                            elif ch == ")" and open_variations:
+                                open_variations.pop()
+                    if detail == "unterminated comment":
+                        line = comment_start
+                    else:
+                        line = open_variations[-1] if open_variations else None
+                    if line is None:
+                        raise AssertionError("unlocatable unmatched opener") from None
                 marker = {"game_number": seq, "line": line or len(lines)}
             else:
                 san = detail.rsplit("'", 2)[1]

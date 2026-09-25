@@ -109,3 +109,47 @@ def test_duplicate_tag_location_ignores_other_tag_value_containing_name():
     store = ReferenceStore()
     result = PRODUCTION_BINDING(text, store, scenario=SCENARIO)
     assert result.marker["location"] == {"game_number": 1, "line": 4}
+
+
+@pytest.mark.parametrize("movetext,opener_line", [
+    ("1. e4 {unclosed\nmore comment text", 11),
+    ("1. e4 (1. d4\nmore variation text", 11),
+])
+def test_unmatched_opener_reports_opening_line_not_last_line(movetext, opener_line):
+    from tests.test_t0537_import_pgn_contract import FULL_HEADER_PGN
+
+    text = FULL_HEADER_PGN.split("\n\n", 1)[0] + "\n\n" + movetext + "\n"
+    store = ReferenceStore()
+    result = PRODUCTION_BINDING(text, store, scenario=SCENARIO)
+    assert result.marker["location"] == {"game_number": 1, "line": opener_line}
+    assert store.rejections == [result] and store.index == [] and store.records == {}
+
+
+@pytest.mark.parametrize("tag_value,movetext,opener_line", [
+    ("T{est", "1. e4 (1. d4\nd5 e5", 11),
+    ("T(est", "1. e4 (1. d4\nd5 e5", 11),
+    ("Test", "1. e4 (1. d4\n; note (\nd5 e5", 12),
+    ("Test", "1. e4\n; note (\n(1. d4 e5", 13),
+])
+def test_opener_locator_ignores_tag_values_and_depth_zero_comments(
+        tag_value, movetext, opener_line):
+    from tests.test_t0537_import_pgn_contract import FULL_HEADER_PGN
+
+    header = FULL_HEADER_PGN.split("\n\n", 1)[0].replace('[Event "Test"]',
+                                                         f'[Event "{tag_value}"]')
+    text = header + "\n\n" + movetext + "\n"
+    store = ReferenceStore()
+    result = PRODUCTION_BINDING(text, store, scenario=SCENARIO)
+    assert result.marker["location"] == {"game_number": 1, "line": opener_line}
+    assert store.rejections == [result]
+
+
+def test_semicolon_inside_variation_does_not_hide_later_unclosed_comment():
+    from tests.test_t0537_import_pgn_contract import FULL_HEADER_PGN
+
+    text = (FULL_HEADER_PGN.split("\n\n", 1)[0] + "\n\n"
+            + "1. e4 (1. d4 ; x) {unclosed\ne5 1-0\n")
+    store = ReferenceStore()
+    result = PRODUCTION_BINDING(text, store, scenario=SCENARIO)
+    assert result.marker["location"] == {"game_number": 1, "line": 11}
+    assert store.rejections == [result] and store.index == [] and store.records == {}
