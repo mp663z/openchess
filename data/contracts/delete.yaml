@@ -1,0 +1,109 @@
+schema_version: 1
+
+contract:
+  id: privacy-delete
+  role:
+    kind: per-collection-user-decided-irreversible-local-delete-with-tombstone
+    serves: deletions-never-automated-and-a-deleted-collection-never-readable-again
+    scope: one-collection-delete-transition-erase-across-local-stores-and-access-verdict
+    owns: delete-semantics-the-tombstone-and-the-collection-access-verdict
+    not_scope: account-delete-on-the-control-plane-account-keys-sync-keys-backups-cloud-mode-collection-flags-byom-terms-redaction-local-model-and-retry-idempotency
+  record:
+    fields: [collection_id, state, revision, pending]
+    exact: true
+  identifiers:
+    collection_id:
+      kind: opaque-local-collection-id
+      grammar: ^col1:[0-9a-f]{64}$
+      source: caller-supplied-exact-built-in-str-validated-never-trusted
+    state:
+      kind: collection-lifecycle-state
+      grammar: exact-built-in-str-live-or-deleted
+      source: stored-by-the-deleter-registered-live
+    revision:
+      kind: monotonic-delete-revision
+      grammar: exact-built-in-int-0-through-9223372036854775807-never-bool
+      source: derived-by-the-deleter-never-caller-chosen
+    pending:
+      kind: stores-not-yet-erased
+      grammar: exact-built-in-list-of-store-names-in-declared-store-order-empty-when-live-or-fully-erased
+      source: derived-by-the-deleter-from-erase-outcomes
+    stores:
+      kind: local-stores-holding-collection-data
+      names: [content, index, analysis, training, ciphertext]
+      reading: invented-closed-list-from-adr-0004-desktop-content-and-ciphertext-plus-the-derived-index-engine-analysis-and-training-state
+    approval:
+      kind: scoped-user-delete-decision-token
+      grammar: ^del1:[0-9a-f]{64}$
+      binding: sha256-over-collection-id-and-expected-revision-and-target-delete
+      preimage:
+        fields: [collection_id, expected_revision, target]
+        separator: "|"
+        trailing_separator: false
+        encoding: utf-8
+        collection_id: the-validated-collection-id-verbatim
+        expected_revision: ascii-decimal-no-sign-no-leading-zeros-zero-is-0
+        target: delete
+        example: "col1:<64-lowercase-hex>|0|delete"
+      digest: sha256-of-the-preimage-bytes-as-64-lowercase-hex-after-the-del1-prefix
+      source: user-decision-surface-only-never-model-imported-content-or-automation
+  semantics:
+    default: registering-a-new-collection-reads-live-revision-0-nothing-pending
+    decision: live-to-deleted-needs-a-delete-decision-bound-to-this-collection-and-expected-revision-never-automated
+    order: the-tombstone-is-written-before-any-store-is-erased-then-every-store-is-erased-in-declared-order
+    erase_failure: a-store-that-fails-to-erase-stays-in-pending-the-collection-stays-deleted-and-never-reads-live-again
+    retry: a-delete-of-a-deleted-collection-needs-no-decision-keeps-the-revision-and-re-erases-only-the-pending-stores
+    access: a-live-collection-is-allowed-a-deleted-collection-is-refused-even-with-nothing-pending-an-unregistered-id-is-unknown
+    tombstone: registering-a-deleted-collection-id-is-refused-an-id-is-never-reused
+    reregister: registering-a-live-collection-is-a-no-op-never-resets-state-or-revision
+    concurrency: compare-and-set-on-expected-revision
+    saturation: a-delete-at-max-revision-is-never-refused-it-writes-deleted-with-the-revision-unchanged
+    rollback: a-rejected-delete-is-rolled-back-whole-and-touches-no-store-an-accepted-delete-is-irreversible-there-is-no-undelete
+    readings:
+      decision: spec-says-deletions-are-never-automated-and-need-an-explicit-decision-so-a-delete-without-a-bound-decision-is-refused
+      irreversible: spec-silent-an-undelete-would-resurrect-data-the-user-chose-to-erase-so-none-exists
+      never_exhausted: privacy-fail-closed-a-delete-is-never-refused-for-revision-exhaustion-as-with-the-byom-revoke-ruling
+      stores: the-five-store-names-are-invented-a-store-outside-the-list-is-not-covered-by-this-contract
+  failures:
+    classes:
+      - malformed_delete_request
+      - unknown_collection
+      - stale_revision
+      - decision_missing
+      - collection_deleted
+    triggers:
+      malformed_delete_request: checked-before-every-other-class-request-grammar-or-exact-type-violation-including-str-dict-list-subclasses-and-non-str-keys
+      unknown_collection: well-formed-collection-id-that-was-never-registered-on-delete-or-access
+      stale_revision: expected-revision-not-equal-to-current-revision
+      decision_missing: delete-of-a-live-collection-without-a-bound-delete-decision
+      collection_deleted: access-to-or-registering-of-a-deleted-collection
+    mapping:
+      malformed_delete_request: malformed_request
+      unknown_collection: unknown_collection
+      stale_revision: conflict
+      decision_missing: approval_required
+      collection_deleted: collection_deleted
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - unknown_collection
+      - conflict
+      - approval_required
+      - collection_deleted
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    atomic: a-rejected-delete-or-access-leaves-state-every-store-and-inputs-unchanged
+    fail_closed: any-doubt-reads-deleted-a-partly-erased-collection-is-never-readable
+    never_exhausted: a-delete-is-never-refused-except-malformed-unknown-stale-or-decision-missing
+  versioning:
+    base_path: /privacy/delete/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    sensitive_flag_contract: data/contracts/sensitive_flag.yaml
+    control_plane_contract: data/contracts/control-plane.yaml
+    architecture_decision: docs/adr/ADR-0004-asymmetric-architecture.md
+    product_report: docs/plan/product-report-v5.md
