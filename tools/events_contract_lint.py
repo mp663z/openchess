@@ -67,7 +67,7 @@ def lint(path: Path | None = None):
             "excludes": ["adr-0003-offline-log", "import-telemetry", "hosted-send", "oauth-sync"],
             "source": "data/contracts/control-plane.yaml",
             "source_schema_version": 2,
-            "status": "contract-only-no-shipped-emission-claimed",
+            "status": "opt-in-local-consumer-operation-emission-shipped-no-hosted-send",
         },
         "role",
     )

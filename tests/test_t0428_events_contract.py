@@ -130,7 +130,10 @@ class ContractBattery(unittest.TestCase):
         self.assertEqual(doc["envelope"]["fields"], list(sample()) + ["error_code"])
         self.assertEqual(doc["role"]["source_schema_version"], SOURCE_DOC["schema_version"])
         self.assertEqual(doc["failure"]["no_http_mapping"], True)
-        self.assertEqual(doc["role"]["status"], "contract-only-no-shipped-emission-claimed")
+        self.assertEqual(
+            doc["role"]["status"],
+            "opt-in-local-consumer-operation-emission-shipped-no-hosted-send",
+        )
         self.assertEqual(set(OPERATIONS), set(CATALOG))
         self.assertEqual(len(OPERATIONS), sum(len(d["ops"]) for d in SOURCE_DOC["areas"].values()))
 
