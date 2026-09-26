@@ -25,8 +25,8 @@ from pathlib import Path
 
 import pytest
 
-from tests import test_t0437_control_plane_versioning_contract as _reference
 from server import control_plane_versioning as _production
+from tests import test_t0437_control_plane_versioning_contract as _reference
 
 PRODUCTION_BINDING = (_production.compare, _production.VersionError)
 

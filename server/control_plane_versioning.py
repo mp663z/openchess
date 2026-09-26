@@ -242,9 +242,10 @@ def _same_major(old, new):
         return {
             **cc,
             "transport": {
-                **transport,
-                "auth": {k: v for k, v in transport["auth"].items() if k != "public_operations"},
-                **{k: v for k, v in transport.items() if k != "read_only_operations" and k != "auth"},
+                **{k: v for k, v in transport.items()
+                   if k not in ("read_only_operations", "auth")},
+                "auth": {k: v for k, v in transport["auth"].items()
+                         if k != "public_operations"},
             },
         }
 
