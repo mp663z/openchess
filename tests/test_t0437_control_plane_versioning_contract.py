@@ -42,29 +42,38 @@ def _base(doc):
 
 
 def _exact_builtins(value):
-    """Iterative exact-type sweep with identity tracking and a depth bound:
-    only exact built-in container and scalar types, so a decoded-but-hostile
-    subclass, a cyclic or aliased container, or an absurdly deep snapshot
-    refuses here instead of reaching a comparison that would invoke
-    user-defined code or exhaust the interpreter recursion limit. Unbound
-    built-in calls only; this walk never touches user operators."""
-    seen = set()
-    stack = [(value, 0)]
+    """Iterative exact-type sweep with active-path identity tracking and a
+    depth bound: only exact built-in container and scalar types, so a
+    decoded-but-hostile subclass, a cyclic container, or an absurdly deep
+    snapshot refuses here instead of reaching a comparison that would
+    invoke user-defined code or exhaust the interpreter recursion limit.
+    Acyclic aliases (ordinary shared references) are valid document
+    structure, not cycles: identity is tracked only along the active walk
+    path, so a repeated reference that is not its own ancestor passes.
+    The depth bound stays an explicit fail-closed implementation limit.
+    Unbound built-in calls only; this walk never touches user operators."""
+    active = set()
+    stack = [("enter", value, 0)]
     while stack:
-        node, depth = stack.pop()
+        event, node, depth = stack.pop()
+        if event == "exit":
+            active.discard(id(node))
+            continue
         if type(node) is dict:
-            if depth > 64 or id(node) in seen:
+            if depth > 64 or id(node) in active:
                 return False
-            seen.add(id(node))
+            active.add(id(node))
             for key in dict.keys(node):
                 if type(key) is not str:
                     return False
-            stack.extend((item, depth + 1) for item in dict.values(node))
+            stack.append(("exit", node, depth))
+            stack.extend(("enter", item, depth + 1) for item in dict.values(node))
         elif type(node) is list:
-            if depth > 64 or id(node) in seen:
+            if depth > 64 or id(node) in active:
                 return False
-            seen.add(id(node))
-            stack.extend((item, depth + 1) for item in list.__iter__(node))
+            active.add(id(node))
+            stack.append(("exit", node, depth))
+            stack.extend(("enter", item, depth + 1) for item in list.__iter__(node))
         elif type(node) not in (str, int, float, bool, type(None)):
             return False
     return True
@@ -440,6 +449,23 @@ def test_source_snapshot_cyclic_or_deep_containers_refuse_typed_fresh_and_pure()
                 assert logs[0] is logs
             else:
                 assert logs["self"] is logs
+
+
+def test_acyclic_alias_is_valid_document_structure_and_compares_true():
+    """Two optional request fields may share one spec object: an acyclic
+    alias is ordinary document structure (snapshots are independent
+    validated control-plane documents, not tree-only/no-alias documents),
+    so strict T0419 accepts it and the two optional additions verdict True.
+    """
+    old, new = fresh()
+    fields = new["areas"]["identity"]["ops"]["register"]["request"]["fields"]
+    fields["opt_a"] = {"type": "string", "required": False}
+    fields["opt_b"] = fields["opt_a"]
+    assert fields["opt_a"] is fields["opt_b"]
+    before = copy.deepcopy((old, new))
+    assert compare(old, new, 0, 1) is True
+    assert compare(old, new, 0, 1) is True
+    assert (old, new) == before
 
 
 def test_source_validator_is_t0419_strict_on_new_optional_nested_bad_type():

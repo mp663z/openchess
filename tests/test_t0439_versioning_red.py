@@ -135,7 +135,10 @@ def _snapshot(value, seen=None):
 def _iter_snapshot(value):
     """Cycle-safe, depth-unbounded input snapshot for hostile probes:
     iterative and identity-tracked, so the purity check itself never
-    recurses and cyclic containers terminate. Unbound built-in calls only."""
+    recurses and cyclic containers terminate. Dictionary keys are recorded
+    with safe content - unbound str.__str__ on str keys, identity for
+    non-str keys - so a key rename reads as a change. Unbound built-in
+    calls only."""
     seen = {}
     parts = []
     stack = [(value, 0)]
@@ -149,7 +152,8 @@ def _iter_snapshot(value):
             parts.append((type(node).__name__, depth))
             if isinstance(node, dict):
                 for key in dict.keys(node):
-                    parts.append(("key", type(key).__name__, depth))
+                    key_content = str.__str__(key) if isinstance(key, str) else id(key)
+                    parts.append(("key", type(key).__name__, key_content, depth))
                 stack.extend((item, depth + 1) for item in dict.values(node))
             else:
                 stack.extend((item, depth + 1) for item in list.__iter__(node))
@@ -483,6 +487,34 @@ def _hostile(binding):
             _Armed.active = False
         assert _Armed.calls == [], f"{label}: {_Armed.calls}"
         assert (_iter_snapshot(old), _iter_snapshot(new)) == before, label
+
+
+def test_iter_snapshot_records_string_key_content():
+    """The hostile purity oracle must see a key rename: key content, not
+    just key type, is part of the recorded shape, nested included."""
+    assert _iter_snapshot({"a": 1}) != _iter_snapshot({"b": 1})
+    assert _iter_snapshot({"x": {"a": 1}}) != _iter_snapshot({"x": {"b": 1}})
+    assert _iter_snapshot({"a": 1}) == _iter_snapshot({"a": 1})
+
+
+def _key_renaming_compare(old, new, old_minor, new_minor):
+    """A faulty binding: compares exactly like the reference, then renames
+    a contract key in the caller's new snapshot while preserving every
+    value and the insertion order."""
+    try:
+        return _reference.compare(old, new, old_minor, new_minor)
+    finally:
+        if type(new) is dict and type(new.get("contract")) is dict:
+            contract = new["contract"]
+            new["contract"] = {
+                ("privacy_renamed" if type(key) is str and key == "privacy" else key): value
+                for key, value in dict.items(contract)
+            }
+
+
+def test_key_renaming_binding_turns_the_same_hostile_battery_red():
+    with pytest.raises(AssertionError):
+        _hostile((_key_renaming_compare, _reference.VersionError))
 
 
 # -- acceptance on the current binding --------------------------------------------
