@@ -9284,10 +9284,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "6faf9dc35c1c591077a6b81ddadf2b42e8d90426",
+   "evidence_manifest": "evidence/T0438.md"
   },
   {
    "id": "T0439",
