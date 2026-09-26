@@ -92,14 +92,13 @@ def test_deep_opaque_metadata_is_valid_but_breaking():
     assert compare(old, new, 0, 1) is False
 
 
-def test_extreme_nesting_and_metadata_cycle_remain_typed_refusals():
+def test_deep_metadata_valid_and_cycle_remains_typed_refusal():
     old, new = sample(), sample()
-    nested = []
+    nested = "opaque"
     for _ in range(1100):
         nested = [nested]
     new["contract"]["privacy"]["logs"] = nested
-    with pytest.raises(VersionError):
-        compare(old, new, 0, 1)
+    assert compare(old, new, 0, 1) is False
     cycle = []
     cycle.append(cycle)
     new["contract"]["privacy"]["logs"] = cycle

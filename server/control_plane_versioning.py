@@ -80,10 +80,9 @@ def _safe_tree(root):
         if leaving:
             active.remove(id(node))
         elif type(node) is dict or type(node) is list:
-            # Source metadata is opaque to the strict T0419 schema checker: a
-            # 65-deep plain value is valid there. This separate safety cap
-            # only rejects pathological nesting, not normal metadata.
-            _require(depth <= 512 and id(node) not in active)
+            # T0419 has no depth limit for opaque metadata. Active ancestry
+            # catches cycles without rejecting finite nested plain values.
+            _require(id(node) not in active)
             active.add(id(node))
             if type(node) is dict:
                 _require(all(type(key) is str for key in dict.keys(node)))
@@ -94,6 +93,30 @@ def _safe_tree(root):
             stack.extend((child, depth + 1, False) for child in children)
         else:
             _require(type(node) in (str, int, bool, float, type(None)))
+
+
+def _equal(left, right):
+    """Deep equality without recursive Python container comparison.
+
+    Both operands passed the exact-builtin, acyclic safety walk. Equality
+    is by content, not alias topology, matching ordinary dict/list equality.
+    """
+    pairs = [(left, right)]
+    while pairs:
+        a, b = pairs.pop()
+        if type(a) is not type(b):
+            return False
+        if type(a) is dict:
+            if dict.keys(a) != dict.keys(b):
+                return False
+            pairs.extend((value, b[key]) for key, value in dict.items(a))
+        elif type(a) is list:
+            if len(a) != len(b):
+                return False
+            pairs.extend(zip(list.__iter__(a), list.__iter__(b), strict=True))
+        elif a != b:
+            return False
+    return True
 
 
 def _mapping(node):
@@ -235,7 +258,7 @@ def _additive_fields(before, after):
                 k: v for k, v in updated.items() if k != "fields"
             } or not _additive_fields(original["fields"], updated["fields"]):
                 return False
-        elif original != updated:
+        elif not _equal(original, updated):
             return False
     return all(spec["required"] is False for name, spec in after.items() if name not in before)
 
@@ -274,18 +297,19 @@ def _same_major(old, new):
             },
         }
 
-    if strip_contract(old_contract) != strip_contract(new_contract):
+    if not _equal(strip_contract(old_contract), strip_contract(new_contract)):
         return False
     for area, previous in old_areas.items():
         current = new_areas.get(area)
-        if current is None or {k: v for k, v in previous.items() if k != "ops"} != {
-            k: v for k, v in current.items() if k != "ops"
-        }:
+        if current is None or not _equal(
+            {k: v for k, v in previous.items() if k != "ops"},
+            {k: v for k, v in current.items() if k != "ops"},
+        ):
             return False
         for name, op in previous["ops"].items():
             updated = current["ops"].get(name)
             if updated is None or any(
-                op[key] != updated[key] for key in OP_KEYS - {"request", "response"}
+                not _equal(op[key], updated[key]) for key in OP_KEYS - {"request", "response"}
             ):
                 return False
             if any(
