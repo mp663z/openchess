@@ -1,0 +1,3127 @@
+{
+ "base_manifest": "d858e45e694cc74ba35a993a6d5bf628b030382632867e90ad1c5614ca5a96bb",
+ "base_snapshot": {
+  "areas": {
+   "billing": {
+    "ops": {
+     "create_checkout": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "malformed_request",
+       "provider_unavailable",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/billing/checkout",
+      "request": {
+       "fields": {
+        "cancel_url": {
+         "example": "https://app.example/cancel",
+         "required": true,
+         "type": "string"
+        },
+        "price_id": {
+         "example": "price_monthly",
+         "required": true,
+         "type": "string"
+        },
+        "success_url": {
+         "example": "https://app.example/ok",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {
+        "checkout_url": {
+         "example": "https://payments.example/c/1",
+         "required": true,
+         "type": "string"
+        },
+        "expires_at": {
+         "example": 1893456000,
+         "required": true,
+         "type": "integer"
+        }
+       }
+      }
+     },
+     "get_subscription": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "not_found",
+       "internal"
+      ],
+      "method": "GET",
+      "mutating": false,
+      "path": "/billing/subscription",
+      "request": {
+       "fields": {}
+      },
+      "response": {
+       "fields": {
+        "cancel_at_period_end": {
+         "example": false,
+         "required": true,
+         "type": "boolean"
+        },
+        "current_period_end": {
+         "example": 1893456000,
+         "required": true,
+         "type": "integer"
+        },
+        "status": {
+         "example": "active",
+         "required": true,
+         "type": "string"
+        },
+        "tier": {
+         "example": "pro",
+         "required": true,
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "pci_boundary": "Card details NEVER cross this contract. Checkout is a redirect to the payment provider; the control plane sees only provider webhooks."
+   },
+   "entitlements": {
+    "ops": {
+     "get": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "internal"
+      ],
+      "method": "GET",
+      "mutating": false,
+      "path": "/entitlements",
+      "request": {
+       "fields": {}
+      },
+      "response": {
+       "fields": {
+        "cache_ttl_seconds": {
+         "example": 300,
+         "required": true,
+         "type": "integer"
+        },
+        "cost_caps": {
+         "fields": {
+          "per_day_usd": {
+           "example": 2.0,
+           "required": true,
+           "type": "number"
+          },
+          "per_request_usd": {
+           "example": 0.1,
+           "required": true,
+           "type": "number"
+          }
+         },
+         "required": true,
+         "type": "object"
+        },
+        "features": {
+         "example": [
+          "local-analysis"
+         ],
+         "items": "string",
+         "required": true,
+         "type": "array"
+        },
+        "tier": {
+         "example": "free",
+         "required": true,
+         "type": "string"
+        }
+       }
+      }
+     }
+    }
+   },
+   "identity": {
+    "ops": {
+     "delete_account": {
+      "auth": "required",
+      "errors": [
+       "auth_invalid",
+       "malformed_request",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/identity/delete-account",
+      "request": {
+       "fields": {
+        "confirm": {
+         "example": "DELETE",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {}
+      }
+     },
+     "login": {
+      "auth": "public",
+      "errors": [
+       "malformed_request",
+       "auth_invalid",
+       "rate_limited",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/identity/login",
+      "request": {
+       "fields": {
+        "email": {
+         "example": "ada@example.test",
+         "required": true,
+         "type": "string"
+        },
+        "password_hash_client": {
+         "example": "h0",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {
+        "account_id": {
+         "example": "acct-1",
+         "required": true,
+         "type": "string"
+        },
+        "token": {
+         "example": "tok-2",
+         "required": true,
+         "type": "string"
+        },
+        "token_expires_at": {
+         "example": 1893456000,
+         "required": true,
+         "type": "integer"
+        }
+       }
+      }
+     },
+     "logout": {
+      "auth": "required",
+      "errors": [
+       "auth_invalid",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/identity/logout",
+      "request": {
+       "fields": {}
+      },
+      "response": {
+       "fields": {}
+      }
+     },
+     "refresh": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/identity/refresh",
+      "request": {
+       "fields": {}
+      },
+      "response": {
+       "fields": {
+        "token": {
+         "example": "tok-3",
+         "required": true,
+         "type": "string"
+        },
+        "token_expires_at": {
+         "example": 1893456000,
+         "required": true,
+         "type": "integer"
+        }
+       }
+      }
+     },
+     "register": {
+      "auth": "public",
+      "errors": [
+       "malformed_request",
+       "conflict",
+       "rate_limited",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/identity/register",
+      "request": {
+       "fields": {
+        "display_name": {
+         "example": "Ada",
+         "required": false,
+         "type": "string"
+        },
+        "email": {
+         "example": "ada@example.test",
+         "required": true,
+         "type": "string"
+        },
+        "password_hash_client": {
+         "example": "h0",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {
+        "account_id": {
+         "example": "acct-1",
+         "required": true,
+         "type": "string"
+        },
+        "display_name": {
+         "required": false,
+         "type": "string"
+        },
+        "token": {
+         "example": "tok-1",
+         "required": true,
+         "type": "string"
+        },
+        "token_expires_at": {
+         "example": 1893456000,
+         "required": true,
+         "type": "integer"
+        }
+       }
+      }
+     }
+    }
+   },
+   "provider_routing": {
+    "byok": "provider_kind is an open enum (new providers additively, MINOR bump); consumers MUST NOT hardcode provider lists. Field names are vendor-neutral everywhere.",
+    "ops": {
+     "register_key": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "provider_key_invalid",
+       "malformed_request",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/provider-keys/register",
+      "request": {
+       "fields": {
+        "key_material": {
+         "example": "12345678",
+         "required": true,
+         "type": "string",
+         "write_only": true
+        },
+        "label": {
+         "example": "my-key",
+         "required": false,
+         "type": "string"
+        },
+        "provider_kind": {
+         "example": "generic-a",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {
+        "key_ref": {
+         "example": "key-1",
+         "required": true,
+         "type": "string"
+        }
+       }
+      }
+     },
+     "revoke_key": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "not_found",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/provider-keys/revoke",
+      "request": {
+       "fields": {
+        "key_ref": {
+         "example": "key-1",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {}
+      }
+     },
+     "route": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "entitlement_missing",
+       "cost_cap_exceeded",
+       "provider_unavailable",
+       "malformed_request",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": false,
+      "path": "/provider-routing/route",
+      "request": {
+       "fields": {
+        "capability": {
+         "example": "analysis-fast",
+         "required": true,
+         "type": "string"
+        },
+        "policy": {
+         "fields": {
+          "max_cost_usd": {
+           "example": 0.05,
+           "required": false,
+           "type": "number"
+          },
+          "prefer": {
+           "example": "own-key",
+           "required": false,
+           "type": "string"
+          }
+         },
+         "required": false,
+         "type": "object"
+        }
+       }
+      },
+      "response": {
+       "fields": {
+        "estimated_cost_usd": {
+         "example": 0.02,
+         "required": true,
+         "type": "number"
+        },
+        "key_ref": {
+         "example": "key-1",
+         "required": false,
+         "type": "string"
+        },
+        "provider_kind": {
+         "example": "generic-a",
+         "required": true,
+         "type": "string"
+        }
+       }
+      }
+     }
+    }
+   },
+   "quota": {
+    "ops": {
+     "commit": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "quota_reservation_expired",
+       "not_found",
+       "malformed_request",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/quota/commit",
+      "request": {
+       "fields": {
+        "actual_units": {
+         "example": 8,
+         "required": true,
+         "type": "integer"
+        },
+        "reservation_id": {
+         "example": "rsv-1",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {
+        "remaining_units": {
+         "example": 990,
+         "required": true,
+         "type": "integer"
+        }
+       }
+      }
+     },
+     "release": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "not_found",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/quota/release",
+      "request": {
+       "fields": {
+        "reservation_id": {
+         "example": "rsv-1",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {}
+      }
+     },
+     "reserve": {
+      "auth": "required",
+      "errors": [
+       "auth_expired",
+       "auth_invalid",
+       "quota_exhausted",
+       "malformed_request",
+       "idempotency_conflict",
+       "internal"
+      ],
+      "method": "POST",
+      "mutating": true,
+      "path": "/quota/reserve",
+      "request": {
+       "fields": {
+        "estimated_units": {
+         "example": 10,
+         "required": true,
+         "type": "integer"
+        },
+        "hold_seconds": {
+         "example": 60,
+         "required": true,
+         "type": "integer"
+        },
+        "operation_kind": {
+         "example": "analysis",
+         "required": true,
+         "type": "string"
+        }
+       }
+      },
+      "response": {
+       "fields": {
+        "expires_at": {
+         "example": 1893456000,
+         "required": true,
+         "type": "integer"
+        },
+        "granted_units": {
+         "example": 10,
+         "required": true,
+         "type": "integer"
+        },
+        "reservation_id": {
+         "example": "rsv-1",
+         "required": true,
+         "type": "string"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "contract": {
+   "cost": {
+    "caps_enforced": "server-side",
+    "reservation_required": true,
+    "reservation_required_note": "Billable operations require a quota reservation first; consumers receive cost_cap_exceeded, never a surprise bill."
+   },
+   "name": "replaceable-control-plane",
+   "privacy": {
+    "chess_content": "forbidden",
+    "chess_content_note": "No games, moves, FENs, analysis or notes in any field of any operation, in either direction.",
+    "key_material": "write-only",
+    "key_material_note": "Provider keys and credentials are accepted only in fields flagged write_only and MUST NOT appear in any response, log line or error message.",
+    "logs": "no-secrets"
+   },
+   "recovery": {
+    "entitlements_cache_ttl_field": "cache_ttl_seconds",
+    "recovery_note": "entitlements.get responses carry the TTL field; consumers may serve cached entitlements that long when unreachable, then degrade to free tier. Reservations carry the expiry field; consumers MUST treat expired ones as released.",
+    "reservation_expiry_field": "expires_at"
+   },
+   "transport": {
+    "auth": {
+     "format": "Authorization: Bearer <opaque-token>",
+     "header": "Authorization",
+     "issued_by": [
+      "identity.register",
+      "identity.login"
+     ],
+     "public_operations": [
+      "identity.register",
+      "identity.login"
+     ],
+     "rule": "A valid bearer token is REQUIRED for every operation not listed in public_operations; operations that REQUIRE it answer 401 when the token is missing, unknown or expired: unknown tokens answer auth_invalid, expired tokens answer auth_expired. No cookies, no query tokens, no exceptions.",
+     "scheme": "bearer"
+    },
+    "errors": {
+     "additive_note": "Error payloads MAY carry extra fields beyond the declared shape (MINOR additive); error signalling keys on the HTTP status only, so a 2xx payload containing an 'error' field is data, not an error.",
+     "closed_enum": [
+      "auth_expired",
+      "auth_invalid",
+      "idempotency_conflict",
+      "quota_exhausted",
+      "quota_reservation_expired",
+      "entitlement_missing",
+      "provider_key_invalid",
+      "provider_unavailable",
+      "cost_cap_exceeded",
+      "rate_limited",
+      "malformed_request",
+      "not_found",
+      "conflict",
+      "internal"
+     ],
+     "shape": {
+      "error": {
+       "fields": {
+        "code": {
+         "example": "not_found",
+         "required": true,
+         "type": "string"
+        },
+        "message": {
+         "example": "human-readable detail",
+         "required": true,
+         "type": "string"
+        },
+        "retryable": {
+         "example": false,
+         "required": true,
+         "type": "boolean"
+        }
+       }
+      }
+     }
+    },
+    "idempotency": "Every mutating operation REQUIRES an Idempotency-Key header (unique nonempty string per logical operation). A replay with the same key AND the same canonical request body returns the original outcome with no duplicate effect. The same key with a DIFFERENT body answers 409 idempotency_conflict. Keys are scoped per authenticated account.",
+    "kind": "https-json",
+    "read_only_operations": [
+     "billing.get_subscription",
+     "entitlements.get",
+     "provider_routing.route"
+    ],
+    "read_only_rule": "Operations with mutating: false MUST be listed in read_only_operations, and every listed operation MUST be mutating: false. A state-changing operation flipped to mutating: false without allowlisting is an idempotency bypass and fails the contract lint.",
+    "self_destructive_operations": [
+     "identity.logout",
+     "identity.delete_account"
+    ],
+    "self_destructive_rule": "Operations whose success invalidates the calling credential MUST be listed in self_destructive_operations, MUST be mutating and MUST require auth. For these operations the idempotency replay lookup runs BEFORE credential validity checks, scoped by the presented credential itself, never its validity: a retry with the same Idempotency-Key and a byte-identical body replays the recorded outcome; the same key with a different body answers idempotency_conflict; without a recorded first call a revoked credential answers 401 as usual. Replay returns only what the caller already received and can never authorize new work."
+   },
+   "versioning": {
+    "base_path": "/cp/v1",
+    "rule": "Clients pin MAJOR. MINOR is additive-only: new optional request fields, new response fields, new operations or new provider_kind values. A server MUST accept any client minor within its major and MUST ignore unknown request fields. Rollback: a consumer may downgrade to any earlier MINOR within the same MAJOR without migration, because conformance never asserts absence of extra response fields. MAJOR bumps require a new base path.",
+    "scheme": "semver"
+   }
+  },
+  "schema_version": 2
+ },
+ "boundary": [
+  {
+   "expect": true,
+   "name": "equal-snapshots-at-ceiling",
+   "new": [],
+   "new_minor": 2147483647,
+   "old": [],
+   "old_minor": 2147483647,
+   "why": "both minors may sit at the exact ceiling"
+  },
+  {
+   "expect": true,
+   "name": "equal-snapshots-minor-step",
+   "new": [],
+   "new_minor": 4,
+   "old": [],
+   "old_minor": 3,
+   "why": "identical snapshots may still advance the minor"
+  },
+  {
+   "expect": true,
+   "name": "equal-snapshots-same-minor",
+   "new": [],
+   "new_minor": 3,
+   "old": [],
+   "old_minor": 3,
+   "why": "identical snapshots at one minor"
+  },
+  {
+   "expect": true,
+   "name": "equal-snapshots-to-ceiling",
+   "new": [],
+   "new_minor": 2147483647,
+   "old": [],
+   "old_minor": 0,
+   "why": "the new minor may reach the exact 2147483647 ceiling"
+  },
+  {
+   "expect": true,
+   "name": "equal-snapshots-zero-zero",
+   "new": [],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 0,
+   "why": "identical snapshots at minor 0"
+  },
+  {
+   "expect": true,
+   "name": "major-upgrade-from-ceiling",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 2147483647,
+   "why": "the old-minor ceiling holds even across a MAJOR transition"
+  },
+  {
+   "expect": true,
+   "name": "major-upgrade-minor-reset",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 3,
+   "why": "a MAJOR transition resets the minor to 0"
+  }
+ ],
+ "contract": "data/contracts/control_plane_versioning.yaml",
+ "contract_schema_version": 1,
+ "happy": [
+  {
+   "expect": true,
+   "name": "allowlist-order-insignificant",
+   "new": [
+    {
+     "reverse": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ]
+     }
+    },
+    {
+     "reverse": {
+      "path": [
+       "contract",
+       "transport",
+       "auth",
+       "public_operations"
+      ]
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "allowlists are sets in meaning; reversing both lists is no change"
+  },
+  {
+   "expect": true,
+   "name": "major-area-removed",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "areas",
+       "quota"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 0,
+   "why": "a higher MAJOR admits removing a whole area"
+  },
+  {
+   "expect": true,
+   "name": "major-base-path-v10",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v10"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 0,
+   "why": "multi-digit MAJOR base paths are valid transitions"
+  },
+  {
+   "expect": true,
+   "name": "major-contract-text-changed",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "rule"
+      ],
+      "value": "Clients pin MAJOR. MINOR is additive-only: new optional request fields, new response fields, new operations or new provider_kind values. A server MUST accept any client minor within its major and MUST ignore unknown request fields. Rollback: a consumer may downgrade to any earlier MINOR within the same MAJOR without migration, because conformance never asserts absence of extra response fields. MAJOR bumps require a new base path. More text."
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 0,
+   "why": "a higher MAJOR admits changing non-operation contract text"
+  },
+  {
+   "expect": true,
+   "name": "major-field-removed",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "display_name"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 3,
+   "why": "a higher MAJOR admits removing a request field"
+  },
+  {
+   "expect": true,
+   "name": "major-operation-path-changed",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh",
+       "path"
+      ],
+      "value": "/identity/renew"
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 0,
+   "why": "a higher MAJOR admits moving an operation's route"
+  },
+  {
+   "expect": true,
+   "name": "major-operation-removed",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 0,
+   "why": "a higher MAJOR admits removing an operation"
+  },
+  {
+   "expect": true,
+   "name": "major-optional-to-required-request",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "display_name",
+       "required"
+      ],
+      "value": true
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 3,
+   "why": "a higher MAJOR admits optional-to-required on a request field"
+  },
+  {
+   "expect": true,
+   "name": "major-optional-to-required-response",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "display_name",
+       "required"
+      ],
+      "value": true
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "display_name",
+       "example"
+      ],
+      "value": "Ada"
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 3,
+   "why": "a higher MAJOR admits optional-to-required on a response field"
+  },
+  {
+   "expect": true,
+   "name": "major-required-request-field",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "new_flag"
+      ],
+      "value": {
+       "example": true,
+       "required": true,
+       "type": "boolean"
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 3,
+   "why": "a higher MAJOR at a new base path admits a required request field"
+  },
+  {
+   "expect": true,
+   "name": "multiple-new-operations-reverse-allowlist-order",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "summary"
+      ],
+      "value": {
+       "auth": "required",
+       "errors": [
+        "auth_expired",
+        "auth_invalid",
+        "internal"
+       ],
+       "method": "GET",
+       "mutating": false,
+       "path": "/entitlements/summary",
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {
+         "cache_ttl_seconds": {
+          "example": 300,
+          "required": true,
+          "type": "integer"
+         },
+         "cost_caps": {
+          "fields": {
+           "per_day_usd": {
+            "example": 2.0,
+            "required": true,
+            "type": "number"
+           },
+           "per_request_usd": {
+            "example": 0.1,
+            "required": true,
+            "type": "number"
+           }
+          },
+          "required": true,
+          "type": "object"
+         },
+         "features": {
+          "example": [
+           "local-analysis"
+          ],
+          "items": "string",
+          "required": true,
+          "type": "array"
+         },
+         "tier": {
+          "example": "free",
+          "required": true,
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "totals"
+      ],
+      "value": {
+       "auth": "required",
+       "errors": [
+        "auth_expired",
+        "auth_invalid",
+        "internal"
+       ],
+       "method": "GET",
+       "mutating": false,
+       "path": "/entitlements/totals",
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {
+         "cache_ttl_seconds": {
+          "example": 300,
+          "required": true,
+          "type": "integer"
+         },
+         "cost_caps": {
+          "fields": {
+           "per_day_usd": {
+            "example": 2.0,
+            "required": true,
+            "type": "number"
+           },
+           "per_request_usd": {
+            "example": 0.1,
+            "required": true,
+            "type": "number"
+           }
+          },
+          "required": true,
+          "type": "object"
+         },
+         "features": {
+          "example": [
+           "local-analysis"
+          ],
+          "items": "string",
+          "required": true,
+          "type": "array"
+         },
+         "tier": {
+          "example": "free",
+          "required": true,
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "extend": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "values": [
+       "entitlements.totals",
+       "entitlements.summary"
+      ]
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "allowlists are sets: several new operations may be appended in any order"
+  },
+  {
+   "expect": true,
+   "name": "nested-optional-request-field-added",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "provider_routing",
+       "ops",
+       "route",
+       "request",
+       "fields",
+       "policy",
+       "fields",
+       "timeout_seconds"
+      ],
+      "value": {
+       "required": false,
+       "type": "integer"
+      }
+     }
+    }
+   ],
+   "new_minor": 2,
+   "old": [],
+   "old_minor": 1,
+   "why": "MINOR: a new optional field inside a nested request object"
+  },
+  {
+   "expect": true,
+   "name": "nested-optional-response-field-added",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "get",
+       "response",
+       "fields",
+       "cost_caps",
+       "fields",
+       "display_currency"
+      ],
+      "value": {
+       "required": false,
+       "type": "string"
+      }
+     }
+    }
+   ],
+   "new_minor": 2,
+   "old": [],
+   "old_minor": 1,
+   "why": "MINOR: a new optional field inside a nested response object"
+  },
+  {
+   "expect": true,
+   "name": "new-area-with-operation-and-allowlist",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "zones"
+      ],
+      "value": {
+       "ops": {
+        "get": {
+         "auth": "required",
+         "errors": [
+          "auth_expired",
+          "auth_invalid",
+          "internal"
+         ],
+         "method": "GET",
+         "mutating": false,
+         "path": "/zones",
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {
+           "cache_ttl_seconds": {
+            "example": 300,
+            "required": true,
+            "type": "integer"
+           },
+           "cost_caps": {
+            "fields": {
+             "per_day_usd": {
+              "example": 2.0,
+              "required": true,
+              "type": "number"
+             },
+             "per_request_usd": {
+              "example": 0.1,
+              "required": true,
+              "type": "number"
+             }
+            },
+            "required": true,
+            "type": "object"
+           },
+           "features": {
+            "example": [
+             "local-analysis"
+            ],
+            "items": "string",
+            "required": true,
+            "type": "array"
+           },
+           "tier": {
+            "example": "free",
+            "required": true,
+            "type": "string"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "value": "zones.get"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "coordinator ruling: a new area with new operations is a MINOR addition, allowlist extended to match"
+  },
+  {
+   "expect": true,
+   "name": "new-mutating-operation-no-allowlist-change",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "restore"
+      ],
+      "value": {
+       "auth": "required",
+       "errors": [
+        "auth_expired",
+        "auth_invalid",
+        "idempotency_conflict",
+        "internal"
+       ],
+       "method": "POST",
+       "mutating": true,
+       "path": "/identity/restore",
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {
+         "token": {
+          "example": "tok-3",
+          "required": true,
+          "type": "string"
+         },
+         "token_expires_at": {
+          "example": 1893456000,
+          "required": true,
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "MINOR: a new authenticated mutating operation joins no allowlist"
+  },
+  {
+   "expect": true,
+   "name": "new-public-operation-with-allowlist",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "recover"
+      ],
+      "value": {
+       "auth": "public",
+       "errors": [
+        "malformed_request",
+        "auth_invalid",
+        "rate_limited",
+        "idempotency_conflict",
+        "internal"
+       ],
+       "method": "POST",
+       "mutating": true,
+       "path": "/identity/recover",
+       "request": {
+        "fields": {
+         "email": {
+          "example": "ada@example.test",
+          "required": true,
+          "type": "string"
+         },
+         "password_hash_client": {
+          "example": "h0",
+          "required": true,
+          "type": "string"
+         }
+        }
+       },
+       "response": {
+        "fields": {
+         "account_id": {
+          "example": "acct-1",
+          "required": true,
+          "type": "string"
+         },
+         "token": {
+          "example": "tok-2",
+          "required": true,
+          "type": "string"
+         },
+         "token_expires_at": {
+          "example": 1893456000,
+          "required": true,
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "auth",
+       "public_operations"
+      ],
+      "value": "identity.recover"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "MINOR: a new public operation at a new route, listed in public_operations"
+  },
+  {
+   "expect": true,
+   "name": "new-readonly-operation-with-allowlist",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "refresh_status"
+      ],
+      "value": {
+       "auth": "required",
+       "errors": [
+        "auth_expired",
+        "auth_invalid",
+        "internal"
+       ],
+       "method": "GET",
+       "mutating": false,
+       "path": "/entitlements/refresh-status",
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {
+         "cache_ttl_seconds": {
+          "example": 300,
+          "required": true,
+          "type": "integer"
+         },
+         "cost_caps": {
+          "fields": {
+           "per_day_usd": {
+            "example": 2.0,
+            "required": true,
+            "type": "number"
+           },
+           "per_request_usd": {
+            "example": 0.1,
+            "required": true,
+            "type": "number"
+           }
+          },
+          "required": true,
+          "type": "object"
+         },
+         "features": {
+          "example": [
+           "local-analysis"
+          ],
+          "items": "string",
+          "required": true,
+          "type": "array"
+         },
+         "tier": {
+          "example": "free",
+          "required": true,
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "value": "entitlements.refresh_status"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "MINOR: a new read-only operation at a new route, listed in read_only_operations"
+  },
+  {
+   "expect": true,
+   "name": "optional-request-field-added",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "new_flag"
+      ],
+      "value": {
+       "example": true,
+       "required": false,
+       "type": "boolean"
+      }
+     }
+    }
+   ],
+   "new_minor": 4,
+   "old": [],
+   "old_minor": 3,
+   "why": "MINOR: a new optional request field"
+  },
+  {
+   "expect": true,
+   "name": "optional-response-field-added",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "avatar_url"
+      ],
+      "value": {
+       "required": false,
+       "type": "string"
+      }
+     }
+    }
+   ],
+   "new_minor": 4,
+   "old": [],
+   "old_minor": 3,
+   "why": "MINOR: a new optional response field"
+  }
+ ],
+ "incompatible": [
+  {
+   "expect": false,
+   "name": "area-metadata-changed",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "billing",
+       "pci_boundary"
+      ],
+      "value": "Card details NEVER cross this contract. Checkout is a redirect to the payment provider; the control plane sees only provider webhooks. New text."
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "area metadata outside ops is immutable in a MINOR"
+  },
+  {
+   "expect": false,
+   "name": "area-removed",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "areas",
+       "quota"
+      ]
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "removing an area is not MINOR"
+  },
+  {
+   "expect": false,
+   "name": "contract-rule-text-changed",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "rule"
+      ],
+      "value": "Clients pin MAJOR. MINOR is additive-only: new optional request fields, new response fields, new operations or new provider_kind values. A server MUST accept any client minor within its major and MUST ignore unknown request fields. Rollback: a consumer may downgrade to any earlier MINOR within the same MAJOR without migration, because conformance never asserts absence of extra response fields. MAJOR bumps require a new base path. More text."
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "non-operation contract declarations are immutable in a MINOR"
+  },
+  {
+   "expect": false,
+   "name": "field-example-changed",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "email",
+       "example"
+      ],
+      "value": "other@example.test"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "an existing field's declaration is immutable, example included"
+  },
+  {
+   "expect": false,
+   "name": "field-type-changed",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "email"
+      ],
+      "value": {
+       "example": 1,
+       "required": true,
+       "type": "integer"
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "changing a field's declared type breaks existing clients"
+  },
+  {
+   "expect": false,
+   "name": "nested-required-request-field-added",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "provider_routing",
+       "ops",
+       "route",
+       "request",
+       "fields",
+       "policy",
+       "fields",
+       "timeout_seconds"
+      ],
+      "value": {
+       "example": 30,
+       "required": true,
+       "type": "integer"
+      }
+     }
+    }
+   ],
+   "new_minor": 2,
+   "old": [],
+   "old_minor": 1,
+   "why": "a new required field inside a nested request object is not MINOR"
+  },
+  {
+   "expect": false,
+   "name": "nested-required-response-field-added",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "get",
+       "response",
+       "fields",
+       "cost_caps",
+       "fields",
+       "display_currency"
+      ],
+      "value": {
+       "example": "USD",
+       "required": true,
+       "type": "string"
+      }
+     }
+    }
+   ],
+   "new_minor": 2,
+   "old": [],
+   "old_minor": 1,
+   "why": "a new required field inside a nested response object is not MINOR"
+  },
+  {
+   "expect": false,
+   "name": "object-metadata-changed",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "get",
+       "response",
+       "fields",
+       "cost_caps",
+       "required"
+      ],
+      "value": false
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "a nested object's own declaration is immutable in a MINOR"
+  },
+  {
+   "expect": false,
+   "name": "operation-errors-removed",
+   "new": [
+    {
+     "remove": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh",
+       "errors"
+      ],
+      "value": "idempotency_conflict"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "an existing operation's declared errors are immutable"
+  },
+  {
+   "expect": false,
+   "name": "operation-path-changed",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh",
+       "path"
+      ],
+      "value": "/identity/renew"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "moving an existing operation's route is not MINOR"
+  },
+  {
+   "expect": false,
+   "name": "operation-removed",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh"
+      ]
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "removing an operation is not MINOR"
+  },
+  {
+   "expect": false,
+   "name": "optional-to-required-request",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "display_name",
+       "required"
+      ],
+      "value": true
+     }
+    }
+   ],
+   "new_minor": 4,
+   "old": [],
+   "old_minor": 3,
+   "why": "optional-to-required on a request field needs a new MAJOR"
+  },
+  {
+   "expect": false,
+   "name": "optional-to-required-response",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "display_name",
+       "required"
+      ],
+      "value": true
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "display_name",
+       "example"
+      ],
+      "value": "Ada"
+     }
+    }
+   ],
+   "new_minor": 4,
+   "old": [],
+   "old_minor": 3,
+   "why": "optional-to-required on a response field needs a new MAJOR"
+  },
+  {
+   "expect": false,
+   "name": "request-field-removed",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "email"
+      ]
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "removing a request field breaks existing clients"
+  },
+  {
+   "expect": false,
+   "name": "required-request-field-added",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "new_flag"
+      ],
+      "value": {
+       "example": true,
+       "required": true,
+       "type": "boolean"
+      }
+     }
+    }
+   ],
+   "new_minor": 4,
+   "old": [],
+   "old_minor": 3,
+   "why": "a new required request field is not on the MINOR allowlist"
+  },
+  {
+   "expect": false,
+   "name": "required-response-field-added",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "session_id"
+      ],
+      "value": {
+       "example": "s1",
+       "required": true,
+       "type": "string"
+      }
+     }
+    }
+   ],
+   "new_minor": 4,
+   "old": [],
+   "old_minor": 3,
+   "why": "a new required response field is not on the MINOR allowlist"
+  },
+  {
+   "expect": false,
+   "name": "response-field-removed",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "response",
+       "fields",
+       "token"
+      ]
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "removing a response field breaks existing clients"
+  }
+ ],
+ "malformed": [
+  {
+   "expect": "malformed_version_request",
+   "name": "allowlist-duplicate-entry",
+   "new": [
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "value": "entitlements.get"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "allowlists carry no duplicates"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "allowlist-member-removed",
+   "new": [
+    {
+     "remove": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "value": "entitlements.get"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "existing allowlist membership is immutable"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "allowlist-mutating-member-added",
+   "new": [
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "value": "identity.refresh"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "read_only_operations lists exactly the non-mutating operations"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "allowlist-nonpublic-member-added",
+   "new": [
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "auth",
+       "public_operations"
+      ],
+      "value": "quota.reserve"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "public_operations lists exactly the auth:public operations"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "areas-section-missing",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "areas"
+      ]
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "a snapshot without areas is not a source contract"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "auth-undeclared-value",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh",
+       "auth"
+      ],
+      "value": "sometimes"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "an operation's auth is one of the declared values"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "base-path-junk",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v1junk"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "the base path must match the pinned /cp/v<n> grammar"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "base-path-nonstring",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": 1
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "the base path is a string"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "base-path-v0",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v0"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "MAJOR numbering starts at 1"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "errors-member-nonstring",
+   "new": [
+    {
+     "append": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh",
+       "errors"
+      ],
+      "value": []
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "an operation's errors are strings"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "errors-outside-closed-enum",
+   "new": [
+    {
+     "append": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh",
+       "errors"
+      ],
+      "value": "weird_code"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "an operation's errors stay inside the closed enum"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "field-required-nonbool",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "new_flag"
+      ],
+      "value": {
+       "required": "yes",
+       "type": "string"
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "a field's required flag is an exact bool"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "field-type-undeclared",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "new_flag"
+      ],
+      "value": {
+       "required": false,
+       "type": "money"
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "a field's type must be one of the declared scalar kinds"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "hostile-old-snapshot",
+   "new": [],
+   "new_minor": 1,
+   "old": [
+    {
+     "set": {
+      "path": [
+       "schema_version"
+      ],
+      "value": 3
+     }
+    }
+   ],
+   "old_minor": 0,
+   "why": "both snapshots are validated, old included"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "major-downgrade",
+   "new": [],
+   "new_minor": 1,
+   "old": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "old_minor": 0,
+   "why": "a lower MAJOR base path in the new snapshot refuses"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "method-undeclared",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "method"
+      ],
+      "value": "post"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "an operation's method is one of the declared verbs"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "minor-downgrade-same-major",
+   "new": [],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 2,
+   "why": "within one MAJOR the minor may not go backwards"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "mutating-nonbool",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh",
+       "mutating"
+      ],
+      "value": "yes"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "an operation's mutating flag is an exact bool"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-minor-bool",
+   "new": [],
+   "new_minor": true,
+   "old": [],
+   "old_minor": 0,
+   "why": "a bool is not an exact minor int"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-minor-float",
+   "new": [],
+   "new_minor": 1.0,
+   "old": [],
+   "old_minor": 0,
+   "why": "a float is not an exact minor int"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-minor-negative",
+   "new": [],
+   "new_minor": -1,
+   "old": [],
+   "old_minor": 0,
+   "why": "minors are nonnegative"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-minor-null",
+   "new": [],
+   "new_minor": null,
+   "old": [],
+   "old_minor": 0,
+   "why": "null is not an exact minor int"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-minor-over-ceiling",
+   "new": [],
+   "new_minor": 2147483648,
+   "old": [],
+   "old_minor": 0,
+   "why": "the ceiling binds the new minor too"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-operation-route-collision",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "new_login"
+      ],
+      "value": {
+       "auth": "public",
+       "errors": [
+        "malformed_request",
+        "auth_invalid",
+        "rate_limited",
+        "idempotency_conflict",
+        "internal"
+       ],
+       "method": "POST",
+       "mutating": true,
+       "path": "/identity/login",
+       "request": {
+        "fields": {
+         "email": {
+          "example": "ada@example.test",
+          "required": true,
+          "type": "string"
+         },
+         "password_hash_client": {
+          "example": "h0",
+          "required": true,
+          "type": "string"
+         }
+        }
+       },
+       "response": {
+        "fields": {
+         "account_id": {
+          "example": "acct-1",
+          "required": true,
+          "type": "string"
+         },
+         "token": {
+          "example": "tok-2",
+          "required": true,
+          "type": "string"
+         },
+         "token_expires_at": {
+          "example": 1893456000,
+          "required": true,
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "a new operation may not reuse an existing route"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-operations-share-route",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "recover_a"
+      ],
+      "value": {
+       "auth": "public",
+       "errors": [
+        "malformed_request",
+        "auth_invalid",
+        "rate_limited",
+        "idempotency_conflict",
+        "internal"
+       ],
+       "method": "POST",
+       "mutating": true,
+       "path": "/identity/recover",
+       "request": {
+        "fields": {
+         "email": {
+          "example": "ada@example.test",
+          "required": true,
+          "type": "string"
+         },
+         "password_hash_client": {
+          "example": "h0",
+          "required": true,
+          "type": "string"
+         }
+        }
+       },
+       "response": {
+        "fields": {
+         "account_id": {
+          "example": "acct-1",
+          "required": true,
+          "type": "string"
+         },
+         "token": {
+          "example": "tok-2",
+          "required": true,
+          "type": "string"
+         },
+         "token_expires_at": {
+          "example": 1893456000,
+          "required": true,
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "recover_b"
+      ],
+      "value": {
+       "auth": "public",
+       "errors": [
+        "malformed_request",
+        "auth_invalid",
+        "rate_limited",
+        "idempotency_conflict",
+        "internal"
+       ],
+       "method": "POST",
+       "mutating": true,
+       "path": "/identity/recover",
+       "request": {
+        "fields": {
+         "email": {
+          "example": "ada@example.test",
+          "required": true,
+          "type": "string"
+         },
+         "password_hash_client": {
+          "example": "h0",
+          "required": true,
+          "type": "string"
+         }
+        }
+       },
+       "response": {
+        "fields": {
+         "account_id": {
+          "example": "acct-1",
+          "required": true,
+          "type": "string"
+         },
+         "token": {
+          "example": "tok-2",
+          "required": true,
+          "type": "string"
+         },
+         "token_expires_at": {
+          "example": 1893456000,
+          "required": true,
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "two new operations may not share one route"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-public-operation-missing-allowlist",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "recover"
+      ],
+      "value": {
+       "auth": "public",
+       "errors": [
+        "malformed_request",
+        "auth_invalid",
+        "rate_limited",
+        "idempotency_conflict",
+        "internal"
+       ],
+       "method": "POST",
+       "mutating": true,
+       "path": "/identity/recover",
+       "request": {
+        "fields": {
+         "email": {
+          "example": "ada@example.test",
+          "required": true,
+          "type": "string"
+         },
+         "password_hash_client": {
+          "example": "h0",
+          "required": true,
+          "type": "string"
+         }
+        }
+       },
+       "response": {
+        "fields": {
+         "account_id": {
+          "example": "acct-1",
+          "required": true,
+          "type": "string"
+         },
+         "token": {
+          "example": "tok-2",
+          "required": true,
+          "type": "string"
+         },
+         "token_expires_at": {
+          "example": 1893456000,
+          "required": true,
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "a new public operation must join public_operations"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "new-readonly-operation-missing-allowlist",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "refresh_status"
+      ],
+      "value": {
+       "auth": "required",
+       "errors": [
+        "auth_expired",
+        "auth_invalid",
+        "internal"
+       ],
+       "method": "GET",
+       "mutating": false,
+       "path": "/entitlements/refresh-status",
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {
+         "cache_ttl_seconds": {
+          "example": 300,
+          "required": true,
+          "type": "integer"
+         },
+         "cost_caps": {
+          "fields": {
+           "per_day_usd": {
+            "example": 2.0,
+            "required": true,
+            "type": "number"
+           },
+           "per_request_usd": {
+            "example": 0.1,
+            "required": true,
+            "type": "number"
+           }
+          },
+          "required": true,
+          "type": "object"
+         },
+         "features": {
+          "example": [
+           "local-analysis"
+          ],
+          "items": "string",
+          "required": true,
+          "type": "array"
+         },
+         "tier": {
+          "example": "free",
+          "required": true,
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "a new read-only operation must join read_only_operations"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "object-with-example",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "get",
+       "response",
+       "fields",
+       "cost_caps",
+       "example"
+      ],
+      "value": {}
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "an object field carries no example"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "old-minor-bool",
+   "new": [],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": true,
+   "why": "a bool is not an exact minor int"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "old-minor-negative",
+   "new": [],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": -1,
+   "why": "minors are nonnegative"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "old-minor-over-ceiling",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "new_minor": 0,
+   "old": [],
+   "old_minor": 2147483648,
+   "why": "the 2147483647 ceiling is inclusive, one past it refuses even when a MAJOR transition would make the verdict True"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "old-minor-string",
+   "new": [],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": "1",
+   "why": "a string is not an exact minor int"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "precedence-minor-bound-beats-comparison",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "new_flag"
+      ],
+      "value": {
+       "example": true,
+       "required": true,
+       "type": "boolean"
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 2,
+   "why": "validation runs before any comparison: a minor downgrade refuses typed even when the snapshots also carry a breaking change"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "schema-version-bool",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "schema_version"
+      ],
+      "value": true
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "the source schema_version is an exact int"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "schema-version-float",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "schema_version"
+      ],
+      "value": 2.0
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "the source schema_version is an exact int"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "schema-version-string",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "schema_version"
+      ],
+      "value": "2"
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "the source schema_version is an exact int"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "schema-version-three",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "schema_version"
+      ],
+      "value": 3
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "only control-plane schema v2 documents are comparable"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "versioning-section-missing",
+   "new": [
+    {
+     "del": {
+      "path": [
+       "contract",
+       "versioning"
+      ]
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "a snapshot without its versioning section is not a source contract"
+  },
+  {
+   "expect": "malformed_version_request",
+   "name": "write-only-outside-request",
+   "new": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "session_secret"
+      ],
+      "value": {
+       "required": false,
+       "type": "string",
+       "write_only": true
+      }
+     }
+    }
+   ],
+   "new_minor": 1,
+   "old": [],
+   "old_minor": 0,
+   "why": "write_only fields may not appear on the response side"
+  }
+ ],
+ "notes": "Closed fixture for the v1 control-plane versioning contract (data/contracts/control_plane_versioning.yaml), executed against the T0437 test-only reference as a separate binding; a later implement task must rebind these rows to its production compare. Expectations are authored from the structured contract, never computed by the reference. base_snapshot is the single embedded source document; each row's old/new lists are exact mutations materializing that row's snapshots. All values are plain JSON data; Python-level hostile objects are out of representational scope and owned by the T0437 reference tests.",
+ "schema_version": 1,
+ "section_manifests": {
+  "boundary": {
+   "equal-snapshots-at-ceiling": "42015fdf448b054fe59f68b8f7d68dcd42cd82a80ea58a32c63f5c21fe028ce9",
+   "equal-snapshots-minor-step": "bc392677fe32052ea5f475899c7e8ad360658b04dea6db0ef8fdc0909447dc44",
+   "equal-snapshots-same-minor": "9baf9f74e6bd7d04bdd4242719df8d15505a699736f4f915df396d62e1dcb393",
+   "equal-snapshots-to-ceiling": "d387595d4a2c223e767ab17d94082dbfe1e42fa69a26511699f4559bd695b50a",
+   "equal-snapshots-zero-zero": "5db0331fb1c56950d76297883ebedea7ac6a9015f73bf0511d34d50f49f39158",
+   "major-upgrade-from-ceiling": "4630e1611f36f92a09439027ca4126cba01e13140aa8ebeba2e7ede0447403a4",
+   "major-upgrade-minor-reset": "18ed0c5dff3325408dcbc84ddf4e148f4026430ed9c598baad5aeff8c5b43118"
+  },
+  "happy": {
+   "allowlist-order-insignificant": "ceb2ab290e1679f374022a7db32afd309136a301444dca2ddb64a4ff9a1f6dd8",
+   "major-area-removed": "5847faf90a0a8a34f780f4876499bd36ffbeefad5bbc39a667b40c00f4ec8d9d",
+   "major-base-path-v10": "54b9104696b316f2445c05dc277a2e2528abc66aefedc9edd6d1632cccfa7ea9",
+   "major-contract-text-changed": "b4c64ac6ec5d6328b16a002c6a5524c0845c954937113634c5bce10a1ef7385a",
+   "major-field-removed": "9df8690394bb64098308a0d5b2431412d344db58926578b0e52bda6ebfc730ec",
+   "major-operation-path-changed": "f7db8d9e06df7b8f24c98e466e222425ab6a640e48dac176d861d85a2e435a3b",
+   "major-operation-removed": "98e9c00a6b5a79b0a8804f17a33977b4f60b725e6d0be1dc3083ad76007b3979",
+   "major-optional-to-required-request": "e3ccf109df234097e514fa419f9011efa98712289509addd9fb72a6b86218855",
+   "major-optional-to-required-response": "c617e8ed2e24530ebddf4dd2bf198dc0dd83ea92da4594211487a2d877295caa",
+   "major-required-request-field": "aa4558209178581b0b92188fe34e4870db3fa69ea0a6628cd57e932ddd6da6fc",
+   "multiple-new-operations-reverse-allowlist-order": "ffc1785a31ce9f60cf41d17768d4a9edb5dc1312e7a77e47604a3138133575a5",
+   "nested-optional-request-field-added": "10ff57c10a17c65a06a07d16a827a6a6a61f74b7f22c4448cdafcb8ebd2b454c",
+   "nested-optional-response-field-added": "41f94dca79a6c053a6dc968da9a26d0a558324d754ea92b71f7ba39765231d09",
+   "new-area-with-operation-and-allowlist": "99b127a2c6d03e3463fc1fd8640530651f531789a2c187e15510f077ac795ea8",
+   "new-mutating-operation-no-allowlist-change": "d9c4fee5946eacfb6de845bd171efbfa0d6498be785214d97fed7624a735108f",
+   "new-public-operation-with-allowlist": "720c89989199b4d6dc1e2a3e7b8e8cde2d416c436f5589f32642111d290cccfa",
+   "new-readonly-operation-with-allowlist": "84ac7bb0719a07d6840990868d8c51c72c520515fab41a054a16a1386a82d85e",
+   "optional-request-field-added": "8b6783c7814a1cde9ba48e42f2cece52293f418845a774a9960eaa5c6cc7d886",
+   "optional-response-field-added": "e92bbd4d1773a866d12e8ec229dd75a6c423848b2a3b890a070a677874a542cc"
+  },
+  "incompatible": {
+   "area-metadata-changed": "c53d8434a214904cdd0ebfbc3dfc8c94ce7d8cf8a0cba8385cfb147ad5a714dd",
+   "area-removed": "719a808ac0cc83a1d3ee86be6d35825f6cd687b7689e99aa894bd74ef273446c",
+   "contract-rule-text-changed": "fb996063264321dab23f79993f1cc9cfff530a333e253f1bd28312cf6d91eb58",
+   "field-example-changed": "9900a61ed11a1df506a6464ae05cc605fa96af70f9b0eaf69b144b4cd53c13d3",
+   "field-type-changed": "41044a41d07bbe3cd8e58c37d8d7a05070c01e3ad61fffbc4a9e77620c52cd1f",
+   "nested-required-request-field-added": "0ba13ee63eeaa318e12dcf5581ef2eeb7afd54dbc3fd57fe107f5a82639d1bb7",
+   "nested-required-response-field-added": "fc6530404f08f27087ee6db088c8b5cd35e435de2f72428398d086e40e53932f",
+   "object-metadata-changed": "01b3abc256cad48767248e347ca05205878fd83cfca4dc28fac16f2d9d0ba17a",
+   "operation-errors-removed": "e13960870e561ac6ec3408156f9546b17b92fb169d541da05eb61b40a3a24f82",
+   "operation-path-changed": "b7b4341b309776f62fb430793599ce97d7896de329f0f2d08385db7c56e8d32b",
+   "operation-removed": "11b3517d12c4edc2a8b8140ad4f45e866debc58c98e7f7b8e7eb9d18b26e0a95",
+   "optional-to-required-request": "85ddabdc6e0acdecf8d231756f48782a823556d02f696a848c77f8284f5a67f8",
+   "optional-to-required-response": "62b3f425d67ea77d518fc2901dd334be4012a4615949f9a23b63269ae9939f3c",
+   "request-field-removed": "81a50c61713b79878b527e5bb420f09c0eff9668324df50134a1412559f2f753",
+   "required-request-field-added": "2c6812d198f326506e9d29fe0c4233576b053df440359f41e4ad82f09fb94d0f",
+   "required-response-field-added": "bbba26b05c6c39a72951800187f2a8bf58530fb716fc293a2d275f69403d0a21",
+   "response-field-removed": "fc394bb67d1ccb6f703e8d6d95da18399a764efac3e6cf1a9ebca5c116d45ad4"
+  },
+  "malformed": {
+   "allowlist-duplicate-entry": "44efcac9bcde0d5465e56fe85d42bb19d0a8abda4741fd7ffa420b65dcfa0d3f",
+   "allowlist-member-removed": "e3ef084b343b9a38ea1cc63c5d7a64a72ac3a628ea407fdcd6af6359a64141ad",
+   "allowlist-mutating-member-added": "6a455a009d69fc48d141e6584f667bb1a40462ee9336638a547ea3e15c2b9c0a",
+   "allowlist-nonpublic-member-added": "90c581ec68c458ff0b57f412ad79d91028251c2990aeb4041b1e11ed0caaa5e5",
+   "areas-section-missing": "75c87837b64f63ff86b715e57a71dfd8276bab7fca298cea27aee4f30bd4d59f",
+   "auth-undeclared-value": "9ada367b6f66d3636bab290a2029a9178ede9d3d1eed378075b7417ef8723e84",
+   "base-path-junk": "1d82b04e5b335b132ba691d494e54957519dbd6f4b82804b261a986ecebd8616",
+   "base-path-nonstring": "5bbef3ccb377fc3ed36446005fb951050097f35adaa105ea26bead9777533d92",
+   "base-path-v0": "a41425a561447e9b4e1fdcbb0e6e1c1b0883246ac5aad57162dedcbdd926e778",
+   "errors-member-nonstring": "0ec5dfd0c086f601a4fbd893c58e1aebae9c8b0722fa8986cddf17410035541a",
+   "errors-outside-closed-enum": "d98caa0b01ca77c13e137b15be9146e41d87889fb65243b41a2fc77d50f1f54c",
+   "field-required-nonbool": "c14bbecef5e4e65d671c640f47fb734a91a7aeaaa787decc6ce4845243b5f5a2",
+   "field-type-undeclared": "898f3c5e0d329184592d00cdd918057fee991a2f5418c900d1f7aa5541c73074",
+   "hostile-old-snapshot": "c35223639fafdfa9bc28505c7f5eb939d59930965be8ea9a52c7a2ebd8704f62",
+   "major-downgrade": "d856f73dbe2fee3c130620ffd3618693ab030aeaf5f0fe10f8207b7e93e93539",
+   "method-undeclared": "0fd0357bf31d2fc53cb95830c6e44394367a68961cde12d9b57d4ef84d353439",
+   "minor-downgrade-same-major": "1f1e9c4517516499d074dbb73104f608a9e41ca1e21fc40ea52fab4e5167c300",
+   "mutating-nonbool": "f9694a3171ffd779837c914b93fa97b06f8c2659feae1375dfc19b533d0eab16",
+   "new-minor-bool": "30f45fcabfa780753c85e3fca080347e20c0bc0cd9a6159a9f034cc7801175af",
+   "new-minor-float": "a746bd7efb0ac2f445309ce12de43f331bb46e402333578c6fb1bd844eff604e",
+   "new-minor-negative": "8e46e84231581973f2961a2d35bc1650c5c65dde8df7ae739ef8802faa7d4c76",
+   "new-minor-null": "f058bf48b6cb95a1cb5dba71e888bf2cecf0adaf117d1c591e9103eaea226d5b",
+   "new-minor-over-ceiling": "771d9becb68d39ba5f2fdd40dc56e255f5ed78b26ed0149c9e0454f547427479",
+   "new-operation-route-collision": "f8ad5eb2742a4065fbf989b316f304a320cff22228f49035b8a11364b26af817",
+   "new-operations-share-route": "998d7b1381f62d42b565d34d697d2914708074e9c99a266bceb706704508cc54",
+   "new-public-operation-missing-allowlist": "ce2b971e6f9fee5afa58afd3b1137b66cc0dbe1be988619f1c1644af76642f5b",
+   "new-readonly-operation-missing-allowlist": "279541b14ebfcf48fde343fb7c9a3d6e4a860c2b232b939206fc1dcebd3e0b45",
+   "object-with-example": "15a642df23395f1e2c9281578a8ce295578ee397b548eaab895791a22e27d596",
+   "old-minor-bool": "f187ba4e7ff7f6e1d6aad6b7c3d9f399b3025fe9a4bd265767b3d1f50807abdf",
+   "old-minor-negative": "15bae6d81ad5738343ed9efbdf130b16c8fc5bb02f9f29014516fa49a074f341",
+   "old-minor-over-ceiling": "b7e636b7ac44be3ed4aa827f83ea71f04d66b2e3b8bbbf6080a93fe80a85231b",
+   "old-minor-string": "648552dc76ec2e1bcf264b3df7516491068f63a9368b93f569cfacfd901ce3bc",
+   "precedence-minor-bound-beats-comparison": "6dd640dc68405b08b28685371dfc19a9176c358493e0930aaa52cc2e88464bb7",
+   "schema-version-bool": "ec4196e1fe91ee0612bab2a53e1cc96634968a48e0da987c869e94a1e7e3609a",
+   "schema-version-float": "82475a1a7337c788a32c8b9a88f100449a8564c3d4448c7fdc7ce9f5bc905d0e",
+   "schema-version-string": "1fad5f425ebb2805800c2cb5d7f4703c8b816d26722e0b7c04b16d59321f7551",
+   "schema-version-three": "fa3eeae5262a9db9d9845af7079ee63b9ccf4d835a03c4df0001ac5e7b178dd8",
+   "versioning-section-missing": "3e747bf2405124c52a7933abdaf12557921491a89fc53b8526f986a78a556915",
+   "write-only-outside-request": "e2999c6700f0aafb7d027b06e6c31631ae6d416004b5bc24cb5e1526a3c9d4dd"
+  }
+ },
+ "source": "data/contracts/control-plane.yaml"
+}
