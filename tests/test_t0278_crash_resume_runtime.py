@@ -58,6 +58,17 @@ PRODUCTION_LINES = (
 # sha256 of tests/test_t0277_crash_resume_red.py as merged (#253)
 RED_AS_MERGED_SHA256 = (
     "e28ec1e8ce7ef4b390ea270cadbf2d5a38bb2a63bda895d7c677dc4dc2c689c8")
+
+# sha256 of the same oracle-binding reconstruction after the reviewed
+# test-infrastructure hygiene edit (PR #374): the red battery's
+# _substitution_mutants streams mutants instead of materializing the
+# full list; mutant order, labels, contents and counts are unchanged in
+# both digest modes (ordered label/content SHA-256 verified against the
+# pre-hygiene baseline), so the binding proof above carries over as-is.
+# RED_AS_MERGED_SHA256 stays as the historical record of the
+# pre-hygiene merged bytes.
+RED_AS_MERGED_AFTER_HYGIENE_SHA256 = (
+    "b56a859416bee4f0d08b817c0484e129302fa038b62c782a4d71c988eec581ab")
 ALLOWED_IMPORTS = {"__future__", "copy", "hashlib", "json", "math", "re",
                    "pathlib", "yaml", "store",
                    "tools.crash_resume_contract_lint"}
@@ -69,7 +80,7 @@ def test_r1_red_battery_switch_is_exactly_the_two_binding_lines():
     assert ORACLE_LINES not in source
     restored = source.replace(PRODUCTION_LINES, ORACLE_LINES)
     assert hashlib.sha256(restored.encode()).hexdigest() == \
-        RED_AS_MERGED_SHA256
+        RED_AS_MERGED_AFTER_HYGIENE_SHA256
     assert _red.ResumeEngine is ResumeEngine
     assert _red.ResumeError is ResumeError
 

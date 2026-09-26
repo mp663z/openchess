@@ -55,6 +55,17 @@ PRODUCTION_LINES = (
 # sha256 of tests/test_t0268_corruption_red.py as merged (#250)
 RED_AS_MERGED_SHA256 = (
     "1d8025b933683c39a778dc9a20169b3e3fcd74763385f6a8cf8aa6208cd9bf90")
+
+# sha256 of the same oracle-binding reconstruction after the reviewed
+# test-infrastructure hygiene edit (PR #374): the red battery's
+# _substitution_mutants streams mutants instead of materializing the
+# full list; mutant order, labels, contents and counts are unchanged in
+# both digest modes (ordered label/content SHA-256 verified against the
+# pre-hygiene baseline), so the binding proof above carries over as-is.
+# RED_AS_MERGED_SHA256 stays as the historical record of the
+# pre-hygiene merged bytes.
+RED_AS_MERGED_AFTER_HYGIENE_SHA256 = (
+    "417cf85285bd05d2a7934bd50d94b09a4d5402f2fd2be99f070341cf520778c0")
 ALLOWED_IMPORTS = {"__future__", "copy", "hashlib", "re", "pathlib", "yaml",
                    "store", "tools.corruption_contract_lint"}
 
@@ -65,7 +76,7 @@ def test_r1_red_battery_switch_is_exactly_the_two_binding_lines():
     assert ORACLE_LINES not in source
     restored = source.replace(PRODUCTION_LINES, ORACLE_LINES)
     assert hashlib.sha256(restored.encode()).hexdigest() == \
-        RED_AS_MERGED_SHA256
+        RED_AS_MERGED_AFTER_HYGIENE_SHA256
     assert _red.CorruptionEngine is CorruptionEngine
     assert _red.CorruptionError is CorruptionError
 

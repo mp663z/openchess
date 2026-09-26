@@ -44,6 +44,17 @@ PRODUCTION_BINDING = ("from graph.conflict import ConflictDetector, "
 RED_AS_MERGED_SHA256 = (
     "b5ec0f6139b4cc2a71fdce58b4a3479bda0cd93128aa4273d04787ddc3118fcb")
 
+# sha256 of the same oracle-binding reconstruction after the reviewed
+# test-infrastructure hygiene edit (PR #374): the red battery's
+# _substitution_mutants streams mutants instead of materializing the
+# full list; mutant order, labels, contents and counts are unchanged in
+# both digest modes (ordered label/content SHA-256 verified against the
+# pre-hygiene baseline), so the binding proof above carries over as-is.
+# RED_AS_MERGED_SHA256 stays as the historical record of the
+# pre-hygiene merged bytes.
+RED_AS_MERGED_AFTER_HYGIENE_SHA256 = (
+    "bba4348b0a8ef81f898acf3ad9ab39e9e0ca8323ca76557a3b7ab7d77ffe9228")
+
 STARTPOS, AFTER_E4, KINGS, LEGAL_EP = (ref.STARTPOS, ref.AFTER_E4,
                                        ref.KINGS, ref.LEGAL_EP)
 K1, K2, K3 = ref.K1, ref.K2, ref.K3
@@ -81,7 +92,7 @@ def test_r1_red_switch_is_exactly_the_binding():
     assert text.count(PRODUCTION_BINDING) == 1
     assert ORACLE_BINDING not in text
     back = text.replace(PRODUCTION_BINDING, ORACLE_BINDING)
-    assert hashlib.sha256(back.encode()).hexdigest() == RED_AS_MERGED_SHA256
+    assert hashlib.sha256(back.encode()).hexdigest() == RED_AS_MERGED_AFTER_HYGIENE_SHA256
 
 
 # -- R2: parity with the contract reference ------------------------------------

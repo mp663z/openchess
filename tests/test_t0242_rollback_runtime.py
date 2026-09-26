@@ -45,6 +45,17 @@ PRODUCTION_LINES = (
 # source-mutant rebind)
 RED_AS_MERGED_SHA256 = (
     "f1e0b17dc4c5037f7bf3649b6ed933785b527f15a4e642e2b57ab349d3472321")
+
+# sha256 of the same oracle-binding reconstruction after the reviewed
+# test-infrastructure hygiene edit (PR #374): the red battery's
+# _substitution_mutants streams mutants instead of materializing the
+# full list; mutant order, labels, contents and counts are unchanged in
+# both digest modes (ordered label/content SHA-256 verified against the
+# pre-hygiene baseline), so the binding proof above carries over as-is.
+# RED_AS_MERGED_SHA256 stays as the historical record of the
+# pre-hygiene merged bytes.
+RED_AS_MERGED_AFTER_HYGIENE_SHA256 = (
+    "b7aedcc9d0382d0f5c6731d84eae3320b4c125b52da64e426e2453155f2fe749")
 ALLOWED_IMPORTS = {"__future__", "copy", "hashlib", "re", "pathlib", "yaml",
                    "store", "tools.rollback_contract_lint"}
 
@@ -55,7 +66,7 @@ def test_r1_red_battery_switch_is_exactly_the_two_binding_lines():
     assert ORACLE_LINES not in source
     restored = source.replace(PRODUCTION_LINES, ORACLE_LINES)
     assert hashlib.sha256(restored.encode()).hexdigest() == \
-        RED_AS_MERGED_SHA256
+        RED_AS_MERGED_AFTER_HYGIENE_SHA256
 
 
 def test_r2_production_imports_only_shipped_runtimes_and_links_wal():
