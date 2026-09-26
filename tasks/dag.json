@@ -9240,10 +9240,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "39026c25e7eca4b50b795b1d20eed23bdf7b7bb9",
+   "evidence_manifest": "evidence/T0436.md"
   },
   {
    "id": "T0437",
