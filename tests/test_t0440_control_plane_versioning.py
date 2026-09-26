@@ -79,3 +79,29 @@ def test_same_major_different_prefix_cannot_claim_minor():
     old, new = sample(), sample()
     new["contract"]["versioning"]["base_path"] = "/other/v1"
     assert compare(old, new, 0, 1) is False
+
+
+def test_deep_opaque_metadata_is_valid_but_breaking():
+    old, new = sample(), sample()
+    nested = "opaque"
+    for _ in range(65):
+        nested = [nested]
+    new["contract"]["privacy"]["logs"] = nested
+    # The strict source derivation accepts an opaque metadata list here;
+    # it is a changed non-operation declaration, not a minor addition.
+    assert compare(old, new, 0, 1) is False
+
+
+def test_extreme_nesting_and_metadata_cycle_remain_typed_refusals():
+    old, new = sample(), sample()
+    nested = []
+    for _ in range(1100):
+        nested = [nested]
+    new["contract"]["privacy"]["logs"] = nested
+    with pytest.raises(VersionError):
+        compare(old, new, 0, 1)
+    cycle = []
+    cycle.append(cycle)
+    new["contract"]["privacy"]["logs"] = cycle
+    with pytest.raises(VersionError):
+        compare(old, new, 0, 1)

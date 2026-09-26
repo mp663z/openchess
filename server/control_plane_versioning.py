@@ -18,14 +18,36 @@ ITEM_TYPES = {"string", "integer", "number", "boolean"}
 FIELD_KEYS = {"type", "required", "example", "items", "fields", "write_only"}
 OP_KEYS = {"method", "path", "auth", "mutating", "request", "response", "errors"}
 CODES = {
-    "auth_expired", "auth_invalid", "idempotency_conflict", "quota_exhausted",
-    "quota_reservation_expired", "entitlement_missing", "provider_key_invalid",
-    "provider_unavailable", "cost_cap_exceeded", "rate_limited",
-    "malformed_request", "not_found", "conflict", "internal",
+    "auth_expired",
+    "auth_invalid",
+    "idempotency_conflict",
+    "quota_exhausted",
+    "quota_reservation_expired",
+    "entitlement_missing",
+    "provider_key_invalid",
+    "provider_unavailable",
+    "cost_cap_exceeded",
+    "rate_limited",
+    "malformed_request",
+    "not_found",
+    "conflict",
+    "internal",
 }
 CHESS_TOKENS = {
-    "game", "games", "move", "moves", "fen", "pgn", "san", "uci",
-    "analysis", "note", "notes", "position", "board", "eval",
+    "game",
+    "games",
+    "move",
+    "moves",
+    "fen",
+    "pgn",
+    "san",
+    "uci",
+    "analysis",
+    "note",
+    "notes",
+    "position",
+    "board",
+    "eval",
 }
 MAX_EXAMPLE_INT = 2**53 - 1
 
@@ -58,7 +80,10 @@ def _safe_tree(root):
         if leaving:
             active.remove(id(node))
         elif type(node) is dict or type(node) is list:
-            _require(depth <= 64 and id(node) not in active)
+            # Source metadata is opaque to the strict T0419 schema checker: a
+            # 65-deep plain value is valid there. This separate safety cap
+            # only rejects pathological nesting, not normal metadata.
+            _require(depth <= 512 and id(node) not in active)
             active.add(id(node))
             if type(node) is dict:
                 _require(all(type(key) is str for key in dict.keys(node)))
@@ -218,7 +243,9 @@ def _additive_fields(before, after):
 def _same_major(old, new):
     old_areas, new_areas = old["areas"], new["areas"]
     additions = {
-        (area, op) for area, spec in new_areas.items() for op in spec["ops"]
+        (area, op)
+        for area, spec in new_areas.items()
+        for op in spec["ops"]
         if area not in old_areas or op not in old_areas[area]["ops"]
     }
     old_contract, new_contract = old["contract"], new["contract"]
@@ -229,23 +256,21 @@ def _same_major(old, new):
     ):
         prev, curr = (
             (old_transport["auth"], new_transport["auth"])
-            if key == "public_operations" else (old_transport, new_transport)
+            if key == "public_operations"
+            else (old_transport, new_transport)
         )
-        allowed = {
-            f"{area}.{op}" for area, op in additions if eligible(new_areas[area]["ops"][op])
-        }
+        allowed = {f"{area}.{op}" for area, op in additions if eligible(new_areas[area]["ops"][op])}
         if set(curr[key]) != set(prev[key]) | allowed:
             return False
+
     # Compare every non-allowlist declaration without mutating the caller.
     def strip_contract(cc):
         transport = cc["transport"]
         return {
             **cc,
             "transport": {
-                **{k: v for k, v in transport.items()
-                   if k not in ("read_only_operations", "auth")},
-                "auth": {k: v for k, v in transport["auth"].items()
-                         if k != "public_operations"},
+                **{k: v for k, v in transport.items() if k not in ("read_only_operations", "auth")},
+                "auth": {k: v for k, v in transport["auth"].items() if k != "public_operations"},
             },
         }
 
@@ -263,16 +288,17 @@ def _same_major(old, new):
                 op[key] != updated[key] for key in OP_KEYS - {"request", "response"}
             ):
                 return False
-            if any(not _additive_fields(op[side]["fields"], updated[side]["fields"])
-                   for side in ("request", "response")):
+            if any(
+                not _additive_fields(op[side]["fields"], updated[side]["fields"])
+                for side in ("request", "response")
+            ):
                 return False
     old_routes = {
-        (op["method"], op["path"])
-        for area in old_areas.values() for op in area["ops"].values()
+        (op["method"], op["path"]) for area in old_areas.values() for op in area["ops"].values()
     }
     return all(
-        (new_areas[area]["ops"][op]["method"], new_areas[area]["ops"][op]["path"])
-        not in old_routes for area, op in additions
+        (new_areas[area]["ops"][op]["method"], new_areas[area]["ops"][op]["path"]) not in old_routes
+        for area, op in additions
     )
 
 
