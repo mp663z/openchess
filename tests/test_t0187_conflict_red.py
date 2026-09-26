@@ -1631,10 +1631,9 @@ def _is_edge_erasure(section, original, mutant):
     return _signature(mutant) != _signature(original)
 
 
-def _substitution_mutants(edge_only=False):
+def _iter_substitution_mutants(edge_only=False):
     """(label, mutated cases). EDGE_ONLY drops the scenario-
     preserving perturbations, which only the digest can kill."""
-    out = []
     labels = [(s, r["name"]) for s in MANIFESTS for r in CASES[s]]
     # payload substitution: every ordered pair across all sections
     for sa, na in labels:
@@ -1647,7 +1646,7 @@ def _substitution_mutants(edge_only=False):
             i = [r["name"] for r in m[sa]].index(na)
             src = next(r for r in CASES[sb] if r["name"] == nb)
             m[sa][i] = dict(copy.deepcopy(src), name=na)
-            out.append((f"payload:{sa}:{na}<-{sb}:{nb}", m))
+            yield (f"payload:{sa}:{na}<-{sb}:{nb}", m)
     # name swaps within each section
     for section in MANIFESTS:
         rows = CASES[section]
@@ -1656,18 +1655,18 @@ def _substitution_mutants(edge_only=False):
                 m = copy.deepcopy(CASES)
                 m[section][i]["name"], m[section][j]["name"] = \
                     rows[j]["name"], rows[i]["name"]
-                out.append((f"name-swap:{section}:{i}:{j}", m))
+                yield (f"name-swap:{section}:{i}:{j}", m)
     # reversed rows, dropped row, duplicated row
     for section in MANIFESTS:
         m = copy.deepcopy(CASES)
         m[section].reverse()
-        out.append((f"reversed:{section}", m))
+        yield (f"reversed:{section}", m)
         m = copy.deepcopy(CASES)
         m[section].pop()
-        out.append((f"dropped:{section}", m))
+        yield (f"dropped:{section}", m)
         m = copy.deepcopy(CASES)
         m[section].append(copy.deepcopy(m[section][0]))
-        out.append((f"duplicated:{section}", m))
+        yield (f"duplicated:{section}", m)
     # per-row single-edge erasures
     for section in MANIFESTS:
         for i, row in enumerate(CASES[section]):
@@ -1677,9 +1676,9 @@ def _substitution_mutants(edge_only=False):
                     continue
                 m = copy.deepcopy(CASES)
                 m[section][i] = mutant
-                out.append((f"erased:{section}:{row['name']}:"
-                            f"{label}", m))
-    return out
+                yield (f"erased:{section}:{row['name']}:"
+                            f"{label}", m)
+    return
 
 
 def test_equivalent_payload_pairs_are_closed():
@@ -1722,13 +1721,14 @@ def test_closure_kills_substitution_mutants(with_digests,
             sys.modules[__name__], "_row_digest",
             lambda row: ROW_DIGESTS.get(
                 f"{_section_of(row)}:{row['name']}", ""))
-    mutants = _substitution_mutants(edge_only=not with_digests)
-    assert len(mutants) > 600
+    count = 0
     survivors = []
-    for label, m in mutants:
+    for label, m in _iter_substitution_mutants(edge_only=not with_digests):
+        count += 1
         try:
             _validate_closure(m)
         except (AssertionError, ValueError, KeyError, TypeError):
             continue
         survivors.append(label)
+    assert count > 600
     assert survivors == [], survivors

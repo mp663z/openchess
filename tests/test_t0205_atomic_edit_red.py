@@ -1240,8 +1240,7 @@ def _erasures(section, row):
     return [(label, m) for label, m in out if _canon(m) != _canon(row)]
 
 
-def _substitution_mutants():
-    out = []
+def _iter_substitution_mutants():
     labels = [(s, r["name"]) for s in MANIFESTS for r in CASES[s]]
     for sa, na in labels:
         for sb, nb in labels:
@@ -1251,7 +1250,7 @@ def _substitution_mutants():
             i = [r["name"] for r in m[sa]].index(na)
             src = next(r for r in CASES[sb] if r["name"] == nb)
             m[sa][i] = dict(copy.deepcopy(src), name=na)
-            out.append((f"payload:{sa}:{na}<-{sb}:{nb}", m))
+            yield (f"payload:{sa}:{na}<-{sb}:{nb}", m)
     for section in MANIFESTS:
         rows = CASES[section]
         for i in range(len(rows)):
@@ -1259,19 +1258,19 @@ def _substitution_mutants():
                 m = copy.deepcopy(CASES)
                 m[section][i]["name"], m[section][j]["name"] = \
                     rows[j]["name"], rows[i]["name"]
-                out.append((f"name-swap:{section}:{i}:{j}", m))
+                yield (f"name-swap:{section}:{i}:{j}", m)
         for label, fn in (("reversed", lambda r: r.reverse()),
                           ("dropped", lambda r: r.pop()),
                           ("duplicated", lambda r: r.append(copy.deepcopy(r[0])))):
             m = copy.deepcopy(CASES)
             fn(m[section])
-            out.append((f"{label}:{section}", m))
+            yield (f"{label}:{section}", m)
         for i, row in enumerate(CASES[section]):
             for label, mutant in _erasures(section, row):
                 m = copy.deepcopy(CASES)
                 m[section][i] = mutant
-                out.append((f"erased:{section}:{row['name']}:{label}", m))
-    return out
+                yield (f"erased:{section}:{row['name']}:{label}", m)
+    return
 
 
 def _check_pins(cases):
@@ -1389,16 +1388,17 @@ def test_closure_kills_substitution_mutants(with_digests, monkeypatch):
         monkeypatch.setattr(
             _fixture, "_row_digest",
             lambda row: ROW_DIGESTS.get(f"{_section_of(row)}:{row['name']}", ""))
-    mutants = _substitution_mutants()
-    assert len(mutants) > 1000
+    count = 0
     survivors = []
-    for label, m in mutants:
+    for label, m in _iter_substitution_mutants():
+        count += 1
         try:
             _closure(m)
         except (AssertionError, ValueError, KeyError, TypeError,
                 AttributeError, IndexError):
             continue
         survivors.append(label)
+    assert count > 1000
     assert survivors == [], survivors
 
 
