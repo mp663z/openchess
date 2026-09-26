@@ -26,8 +26,9 @@ from pathlib import Path
 import pytest
 
 from tests import test_t0437_control_plane_versioning_contract as _reference
+from server import control_plane_versioning as _production
 
-PRODUCTION_BINDING = (_reference.compare, _reference.VersionError)
+PRODUCTION_BINDING = (_production.compare, _production.VersionError)
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = json.loads((ROOT / "tests/fixtures/control-plane-versioning/cases.json").read_text())
