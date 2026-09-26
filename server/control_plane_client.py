@@ -20,6 +20,32 @@ Pinned behaviour, each from the contract:
 - every failure is a fresh ControlPlaneError whose code is in the
   closed enum; a contract-violating response is ``internal``.
 
+Opt-in local operation events (T0435): pass
+``event_ledger=control_plane_events.Ledger(...)`` to record exactly one
+closed metadata envelope per EXECUTED logical call, from
+data/contracts/events.yaml. The terminal outcome is decided inside
+``call()`` after request validation and token preflight: success once
+the validated response's local session effect is applied
+(``_after_success``), failure as the ControlPlaneError that would
+propagate - whether the server decided it or the contract assigned the
+decision to this consumer (the expired-reservation shortcut, whose
+outcomes the contract's recovery rule owns). Consumer-side preflight
+refusals - validation failure, no held token, a locally expired token -
+are not operation outcomes: they record nothing and the caller's error
+is unchanged (for identity.logout/identity.delete_account the contract
+declares no auth_expired outcome, so the preflight refusal must never
+become an event). Transport attempts are not operation events: retries
+of one logical call record one event, and the per-attempt ``log`` seam
+is untouched. Envelopes carry operation metadata only - independent
+opaque ids, no transport status, no request/response content. Publisher
+failure propagates as control_plane_events.Refusal
+(never swallowed, never converted to ControlPlaneError, so it can never
+be mistaken for an operation outcome or trigger operation retry logic)
+and never rolls back, hides or replays an already-applied effect; on
+the failure path the refusal replaces the operation error, because the
+audit failure dominates. No network sink: the ledger is a local SQLite
+outbox.
+
 Fail-closed readings where the contract is silent are listed in
 requirements/tasks/T0476.md.
 """
@@ -33,6 +59,8 @@ import time
 from pathlib import Path
 
 import yaml
+
+from server import control_plane_events as events
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "data" / "contracts" / "control-plane.yaml"
@@ -210,6 +238,9 @@ class ControlPlaneClient:
     untrusted boundary in this repo) means the control plane is
     unreachable. CLOCK returns epoch seconds; KEY_FACTORY returns a fresh
     Idempotency-Key; LOG receives ``(operation, status, code)`` only.
+    EVENT_LEDGER is an optional control_plane_events.Ledger (exact type)
+    that turns on one local terminal-outcome event per executed or
+    contract-recovery-decided call.
     """
 
     def __init__(
@@ -221,17 +252,21 @@ class ControlPlaneClient:
         max_attempts=3,
         refresh_skew_seconds=60,
         log=None,
+        event_ledger=None,
     ):
         if type(max_attempts) is not int or not 1 <= max_attempts <= 10:
             raise ValueError("max_attempts must be an int in 1..10")
         if type(refresh_skew_seconds) is not int or refresh_skew_seconds < 0:
             raise ValueError("refresh_skew_seconds must be a non-negative int")
+        if event_ledger is not None and type(event_ledger) is not events.Ledger:
+            raise ValueError("event_ledger must be a control_plane_events.Ledger")
         self._transport = transport
         self._clock = clock
         self._key_factory = key_factory or (lambda: secrets.token_hex(16))
         self._max_attempts = max_attempts
         self._skew = refresh_skew_seconds
         self._log = log
+        self._event_ledger = event_ledger
         self.token = None
         self.token_expires_at = None
         self.account_id = None
@@ -251,13 +286,31 @@ class ControlPlaneClient:
         if not _valid(body, op["request"], closed=True):
             _fail("malformed_request", "request does not match the contract")
         body = copy.deepcopy(body)
-        early = self._reservation_shortcut(name, body)
-        if early is not None:
-            return early
+        try:
+            early = self._reservation_shortcut(name, body)
+            if early is not None:
+                self._record_event(name, "succeeded", None)
+                return early
+        except ControlPlaneError as err:
+            self._record_event(name, "failed", err.code)
+            raise
         if op["auth"] == "required":
+            # Consumer-side preflight: a refusal here (no held token, a
+            # locally expired token) is not an operation outcome and
+            # records nothing, exactly like a validation refusal. This
+            # is also what keeps self-destructive operations lawful:
+            # the contract does not declare auth_expired for
+            # identity.logout/identity.delete_account, so the preflight
+            # refusal must never become an event or mask the caller's
+            # ControlPlaneError.
             self._ensure_token(name)
-        payload = self._send(name, op, body)
-        self._after_success(name, body, payload)
+        try:
+            payload = self._send(name, op, body)
+            self._after_success(name, body, payload)
+        except ControlPlaneError as err:
+            self._record_event(name, "failed", err.code)
+            raise
+        self._record_event(name, "succeeded", None)
         return copy.deepcopy(payload)
 
     def entitlements(self):
@@ -399,6 +452,17 @@ class ControlPlaneClient:
         if _contains(message, secrets_):
             message = "redacted"
         return code, message, retryable
+
+    def _record_event(self, name, outcome, code):
+        """Publish ONE terminal-outcome metadata event for this logical
+        call to the opt-in local outbox; no-op when no ledger is wired.
+        Runs only after the outcome is decided - never on validation
+        refusal, never per transport attempt. A publisher refusal
+        propagates typed and unconverted."""
+        ledger = self._event_ledger
+        if ledger is None:
+            return
+        ledger.publish([events.new_event(name, outcome, error_code=code)])
 
     def _emit(self, name, status, code):
         if self._log is not None:
