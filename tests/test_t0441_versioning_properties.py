@@ -59,18 +59,24 @@ def refused(old, new, older, newer):
     assert (old, new) == before
 
 
-def target_fields(doc, randomizer, side):
+def target_fields(doc, randomizer, side, nested):
     choices = [
         op[side]["fields"]
         for area in doc["areas"].values()
         for op in area["ops"].values()
         if op["method"] != "GET" or side == "response"
     ]
-    fields = randomizer.choice(choices)
-    objects = [spec["fields"] for spec in fields.values() if spec["type"] == "object"]
-    if objects and randomizer.randrange(2):
-        fields = randomizer.choice(objects)
-    return fields
+    if nested:
+        choices = [
+            spec["fields"]
+            for fields in choices
+            for spec in fields.values()
+            if spec["type"] == "object"
+        ]
+    else:
+        choices = [fields for fields in choices if fields is not None]
+    assert choices, "source must furnish this seeded coverage stratum"
+    return randomizer.choice(choices)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -78,7 +84,8 @@ def test_seeded_optional_additions_and_requiredness(seed):
     randomizer = random.Random(seed)
     old, new = source(), source()
     side = randomizer.choice(("request", "response"))
-    fields = target_fields(new, randomizer, side)
+    nested = seed % 4 == 0
+    fields = target_fields(new, randomizer, side, nested)
     name = f"extension_{seed}"
     fields[name] = {"type": randomizer.choice(("string", "boolean", "integer")), "required": False}
     minor = randomizer.choice((0, 1, 17, CEILING - 1))
@@ -217,6 +224,42 @@ def test_nan_identity_and_opaque_scalar_type():
     verdict(old, new, 0, 1, False)
 
 
+def _safe_snapshot(root):
+    """Identity-aware iterative snapshot, without subclass hooks or recursion.
+
+    Builtin unbound iterators read even hostile containers. Preserve key
+    identity as well as its safe content so a rename or replacement is seen.
+    """
+    seen = {}
+    parts = []
+    stack = [(root, 0)]
+    while stack:
+        node, depth = stack.pop()
+        if isinstance(node, (dict, list)):
+            if id(node) in seen:
+                parts.append(("alias", seen[id(node)], depth))
+                continue
+            seen[id(node)] = len(seen)
+            parts.append((type(node).__name__, id(node), depth))
+            if isinstance(node, dict):
+                keys = list(dict.keys(node))
+                for key in keys:
+                    content = str.__str__(key) if isinstance(key, str) else id(key)
+                    parts.append(("key", type(key).__name__, id(key), content, depth))
+                stack.extend((value, depth + 1) for value in dict.values(node))
+            else:
+                stack.extend((value, depth + 1) for value in list.__iter__(node))
+        elif isinstance(node, str):
+            parts.append((type(node).__name__, id(node), str.__str__(node), depth))
+        elif isinstance(node, int):
+            parts.append((type(node).__name__, id(node), int.__int__(node), depth))
+        elif type(node) in (float, bool, type(None)):
+            parts.append((type(node).__name__, id(node), node, depth))
+        else:
+            parts.append((type(node).__name__, id(node), depth))
+    return tuple(parts)
+
+
 class _Alarm:
     calls = []
     armed = False
@@ -285,6 +328,7 @@ def test_hostile_subclasses_refuse_before_user_operators(side, kind):
         doc["contract"]["privacy"]["logs"] = _HostileInt(1)
     else:
         older, newer = (_HostileInt(0), 1) if side == "old" else (0, _HostileInt(1))
+    before = (_safe_snapshot(old), _safe_snapshot(new))
     _Alarm.calls = []
     _Alarm.armed = True
     try:
@@ -295,6 +339,7 @@ def test_hostile_subclasses_refuse_before_user_operators(side, kind):
             assert caught.value.code == "malformed_request"
             assert caught.value.__context__ is None
         assert _Alarm.calls == []
+        assert (_safe_snapshot(old), _safe_snapshot(new)) == before
     finally:
         _Alarm.armed = False
 
@@ -348,3 +393,21 @@ def test_property_suite_catches_own_behavioral_fault_variants(monkeypatch):
             with pytest.raises(BaseException) as caught:
                 probe()
             assert type(caught.value) in (AssertionError, pytest.fail.Exception)
+
+
+def test_hostile_refusal_impurity_is_killed_by_own_snapshot(monkeypatch):
+    import tests.test_t0441_versioning_properties as module
+
+    real_compare = compare
+
+    def impure_refusal(old, new, older, newer):
+        old["contract"]["privacy"]["rule"] = "mutated-on-refusal"
+        try:
+            return real_compare(old, new, older, newer)
+        except VersionError:
+            raise VersionError() from None
+
+    with monkeypatch.context() as patch:
+        patch.setattr(module, "compare", impure_refusal)
+        with pytest.raises(AssertionError):
+            test_hostile_subclasses_refuse_before_user_operators("old", "list")
