@@ -9328,10 +9328,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "50cf1fef6697df5a67a072c79a53fe8d28f46296",
+   "evidence_manifest": "evidence/T0440.md"
   },
   {
    "id": "T0441",
