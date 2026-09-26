@@ -79,10 +79,12 @@ pytest, PyYAML, ruff, zstandard):
   ("node down: Not properly terminated") in the 2-CPU/2GB sandbox; the
   same test passes serially (2 passed in 5.80s) and its whole file
   passes under the same xdist invocation in isolation (78 passed),
-  so it is a container resource artifact of the full parallel run,
-  not a chain or main defect. A purely serial full-suite run was not
-  completed in the container (observed throughput projects multiple
-  hours; the CI gate's canonical invocation is the xdist one above).
+  which is consistent with an environment/resource issue but does not
+  prove its cause. The full local suite is non-green; the isolated
+  reruns do not establish the full gate. A purely serial full-suite run
+  was not completed in the container (observed throughput projects
+  multiple hours; the CI gate's canonical invocation is the xdist one
+  above). Exact-head CI remains the full-gate decider.
 
 No independent-verifier verdict exists at package time. The two
 independent verifiers' own rerun environments and results will be
