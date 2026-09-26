@@ -85,9 +85,9 @@ def _apply(doc, mutations, where):
         if type(mutation) is not dict or len(mutation) != 1:
             raise FixtureError(f"{where}: malformed mutation {mutation}")
         (action,) = mutation
-        if action not in ACTIONS or set(mutation[action]) != ACTIONS[action]:
-            raise FixtureError(f"{where}: malformed mutation {mutation}")
         spec = mutation[action]
+        if action not in ACTIONS or type(spec) is not dict or set(spec) != ACTIONS[action]:
+            raise FixtureError(f"{where}: malformed mutation {mutation}")
         path = spec["path"]
         if type(path) is not list or not path or not all(type(key) is str for key in path):
             raise FixtureError(f"{where}: malformed path {path}")
@@ -146,6 +146,7 @@ def _check_mutation_lists(row, where):
             assert type(mutation) is dict and len(mutation) == 1, where
             (action,) = mutation
             assert action in ACTIONS, where
+            assert type(mutation[action]) is dict, where
             assert set(mutation[action]) == ACTIONS[action], where
             path = mutation[action]["path"]
             assert type(path) is list and path, where
@@ -281,6 +282,23 @@ def test_structure_mutations_fail():
     mutant["base_snapshot"]["areas"]["identity"]["ops"]["register"]["path"] = "/identity/join"
     with pytest.raises(AssertionError):
         _check(mutant)
+
+
+def test_malformed_mutation_specs_refuse():
+    for descriptor in (
+        [{"set": None}],
+        [{"del": None}],
+        [{"set": []}],
+        [{"set": "x"}],
+        [{"del": 1}],
+        [{"append": [{"path": ["areas"], "value": 1}]}],
+    ):
+        with pytest.raises(FixtureError):
+            _materialize(descriptor, "probe")
+        row = copy.deepcopy(CASES["happy"][0])
+        row["new"] = copy.deepcopy(descriptor)
+        with pytest.raises(AssertionError):
+            _check_row(row, "happy", "probe")
 
 
 def test_unresolvable_mutation_paths_refuse():
