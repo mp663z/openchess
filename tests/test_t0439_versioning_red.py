@@ -132,6 +132,36 @@ def _snapshot(value, seen=None):
     return (type(value).__name__, id(value))
 
 
+def _iter_snapshot(value):
+    """Cycle-safe, depth-unbounded input snapshot for hostile probes:
+    iterative and identity-tracked, so the purity check itself never
+    recurses and cyclic containers terminate. Unbound built-in calls only."""
+    seen = {}
+    parts = []
+    stack = [(value, 0)]
+    while stack:
+        node, depth = stack.pop()
+        if isinstance(node, (dict, list)):
+            if id(node) in seen:
+                parts.append(("alias", seen[id(node)], depth))
+                continue
+            seen[id(node)] = len(seen)
+            parts.append((type(node).__name__, depth))
+            if isinstance(node, dict):
+                for key in dict.keys(node):
+                    parts.append(("key", type(key).__name__, depth))
+                stack.extend((item, depth + 1) for item in dict.values(node))
+            else:
+                stack.extend((item, depth + 1) for item in list.__iter__(node))
+        elif isinstance(node, str):
+            parts.append((type(node).__name__, str.__str__(node), depth))
+        elif type(node) in (int, float, bool, type(None)):
+            parts.append((type(node).__name__, node, depth))
+        else:
+            parts.append((type(node).__name__, id(node), depth))
+    return tuple(parts)
+
+
 def _typed_refusal(binding, call, label):
     _, error_type = binding
     with pytest.raises(error_type) as caught:
@@ -291,6 +321,28 @@ def _int_key(mapping, key):
     return out
 
 
+def _cyclic_list(doc):
+    cycle = []
+    cycle.append(cycle)
+    return _replace(doc, ["contract", "privacy"], {"logs": [cycle]})
+
+
+def _cyclic_dict(doc):
+    cycle = {}
+    cycle["self"] = cycle
+    return _replace(doc, ["contract", "privacy"], {"logs": [cycle]})
+
+
+def _deep_list(doc):
+    deep = []
+    cursor = deep
+    for _ in range(1100):
+        inner = []
+        cursor.append(inner)
+        cursor = inner
+    return _replace(doc, ["contract", "privacy"], {"logs": [deep]})
+
+
 def _hostile_probes():
     """Python-only hostile shapes at the boundary; the closed JSON corpus
     cannot represent subclasses or non-string keys."""
@@ -403,6 +455,12 @@ def _hostile_probes():
             ),
         ),
     )
+    probe("cyclic-list-old", lambda old, new: (_cyclic_list(old), new))
+    probe("cyclic-list-new", lambda old, new: (old, _cyclic_list(new)))
+    probe("cyclic-dict-old", lambda old, new: (_cyclic_dict(old), new))
+    probe("cyclic-dict-new", lambda old, new: (old, _cyclic_dict(new)))
+    probe("deep-list-old", lambda old, new: (_deep_list(old), new))
+    probe("deep-list-new", lambda old, new: (old, _deep_list(new)))
     probe("intsub-minor", lambda old, new: (old, new), minors=(IntSub(0), 1))
     probe("intsub-minor-new", lambda old, new: (old, new), minors=(0, IntSub(1)))
     probe("evil-str-minor", lambda old, new: (old, new), minors=(EvilStr("0"), 1))
@@ -415,7 +473,7 @@ def _hostile(binding):
     for label, mutate, minors in _hostile_probes():
         old, new = _snapshots(CASES["boundary"][0])
         old, new = mutate(old, new)
-        before = (_snapshot(old), _snapshot(new))
+        before = (_iter_snapshot(old), _iter_snapshot(new))
         _Armed.calls = []
         _Armed.active = True
         try:
@@ -424,7 +482,7 @@ def _hostile(binding):
         finally:
             _Armed.active = False
         assert _Armed.calls == [], f"{label}: {_Armed.calls}"
-        assert (_snapshot(old), _snapshot(new)) == before, label
+        assert (_iter_snapshot(old), _iter_snapshot(new)) == before, label
 
 
 # -- acceptance on the current binding --------------------------------------------

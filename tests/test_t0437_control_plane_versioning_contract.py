@@ -42,18 +42,32 @@ def _base(doc):
 
 
 def _exact_builtins(value):
-    """Deep exact-type sweep: only built-in container and scalar types, so a
-    decoded-but-hostile subclass anywhere in the snapshot refuses here
-    instead of reaching a comparison that would invoke user-defined code.
-    Unbound built-in calls only; this walk never touches user operators."""
-    if type(value) is dict:
-        for key in dict.keys(value):
-            if type(key) is not str:
+    """Iterative exact-type sweep with identity tracking and a depth bound:
+    only exact built-in container and scalar types, so a decoded-but-hostile
+    subclass, a cyclic or aliased container, or an absurdly deep snapshot
+    refuses here instead of reaching a comparison that would invoke
+    user-defined code or exhaust the interpreter recursion limit. Unbound
+    built-in calls only; this walk never touches user operators."""
+    seen = set()
+    stack = [(value, 0)]
+    while stack:
+        node, depth = stack.pop()
+        if type(node) is dict:
+            if depth > 64 or id(node) in seen:
                 return False
-        return all(_exact_builtins(item) for item in dict.values(value))
-    if type(value) is list:
-        return all(_exact_builtins(item) for item in list.__iter__(value))
-    return type(value) in (str, int, float, bool, type(None))
+            seen.add(id(node))
+            for key in dict.keys(node):
+                if type(key) is not str:
+                    return False
+            stack.extend((item, depth + 1) for item in dict.values(node))
+        elif type(node) is list:
+            if depth > 64 or id(node) in seen:
+                return False
+            seen.add(id(node))
+            stack.extend((item, depth + 1) for item in list.__iter__(node))
+        elif type(node) not in (str, int, float, bool, type(None)):
+            return False
+    return True
 
 
 def _source(doc):
@@ -367,6 +381,65 @@ def test_source_snapshot_with_hostile_subclass_refuses_without_user_code():
     assert error.value.__cause__ is None and error.value.__context__ is None
     assert calls == []
     assert (old, new) == before
+
+
+def _cyclic_list_doc():
+    old, new = fresh()
+    cycle = []
+    cycle.append(cycle)
+    new["contract"]["privacy"] = {"logs": [cycle]}
+    return old, new
+
+
+def _cyclic_dict_doc():
+    old, new = fresh()
+    cycle = {}
+    cycle["self"] = cycle
+    new["contract"]["privacy"] = {"logs": [cycle]}
+    return old, new
+
+
+def _deep_list_doc():
+    old, new = fresh()
+    deep = []
+    cursor = deep
+    for _ in range(1100):
+        inner = []
+        cursor.append(inner)
+        cursor = inner
+    new["contract"]["privacy"] = {"logs": [deep]}
+    return old, new
+
+
+def test_source_snapshot_cyclic_or_deep_containers_refuse_typed_fresh_and_pure():
+    for make in (_cyclic_list_doc, _cyclic_dict_doc, _deep_list_doc):
+        for hostile_side in ("new", "old"):
+            old, new = make()
+            if hostile_side == "old":
+                old, new = new, old
+            errors = []
+            for _ in range(2):
+                with pytest.raises(VersionError) as caught:
+                    compare(old, new, 0, 1)
+                errors.append(caught.value)
+            assert errors[0] is not errors[1]
+            for error in errors:
+                assert error.failure_class == "malformed_version_request"
+                assert error.code == "malformed_request"
+                assert error.retryable is False
+                assert error.__cause__ is None and error.__context__ is None
+            hostile = new if hostile_side == "new" else old
+            logs = hostile["contract"]["privacy"]["logs"][0]
+            if make is _deep_list_doc:
+                cursor, count = logs, 0
+                while cursor:
+                    count += 1
+                    cursor = cursor[0]
+                assert count == 1100
+            elif make is _cyclic_list_doc:
+                assert logs[0] is logs
+            else:
+                assert logs["self"] is logs
 
 
 def test_source_validator_is_t0419_strict_on_new_optional_nested_bad_type():
