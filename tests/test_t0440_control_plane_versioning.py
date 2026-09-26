@@ -73,3 +73,9 @@ def test_both_sources_validated_before_major_success():
         assert caught.value.__context__ is None
     assert errors[0] is not errors[1]
     assert (old, new) == original
+
+
+def test_same_major_different_prefix_cannot_claim_minor():
+    old, new = sample(), sample()
+    new["contract"]["versioning"]["base_path"] = "/other/v1"
+    assert compare(old, new, 0, 1) is False

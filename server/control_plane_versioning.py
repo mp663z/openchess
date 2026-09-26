@@ -285,5 +285,7 @@ def compare(old, new, old_minor, new_minor):
     _require(new_major >= old_major)
     if new_major == old_major:
         _require(new_minor >= old_minor)
+        if old["contract"]["versioning"]["base_path"] != new["contract"]["versioning"]["base_path"]:
+            return False
         return _same_major(old, new)
     return True
