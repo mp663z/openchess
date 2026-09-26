@@ -488,7 +488,6 @@ def _hostile(binding):
         assert (_iter_snapshot(old), _iter_snapshot(new)) == before, label
 
 
-
 def test_deep_opaque_metadata_is_valid_incompatible_on_production():
     """T0419 validates opaque metadata without a depth bound. Depth alone
     is not hostile; this corrects the former 1100-deep hostile probe.
