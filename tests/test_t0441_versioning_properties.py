@@ -215,3 +215,136 @@ def test_nan_identity_and_opaque_scalar_type():
     old["contract"]["privacy"]["logs"] = 1
     new["contract"]["privacy"]["logs"] = 1.0
     verdict(old, new, 0, 1, False)
+
+
+class _Alarm:
+    calls = []
+    armed = False
+
+    @classmethod
+    def trip(cls, name):
+        cls.calls.append(name)
+        raise AssertionError("user operator called")
+
+
+class _HostileStr(str):
+    def __eq__(self, other):
+        _Alarm.trip("str.eq")
+
+    def __hash__(self):
+        if _Alarm.armed:
+            _Alarm.trip("str.hash")
+        return str.__hash__(self)
+
+    def __str__(self):
+        _Alarm.trip("str.str")
+
+
+class _HostileDict(dict):
+    def __iter__(self):
+        _Alarm.trip("dict.iter")
+
+    def __getitem__(self, item):
+        _Alarm.trip("dict.get")
+
+
+class _HostileList(list):
+    def __iter__(self):
+        _Alarm.trip("list.iter")
+
+    def __eq__(self, other):
+        _Alarm.trip("list.eq")
+
+
+class _HostileInt(int):
+    def __le__(self, other):
+        _Alarm.trip("int.le")
+
+    def __eq__(self, other):
+        _Alarm.trip("int.eq")
+
+
+@pytest.mark.parametrize("side", ["old", "new"])
+@pytest.mark.parametrize("kind", ["dict", "list", "str", "key", "int", "minor"])
+def test_hostile_subclasses_refuse_before_user_operators(side, kind):
+    old, new = source(), source()
+    doc = old if side == "old" else new
+    older, newer = 0, 1
+    if kind == "dict":
+        doc["contract"]["privacy"]["logs"] = _HostileDict({"plain": 1})
+    elif kind == "list":
+        doc["contract"]["privacy"]["logs"] = _HostileList([1])
+    elif kind == "str":
+        doc["contract"]["privacy"]["logs"] = _HostileStr("opaque")
+    elif kind == "key":
+        hostile_key = _HostileStr("x")
+        mapping = {}
+        dict.__setitem__(mapping, hostile_key, 1)
+        doc["contract"]["privacy"]["logs"] = mapping
+    elif kind == "int":
+        doc["contract"]["privacy"]["logs"] = _HostileInt(1)
+    else:
+        older, newer = (_HostileInt(0), 1) if side == "old" else (0, _HostileInt(1))
+    _Alarm.calls = []
+    _Alarm.armed = True
+    try:
+        for _ in range(2):
+            with pytest.raises(VersionError) as caught:
+                compare(old, new, older, newer)
+            assert caught.value.failure_class == "malformed_version_request"
+            assert caught.value.code == "malformed_request"
+            assert caught.value.__context__ is None
+        assert _Alarm.calls == []
+    finally:
+        _Alarm.armed = False
+
+
+def test_valid_request_survives_malformed_predecessors_without_residue():
+    valid_old, valid_new = source(), source()
+    valid_new["areas"]["identity"]["ops"]["register"]["response"]["fields"]["new_opt"] = {
+        "type": "boolean",
+        "required": False,
+    }
+    for bad_minor in (-1, True, CEILING + 1):
+        refused(valid_old, valid_new, bad_minor, 1)
+        verdict(valid_old, valid_new, 0, 1, True)
+
+
+def test_property_suite_catches_own_behavioral_fault_variants(monkeypatch):
+    """These are local perturbations of the shipped production seam, not
+    T0439 mutants or source-text substitutions. A kill is an executed
+    assertion from this suite turning red against the faulty binding.
+    """
+    import tests.test_t0441_versioning_properties as module
+
+    real_compare = compare
+    old, new = source(), source()
+    fields = new["areas"]["identity"]["ops"]["register"]["response"]["fields"]
+    fields["new_opt"] = {"type": "boolean", "required": False}
+
+    def always_false(*_args):
+        return False
+
+    def always_true(*_args):
+        return True
+
+    def impure(prior, current, older, newer):
+        result = real_compare(prior, current, older, newer)
+        current["contract"]["privacy"]["logs"] = "tampered"
+        return result
+
+    def skip_minor_validation(prior, current, _older, _newer):
+        return real_compare(prior, current, 0, 1)
+
+    variants = (
+        (always_false, lambda: verdict(old, new, 0, 1, True)),
+        (always_true, lambda: verdict(new, old, 0, 1, False)),
+        (impure, lambda: verdict(old, new, 0, 1, True)),
+        (skip_minor_validation, lambda: refused(old, new, -1, 1)),
+    )
+    for faulty, probe in variants:
+        with monkeypatch.context() as patch:
+            patch.setattr(module, "compare", faulty)
+            with pytest.raises(BaseException) as caught:
+                probe()
+            assert type(caught.value) in (AssertionError, pytest.fail.Exception)
