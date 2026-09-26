@@ -41,9 +41,26 @@ def _base(doc):
     return int(match.group(1))
 
 
+def _exact_builtins(value):
+    """Deep exact-type sweep: only built-in container and scalar types, so a
+    decoded-but-hostile subclass anywhere in the snapshot refuses here
+    instead of reaching a comparison that would invoke user-defined code.
+    Unbound built-in calls only; this walk never touches user operators."""
+    if type(value) is dict:
+        for key in dict.keys(value):
+            if type(key) is not str:
+                return False
+        return all(_exact_builtins(item) for item in dict.values(value))
+    if type(value) is list:
+        return all(_exact_builtins(item) for item in list.__iter__(value))
+    return type(value) in (str, int, float, bool, type(None))
+
+
 def _source(doc):
     if type(doc) is not dict or type(doc.get("schema_version")) is not int or doc["schema_version"] != 2:
         raise VersionError("source")
+    if not _exact_builtins(doc):
+        raise VersionError("source hostile")
     failed = False
     try:
         strict_source_derivation(doc)
@@ -326,6 +343,30 @@ def test_determinism_and_fresh_errors():
             compare(old, new, True, 0)
         errors.append(error.value)
     assert errors[0] is not errors[1]
+
+
+def test_source_snapshot_with_hostile_subclass_refuses_without_user_code():
+    calls = []
+
+    class EvilStr(str):
+        def __eq__(self, other):
+            calls.append("eq")
+            return str.__eq__(self, other)
+
+        def __hash__(self):
+            calls.append("hash")
+            return str.__hash__(self)
+
+    old, new = fresh()
+    new["contract"]["versioning"]["rule"] = EvilStr(new["contract"]["versioning"]["rule"])
+    before = copy.deepcopy((old, new))
+    with pytest.raises(VersionError) as error:
+        compare(old, new, 0, 1)
+    assert error.value.failure_class == "malformed_version_request"
+    assert error.value.code == "malformed_request"
+    assert error.value.__cause__ is None and error.value.__context__ is None
+    assert calls == []
+    assert (old, new) == before
 
 
 def test_source_validator_is_t0419_strict_on_new_optional_nested_bad_type():
