@@ -464,8 +464,6 @@ def _hostile_probes():
     probe("cyclic-list-new", lambda old, new: (old, _cyclic_list(new)))
     probe("cyclic-dict-old", lambda old, new: (_cyclic_dict(old), new))
     probe("cyclic-dict-new", lambda old, new: (old, _cyclic_dict(new)))
-    probe("deep-list-old", lambda old, new: (_deep_list(old), new))
-    probe("deep-list-new", lambda old, new: (old, _deep_list(new)))
     probe("intsub-minor", lambda old, new: (old, new), minors=(IntSub(0), 1))
     probe("intsub-minor-new", lambda old, new: (old, new), minors=(0, IntSub(1)))
     probe("evil-str-minor", lambda old, new: (old, new), minors=(EvilStr("0"), 1))
@@ -489,6 +487,23 @@ def _hostile(binding):
         assert _Armed.calls == [], f"{label}: {_Armed.calls}"
         assert (_iter_snapshot(old), _iter_snapshot(new)) == before, label
 
+
+
+def test_deep_opaque_metadata_is_valid_incompatible_on_production():
+    """T0419 validates opaque metadata without a depth bound. Depth alone
+    is not hostile; this corrects the former 1100-deep hostile probe.
+    Cycles and subclasses remain hostile at every depth.
+    """
+    compare, _ = PRODUCTION_BINDING
+    for depth in (600, 1100, 1400):
+        old, new = _snapshots(CASES["boundary"][0])
+        deep = "opaque"
+        for _ in range(depth):
+            deep = [deep]
+        new["contract"]["privacy"]["logs"] = deep
+        before = (_iter_snapshot(old), _iter_snapshot(new))
+        assert compare(old, new, 0, 1) is False
+        assert (_iter_snapshot(old), _iter_snapshot(new)) == before
 
 def test_iter_snapshot_records_string_key_content():
     """The hostile purity oracle must see a key rename: key content, not
