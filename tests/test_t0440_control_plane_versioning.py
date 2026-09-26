@@ -1,4 +1,5 @@
 """Production-only metamorphic checks independent of the closed fixture oracle."""
+
 from __future__ import annotations
 
 import copy
@@ -30,8 +31,12 @@ def test_new_area_and_new_operation_with_both_allowlist_classes():
     new["areas"]["reports"] = {
         "ops": {
             "get": {
-                "method": "GET", "path": "/reports", "auth": "public", "mutating": False,
-                "request": {"fields": {}}, "response": {"fields": {}},
+                "method": "GET",
+                "path": "/reports",
+                "auth": "public",
+                "mutating": False,
+                "request": {"fields": {}},
+                "response": {"fields": {}},
                 "errors": ["internal"],
             }
         }
@@ -50,8 +55,10 @@ def test_nested_optional_then_required_is_breaking(side):
     old, new = sample(), sample()
     object_fields = next(
         spec["fields"]
-        for area in new["areas"].values() for op in area["ops"].values()
-        for spec in op[side]["fields"].values() if spec["type"] == "object"
+        for area in new["areas"].values()
+        for op in area["ops"].values()
+        for spec in op[side]["fields"].values()
+        if spec["type"] == "object"
     )
     name = "extra_flag"
     object_fields[name] = {"type": "boolean", "required": False}
@@ -104,3 +111,23 @@ def test_deep_metadata_valid_and_cycle_remains_typed_refusal():
     new["contract"]["privacy"]["logs"] = cycle
     with pytest.raises(VersionError):
         compare(old, new, 0, 1)
+
+
+def test_opaque_nan_at_same_position_is_unchanged():
+    source = sample()
+    source["contract"]["privacy"]["logs"] = float("nan")
+    assert compare(source, source, 0, 0) is True
+    assert compare(source, copy.deepcopy(source), 0, 0) is True
+    changed = copy.deepcopy(source)
+    changed["contract"]["privacy"]["logs"] = 1.0
+    assert compare(source, changed, 0, 1) is False
+
+
+@pytest.mark.parametrize("before,after", [(1, 1.0), (True, 1)])
+def test_opaque_scalar_types_are_declarations(before, after):
+    old = sample()
+    old["contract"]["privacy"]["logs"] = before
+    new = copy.deepcopy(old)
+    new["contract"]["privacy"]["logs"] = after
+    assert compare(old, old, 0, 0) is True
+    assert compare(old, new, 0, 1) is False

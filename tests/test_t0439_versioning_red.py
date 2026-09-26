@@ -505,6 +505,7 @@ def test_deep_opaque_metadata_is_valid_incompatible_on_production():
         assert compare(old, new, 0, 1) is False
         assert (_iter_snapshot(old), _iter_snapshot(new)) == before
 
+
 def test_iter_snapshot_records_string_key_content():
     """The hostile purity oracle must see a key rename: key content, not
     just key type, is part of the recorded shape, nested included."""

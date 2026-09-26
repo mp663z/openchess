@@ -114,6 +114,8 @@ def _equal(left, right):
             if len(a) != len(b):
                 return False
             pairs.extend(zip(list.__iter__(a), list.__iter__(b), strict=True))
+        elif type(a) is float and math.isnan(a) and math.isnan(b):
+            continue  # opaque nonfinite metadata is valid under T0419
         elif a != b:
             return False
     return True
