@@ -9372,10 +9372,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "827f6890102a730611bd5c028bc5a2d55fbacab8",
+   "evidence_manifest": "evidence/T0442.md"
   },
   {
    "id": "T0443",
