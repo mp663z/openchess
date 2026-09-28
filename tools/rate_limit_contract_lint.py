@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 
 from tools.contract_lint_closure import close_envelope  # noqa: E402
 from tools.variant_contract_lint import ContractError  # noqa: E402
+
 CONTRACT = ROOT / "data/contracts/rate_limit.yaml"
 SOURCE = ROOT / "data/contracts/control-plane.yaml"
 SECTIONS = {
