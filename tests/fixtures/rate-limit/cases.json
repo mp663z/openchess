@@ -1,0 +1,5257 @@
+{
+ "boundary": [
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 100,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 1
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 1
+     }
+    ]
+   },
+   "name": "admit-at-exact-window-start",
+   "why": "at the exact new window start the old count does not carry: full buckets in window 0 admit again at now=window_ms (contract buckets.boundary)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 1,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 1,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-capacity-one-first-attempt",
+   "why": "capacity 1 is the minimum capacity policy and admits the first attempt"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 2,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     },
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.register",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     },
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.register",
+      "scope": "account",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-charges-exactly-the-two-scope-buckets",
+   "why": "admission increments the account and source buckets by one each and nothing else in the store"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 2,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-last-account-slot",
+   "why": "count one below capacity admits and lands exactly at capacity (contract buckets.boundary: count less than capacity admits)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 9007199254740991,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 90071992547409
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 90071992547409
+     }
+    ]
+   },
+   "name": "admit-now-max-clock",
+   "why": "now at the 2**53-1 ceiling admits into the floored window"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 250,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 2
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 2
+     }
+    ]
+   },
+   "name": "admit-old-window-full-count-dropped",
+   "why": "full buckets from an old window do not carry into a later window"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 42,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 2,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-same-clock-mid-window",
+   "why": "a repeated attempt at the same injected clock stays in the same window and consumes another slot"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "deny",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "deny-account-at-capacity",
+   "why": "count equal to capacity denies the next attempt and commits neither counter (contract buckets.boundary, buckets.rejection)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:other-source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "deny",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ]
+   },
+   "name": "deny-account-not-evaded-by-source-rotation",
+   "why": "rotating the source cannot evade an account limit; no new source record is created by the denied attempt"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 1,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 1,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "deny",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ]
+   },
+   "name": "deny-capacity-one-second-attempt",
+   "why": "capacity 1 denies the second attempt in the same window"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 99,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "deny",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "deny-one-tick-before-window-start",
+   "why": "one tick before the window rolls the old count still gates"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 9,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 1,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "deny",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "deny-second-bucket-leaves-first-uncharged",
+   "why": "when the source bucket denies, the account bucket that had room is not charged: both counters commit as one transaction or not at all (contract buckets.atomic)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 9,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 1,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "deny",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "deny-source-at-capacity",
+   "why": "the source bucket denies independently of account headroom (contract buckets.independence)"
+  },
+  {
+   "call": {
+    "account": "opaque:other-account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 9,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 1,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "deny",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "deny-source-not-evaded-by-account-rotation",
+   "why": "rotating the account cannot evade a source limit; no new account record is created by the denied attempt"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "replay",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "replay-at-full-bucket",
+   "why": "a cached replay is not gated by bucket state: full buckets replay with no charge (contract results.replay)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 7,
+      "opaque": "opaque:jobs",
+      "operation": "identity.login",
+      "scope": "jobs",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 7,
+      "opaque": "opaque:jobs",
+      "operation": "identity.login",
+      "scope": "jobs",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "state-unknown-scope-record-preserved",
+   "why": "the store snapshot is opaque beyond the two declared scopes: an unknown-scope record is carried unchanged (the synthetic model treats stored records as authenticated)"
+  }
+ ],
+ "contract": "data/contracts/rate_limit.yaml",
+ "contract_schema_version": 1,
+ "happy": [
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 9007199254740991,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 9007199254740991,
+      "window_ms": 86400000
+     },
+     "source": {
+      "capacity": 9007199254740991,
+      "window_ms": 86400000
+     },
+     "version": 7
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 104249991
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 104249991
+     }
+    ]
+   },
+   "name": "admit-capacity-and-clock-max",
+   "why": "capacity and now at the 2**53-1 ceiling admit; the window is the floor of now / window_ms (contract buckets.algorithm)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-first-empty-login",
+   "why": "first attempt on empty buckets admits and charges both scopes once (contract buckets.atomic, results.admit)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.register",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.register",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.register",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-first-empty-register",
+   "why": "register has its own operation-scoped buckets (contract buckets account_key/source_key include the operation)"
+  },
+  {
+   "call": {
+    "account": "opaque:other-account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:other-account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-other-account-own-bucket",
+   "why": "a different canonical account has its own account bucket even when another account is at capacity"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.register",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.register",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.register",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-other-operation-own-buckets",
+   "why": "login buckets at capacity do not gate register: bucket keys are scoped per operation (contract buckets.independence)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:other-source",
+    "state": [
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 3,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:other-source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-other-source-own-bucket",
+   "why": "a different canonical source has its own source bucket even when another source is at capacity"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 9007199254740991,
+      "window_ms": 86400000
+     },
+     "source": {
+      "capacity": 9007199254740991,
+      "window_ms": 86400000
+     },
+     "version": 7
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-policy-version-high",
+   "why": "any integer policy version >= 1 is accepted (contract request.policy is injected and versioned)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.register",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.register",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-preserves-unrelated-records",
+   "why": "admission touches only its two scope buckets; unrelated stored records pass through bit-identical"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 2,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "admit-second-slot-both-buckets",
+   "why": "a second attempt below capacity increments each bucket by exactly one"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 5,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 3,
+      "window_ms": 1
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 1
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "admit",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 5
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 5
+     }
+    ]
+   },
+   "name": "admit-window-one-ms",
+   "why": "a 1ms window is the minimum window policy; now=5 lands in window 5"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "replay",
+    "state": []
+   },
+   "name": "replay-cached-empty-state",
+   "why": "the synthetic replay decision does not consult bucket state at all: a cached replay on an empty store replays and charges nothing"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect": {
+    "outcome": "replay",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     },
+     {
+      "count": 1,
+      "opaque": "opaque:source",
+      "operation": "identity.login",
+      "scope": "source",
+      "window": 0
+     }
+    ]
+   },
+   "name": "replay-cached-identical",
+   "why": "a byte-identical cached idempotent outcome replays with no counter change (contract results.replay)"
+  }
+ ],
+ "malformed": [
+  {
+   "call": {
+    "account": "account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "account-missing-opaque-prefix",
+   "why": "account keys carry the opaque: scheme of the synthetic stand-in"
+  },
+  {
+   "call": {
+    "account": 1,
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "account-nonstring",
+   "why": "account must be a string"
+  },
+  {
+   "call": {
+    "account": "ada@example.test",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "account-raw-email",
+   "why": "account must be an opaque normalizer key, never a raw email (contract request.canonical_account, privacy.keys)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": 1,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "body-same-nonbool-int",
+   "why": "body-same is a boolean; the synthetic model validates its exact type on the new-attempt path"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": null,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "body-same-nonbool-null",
+   "why": "body-same is a boolean; the synthetic model validates its exact type on the new-attempt path"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": false,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect_failure": "idempotency_conflict",
+   "name": "conflict-at-full-bucket",
+   "why": "conflict resolution precedes bucket admission: a conflicting replay at full buckets conflicts rather than denying"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": false,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "idempotency_conflict",
+   "name": "conflict-cached-different-body",
+   "why": "the same key with a different canonical body conflicts with no charge (contract results.conflict)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": false,
+    "effect_ok": true,
+    "now": 0,
+    "operation": 1,
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "idempotency_conflict",
+   "name": "conflict-with-malformed-operation",
+   "why": "conflict resolution precedes request-shape validation (synthetic validation order)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": false,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "internal",
+   "name": "effect-failure",
+   "why": "a transaction failure commits neither counter (contract buckets.atomic, results.failure)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": 1,
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": -1
+     }
+    ],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "malformed-operation-with-corrupt-state",
+   "why": "request shape is validated before store state (synthetic validation order)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": null,
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": -1
+     }
+    ],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "malformed-policy-with-corrupt-state",
+   "why": "policy is validated before store state (synthetic validation order)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": true,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "now-bool",
+   "why": "now is a nonnegative integer clock; bool is not int (contract request.now_ms)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 1.5,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "now-float",
+   "why": "now is an integer"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": -1,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "now-negative",
+   "why": "now is nonnegative"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 9007199254740992,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "now-past-max-clock",
+   "why": "now is capped at 2**53-1"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": "0",
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "now-string",
+   "why": "now is an integer"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": 1,
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "operation-nonstring",
+   "why": "operation must be a string"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": null,
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "operation-null",
+   "why": "operation must be a string"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "quota.reserve",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "operation-undeclared",
+   "why": "operation must be an exact declared public identity operation (contract request.operation)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": true,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-capacity-bool",
+   "why": "capacities are integers; bool is not int"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2.5,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-capacity-float",
+   "why": "capacities are integers"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": -1,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-capacity-negative",
+   "why": "capacities are positive"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 9007199254740992,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-capacity-past-max-clock",
+   "why": "capacities are capped at 2**53-1"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 0,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-capacity-zero",
+   "why": "capacities are positive"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "burst": 1,
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-config-extra-key",
+   "why": "each scope config shape is closed"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-config-missing-window",
+   "why": "each scope config declares capacity and window_ms"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "billing": {},
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-extra-key",
+   "why": "the policy shape is closed"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-missing-account",
+   "why": "the policy declares both scopes"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": null,
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-null",
+   "why": "an unconfigured policy refuses closed (contract unresolved.thresholds refuse-unconfigured-policy)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": true
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-version-bool",
+   "why": "policy version is an integer; bool is not int"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": -1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-version-negative",
+   "why": "policy version is a positive integer"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 0
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-version-zero",
+   "why": "policy version is a positive integer"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 9007199254740992
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-window-past-max-clock",
+   "why": "windows are capped at 2**53-1"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 0
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "policy-window-zero",
+   "why": "windows are positive"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": 0,
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "replay-token-nonstring",
+   "why": "idempotency resolution is a string token"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "maybe",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "replay-token-undeclared",
+   "why": "idempotency resolution is new or cached (contract request.idempotency_resolution)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": 1,
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "source-nonstring",
+   "why": "source must be a string"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "203.0.113.1",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "source-raw-ip",
+   "why": "source must be an opaque trusted-edge key, never a raw IP (contract request.canonical_source, privacy.keys)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": true,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect_failure": "internal",
+   "name": "state-record-count-bool",
+   "why": "stored counts are exact integers; bool is not int (contract buckets.persistence corrupt store refuses)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": -1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect_failure": "internal",
+   "name": "state-record-count-negative",
+   "why": "stored counts are nonnegative"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 3,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": true
+   },
+   "expect_failure": "internal",
+   "name": "state-record-count-over-capacity",
+   "why": "a stored count above the policy capacity in the active window is corrupt and refuses closed"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 5
+     }
+    ],
+    "store_available": true
+   },
+   "expect_failure": "internal",
+   "name": "state-record-future-window",
+   "why": "a stored window ahead of the injected clock is a regression and refuses closed"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 1,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": -1
+     }
+    ],
+    "store_available": true
+   },
+   "expect_failure": "internal",
+   "name": "state-record-window-negative",
+   "why": "stored windows are nonnegative"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": false
+   },
+   "expect_failure": "internal",
+   "name": "store-unavailable",
+   "why": "an unavailable store refuses closed with no identity effect (contract buckets.persistence)"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": true,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "new",
+    "source": "opaque:source",
+    "state": [
+     {
+      "count": 2,
+      "opaque": "opaque:account",
+      "operation": "identity.login",
+      "scope": "account",
+      "window": 0
+     }
+    ],
+    "store_available": false
+   },
+   "expect_failure": "internal",
+   "name": "store-unavailable-at-full-bucket",
+   "why": "store availability precedes bucket admission: an outage at full buckets is internal, not a denial"
+  }
+ ],
+ "notes": "Closed fixture for the public identity rate-limit reference contract (data/contracts/rate_limit.yaml), executed against the T0455 test-only synthetic reference decision() as a separate binding; a later implement task (T0458) must independently implement the admission decision and rebind these rows. Expectations are authored from the structured contract, never computed by the reference. No production semantics are shipped here: no HTTP middleware, no live enforcement, no account or source normalization, no production thresholds. Policies are synthetic injected fixtures per the contract's injected-policy rule (unresolved.thresholds); opaque: keys are synthetic stand-ins for normalizer output (unresolved.account_normalization and unresolved.source_normalization). The replay decision does not consult bucket state, and any opaque:-prefixed str is admitted as a key including bytes a real normalizer would never emit; both are pinned as the synthetic model's declared behavior, not production choices. State records outside the two declared scopes are carried unchanged. The source document is pinned by source_manifest. All values are plain JSON data; Python-level hostile objects are out of representational scope and owned by the fixture battery's derived probes and the T0455 reference battery.",
+ "rollback": [
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "deny",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "cached",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "replay",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 100,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 1
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 1
+       }
+      ]
+     }
+    }
+   ],
+   "name": "admit-deny-replay-readmit-chain",
+   "why": "a pinned admit/deny/replay chain: denial and replay commit nothing, and the next window admits from the pinned state"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": false,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "cached",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect_failure": "idempotency_conflict"
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "cached",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "replay",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "deny",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    }
+   ],
+   "name": "conflict-then-replay-then-admit-chain",
+   "why": "conflict and replay consume no slot: the follow-up admit lands exactly at the pinned count"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": false,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect_failure": "internal"
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    }
+   ],
+   "name": "effect-failure-then-success-chain",
+   "why": "a transaction failure commits neither counter: the retry admits against the untouched state"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": false
+     },
+     "expect_failure": "internal"
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": false,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "cached",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect_failure": "idempotency_conflict"
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": true,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect_failure": "malformed_request"
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    }
+   ],
+   "name": "failure-mid-chain-poisons-nothing",
+   "why": "an internal failure, a conflict and a malformed refusal in sequence leave the pinned state for the valid follow-up"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": -1,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect_failure": "malformed_request"
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    }
+   ],
+   "name": "malformed-then-valid-unchanged-chain",
+   "why": "a malformed refusal leaves the store bit-identical for the valid follow-up"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.register",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.register",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "deny",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.register",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "deny",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.register",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.register",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    }
+   ],
+   "name": "operation-scope-interleave-chain",
+   "why": "login and register buckets interleave independently on one store; each operation denies only on its own counters"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "cached",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "replay",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "cached",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "replay",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    }
+   ],
+   "name": "replay-never-double-charges-chain",
+   "why": "repeated cached replays never consume slots: the next new attempt takes exactly the second slot"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "deny",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:other-source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "deny",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:other-account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:other-account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 3,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    }
+   ],
+   "name": "rotation-after-deny-chain",
+   "why": "after an account denial, source rotation still denies and creates no record, while a genuinely different account admits and charges only its own buckets"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": false
+     },
+     "expect_failure": "internal"
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    }
+   ],
+   "name": "store-down-then-recovered-chain",
+   "why": "an outage refuses closed and poisons nothing: the recovered store admits from the pre-outage state"
+  },
+  {
+   "calls": [
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 0,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 99,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 99,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "deny",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 100,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 0
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 0
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 1
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 1
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 199,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 1
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 1
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 1
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 1
+       }
+      ]
+     }
+    },
+    {
+     "call": {
+      "account": "opaque:account",
+      "body_same": true,
+      "effect_ok": true,
+      "now": 200,
+      "operation": "identity.login",
+      "policy": {
+       "account": {
+        "capacity": 2,
+        "window_ms": 100
+       },
+       "source": {
+        "capacity": 3,
+        "window_ms": 100
+       },
+       "version": 1
+      },
+      "replay": "new",
+      "source": "opaque:source",
+      "state": [
+       {
+        "count": 2,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 1
+       },
+       {
+        "count": 2,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 1
+       }
+      ],
+      "store_available": true
+     },
+     "expect": {
+      "outcome": "admit",
+      "state": [
+       {
+        "count": 1,
+        "opaque": "opaque:account",
+        "operation": "identity.login",
+        "scope": "account",
+        "window": 2
+       },
+       {
+        "count": 1,
+        "opaque": "opaque:source",
+        "operation": "identity.login",
+        "scope": "source",
+        "window": 2
+       }
+      ]
+     }
+    }
+   ],
+   "name": "window-rollover-chain",
+   "why": "a pinned walk across window boundaries: same-window attempts accumulate, the boundary tick resets, old counts never carry"
+  }
+ ],
+ "schema_version": 1,
+ "section_manifests": {
+  "boundary": {
+   "admit-at-exact-window-start": "fe8d330323f78745bfc0f8fc691d85bd2f2c9b78e7ab7ea44e706d89b8968284",
+   "admit-capacity-one-first-attempt": "b2e1162e1567968a2063cd29fd5664fb3b600ac05633486e08d350c506d89a0b",
+   "admit-charges-exactly-the-two-scope-buckets": "2d322fa619395a6e824ccfbee5ff359cb630bcd3addbcbb168de375dabf2a9f9",
+   "admit-last-account-slot": "5123c0dd8ed240d3bf0d34d307a104f71f7a262ce645f3e6a1ebce5a8dad30cd",
+   "admit-now-max-clock": "c6c40d53fb6bb1874ba33f7255717b378f51d894e68c4d65e539dc24ebf64fe7",
+   "admit-old-window-full-count-dropped": "c4ff20f335c70c270c6d6247ae4ec53e8d997130dc613febf99b7e9d37f8bd7e",
+   "admit-same-clock-mid-window": "bd3fd1e2fd2aacce95cd4a91fac780869f3702aee030e287559370ba74bbe817",
+   "deny-account-at-capacity": "bbef6ef45529f3f352ef519dd5538c4d7cae76feccacdc004507d6cd69595c18",
+   "deny-account-not-evaded-by-source-rotation": "2fd2187f2a257153cfd721e31b6e52c138bbf19f8457228d7eb0e00c404a0cc1",
+   "deny-capacity-one-second-attempt": "90c4f347ddcf2d916684c0460ae69950bc9d932b6b43738c1a3e561a9ecabdcf",
+   "deny-one-tick-before-window-start": "7e1aa88913e4929e9b85202e24c3592584a374aa73fc7e81992888bfba2933a6",
+   "deny-second-bucket-leaves-first-uncharged": "7ca29c7ff7298e7f9109bea39ed02641fd430ae0486dc067da2f85eaaaeca91c",
+   "deny-source-at-capacity": "2b782698ff2c38354dafaa64a82fbc2b5e0ea00ff0fd396999bc12bea977b2a7",
+   "deny-source-not-evaded-by-account-rotation": "ec4bb126d5afed0216d49a1c64e3103b6af2358fabd3fcf3b2c108356e528385",
+   "replay-at-full-bucket": "c10f056815cc87895ebbcae1b776a5e004d9f93e979f19a891ae9d84da4c3e7d",
+   "state-unknown-scope-record-preserved": "f8ad50f8a3d90c8bdde14a145e16ef9b97f2a4412813b095b59ae0890d714cb3"
+  },
+  "happy": {
+   "admit-capacity-and-clock-max": "963802fdfd4815b599c50059b855ca097631db0d5b25fc778c8bd5053b914902",
+   "admit-first-empty-login": "71ef86fd041e723f62e53ca869337e331d07031beeb31a6142eadb869b2d6219",
+   "admit-first-empty-register": "99918073602cdec29ed0e7bb49957c60d6cc161dc10a274ecc068175bfcfaa5e",
+   "admit-other-account-own-bucket": "295499159e743f9a3998acaa5abfdbc83253ee717c25058dad6873d3b26fdbda",
+   "admit-other-operation-own-buckets": "3d53f569806e01f19036c958d566384c0a846c4e10e2431300e89070565ff274",
+   "admit-other-source-own-bucket": "cfa36575172a7ad2d5257cc8c85d8d028103d1d14006f8c49ca043fa8f30e373",
+   "admit-policy-version-high": "603d6970b0a1620b6ab1e18629e544cb21003cbe08b85a636beef530e16868eb",
+   "admit-preserves-unrelated-records": "0837e69d31fbe03af1afb241f30cb2d8164a3bd12d57fb7941fd716f9fd32627",
+   "admit-second-slot-both-buckets": "5789c59fc5749da25aea75c90cd109aac7f6c2fd2045853836f7b0fc7b9b6bea",
+   "admit-window-one-ms": "4f55fe930ad5378e73f4c10fa65de7359e5b1c7f4cc919f9ef9a556901a44db8",
+   "replay-cached-empty-state": "870bfa1a1116cc57bec9194bc3aef15a942a9af3c94eb42cf4a566af767ae56a",
+   "replay-cached-identical": "32b03da8fbc331fe2ed26c170c38c438e047eff43685aaf39e021f711b39010f"
+  },
+  "malformed": {
+   "account-missing-opaque-prefix": "8abc07c6129ad7459b27dd970431049480eec06d8841995cb13fbf1ccf3ae1f0",
+   "account-nonstring": "5dfdad283cd4cb8122df658cd89ab7687604c303d19a0cec177adfa7630d1006",
+   "account-raw-email": "83bc5662263e2bb5200159e87a01a6a141369a4f08e07e80f161c3db689ea3ec",
+   "body-same-nonbool-int": "8bd9d4b728c5f57f3f6f902267701e0ce64c8addeda818004c2737945b3d7ead",
+   "body-same-nonbool-null": "df3df6862aa20239e0f7356e7df822fd1dddc33fa0e93e9e91c13d0c20fcdb44",
+   "conflict-at-full-bucket": "e0713ae71d34cb4ccf00715a658b58dba3708c9267de032307949bba980e9930",
+   "conflict-cached-different-body": "162023bb523a9604b5eecc66b5c8ad404f8e48251c0219da30a7900fea9b95b8",
+   "conflict-with-malformed-operation": "afa069dc4cfc87baf501a6db32dcc4bb177b7b2da93e456df75fa6eb2a531999",
+   "effect-failure": "19af0e792d42b034f4e648e638003de29d5f22101dd90a7661c16f9bf150e4e1",
+   "malformed-operation-with-corrupt-state": "411c5bf60168b5286c56bf89346d819cec046491e4d9be5a24ddd5ebc3cb9177",
+   "malformed-policy-with-corrupt-state": "62156c3b8f35c0b52c85b13b49f8f41cd58cb4edef969e9c0cf19cb4f19a3f5b",
+   "now-bool": "357d32c7850d57334e36127313234e7d337d1eb81156f9baccb298931e676994",
+   "now-float": "95d3ab413ae2579e95555758a5b207373ad538790ea8cd47f1a34990b888d26b",
+   "now-negative": "39a4fd5d8e25d26a461429ec03a69038c47050ff4bb85803696728c4e3a173dd",
+   "now-past-max-clock": "1a35abb06e5813f1469290acf2ce4c547f8ac7bd13c399aacd82dab43104cc67",
+   "now-string": "b790c38c68ca7ea81c59eb82ff9bb1ca196b3de514ec34ae4b7e6c3ab19370f4",
+   "operation-nonstring": "fb5b8b5a38cf35add4c2e0f1b908983fd5b3c9dc454475d5085a3cf5a1fa2dcb",
+   "operation-null": "29e7fc31729612b5879b3cf4c8c895ca910c7d4d333d8158514abbaca5d8b3a2",
+   "operation-undeclared": "38e68811b67057d2679a017889ba60c790acded577a5bab2e130d81e82d37219",
+   "policy-capacity-bool": "6a657ca46735e79a4ef87fdf572b2aa718d166eea45aa82fc0fb1c9d04e83d3f",
+   "policy-capacity-float": "165041499eaabb2361cd2a9986f54175cf5deb25100efdecf29949aac8f7f055",
+   "policy-capacity-negative": "42206bbc81139765bba62a473a9d536cdefeb6b6047c5a7acf064e715d37dfd1",
+   "policy-capacity-past-max-clock": "383ecb012f97cb69a61bd5f6a2c3cfb68a08858fe3a0cf975be844f48b1a46dc",
+   "policy-capacity-zero": "602ee7aa578240d05b38e5474b0bf97aa367c70b1ce26f4991d9202f39e6df22",
+   "policy-config-extra-key": "3900829820f30a25bcd5d821fe5994e3ef963ebd3b0716454389240aaf469cd0",
+   "policy-config-missing-window": "6417abfb423e7c13e71bf119719b87a0875706a2b167debfa54779a9f5a72e71",
+   "policy-extra-key": "6ff52a9029600c5f1ee4754d590084be037ed07bbd792957f0afa4199064e5c4",
+   "policy-missing-account": "b61c786686be291ee20c7a5545de670d23bb506bbe7f6f2eed2a2570bc0de3d7",
+   "policy-null": "beb8f3358352412e3f330c70bdebeabfdd3441b16793f6e0dbafd0b882d2fdde",
+   "policy-version-bool": "e354f86420a14fecc03c7218be31e62d2d0f769b4a853af549b62aafdd3b0302",
+   "policy-version-negative": "2002ca62733a7a2e113b9453284e0e17dd736889e8efd06641969e35ab8fe6e3",
+   "policy-version-zero": "50db8b6651ad3f741e112f00d84614106172c864e20a48e2fc66f70910200f5d",
+   "policy-window-past-max-clock": "8dfbde2d612fccea07a0600301831d42483a4a3c3899f48d9c697dd10bec9f58",
+   "policy-window-zero": "33cc4937782b940c59ca33960283e9bf9bffed90430aa8df16e54fa01553437a",
+   "replay-token-nonstring": "1d3af7a3f91bccf87299487c2c8719dae5b89e0ddd0c3b478682063866f4bfaf",
+   "replay-token-undeclared": "04cd75a43fdf4c8d6073afee5a16d90a05d34d80e0da5125cc71bc35c571c5d7",
+   "source-nonstring": "5436d0c8cbd74484901489d09126f2f9d03a0f719abde67dd67cc2e2282a72f0",
+   "source-raw-ip": "9a66dfb37abf814569011f12c36c09327ab71444aa62b50edf5a0d4547992e76",
+   "state-record-count-bool": "41b76f2395bfc95bcd2c4e77db44252fd6d3462761153c24bccdf01ac1ff8a24",
+   "state-record-count-negative": "0c407dfca8d08627be076b3cc77802f748a74d76105b38eb2bc72419be9f8b16",
+   "state-record-count-over-capacity": "b9536e9f27b6ad9f6e7fd7e3befe6af986ef1d77cf1dfd1a086e02b9a6045b8c",
+   "state-record-future-window": "1afd3f0688cd3b20286a5e083e7e312b00de627577a3ee958cd00ed83a902c5a",
+   "state-record-window-negative": "2ed4c16fb02755ec71d9ad190fa49f7f7007751e946e3b4a97ed2738f6a2f607",
+   "store-unavailable": "3061f3cfea57d838b811e1a42e442f5326a3cdba7a0d071ac3e88ebf83bf7df8",
+   "store-unavailable-at-full-bucket": "afc62bc945d4a0371708fe54059450d77977d392559d14de28b883e375b6de1f"
+  },
+  "rollback": {
+   "admit-deny-replay-readmit-chain": "83335ff3272514d9b5fc0e9dc232c61f93d91ba921cbd411206a2dc4bc40181c",
+   "conflict-then-replay-then-admit-chain": "1de2bbf570031446809b4f40404a7a0ddea5b0bc07609620a9ac94a7c0cf7591",
+   "effect-failure-then-success-chain": "db154b9670bac87ac82fffcea46a9982b8ec13ce899cb7ea45b13af5eadcd3f4",
+   "failure-mid-chain-poisons-nothing": "150794b5292fc6d3e556622ebf905849829347a98ee1056ca548c9b46cbdc62f",
+   "malformed-then-valid-unchanged-chain": "7cbb3b1b54e6f6879ff7394da547b371d2ddf782099b384db657a27dcc66b020",
+   "operation-scope-interleave-chain": "8777d02d2bd6b0dfe923f42b912289deff92514f36cf21ed160a6dc87f03cc06",
+   "replay-never-double-charges-chain": "9749447ffd5bc10c39178d23d11ec876f4f677e47a855a0586796b49dc503d5a",
+   "rotation-after-deny-chain": "3060888423825b4025f2e81db39f08b74063e840e155b1aa13622e40d21d4bb9",
+   "store-down-then-recovered-chain": "6485aeb6bddfa0f04039385908a75c166572b902bd3879ac03b80e1fbf1c65c2",
+   "window-rollover-chain": "5181e7c5e0d05d30f7574d104f661e1fcbb98b1a1582056830fd3256670ec8e2"
+  }
+ },
+ "source": "data/contracts/control-plane.yaml",
+ "source_manifest": "d858e45e694cc74ba35a993a6d5bf628b030382632867e90ad1c5614ca5a96bb"
+}
