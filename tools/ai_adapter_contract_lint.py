@@ -3,14 +3,18 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import yaml
 
-from tools.contract_lint_closure import close_envelope
-from tools.variant_contract_lint import ContractError
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.contract_lint_closure import close_envelope  # noqa: E402
+from tools.variant_contract_lint import ContractError  # noqa: E402
+
 CONTRACT = ROOT / "data/contracts/ai_adapter.yaml"
 SECTIONS = {"id", "role", "interface", "modes", "cost", "failures", "versioning", "unresolved"}
 SOURCES = {
