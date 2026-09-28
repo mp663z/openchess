@@ -1,0 +1,81 @@
+schema_version: 1
+contract:
+  id: contracts-ai-adapter
+  role:
+    kind: provider-neutral-local-or-opted-in-hosted-inference-boundary
+    scope: local-orchestrator-to-selected-provider-adapter-not-a-control-plane-endpoint
+    status: contract-only-no-provider-invocation-shipped-by-this-task
+    source: docs/openchess-contract-rulings-2026-09-25.md
+  interface:
+    version: 1
+    request:
+      closed: true
+      fields: [version, mode, capability, provider_ref, payload, max_cost_usd]
+      required: [version, mode, capability, provider_ref, payload]
+      version: exact-integer-1-not-bool
+      mode: [local, hosted_byom]
+      capability: nonempty-provider-neutral-identifier-not-a-prompt
+      provider_ref: opaque-local-reference-not-credential-or-key-material
+      payload: local-only-or-closed-byom-payload-according-to-mode
+      max_cost_usd: optional-finite-nonnegative-number-excluding-bool-no-implicit-unlimited-spend
+      unknown_fields: refuse-before-any-provider-effect
+    response:
+      closed: true
+      fields: [version, status, output, usage, cost_usd, failure]
+      version: exact-integer-1-not-bool
+      status: [succeeded, refused, cancelled]
+      output: provider-neutral-text-only-on-success-never-claim-evidence-without-task-check
+      usage: optional-provider-neutral-token-counts-only-when-known-never-estimate-presented-as-measured
+      cost_usd: optional-finite-nonnegative-measured-amount-only-when-known-no-invented-zero
+      failure: typed-code-only-on-refused-or-cancelled-no-raw-provider-message
+      no_echo: [provider-key, credential, request-payload, raw-provider-error, FEN, moves]
+    capability:
+      metadata: [capability, context_limit, output_limit]
+      limits: optional-exact-positive-integers-only-when-provider-reports-them
+      unknown: capability-unavailable-not-a-guessed-fallback
+      provider_names: open-set-not-hardcoded-by-callers
+  modes:
+    local:
+      authority: data/contracts/local_model.yaml
+      host: desktop-only-for-local-model-verdict
+      egress: none-even-when-cloud-mode-on
+      availability: works-without-network-or-control-plane-route
+      payload: local-only-never-outbound
+    hosted_byom:
+      authority: data/contracts/byom.yaml
+      payload: exactly-the-closed-byom-payload-schema-no-extra-fields
+      approval: explicit-opt-in-and-current-provider-terms-acceptance
+      checks: [closed-payload, cloud-off-current-verdict, sensitive-collection-current-verdict, terms-current-digest]
+      timing: recheck-at-send-time-not-only-at-routing-or-request-construction
+      credentials: approved-local-custody-only-never-in-contract-request-response-or-diagnostics
+      route: control-plane-route-is-metadata-only-capability-policy-cost-no-chess-content
+      route_source: data/contracts/control-plane.yaml
+  cost:
+    policy: no-paid-hosted-send-without-explicit-cost-limit-and-verifiable-provider-bounded-preflight
+    cap: cost_cap_exceeded-refusal-before-send-if-estimate-exceeds-limit-or-bounded-preflight-unavailable
+    report: measured-cost-only-when-known-never-assert-estimate-as-charge
+    authority: control-plane-cost-policy-does-not-by-itself-authorize-provider-charge
+    local: no-provider-charge
+  failures:
+    classes: [malformed_request, payload_rejected, cloud_off, terms_required, provider_unavailable, cost_cap_exceeded, cancelled, internal]
+    precedence: validate-envelope-and-payload-then-fresh-privacy-checks-then-cost-preflight-then-provider-send
+    provider: normalize-provider-errors-without-raw-text-or-secrets
+    cancellation: before-send-no-effect-in-flight-best-effort-no-false-guarantee-of-no-charge
+    atomic: refusal-before-send-has-no-provider-effect-and-no-success-output-after-send-do-not-promise-provider-rollback
+    mapping:
+      malformed_request: malformed_request
+      payload_rejected: payload_rejected
+      cloud_off: cloud_off
+      terms_required: terms_required
+      provider_unavailable: provider_unavailable
+      cost_cap_exceeded: cost_cap_exceeded
+      cancelled: cancelled
+      internal: internal
+  versioning:
+    rule: major-change-for-existing-field-meaning-or-payload-widening-additive-minor-fields-require-reviewed-contract
+    rollback: old-major-clients-use-their-pinned-contract-no-silent-payload-or-egress-upgrade
+  unresolved:
+    - provider-specific-capabilities-and-credential-flow-not-defined-here
+    - token-usage-and-actual-billing-verification-require-provider-specific-adapters
+    - streaming-partial-output-and-in-flight-cancel-charge-semantics-not-defined
+    - OAuth-and-hosted-sync-architecture-require-owner-decision
