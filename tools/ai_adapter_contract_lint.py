@@ -37,7 +37,7 @@ def lint(doc=None):
             "kind": "provider-neutral-local-or-opted-in-hosted-inference-boundary",
             "scope": "local-orchestrator-to-selected-provider-adapter-not-a-control-plane-endpoint",
             "status": "contract-only-no-provider-invocation-shipped-by-this-task",
-            "source": "docs/openchess-contract-rulings-2026-09-25.md",
+            "source": "T0464-ruling-2026-09-25",
         },
         "role",
     )
@@ -202,8 +202,9 @@ def lint(doc=None):
         ],
         "unresolved",
     )
-    if not (ROOT / c["role"]["source"]).is_file():
-        raise ContractError("missing ruling source")
+    rulings = list((ROOT / "docs").glob("*contract-rulings-2026-09-25.md"))
+    if len(rulings) != 1 or "## T0464 AI adapter" not in rulings[0].read_text():
+        raise ContractError("missing T0464 ruling")
     for path in SOURCES.values():
         if not path.is_file():
             raise ContractError(f"missing source: {path}")

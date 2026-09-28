@@ -5,7 +5,7 @@ contract:
     kind: provider-neutral-local-or-opted-in-hosted-inference-boundary
     scope: local-orchestrator-to-selected-provider-adapter-not-a-control-plane-endpoint
     status: contract-only-no-provider-invocation-shipped-by-this-task
-    source: docs/openchess-contract-rulings-2026-09-25.md
+    source: T0464-ruling-2026-09-25
   interface:
     version: 1
     request:
