@@ -1,0 +1,352 @@
+{
+  "schema_version": 1,
+  "contract": "data/contracts/ai_adapter.yaml",
+  "source": "T0464 provider-neutral contract; synthetic test-only provider, no network or charges",
+  "happy": [
+    {
+      "name": "local-offline",
+      "request": {
+        "version": 1,
+        "mode": "local",
+        "capability": "analysis",
+        "provider_ref": "local:small",
+        "payload": "local only"
+      },
+      "state": {
+        "cloud": false
+      },
+      "expect": "succeeded",
+      "effects": [
+        "local"
+      ]
+    },
+    {
+      "name": "hosted-opted-in",
+      "request": {
+        "version": 1,
+        "mode": "hosted_byom",
+        "capability": "explain",
+        "provider_ref": "opaque:one",
+        "payload": {
+          "fen": "8/8/8/8/8/8/8/8 w - - 0 1",
+          "task": "delta-explanation"
+        },
+        "max_cost_usd": 0.05
+      },
+      "state": {
+        "cloud": true,
+        "accepted_terms": "current",
+        "bounded_cost": 0.04
+      },
+      "expect": "succeeded",
+      "effects": [
+        "hosted"
+      ]
+    }
+  ],
+  "boundary": [
+    {
+      "name": "local-cloud-on-still-local",
+      "base": "local-offline",
+      "state": {
+        "cloud": true
+      },
+      "expect": "succeeded",
+      "effects": [
+        "local"
+      ]
+    },
+    {
+      "name": "hosted-exact-cap",
+      "base": "hosted-opted-in",
+      "state": {
+        "bounded_cost": 0.05
+      },
+      "expect": "succeeded",
+      "effects": [
+        "hosted"
+      ]
+    },
+    {
+      "name": "hosted-zero-cap-zero-bound",
+      "base": "hosted-opted-in",
+      "request": {
+        "max_cost_usd": 0
+      },
+      "state": {
+        "bounded_cost": 0
+      },
+      "expect": "succeeded",
+      "effects": [
+        "hosted"
+      ]
+    },
+    {
+      "name": "hosted-over-cap",
+      "base": "hosted-opted-in",
+      "state": {
+        "bounded_cost": 0.051
+      },
+      "expect": "cost_cap_exceeded",
+      "effects": []
+    },
+    {
+      "name": "hosted-no-cap",
+      "base": "hosted-opted-in",
+      "request": {
+        "max_cost_usd": "DELETE"
+      },
+      "expect": "cost_cap_exceeded",
+      "effects": []
+    },
+    {
+      "name": "hosted-unbounded-preflight",
+      "base": "hosted-opted-in",
+      "state": {
+        "bounded_cost": null
+      },
+      "expect": "cost_cap_exceeded",
+      "effects": []
+    },
+    {
+      "name": "cloud-off",
+      "base": "hosted-opted-in",
+      "state": {
+        "cloud": false
+      },
+      "expect": "cloud_off",
+      "effects": []
+    },
+    {
+      "name": "sensitive",
+      "base": "hosted-opted-in",
+      "state": {
+        "sensitive": true
+      },
+      "expect": "cloud_off",
+      "effects": []
+    },
+    {
+      "name": "terms-unaccepted",
+      "base": "hosted-opted-in",
+      "state": {
+        "accepted_terms": null
+      },
+      "expect": "terms_required",
+      "effects": []
+    },
+    {
+      "name": "terms-changed",
+      "base": "hosted-opted-in",
+      "state": {
+        "accepted_terms": "old"
+      },
+      "expect": "terms_required",
+      "effects": []
+    },
+    {
+      "name": "provider-unavailable",
+      "base": "hosted-opted-in",
+      "state": {
+        "provider_error": true
+      },
+      "expect": "provider_unavailable",
+      "effects": [
+        "hosted"
+      ]
+    },
+    {
+      "name": "cancel-before-send",
+      "base": "hosted-opted-in",
+      "state": {
+        "cancelled": true
+      },
+      "expect": "cancelled",
+      "effects": []
+    }
+  ],
+  "malformed": [
+    {
+      "name": "unknown-key",
+      "base": "hosted-opted-in",
+      "request": {
+        "api_key": "SECRET-FIXTURE"
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "wrong-version",
+      "base": "hosted-opted-in",
+      "request": {
+        "version": 2
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "bool-version",
+      "base": "hosted-opted-in",
+      "request": {
+        "version": true
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "missing-mode",
+      "base": "hosted-opted-in",
+      "request": {
+        "mode": "DELETE"
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "unknown-mode",
+      "base": "hosted-opted-in",
+      "request": {
+        "mode": "cloud"
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "empty-capability",
+      "base": "hosted-opted-in",
+      "request": {
+        "capability": ""
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "empty-provider",
+      "base": "hosted-opted-in",
+      "request": {
+        "provider_ref": ""
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "nan-cap",
+      "base": "hosted-opted-in",
+      "request": {
+        "max_cost_usd": "NaN"
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "negative-cap",
+      "base": "hosted-opted-in",
+      "request": {
+        "max_cost_usd": -1
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "bool-cap",
+      "base": "hosted-opted-in",
+      "request": {
+        "max_cost_usd": true
+      },
+      "expect": "malformed_request",
+      "effects": []
+    },
+    {
+      "name": "extra-hosted-payload",
+      "base": "hosted-opted-in",
+      "request": {
+        "payload": {
+          "fen": "8/8/8/8/8/8/8/8 w - - 0 1",
+          "task": "delta-explanation",
+          "full-corpus": "SECRET-FIXTURE"
+        }
+      },
+      "expect": "payload_rejected",
+      "effects": []
+    },
+    {
+      "name": "missing-hosted-fen",
+      "base": "hosted-opted-in",
+      "request": {
+        "payload": {
+          "task": "delta-explanation"
+        }
+      },
+      "expect": "payload_rejected",
+      "effects": []
+    }
+  ],
+  "rollback": [
+    {
+      "name": "privacy-revoked-between-construction-and-send",
+      "base": "hosted-opted-in",
+      "state": {
+        "cloud": false
+      },
+      "expect": "cloud_off",
+      "effects": []
+    },
+    {
+      "name": "cost-policy-revoked-between-construction-and-send",
+      "base": "hosted-opted-in",
+      "state": {
+        "bounded_cost": null
+      },
+      "expect": "cost_cap_exceeded",
+      "effects": []
+    },
+    {
+      "name": "terms-revoked-between-construction-and-send",
+      "base": "hosted-opted-in",
+      "state": {
+        "accepted_terms": null
+      },
+      "expect": "terms_required",
+      "effects": []
+    }
+  ],
+  "section_manifests": {
+    "happy": {
+      "local-offline": "ff1cc4473b73b162935ce0d59a4f3dec859ecbe3d787e77646b9b547a5de6989",
+      "hosted-opted-in": "e4e6950059d09387a60776156fa5751414c961ae22c4520bdae6592d6b3e1704"
+    },
+    "boundary": {
+      "local-cloud-on-still-local": "790f5731374ce531ebc98209a3a6d9dd31b81af3ed4f4b71f635f6f297be8f66",
+      "hosted-exact-cap": "504c54f0aae78d95a256a7453298d14efc75942e0c05ff72661df5f2805ca689",
+      "hosted-zero-cap-zero-bound": "12ffc346ee6f5af7dfda9ac628c8fe1d78105ca952af19d0cde985f1d4773b39",
+      "hosted-over-cap": "598c666c8febdad93b5c0a2ffb44dbd4d1746c3bb06dcbc0f561df28364eb423",
+      "hosted-no-cap": "463471a3e0674500c93e0d976f3550d0ccdac5ee7826a3aed5d8b2448f55bf58",
+      "hosted-unbounded-preflight": "b80580391386760b4ec4f7044c91f7ebca727e913062e8e29536f7264d1c25a6",
+      "cloud-off": "803815915a8f923f8cc0640b18cef4ed5cecdf894e2eaa805ffd6902a4947d81",
+      "sensitive": "3ce2108592ee731220242476934e2d4f2c45c96045066137ab77b4391acff12f",
+      "terms-unaccepted": "603111cc84f03d791f7488e2fff2a6a7f2b8676bc327b37e2023cfffd19c0640",
+      "terms-changed": "7a98cc1277ca4b972623c0b3c6a3d460b8bb0582b7561bd1a2c79bd4aaeb53e3",
+      "provider-unavailable": "5c3b7d62e48084bcc8f57b10ff4624b82c29436a21aa29e1ee6d2a0fd80e4ea2",
+      "cancel-before-send": "8b7768aaf4a028cf3cc24317a7d6783996057048e731b3cb14fb8964b861e909"
+    },
+    "malformed": {
+      "unknown-key": "1251d44a14d541ec127f2e8195668c22065cdc399f07e4bff65f4518ecbb17dd",
+      "wrong-version": "cc704ee7bd52689731574de3547279d0f882ae999319db3d39f7975b0d475226",
+      "bool-version": "172bc3f18b011f77005889950f5b5c52223504cda3783e49a42d585434203ee1",
+      "missing-mode": "a857d72c71d5f6487d8df89834eaa17506fa8a99f3ff43fd746927579075d867",
+      "unknown-mode": "8c0a5cff00df2b14163857423fc28c9c83ce267278dedbd14d960c1d00259b23",
+      "empty-capability": "b1475d0eff518251cad5deec4ca1ad2f3bc93ecbc27492acf04cd4508de5a4f9",
+      "empty-provider": "6c6b56bf6b3a42eac02b9a7e48b878a4360ea00b9aa9792be40799ae55f3aae7",
+      "nan-cap": "4239b2f1b376024bdce4243b1d24387ce60b7fe4ddcb7892da41f6fb8ade794d",
+      "negative-cap": "ed8c5e0b40ce6d4540fbc9da27ff0d9d5099022f443c85615c95432361fd1d38",
+      "bool-cap": "66b475025d2ac34bbe7c1b9e3cf6fce84c842ae1153fc94011292998a9575616",
+      "extra-hosted-payload": "389434543659003b4d89b9e232b7065269770d95d9a5d350760db9853b02ff25",
+      "missing-hosted-fen": "161bb3d00f166989794f6dd0fce3272b147df9940beb42f6b2aa9f9bc9c4c566"
+    },
+    "rollback": {
+      "privacy-revoked-between-construction-and-send": "b8510b276483328d54a97952a20ca9e9858e432f3786d799d71b27273f30b1d6",
+      "cost-policy-revoked-between-construction-and-send": "d023da3c5f75ca2908fb0739bf265a980579ac8afc967f9634ebf1dc803d6a99",
+      "terms-revoked-between-construction-and-send": "14161b36998d19e49ac6c4345d05dc5d87719dcd2d535445404980a26038fa3e"
+    }
+  }
+}
