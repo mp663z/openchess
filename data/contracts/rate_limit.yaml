@@ -1,0 +1,63 @@
+# T0455 - public identity rate-limit boundary; reference contract, not middleware.
+schema_version: 1
+contract:
+  id: contracts-control-plane-rate-limit
+  role:
+    kind: versioned-identity-admission-contract
+    scope: [identity.register, identity.login]
+    excludes: [jobs-limit, billing-quota, hosted-sync, http-status-mapping]
+    status: reference-only-no-live-enforcement-claimed
+  source:
+    contract: data/contracts/control-plane.yaml
+    schema_version: 2
+    operations: [identity.register, identity.login]
+    error: rate_limited
+    envelope: [code, message, retryable]
+    replay: source-transport-idempotency-rule-preserved-before-new-admission
+  request:
+    fields: [operation, canonical_account, canonical_source, now_ms, policy, state, idempotency_resolution]
+    operation: exact-declared-public-identity-operation
+    canonical_account: opaque-key-from-versioned-account-normalizer-not-raw-email
+    canonical_source: opaque-key-from-trusted-edge-source-normalizer-not-client-header
+    now_ms: injected-nonnegative-integer-clock-not-wall-clock-read-inside-decision
+    policy: injected-versioned-operator-policy-with-positive-account-and-source-capacities-and-windows
+    state: authenticated-atomic-store-snapshot-of-both-scope-buckets
+    idempotency_resolution: new-or-cached-identical-or-conflicting-same-key
+  buckets:
+    account_key: [operation, canonical_account]
+    source_key: [operation, canonical_source]
+    independence: an-account-limit-cannot-be-evaded-by-rotating-source-and-source-abuse-limit-cannot-be-evaded-by-rotating-accounts
+    algorithm: fixed-window-at-floor-of-now-ms-divided-by-window-ms-with-count-for-that-window
+    boundary: count-less-than-capacity-admits-next-attempt-count-equal-to-capacity-denies-next-attempt; at-exact-new-window-start-old-count-does-not-carry
+    atomic: check-both-before-committing-both-counters-as-one-transaction-with-identity-effect
+    concurrency: serializable-equivalent-no-two-admissions-may-consume-one-remaining-slot
+    rejection: denial-commits-neither-counter-nor-identity-effect; no-token-issuance-account-creation-or-password-check-on-denial
+    persistence: counters-survive-restart-within-the-active-window; corrupt-or-unavailable-store-refuses-without-identity-effect
+  results:
+    admit: internal-admission-only-not-an-identity-success; both-buckets-increment-once
+    deny: rate_limited-using-source-error-envelope; no-identity-side-effect
+    malformed: malformed_request-for-invalid-operation-input-or-policy; no-identity-side-effect
+    replay: byte-identical-cached-idempotent-outcome-with-no-counter-change-or-identity-effect
+    conflict: idempotency_conflict-for-same-key-different-canonical-body-with-no-counter-change-or-identity-effect
+    failure: internal-for-store-clock-regression-or-transaction-failure-without-identity-effect
+    quota: quota_exhausted-is-not-an-identity-rate-limit-result
+  privacy:
+    keys: derive-opaque-nonreversible-scope-keys-in-trusted-boundary-never-record-or-emit-raw-account-or-source
+    telemetry: counts-operation-outcome-and-opaque-independent-event-ids-only-no-account-source-keys-raw-identifiers-chess-content-or-credentials
+    response: no-policy-counters-raw-keys-or-source-details-in-public-error-message
+  unresolved:
+    account_normalization: exact-email-canonicalization-and-identity-alias-rules-need-a-versioned-owner-reviewed-policy-before-fixture-or-live-use
+    source_normalization: trusted-proxy-boundary-ip-forwarding-rules-ipv4-ipv6-nat-and-privacy-preserving-derivation-need-a-versioned-policy-before-fixture-or-live-use
+    thresholds: account-and-source-capacities-windows-and-operator-rollout-values-not-set-by-this-contract; refuse-unconfigured-policy
+    policy_migration: version-changes-and-active-counter-migration-require-explicit-policy-before-live-use-no-reset-by-default
+    abuse_tradeoffs: account-targeted-denial-and-shared-source-nat-impact-require-owner-reviewed-operational-policy
+    response_transport: rate_limited-http-status-retryable-boolean-and-public-retry-header-are-unmapped-in-the-source-no-claim-of-fixed-retry-time
+    idempotency_scope: source-says-keys-scoped-per-authenticated-account-but-public-identity-ops-have-no-authenticated-account; public-key-namespace-must-be-set-before-fixture
+  versioning:
+    base_path: /contracts/rate-limit/v1
+    rule: clients-pin-major-minor-additive-only-no-reinterpretation-of-bucket-identity-policy-or-result
+  links:
+    source: data/contracts/control-plane.yaml
+    openapi: data/contracts/openapi.yaml
+    errors: data/contracts/control_plane_errors.yaml
+    excluded_job_limit: data/contracts/limit.yaml
