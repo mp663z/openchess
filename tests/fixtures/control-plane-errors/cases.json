@@ -1,0 +1,3543 @@
+{
+ "boundary": [
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "depth-eight-nesting-accepted",
+   "operation": null,
+   "payload": {
+    "x": {
+     "x": {
+      "x": {
+       "x": {
+        "x": {
+         "x": {
+          "x": {
+           "x": 1
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "status": 200,
+   "why": "payload depth 0 with the last scalar at depth 8 is the deepest accepted nesting"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail",
+    "retryable": false
+   },
+   "name": "dict-256-extras-accepted",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "extra": {
+     "x0": 0,
+     "x1": 1,
+     "x10": 10,
+     "x100": 100,
+     "x101": 101,
+     "x102": 102,
+     "x103": 103,
+     "x104": 104,
+     "x105": 105,
+     "x106": 106,
+     "x107": 107,
+     "x108": 108,
+     "x109": 109,
+     "x11": 11,
+     "x110": 110,
+     "x111": 111,
+     "x112": 112,
+     "x113": 113,
+     "x114": 114,
+     "x115": 115,
+     "x116": 116,
+     "x117": 117,
+     "x118": 118,
+     "x119": 119,
+     "x12": 12,
+     "x120": 120,
+     "x121": 121,
+     "x122": 122,
+     "x123": 123,
+     "x124": 124,
+     "x125": 125,
+     "x126": 126,
+     "x127": 127,
+     "x128": 128,
+     "x129": 129,
+     "x13": 13,
+     "x130": 130,
+     "x131": 131,
+     "x132": 132,
+     "x133": 133,
+     "x134": 134,
+     "x135": 135,
+     "x136": 136,
+     "x137": 137,
+     "x138": 138,
+     "x139": 139,
+     "x14": 14,
+     "x140": 140,
+     "x141": 141,
+     "x142": 142,
+     "x143": 143,
+     "x144": 144,
+     "x145": 145,
+     "x146": 146,
+     "x147": 147,
+     "x148": 148,
+     "x149": 149,
+     "x15": 15,
+     "x150": 150,
+     "x151": 151,
+     "x152": 152,
+     "x153": 153,
+     "x154": 154,
+     "x155": 155,
+     "x156": 156,
+     "x157": 157,
+     "x158": 158,
+     "x159": 159,
+     "x16": 16,
+     "x160": 160,
+     "x161": 161,
+     "x162": 162,
+     "x163": 163,
+     "x164": 164,
+     "x165": 165,
+     "x166": 166,
+     "x167": 167,
+     "x168": 168,
+     "x169": 169,
+     "x17": 17,
+     "x170": 170,
+     "x171": 171,
+     "x172": 172,
+     "x173": 173,
+     "x174": 174,
+     "x175": 175,
+     "x176": 176,
+     "x177": 177,
+     "x178": 178,
+     "x179": 179,
+     "x18": 18,
+     "x180": 180,
+     "x181": 181,
+     "x182": 182,
+     "x183": 183,
+     "x184": 184,
+     "x185": 185,
+     "x186": 186,
+     "x187": 187,
+     "x188": 188,
+     "x189": 189,
+     "x19": 19,
+     "x190": 190,
+     "x191": 191,
+     "x192": 192,
+     "x193": 193,
+     "x194": 194,
+     "x195": 195,
+     "x196": 196,
+     "x197": 197,
+     "x198": 198,
+     "x199": 199,
+     "x2": 2,
+     "x20": 20,
+     "x200": 200,
+     "x201": 201,
+     "x202": 202,
+     "x203": 203,
+     "x204": 204,
+     "x205": 205,
+     "x206": 206,
+     "x207": 207,
+     "x208": 208,
+     "x209": 209,
+     "x21": 21,
+     "x210": 210,
+     "x211": 211,
+     "x212": 212,
+     "x213": 213,
+     "x214": 214,
+     "x215": 215,
+     "x216": 216,
+     "x217": 217,
+     "x218": 218,
+     "x219": 219,
+     "x22": 22,
+     "x220": 220,
+     "x221": 221,
+     "x222": 222,
+     "x223": 223,
+     "x224": 224,
+     "x225": 225,
+     "x226": 226,
+     "x227": 227,
+     "x228": 228,
+     "x229": 229,
+     "x23": 23,
+     "x230": 230,
+     "x231": 231,
+     "x232": 232,
+     "x233": 233,
+     "x234": 234,
+     "x235": 235,
+     "x236": 236,
+     "x237": 237,
+     "x238": 238,
+     "x239": 239,
+     "x24": 24,
+     "x240": 240,
+     "x241": 241,
+     "x242": 242,
+     "x243": 243,
+     "x244": 244,
+     "x245": 245,
+     "x246": 246,
+     "x247": 247,
+     "x248": 248,
+     "x249": 249,
+     "x25": 25,
+     "x250": 250,
+     "x251": 251,
+     "x252": 252,
+     "x253": 253,
+     "x254": 254,
+     "x255": 255,
+     "x26": 26,
+     "x27": 27,
+     "x28": 28,
+     "x29": 29,
+     "x3": 3,
+     "x30": 30,
+     "x31": 31,
+     "x32": 32,
+     "x33": 33,
+     "x34": 34,
+     "x35": 35,
+     "x36": 36,
+     "x37": 37,
+     "x38": 38,
+     "x39": 39,
+     "x4": 4,
+     "x40": 40,
+     "x41": 41,
+     "x42": 42,
+     "x43": 43,
+     "x44": 44,
+     "x45": 45,
+     "x46": 46,
+     "x47": 47,
+     "x48": 48,
+     "x49": 49,
+     "x5": 5,
+     "x50": 50,
+     "x51": 51,
+     "x52": 52,
+     "x53": 53,
+     "x54": 54,
+     "x55": 55,
+     "x56": 56,
+     "x57": 57,
+     "x58": 58,
+     "x59": 59,
+     "x6": 6,
+     "x60": 60,
+     "x61": 61,
+     "x62": 62,
+     "x63": 63,
+     "x64": 64,
+     "x65": 65,
+     "x66": 66,
+     "x67": 67,
+     "x68": 68,
+     "x69": 69,
+     "x7": 7,
+     "x70": 70,
+     "x71": 71,
+     "x72": 72,
+     "x73": 73,
+     "x74": 74,
+     "x75": 75,
+     "x76": 76,
+     "x77": 77,
+     "x78": 78,
+     "x79": 79,
+     "x8": 8,
+     "x80": 80,
+     "x81": 81,
+     "x82": 82,
+     "x83": 83,
+     "x84": 84,
+     "x85": 85,
+     "x86": 86,
+     "x87": 87,
+     "x88": 88,
+     "x89": 89,
+     "x9": 9,
+     "x90": 90,
+     "x91": 91,
+     "x92": 92,
+     "x93": 93,
+     "x94": 94,
+     "x95": 95,
+     "x96": 96,
+     "x97": 97,
+     "x98": 98,
+     "x99": 99
+    }
+   },
+   "status": 400,
+   "why": "a 256-member object is the accepted collection bound"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail",
+    "retryable": false
+   },
+   "name": "error-key-token-run-31-allowed",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "ok"
+   },
+   "status": 400,
+   "why": "a 31-character key run is below the bound on the error path"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "retryable": false
+   },
+   "name": "error-message-token-run-31-allowed",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+     "retryable": false
+    }
+   },
+   "status": 400,
+   "why": "a 31-character run is below the 32-character token-run bound"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "aaaaaaaaaaaaaaaaéaaaaaaaaaaaaaaaa",
+    "retryable": false
+   },
+   "name": "error-token-run-broken-by-non-ascii",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "aaaaaaaaaaaaaaaaéaaaaaaaaaaaaaaaa",
+     "retryable": false
+    }
+   },
+   "status": 400,
+   "why": "a non-ASCII character breaks the run"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa",
+    "retryable": false
+   },
+   "name": "error-token-run-broken-by-period",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "aaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaa",
+     "retryable": false
+    }
+   },
+   "status": 400,
+   "why": "a period is not a token-run character and breaks the run"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "aaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaa",
+    "retryable": false
+   },
+   "name": "error-token-run-broken-by-space",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "aaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaa",
+     "retryable": false
+    }
+   },
+   "status": 400,
+   "why": "a space breaks the run"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "fen-44-near-miss-allowed",
+   "operation": null,
+   "payload": {
+    "extra": "44/8/8/8/8/8/8/8"
+   },
+   "status": 200,
+   "why": "44/8/8/8/8/8/8/8 has no eight-rank substring whose ranks sum correctly (adjacent digits are not a run)"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "fen-middle-rank-bad-allowed",
+   "operation": null,
+   "payload": {
+    "extra": "8/8/8/8/8/8/x/8"
+   },
+   "status": 200,
+   "why": "one invalid middle rank makes the only candidate window a near miss"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "fen-rank-sum-nine-allowed",
+   "operation": null,
+   "payload": {
+    "extra": "8p/8p/8p/8p/8p/8p/8p/8p"
+   },
+   "status": 200,
+   "why": "every rank sums to nine, so no valid eight-rank window exists: a near miss that only a rank-sum-nine mutant refuses"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "fen-rank-sum-seven-allowed",
+   "operation": null,
+   "payload": {
+    "extra": "7/8/8/8/8/8/8/8"
+   },
+   "status": 200,
+   "why": "a rank sum below eight is a near miss"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "fen-seven-ranks-allowed",
+   "operation": null,
+   "payload": {
+    "extra": "8/8/8/8/8/8/8"
+   },
+   "status": 200,
+   "why": "seven ranks is a near miss: no valid eight-rank window exists"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail",
+    "retryable": false
+   },
+   "name": "list-256-extras-accepted",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "extra": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29,
+     30,
+     31,
+     32,
+     33,
+     34,
+     35,
+     36,
+     37,
+     38,
+     39,
+     40,
+     41,
+     42,
+     43,
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53,
+     54,
+     55,
+     56,
+     57,
+     58,
+     59,
+     60,
+     61,
+     62,
+     63,
+     64,
+     65,
+     66,
+     67,
+     68,
+     69,
+     70,
+     71,
+     72,
+     73,
+     74,
+     75,
+     76,
+     77,
+     78,
+     79,
+     80,
+     81,
+     82,
+     83,
+     84,
+     85,
+     86,
+     87,
+     88,
+     89,
+     90,
+     91,
+     92,
+     93,
+     94,
+     95,
+     96,
+     97,
+     98,
+     99,
+     100,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106,
+     107,
+     108,
+     109,
+     110,
+     111,
+     112,
+     113,
+     114,
+     115,
+     116,
+     117,
+     118,
+     119,
+     120,
+     121,
+     122,
+     123,
+     124,
+     125,
+     126,
+     127,
+     128,
+     129,
+     130,
+     131,
+     132,
+     133,
+     134,
+     135,
+     136,
+     137,
+     138,
+     139,
+     140,
+     141,
+     142,
+     143,
+     144,
+     145,
+     146,
+     147,
+     148,
+     149,
+     150,
+     151,
+     152,
+     153,
+     154,
+     155,
+     156,
+     157,
+     158,
+     159,
+     160,
+     161,
+     162,
+     163,
+     164,
+     165,
+     166,
+     167,
+     168,
+     169,
+     170,
+     171,
+     172,
+     173,
+     174,
+     175,
+     176,
+     177,
+     178,
+     179,
+     180,
+     181,
+     182,
+     183,
+     184,
+     185,
+     186,
+     187,
+     188,
+     189,
+     190,
+     191,
+     192,
+     193,
+     194,
+     195,
+     196,
+     197,
+     198,
+     199,
+     200,
+     201,
+     202,
+     203,
+     204,
+     205,
+     206,
+     207,
+     208,
+     209,
+     210,
+     211,
+     212,
+     213,
+     214,
+     215,
+     216,
+     217,
+     218,
+     219,
+     220,
+     221,
+     222,
+     223,
+     224,
+     225,
+     226,
+     227,
+     228,
+     229,
+     230,
+     231,
+     232,
+     233,
+     234,
+     235,
+     236,
+     237,
+     238,
+     239,
+     240,
+     241,
+     242,
+     243,
+     244,
+     245,
+     246,
+     247,
+     248,
+     249,
+     250,
+     251,
+     252,
+     253,
+     254,
+     255
+    ]
+   },
+   "status": 400,
+   "why": "a 256-element list is the accepted collection bound"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "short-san-text-gap-allowed-2xx",
+   "operation": null,
+   "payload": {
+    "extra": "Nf3"
+   },
+   "status": 200,
+   "why": "short SAN/move text is a declared owner gap (contract result.privacy): Nf3 in a 2xx value is allowed"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "Nf3",
+    "retryable": false
+   },
+   "name": "short-san-text-gap-allowed-error",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "Nf3",
+     "retryable": false
+    }
+   },
+   "status": 400,
+   "why": "short SAN/move text in an error message is allowed (declared gap)"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "status-200-edge",
+   "operation": null,
+   "payload": {},
+   "status": 200,
+   "why": "lowest supported success status"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "status-299-edge",
+   "operation": null,
+   "payload": {},
+   "status": 299,
+   "why": "highest supported success status"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail",
+    "retryable": false
+   },
+   "name": "status-400-edge",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "status": 400,
+   "why": "lowest supported error status"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail",
+    "retryable": false
+   },
+   "name": "status-599-edge",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "status": 599,
+   "why": "highest supported error status"
+  }
+ ],
+ "contract": "data/contracts/control_plane_errors.yaml",
+ "contract_schema_version": 1,
+ "happy": [
+  {
+   "expect": {
+    "code": "auth_expired",
+    "kind": "error",
+    "message": "fixture detail for auth_expired",
+    "retryable": false
+   },
+   "name": "enum-auth-expired",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "auth_expired",
+     "message": "fixture detail for auth_expired",
+     "retryable": false
+    }
+   },
+   "status": 401,
+   "why": "every closed-enum member classifies at a representative status (401); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "auth_invalid",
+    "kind": "error",
+    "message": "fixture detail for auth_invalid",
+    "retryable": false
+   },
+   "name": "enum-auth-invalid",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "auth_invalid",
+     "message": "fixture detail for auth_invalid",
+     "retryable": false
+    }
+   },
+   "status": 401,
+   "why": "every closed-enum member classifies at a representative status (401); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "conflict",
+    "kind": "error",
+    "message": "fixture detail for conflict",
+    "retryable": false
+   },
+   "name": "enum-conflict",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "conflict",
+     "message": "fixture detail for conflict",
+     "retryable": false
+    }
+   },
+   "status": 409,
+   "why": "every closed-enum member classifies at a representative status (409); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "cost_cap_exceeded",
+    "kind": "error",
+    "message": "fixture detail for cost_cap_exceeded",
+    "retryable": false
+   },
+   "name": "enum-cost-cap-exceeded",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "cost_cap_exceeded",
+     "message": "fixture detail for cost_cap_exceeded",
+     "retryable": false
+    }
+   },
+   "status": 402,
+   "why": "every closed-enum member classifies at a representative status (402); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "entitlement_missing",
+    "kind": "error",
+    "message": "fixture detail for entitlement_missing",
+    "retryable": false
+   },
+   "name": "enum-entitlement-missing",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "entitlement_missing",
+     "message": "fixture detail for entitlement_missing",
+     "retryable": false
+    }
+   },
+   "status": 403,
+   "why": "every closed-enum member classifies at a representative status (403); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "idempotency_conflict",
+    "kind": "error",
+    "message": "fixture detail for idempotency_conflict",
+    "retryable": false
+   },
+   "name": "enum-idempotency-conflict",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "idempotency_conflict",
+     "message": "fixture detail for idempotency_conflict",
+     "retryable": false
+    }
+   },
+   "status": 409,
+   "why": "every closed-enum member classifies at a representative status (409); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "internal",
+    "kind": "error",
+    "message": "fixture detail for internal",
+    "retryable": true
+   },
+   "name": "enum-internal",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "internal",
+     "message": "fixture detail for internal",
+     "retryable": true
+    }
+   },
+   "status": 500,
+   "why": "every closed-enum member classifies at a representative status (500); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "malformed_request",
+    "kind": "error",
+    "message": "fixture detail for malformed_request",
+    "retryable": false
+   },
+   "name": "enum-malformed-request",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "malformed_request",
+     "message": "fixture detail for malformed_request",
+     "retryable": false
+    }
+   },
+   "status": 400,
+   "why": "every closed-enum member classifies at a representative status (400); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail for not_found",
+    "retryable": false
+   },
+   "name": "enum-not-found",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail for not_found",
+     "retryable": false
+    }
+   },
+   "status": 404,
+   "why": "every closed-enum member classifies at a representative status (404); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "provider_key_invalid",
+    "kind": "error",
+    "message": "fixture detail for provider_key_invalid",
+    "retryable": false
+   },
+   "name": "enum-provider-key-invalid",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "provider_key_invalid",
+     "message": "fixture detail for provider_key_invalid",
+     "retryable": false
+    }
+   },
+   "status": 400,
+   "why": "every closed-enum member classifies at a representative status (400); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "provider_unavailable",
+    "kind": "error",
+    "message": "fixture detail for provider_unavailable",
+    "retryable": true
+   },
+   "name": "enum-provider-unavailable",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "provider_unavailable",
+     "message": "fixture detail for provider_unavailable",
+     "retryable": true
+    }
+   },
+   "status": 503,
+   "why": "every closed-enum member classifies at a representative status (503); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "quota_exhausted",
+    "kind": "error",
+    "message": "fixture detail for quota_exhausted",
+    "retryable": false
+   },
+   "name": "enum-quota-exhausted",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "quota_exhausted",
+     "message": "fixture detail for quota_exhausted",
+     "retryable": false
+    }
+   },
+   "status": 429,
+   "why": "every closed-enum member classifies at a representative status (429); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "quota_reservation_expired",
+    "kind": "error",
+    "message": "fixture detail for quota_reservation_expired",
+    "retryable": false
+   },
+   "name": "enum-quota-reservation-expired",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "quota_reservation_expired",
+     "message": "fixture detail for quota_reservation_expired",
+     "retryable": false
+    }
+   },
+   "status": 410,
+   "why": "every closed-enum member classifies at a representative status (410); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "rate_limited",
+    "kind": "error",
+    "message": "fixture detail for rate_limited",
+    "retryable": true
+   },
+   "name": "enum-rate-limited",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "rate_limited",
+     "message": "fixture detail for rate_limited",
+     "retryable": true
+    }
+   },
+   "status": 429,
+   "why": "every closed-enum member classifies at a representative status (429); status grouping is T0419's, retryable is payload-declared"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail",
+    "retryable": false
+   },
+   "name": "error-additive-extra-fields",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false,
+     "support_id": "s-1"
+    },
+    "trace_id": "trace-1"
+   },
+   "status": 400,
+   "why": "unknown extra fields are permitted in error and top-level payload (contract result.additive)"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail",
+    "retryable": false
+   },
+   "name": "error-null-extra-allowed",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "x": null
+   },
+   "status": 400,
+   "why": "a JSON null extra is JSON-like and allowed on the error path"
+  },
+  {
+   "expect": {
+    "code": "not_found",
+    "kind": "error",
+    "message": "fixture detail",
+    "retryable": false
+   },
+   "name": "error-provider-kind-safe",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "provider_kind": "generic-a"
+   },
+   "status": 400,
+   "why": "provider_kind is neither a chess token nor the provider+key intersection; it is allowed"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-billing-create_checkout-example",
+   "operation": "billing.create_checkout",
+   "payload": {
+    "checkout_url": "https://payments.example/c/1",
+    "expires_at": 1893456000
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-billing-get_subscription-example",
+   "operation": "billing.get_subscription",
+   "payload": {
+    "cancel_at_period_end": false,
+    "current_period_end": 1893456000,
+    "status": "active",
+    "tier": "pro"
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-entitlements-get-example",
+   "operation": "entitlements.get",
+   "payload": {
+    "cache_ttl_seconds": 300,
+    "cost_caps": {
+     "per_day_usd": 2.0,
+     "per_request_usd": 0.1
+    },
+    "features": [
+     "local-analysis"
+    ],
+    "tier": "free"
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-identity-delete_account-example",
+   "operation": "identity.delete_account",
+   "payload": {},
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-identity-login-example",
+   "operation": "identity.login",
+   "payload": {
+    "account_id": "acct-1",
+    "token": "tok-2",
+    "token_expires_at": 1893456000
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-identity-logout-example",
+   "operation": "identity.logout",
+   "payload": {},
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-identity-refresh-example",
+   "operation": "identity.refresh",
+   "payload": {
+    "token": "tok-3",
+    "token_expires_at": 1893456000
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-identity-register-example",
+   "operation": "identity.register",
+   "payload": {
+    "account_id": "acct-1",
+    "token": "tok-1",
+    "token_expires_at": 1893456000
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-provider_routing-register_key-example",
+   "operation": "provider_routing.register_key",
+   "payload": {
+    "key_ref": "key-1"
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-provider_routing-revoke_key-example",
+   "operation": "provider_routing.revoke_key",
+   "payload": {},
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-provider_routing-route-example",
+   "operation": "provider_routing.route",
+   "payload": {
+    "estimated_cost_usd": 0.02,
+    "provider_kind": "generic-a"
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-quota-commit-example",
+   "operation": "quota.commit",
+   "payload": {
+    "remaining_units": 990
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-quota-release-example",
+   "operation": "quota.release",
+   "payload": {},
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "operation-quota-reserve-example",
+   "operation": "quota.reserve",
+   "payload": {
+    "expires_at": 1893456000,
+    "granted_units": 10,
+    "reservation_id": "rsv-1"
+   },
+   "status": 200,
+   "why": "the source-authored required-field response example of every declared operation classifies as success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "success-2xx-with-error-property",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "status": 200,
+   "why": "a 2xx is success even when the payload has an error property (contract result.success)"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "success-clean-empty-payload",
+   "operation": null,
+   "payload": {},
+   "status": 200,
+   "why": "an empty object at 2xx is success"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "success-declared-register-fields",
+   "operation": "identity.register",
+   "payload": {
+    "account_id": "acct-1",
+    "token": "tok-1",
+    "token_expires_at": 1893456000
+   },
+   "status": 200,
+   "why": "identity.register declares the same token field; declared fields pass structural and chess checks"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "success-declared-token-exemption",
+   "operation": "identity.login",
+   "payload": {
+    "token": "tok-1"
+   },
+   "status": 200,
+   "why": "a declared 2xx response field such as identity.login's token is exempt only from the name-based secret check"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "success-key-token-run-32-allowed",
+   "operation": "identity.login",
+   "payload": {
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": 1,
+    "token": "ok"
+   },
+   "status": 200,
+   "why": "the 32-character token-run rule applies to error responses only; a 32-run key on a clean 2xx payload is allowed"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "success-nested-key-token-run-32-allowed",
+   "operation": "identity.login",
+   "payload": {
+    "extra": {
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 1
+    },
+    "token": "ok"
+   },
+   "status": 200,
+   "why": "a nested 32-run key on a clean 2xx payload is allowed"
+  },
+  {
+   "expect": {
+    "kind": "success"
+   },
+   "name": "success-without-operation",
+   "operation": null,
+   "payload": {
+    "account_id": "acct-1"
+   },
+   "status": 200,
+   "why": "operation is optional; without it no declared-field exemption exists"
+  }
+ ],
+ "malformed": [
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-FENString",
+   "operation": null,
+   "payload": {
+    "FENString": "private",
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "acronym boundaries split before comparison"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-GAMEMoves",
+   "operation": null,
+   "payload": {
+    "GAMEMoves": "private",
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "acronym-to-title-case boundaries split"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-GameMoves",
+   "operation": null,
+   "payload": {
+    "GameMoves": "private",
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "leading-uppercase camelCase splits the same way"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-game-dot-id",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "game.id": "private"
+   },
+   "source": [],
+   "status": 400,
+   "why": "dotted chess keys are refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-game-dot-moves",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "game.moves": "private"
+   },
+   "source": [],
+   "status": 400,
+   "why": "dots split key tokens"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-game-id",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "game-id": "private"
+   },
+   "source": [],
+   "status": 400,
+   "why": "hyphens split key tokens"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-gameMoves",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "gameMoves": "private"
+   },
+   "source": [],
+   "status": 400,
+   "why": "camelCase boundaries split before chess-token comparison"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-provider-dot-key",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "provider.key": "private"
+   },
+   "source": [],
+   "status": 400,
+   "why": "the provider+key intersection splits on dots"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-providerKey",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "providerKey": "private"
+   },
+   "source": [],
+   "status": 400,
+   "why": "the provider+key token intersection is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "chess-key-top3Moves",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "top3Moves": "private"
+   },
+   "source": [],
+   "status": 400,
+   "why": "digit-to-uppercase boundaries split"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "depth-nine-nesting-refused",
+   "operation": null,
+   "payload": {
+    "x": {
+     "x": {
+      "x": {
+       "x": {
+        "x": {
+         "x": {
+          "x": {
+           "x": {
+            "x": 1
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "source": [],
+   "status": 200,
+   "why": "a scalar at depth 9 exceeds the declared bound"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "dict-257-extras-refused",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "extra": {
+     "x0": 0,
+     "x1": 1,
+     "x10": 10,
+     "x100": 100,
+     "x101": 101,
+     "x102": 102,
+     "x103": 103,
+     "x104": 104,
+     "x105": 105,
+     "x106": 106,
+     "x107": 107,
+     "x108": 108,
+     "x109": 109,
+     "x11": 11,
+     "x110": 110,
+     "x111": 111,
+     "x112": 112,
+     "x113": 113,
+     "x114": 114,
+     "x115": 115,
+     "x116": 116,
+     "x117": 117,
+     "x118": 118,
+     "x119": 119,
+     "x12": 12,
+     "x120": 120,
+     "x121": 121,
+     "x122": 122,
+     "x123": 123,
+     "x124": 124,
+     "x125": 125,
+     "x126": 126,
+     "x127": 127,
+     "x128": 128,
+     "x129": 129,
+     "x13": 13,
+     "x130": 130,
+     "x131": 131,
+     "x132": 132,
+     "x133": 133,
+     "x134": 134,
+     "x135": 135,
+     "x136": 136,
+     "x137": 137,
+     "x138": 138,
+     "x139": 139,
+     "x14": 14,
+     "x140": 140,
+     "x141": 141,
+     "x142": 142,
+     "x143": 143,
+     "x144": 144,
+     "x145": 145,
+     "x146": 146,
+     "x147": 147,
+     "x148": 148,
+     "x149": 149,
+     "x15": 15,
+     "x150": 150,
+     "x151": 151,
+     "x152": 152,
+     "x153": 153,
+     "x154": 154,
+     "x155": 155,
+     "x156": 156,
+     "x157": 157,
+     "x158": 158,
+     "x159": 159,
+     "x16": 16,
+     "x160": 160,
+     "x161": 161,
+     "x162": 162,
+     "x163": 163,
+     "x164": 164,
+     "x165": 165,
+     "x166": 166,
+     "x167": 167,
+     "x168": 168,
+     "x169": 169,
+     "x17": 17,
+     "x170": 170,
+     "x171": 171,
+     "x172": 172,
+     "x173": 173,
+     "x174": 174,
+     "x175": 175,
+     "x176": 176,
+     "x177": 177,
+     "x178": 178,
+     "x179": 179,
+     "x18": 18,
+     "x180": 180,
+     "x181": 181,
+     "x182": 182,
+     "x183": 183,
+     "x184": 184,
+     "x185": 185,
+     "x186": 186,
+     "x187": 187,
+     "x188": 188,
+     "x189": 189,
+     "x19": 19,
+     "x190": 190,
+     "x191": 191,
+     "x192": 192,
+     "x193": 193,
+     "x194": 194,
+     "x195": 195,
+     "x196": 196,
+     "x197": 197,
+     "x198": 198,
+     "x199": 199,
+     "x2": 2,
+     "x20": 20,
+     "x200": 200,
+     "x201": 201,
+     "x202": 202,
+     "x203": 203,
+     "x204": 204,
+     "x205": 205,
+     "x206": 206,
+     "x207": 207,
+     "x208": 208,
+     "x209": 209,
+     "x21": 21,
+     "x210": 210,
+     "x211": 211,
+     "x212": 212,
+     "x213": 213,
+     "x214": 214,
+     "x215": 215,
+     "x216": 216,
+     "x217": 217,
+     "x218": 218,
+     "x219": 219,
+     "x22": 22,
+     "x220": 220,
+     "x221": 221,
+     "x222": 222,
+     "x223": 223,
+     "x224": 224,
+     "x225": 225,
+     "x226": 226,
+     "x227": 227,
+     "x228": 228,
+     "x229": 229,
+     "x23": 23,
+     "x230": 230,
+     "x231": 231,
+     "x232": 232,
+     "x233": 233,
+     "x234": 234,
+     "x235": 235,
+     "x236": 236,
+     "x237": 237,
+     "x238": 238,
+     "x239": 239,
+     "x24": 24,
+     "x240": 240,
+     "x241": 241,
+     "x242": 242,
+     "x243": 243,
+     "x244": 244,
+     "x245": 245,
+     "x246": 246,
+     "x247": 247,
+     "x248": 248,
+     "x249": 249,
+     "x25": 25,
+     "x250": 250,
+     "x251": 251,
+     "x252": 252,
+     "x253": 253,
+     "x254": 254,
+     "x255": 255,
+     "x256": 256,
+     "x26": 26,
+     "x27": 27,
+     "x28": 28,
+     "x29": 29,
+     "x3": 3,
+     "x30": 30,
+     "x31": 31,
+     "x32": 32,
+     "x33": 33,
+     "x34": 34,
+     "x35": 35,
+     "x36": 36,
+     "x37": 37,
+     "x38": 38,
+     "x39": 39,
+     "x4": 4,
+     "x40": 40,
+     "x41": 41,
+     "x42": 42,
+     "x43": 43,
+     "x44": 44,
+     "x45": 45,
+     "x46": 46,
+     "x47": 47,
+     "x48": 48,
+     "x49": 49,
+     "x5": 5,
+     "x50": 50,
+     "x51": 51,
+     "x52": 52,
+     "x53": 53,
+     "x54": 54,
+     "x55": 55,
+     "x56": 56,
+     "x57": 57,
+     "x58": 58,
+     "x59": 59,
+     "x6": 6,
+     "x60": 60,
+     "x61": 61,
+     "x62": 62,
+     "x63": 63,
+     "x64": 64,
+     "x65": 65,
+     "x66": 66,
+     "x67": 67,
+     "x68": 68,
+     "x69": 69,
+     "x7": 7,
+     "x70": 70,
+     "x71": 71,
+     "x72": 72,
+     "x73": 73,
+     "x74": 74,
+     "x75": 75,
+     "x76": 76,
+     "x77": 77,
+     "x78": 78,
+     "x79": 79,
+     "x8": 8,
+     "x80": 80,
+     "x81": 81,
+     "x82": 82,
+     "x83": 83,
+     "x84": 84,
+     "x85": 85,
+     "x86": 86,
+     "x87": 87,
+     "x88": 88,
+     "x89": 89,
+     "x9": 9,
+     "x90": 90,
+     "x91": 91,
+     "x92": 92,
+     "x93": 93,
+     "x94": 94,
+     "x95": 95,
+     "x96": 96,
+     "x97": 97,
+     "x98": 98,
+     "x99": 99
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "a 257-member object exceeds the declared collection bound"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-chess-key-analysis",
+   "operation": null,
+   "payload": {
+    "error": {
+     "analysis": "private",
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "chess-content key tokens are refused on every response"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-code-nonstring",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": 1,
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "code must be a string"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-code-outside-enum",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "outside_enum",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "code must be in the source closed enum"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-extra-token-run-32-nested-list",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "extra": {
+     "detail": [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+     ]
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "a nested 32-run value on the error path is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-key-token-run-32",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "ok"
+   },
+   "source": [],
+   "status": 400,
+   "why": "a 32-run top-level key on the error path is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-key-token-run-32-dotted-prefix",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "x.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "ok"
+   },
+   "source": [],
+   "status": 400,
+   "why": "a dotted prefix does not hide a 32-run inside a key"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-key-token-run-32-nested",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "extra": {
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 1
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "a nested 32-run key on the error path is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-list",
+   "operation": null,
+   "payload": {
+    "error": []
+   },
+   "source": [],
+   "status": 400,
+   "why": "the error object must be a dict"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-message-nonstring",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": true,
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "message must be a string"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-message-password-hash",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "password_hash_client leaked",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "password_hash_client named in the error message is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-message-secret",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "key_material = s3cr3t-fixture",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "a secret named in the error message is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-message-token-run-32",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "32 contiguous token-run characters in an error value are refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-message-token-run-32-camelcase",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "camelCaseXXXXXXXXXXXXXXXXXXXXXXX",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "camelCase boundaries do not break a token run"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-message-token-run-32-digit",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "top3MovesZZZZZZZZZZZZZZZZZZZZZZZ",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "digit boundaries do not break a token run"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-message-token-run-32-mixed-alphabet",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "aaaaaaaaaaaaaaaa+aaaaaaaaaaaaaaa",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "every declared token-run character joins a run"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-message-uppercase-secret",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "KEY_MATERIAL=x",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "the message secret check is case-insensitive"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-missing",
+   "operation": null,
+   "payload": {},
+   "source": [],
+   "status": 400,
+   "why": "a 4xx requires the error object"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-missing-code",
+   "operation": null,
+   "payload": {
+    "error": {
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "code is required"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-missing-message",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "message is required"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-missing-retryable",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail"
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "retryable is required"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-null",
+   "operation": null,
+   "payload": {
+    "error": null
+   },
+   "source": [],
+   "status": 400,
+   "why": "the error object must be a dict"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-retryable-int",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": 1
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "retryable must be an exact bool, not int"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-retryable-string",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": "no"
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "retryable must be an exact bool"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-secret-key-material",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "key_material": "s3cr3t-fixture",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "the error path gets full secret-name checks; key_material is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "error-string",
+   "operation": null,
+   "payload": {
+    "error": "code message retryable"
+   },
+   "source": [],
+   "status": 400,
+   "why": "the error object must be a dict"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-glued-colon-prefix",
+   "operation": null,
+   "payload": {
+    "extra": "fen:rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a placement after a colon prefix is refused; the scan is unanchored"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-glued-suffix-letter",
+   "operation": null,
+   "payload": {
+    "extra": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNRb"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a placement glued to a letter suffix is still refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-in-declared-token-2xx",
+   "operation": "identity.login",
+   "payload": {
+    "token": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+   },
+   "source": [],
+   "status": 200,
+   "why": "the declared-field exemption is name-only: chess-content checks still apply to declared values"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-in-error-message-4xx",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "a placement in the error message is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-in-list-2xx",
+   "operation": null,
+   "payload": {
+    "extra": [
+     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+    ]
+   },
+   "source": [],
+   "status": 200,
+   "why": "placements inside list values are refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-left-edge-digit",
+   "operation": null,
+   "payload": {
+    "extra": "1rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a digit glued to the left edge does not hide a placement"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-nested-extra-4xx",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "extra": {
+     "detail": [
+      "x",
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+     ]
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "a placement nested inside extra structures is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-nine-ranks",
+   "operation": null,
+   "payload": {
+    "extra": "8/8/8/8/8/8/8/8/8"
+   },
+   "source": [],
+   "status": 200,
+   "why": "nine ranks containing a valid eight-rank window are refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-plain-2xx",
+   "operation": null,
+   "payload": {
+    "extra": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a valid eight-rank placement in any response string value is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-right-edge-digit",
+   "operation": null,
+   "payload": {
+    "extra": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR9"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a digit glued to the right edge does not hide a placement"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-slash-prefix",
+   "operation": null,
+   "payload": {
+    "extra": "x/rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a valid window after a slash-separated prefix is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-spaced-slash-prefix",
+   "operation": null,
+   "payload": {
+    "extra": "1/2 rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a valid window after a spaced slash prefix is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-trailing-piece",
+   "operation": null,
+   "payload": {
+    "extra": "4k3/8/8/8/8/8/8/4K3p"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a valid shorter window inside a greedy candidate is refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-zero-digit-08",
+   "operation": null,
+   "payload": {
+    "extra": "08/8/8/8/8/8/8/8"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a zero-digit prefix does not hide the valid suffix window"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "fen-zero-digit-0p7",
+   "operation": null,
+   "payload": {
+    "extra": "0p7/8/8/8/8/8/8/8"
+   },
+   "source": [],
+   "status": 200,
+   "why": "a zero-digit piece prefix does not hide the valid suffix window"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "hostile-source-enum-nonstring-member",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "transport",
+       "errors",
+       "closed_enum"
+      ],
+      "value": [
+       "not_found",
+       1
+      ]
+     }
+    }
+   ],
+   "status": 400,
+   "why": "a closed enum with a non-string member fails source validation"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "hostile-source-schema-version-bool",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [
+    {
+     "set": {
+      "path": [
+       "schema_version"
+      ],
+      "value": true
+     }
+    }
+   ],
+   "status": 400,
+   "why": "a hostile source fails strict T0419 derivation before any classification"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "hostile-source-shape-required-flipped",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "transport",
+       "errors",
+       "shape",
+       "error",
+       "fields",
+       "code",
+       "required"
+      ],
+      "value": false
+     }
+    }
+   ],
+   "status": 400,
+   "why": "an error shape that no longer requires code fails source validation"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "list-257-extras-refused",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "extra": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29,
+     30,
+     31,
+     32,
+     33,
+     34,
+     35,
+     36,
+     37,
+     38,
+     39,
+     40,
+     41,
+     42,
+     43,
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53,
+     54,
+     55,
+     56,
+     57,
+     58,
+     59,
+     60,
+     61,
+     62,
+     63,
+     64,
+     65,
+     66,
+     67,
+     68,
+     69,
+     70,
+     71,
+     72,
+     73,
+     74,
+     75,
+     76,
+     77,
+     78,
+     79,
+     80,
+     81,
+     82,
+     83,
+     84,
+     85,
+     86,
+     87,
+     88,
+     89,
+     90,
+     91,
+     92,
+     93,
+     94,
+     95,
+     96,
+     97,
+     98,
+     99,
+     100,
+     101,
+     102,
+     103,
+     104,
+     105,
+     106,
+     107,
+     108,
+     109,
+     110,
+     111,
+     112,
+     113,
+     114,
+     115,
+     116,
+     117,
+     118,
+     119,
+     120,
+     121,
+     122,
+     123,
+     124,
+     125,
+     126,
+     127,
+     128,
+     129,
+     130,
+     131,
+     132,
+     133,
+     134,
+     135,
+     136,
+     137,
+     138,
+     139,
+     140,
+     141,
+     142,
+     143,
+     144,
+     145,
+     146,
+     147,
+     148,
+     149,
+     150,
+     151,
+     152,
+     153,
+     154,
+     155,
+     156,
+     157,
+     158,
+     159,
+     160,
+     161,
+     162,
+     163,
+     164,
+     165,
+     166,
+     167,
+     168,
+     169,
+     170,
+     171,
+     172,
+     173,
+     174,
+     175,
+     176,
+     177,
+     178,
+     179,
+     180,
+     181,
+     182,
+     183,
+     184,
+     185,
+     186,
+     187,
+     188,
+     189,
+     190,
+     191,
+     192,
+     193,
+     194,
+     195,
+     196,
+     197,
+     198,
+     199,
+     200,
+     201,
+     202,
+     203,
+     204,
+     205,
+     206,
+     207,
+     208,
+     209,
+     210,
+     211,
+     212,
+     213,
+     214,
+     215,
+     216,
+     217,
+     218,
+     219,
+     220,
+     221,
+     222,
+     223,
+     224,
+     225,
+     226,
+     227,
+     228,
+     229,
+     230,
+     231,
+     232,
+     233,
+     234,
+     235,
+     236,
+     237,
+     238,
+     239,
+     240,
+     241,
+     242,
+     243,
+     244,
+     245,
+     246,
+     247,
+     248,
+     249,
+     250,
+     251,
+     252,
+     253,
+     254,
+     255,
+     256
+    ]
+   },
+   "source": [],
+   "status": 400,
+   "why": "a 257-element list exceeds the declared collection bound"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "nested-declared-token-2xx",
+   "operation": "identity.login",
+   "payload": {
+    "x": {
+     "token": "leak"
+    }
+   },
+   "source": [],
+   "status": 200,
+   "why": "the declared-field exemption is top-level only"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "operation-nonstring",
+   "operation": 7,
+   "payload": {},
+   "source": [],
+   "status": 200,
+   "why": "operation must be a string when present"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "operation-three-segments",
+   "operation": "identity.login.x",
+   "payload": {},
+   "source": [],
+   "status": 200,
+   "why": "operation must name exactly one area and one op"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "operation-unknown-area",
+   "operation": "nope.login",
+   "payload": {},
+   "source": [],
+   "status": 200,
+   "why": "the area must exist in the source"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "operation-unknown-operation",
+   "operation": "identity.nope",
+   "payload": {},
+   "source": [],
+   "status": 200,
+   "why": "the operation must exist in the source"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "payload-list",
+   "operation": null,
+   "payload": [],
+   "source": [],
+   "status": 400,
+   "why": "payload must be an exact dict"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "payload-null",
+   "operation": null,
+   "payload": null,
+   "source": [],
+   "status": 400,
+   "why": "payload must be an exact dict"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "payload-string",
+   "operation": null,
+   "payload": "error",
+   "source": [],
+   "status": 400,
+   "why": "payload must be an exact dict"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-100",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 100,
+   "why": "1xx and 3xx have no declared payload semantics and statuses outside 200-299/400-599 are refused as an unsupported reading"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-199",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 199,
+   "why": "1xx and 3xx have no declared payload semantics and statuses outside 200-299/400-599 are refused as an unsupported reading"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-300",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 300,
+   "why": "1xx and 3xx have no declared payload semantics and statuses outside 200-299/400-599 are refused as an unsupported reading"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-399",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 399,
+   "why": "1xx and 3xx have no declared payload semantics and statuses outside 200-299/400-599 are refused as an unsupported reading"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-600",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 600,
+   "why": "1xx and 3xx have no declared payload semantics and statuses outside 200-299/400-599 are refused as an unsupported reading"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-bool-true",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": true,
+   "why": "status must be an exact built-in int, not bool"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-float",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400.0,
+   "why": "status must be an exact built-in int, not float"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-null",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": null,
+   "why": "status must be an exact built-in int, not null"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-string",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": "400",
+   "why": "status must be an exact built-in int, not str"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "status-zero",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 0,
+   "why": "1xx and 3xx have no declared payload semantics and statuses outside 200-299/400-599 are refused as an unsupported reading"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "top-level-case-secret-key",
+   "operation": null,
+   "payload": {
+    "Key_Material": "s3cr3t-fixture",
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    }
+   },
+   "source": [],
+   "status": 400,
+   "why": "the secret-key check is case-insensitive"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "top-level-password-hash-extra",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "password_hash_client": "hunter2-fixture"
+   },
+   "source": [],
+   "status": 400,
+   "why": "password_hash_client extras are refused"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "top-level-secret-extra",
+   "operation": null,
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "secret": "s3cr3t-fixture"
+   },
+   "source": [],
+   "status": 400,
+   "why": "secret-named top-level extras are refused on the error path"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "top-level-token-extra-2xx-without-operation",
+   "operation": null,
+   "payload": {
+    "token": "tok-1"
+   },
+   "source": [],
+   "status": 200,
+   "why": "without an operation there are no declared fields, so a token key is refused on 2xx"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "undeclared-token-2xx",
+   "operation": "entitlements.get",
+   "payload": {
+    "token": "tok-1"
+   },
+   "source": [],
+   "status": 200,
+   "why": "token is not a declared field of entitlements.get"
+  },
+  {
+   "expect_failure": "malformed_error_result",
+   "name": "undeclared-token-error-with-operation",
+   "operation": "identity.login",
+   "payload": {
+    "error": {
+     "code": "not_found",
+     "message": "fixture detail",
+     "retryable": false
+    },
+    "token": "tok-1"
+   },
+   "source": [],
+   "status": 400,
+   "why": "the declared-field exemption never applies to the error path, even for the operation that declares token"
+  }
+ ],
+ "notes": "Closed fixture for the v1 control-plane errors contract (data/contracts/control_plane_errors.yaml), executed against the T0446 test-only reference classify() as a separate binding; a later implement task (T0449) must independently implement the classifier and rebind these rows. Expectations are authored from the structured contract, never computed by the reference. No production semantics are shipped here: no HTTP middleware, no status-to-code mapping (T0419 owns status grouping), no retry schedule. Representative statuses on enum rows are fixture data, not a declared mapping. The source document is pinned by source_manifest; source mutations use set/del mutation lists materialized against the pinned document. All values are plain JSON data; Python-level hostile objects are out of representational scope and owned by the fixture battery's derived probes and the T0446 reference tests. Short SAN/move text and key-shaped values are declared owner gaps (contract result.privacy), pinned here as allowed rows. Secret-looking values exist only to prove typed refusal without echo.",
+ "rollback": [
+  {
+   "calls": [
+    {
+     "expect": {
+      "code": "not_found",
+      "kind": "error",
+      "message": "fixture detail",
+      "retryable": false
+     },
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "not_found",
+       "message": "fixture detail",
+       "retryable": false
+      }
+     },
+     "source": [],
+     "status": 404
+    },
+    {
+     "expect": {
+      "code": "not_found",
+      "kind": "error",
+      "message": "fixture detail",
+      "retryable": false
+     },
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "not_found",
+       "message": "fixture detail",
+       "retryable": false
+      }
+     },
+     "source": [],
+     "status": 404
+    }
+   ],
+   "name": "accepted-result-detached-from-payload",
+   "why": "the returned classification is a fresh dict, not a reference into the payload (contract result.detached); the harness mutates a copy after the first call and re-runs it"
+  },
+  {
+   "calls": [
+    {
+     "expect": {
+      "kind": "success"
+     },
+     "operation": null,
+     "payload": {
+      "account_id": "acct-1"
+     },
+     "source": [],
+     "status": 200
+    },
+    {
+     "expect_failure": "malformed_error_result",
+     "operation": null,
+     "payload": {},
+     "source": [],
+     "status": 400
+    },
+    {
+     "expect": {
+      "code": "provider_unavailable",
+      "kind": "error",
+      "message": "down",
+      "retryable": true
+     },
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "provider_unavailable",
+       "message": "down",
+       "retryable": true
+      }
+     },
+     "source": [],
+     "status": 503
+    }
+   ],
+   "name": "classify-refuse-classify",
+   "why": "a refusal in the middle of a sequence leaves both sides of the sequence unchanged"
+  },
+  {
+   "calls": [
+    {
+     "expect_failure": "malformed_error_result",
+     "operation": null,
+     "payload": {
+      "extra": {
+       "detail": [
+        "x",
+        {
+         "y": [
+          1,
+          2,
+          null
+         ]
+        }
+       ]
+      }
+     },
+     "source": [],
+     "status": 300
+    },
+    {
+     "expect": {
+      "kind": "success"
+     },
+     "operation": null,
+     "payload": {
+      "extra": {
+       "detail": [
+        "x",
+        {
+         "y": [
+          1,
+          2,
+          null
+         ]
+        }
+       ]
+      }
+     },
+     "source": [],
+     "status": 200
+    }
+   ],
+   "name": "refusal-leaves-nested-inputs-bit-identical",
+   "why": "a refusal on an unsupported status leaves a nested payload bit-identical, and the same clean payload then classifies at a supported status"
+  },
+  {
+   "calls": [
+    {
+     "expect_failure": "malformed_error_result",
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "not_found",
+       "message": "fixture detail",
+       "retryable": false
+      }
+     },
+     "source": [],
+     "status": 300
+    },
+    {
+     "expect": {
+      "code": "not_found",
+      "kind": "error",
+      "message": "fixture detail",
+      "retryable": false
+     },
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "not_found",
+       "message": "fixture detail",
+       "retryable": false
+      }
+     },
+     "source": [],
+     "status": 400
+    },
+    {
+     "expect": {
+      "kind": "success"
+     },
+     "operation": null,
+     "payload": {
+      "account_id": "acct-1"
+     },
+     "source": [],
+     "status": 200
+    }
+   ],
+   "name": "refuse-then-classify-unchanged",
+   "why": "a refusal carries no state: the same valid payloads classify identically afterwards"
+  },
+  {
+   "calls": [
+    {
+     "expect_failure": "malformed_error_result",
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "not_found",
+       "message": "fixture detail",
+       "retryable": false
+      }
+     },
+     "source": [
+      {
+       "set": {
+        "path": [
+         "schema_version"
+        ],
+        "value": true
+       }
+      }
+     ],
+     "status": 400
+    },
+    {
+     "expect": {
+      "code": "conflict",
+      "kind": "error",
+      "message": "fixture detail for conflict",
+      "retryable": false
+     },
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "conflict",
+       "message": "fixture detail for conflict",
+       "retryable": false
+      }
+     },
+     "source": [],
+     "status": 400
+    }
+   ],
+   "name": "refuse-with-hostile-source-then-clean-source",
+   "why": "a source-validation refusal poisons nothing: the pinned clean source classifies immediately afterwards"
+  },
+  {
+   "calls": [
+    {
+     "expect_failure": "malformed_error_result",
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "not_found",
+       "message": "fixture detail",
+       "retryable": false
+      }
+     },
+     "source": [],
+     "status": 600
+    },
+    {
+     "expect_failure": "malformed_error_result",
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "not_found",
+       "message": "fixture detail",
+       "retryable": false
+      }
+     },
+     "source": [],
+     "status": 600
+    },
+    {
+     "expect_failure": "malformed_error_result",
+     "operation": null,
+     "payload": {
+      "error": {
+       "code": "not_found",
+       "message": "fixture detail",
+       "retryable": false
+      }
+     },
+     "source": [],
+     "status": 600
+    }
+   ],
+   "name": "repeated-refusals-fresh-errors",
+   "why": "repeated identical refusals each yield a fresh typed error; the harness asserts the objects are distinct"
+  }
+ ],
+ "schema_version": 1,
+ "section_manifests": {
+  "boundary": {
+   "depth-eight-nesting-accepted": "ce848e16f4d237c43a81983440dabef4b9f32ddad175a18f6130246e2840a264",
+   "dict-256-extras-accepted": "57e0e6dfc8d035ff86b73944e96651f91d2e133c2dc668ec3e1e84e0e9c3c403",
+   "error-key-token-run-31-allowed": "5c3f8f1e564cc679d0897369ad6e84c27ea6a1780741e2e9804c69ffc62d4c26",
+   "error-message-token-run-31-allowed": "b30cffd82e65e11123947233bd5d5ae7865b88f8a3ddc4909dbbe8c741ee2266",
+   "error-token-run-broken-by-non-ascii": "29485bbb871e1a0181469b98d7828e150ecc39e330c18b8b7f17a724b45697c7",
+   "error-token-run-broken-by-period": "2eda03afee5ccaad205f47b892608020673c46f1156e73e6be735301667218d1",
+   "error-token-run-broken-by-space": "57cbf9b51d8fbca190c3e1a5ed8f155ed990ab94b2af2adb535b9a35c4a8d69e",
+   "fen-44-near-miss-allowed": "f306abe25fda4aed55baf661f753c8291ebcbbe69de07c55226b11ff4edff234",
+   "fen-middle-rank-bad-allowed": "9946f533d899500be3d5793b34b28e1a5c89c702bcb19fc31781ed5e6fa207ef",
+   "fen-rank-sum-nine-allowed": "8eab830c87836481eb7c048300c6f4daab0666ae24ec2eca7e8e3c322f8088a9",
+   "fen-rank-sum-seven-allowed": "52f6f7c98d34dd96f8be4bc40779369d0e1125e7d6902cb2f3db361703078259",
+   "fen-seven-ranks-allowed": "abd3425c6584198d0934197aa0068cbb2870231aa5ca955b37f7151b604ea0e0",
+   "list-256-extras-accepted": "2920d7de711525d4a2717ab703d2269bbdf18d46a3e719e1e5d75278940af79c",
+   "short-san-text-gap-allowed-2xx": "0b9d0f97e7bf1c677f58534b6ea9e4e39827318f1a0855cf7ad68c8029168f7d",
+   "short-san-text-gap-allowed-error": "0c044e23d03dc5cea55a7a3768bc39470061bd9790cf4743e763229b8e42c138",
+   "status-200-edge": "98f9522be4f33ec265bf65851473601a0dccf82f0cf38ad6e8edba859161f01a",
+   "status-299-edge": "533e6f6481d768ce14aedb2a4e90d400283a26ab1131ead5bfdf2cbcb83fa92c",
+   "status-400-edge": "1e227bd8d52f7e667dc94fe7069a8cc576096dafbb06e49bf4703115575162f6",
+   "status-599-edge": "bdadbd6971e1ffeee61410cbbf8af6e49bacea2a72c8fa837c7919d1dbc801f2"
+  },
+  "happy": {
+   "enum-auth-expired": "7d2b277ab421a54cc39ebd3c876b5db6cbfa896b27ca73ccb4f66eeb5fbd66c1",
+   "enum-auth-invalid": "9e5419afc9d5e0eae9d247e21b5c0b2206bb7bf3c356c1780f2e5f2a85cee35b",
+   "enum-conflict": "6dbcfb28b61327c057336cd69680b07f8e4e3431ef88fc5301a3d34d1f60987a",
+   "enum-cost-cap-exceeded": "908d1fed3d6a0647fb7e1c272b91bc34d38d8fd53dcac8f4b5a990051aa3bfee",
+   "enum-entitlement-missing": "7e7d8731eb149c00604becf725cc20ef093306876eab1f34efff20a279756e42",
+   "enum-idempotency-conflict": "cf453474cbeb19c506e9bb62d19186d7786a75d314f0d7fc0ec634356c47f724",
+   "enum-internal": "b32dc92891586716a4d0063632a56f34e02bd5079262db798dfc4779577a920c",
+   "enum-malformed-request": "b7ac057e2dd1f7b67c1ff1320ec30291da701f9ab360b72e21f9c618eefadeb8",
+   "enum-not-found": "543e954304e56b80c744cea5aeb4b3a2f707d7ee5d199883a6eb786948484b1d",
+   "enum-provider-key-invalid": "8037cd06e799301eac94022a6b4e8d485f239ddc214f611c6bd3d47aff349a16",
+   "enum-provider-unavailable": "f6ae14034b12befec6f8f7f6bd3a091f80c48e630d13ab8094c7a90f66298b0b",
+   "enum-quota-exhausted": "94e140a378d07bca72151f161616c87d9455813f1973a746afe7a352ee3c5c45",
+   "enum-quota-reservation-expired": "1179055546339b43b121db2cbd418e8eddee16791a60d0fe1b63c32d77f38f7f",
+   "enum-rate-limited": "338e070ffc1c52ba547d51f5ea936530f633c00a91c9ab7147512914175eeca6",
+   "error-additive-extra-fields": "f119eba4f3ad460a3c7641d29339d0f19cd9383988e471d4bdceb9043cc45631",
+   "error-null-extra-allowed": "0a3379b99d2273d51f40215f68839321721a75aa318ca4b88e0e009fab4648a9",
+   "error-provider-kind-safe": "06800fbe4845b6342dbc9ecc20242b2e06e350706410d1a844f07fad822e2aea",
+   "operation-billing-create_checkout-example": "5ca22dd827225959ef5db78096e7fddeab2e49c7e3db17db89d09d1f779c19e2",
+   "operation-billing-get_subscription-example": "8fa315d9cab53067052e5e83aa24819e5ed88e6094c7ce4de9c02bc0bb6fbc17",
+   "operation-entitlements-get-example": "2373fe211beeb0fcf2ca7f93f01fa6a09be8f5a810c2ecec4fef2d1f5dd9027e",
+   "operation-identity-delete_account-example": "0fc74be2f4010e6eb6d62944f13cbefc150163de11f7ddc056b62123cf4fbdda",
+   "operation-identity-login-example": "4bf509b452aea6ce42d970ec4b1bdaf54b257f20b38616174cf337d9f772b383",
+   "operation-identity-logout-example": "ddcc2cba9a0bd03922a544018692bec3a6191735a20348a8319292dc3c72fb87",
+   "operation-identity-refresh-example": "d6230f990ccc2cb01a16aa6d62041e89f347ea1f966d770e02aecd4a7887dd26",
+   "operation-identity-register-example": "22a3ed22359825f6cdfd1ed5bcc7e86bb6d6b2e4f1705bb9b310b19c7ef0fcc5",
+   "operation-provider_routing-register_key-example": "2ea5e60edb929ebba1f158cc9b7ad222c2af7383216027758fdd0f16f6223315",
+   "operation-provider_routing-revoke_key-example": "ef64da16e83a626f8aa9d373589d814916e8749bb0c441712400724e2ea79941",
+   "operation-provider_routing-route-example": "9833928ce91f1713a406ad9c96994205e4c90762ca2265877e22c7580c7641fa",
+   "operation-quota-commit-example": "031fe90c2005c69475551a9368fc7f78002abf520f0148f30a5401fb8c5453ba",
+   "operation-quota-release-example": "b45518b041785982f0fe6e82d0e7914b2539e152644913c98b29cc47a5bc1dbf",
+   "operation-quota-reserve-example": "3d45f68965c6aa9db6cb332e42764406d9a02834d23ed09ecf0b3cbe545406cb",
+   "success-2xx-with-error-property": "38b7ef4017fd5934d9721da24274939a16888c7bb25a78fe41c8a6abc409330a",
+   "success-clean-empty-payload": "d38a1b545dfdf300080b8b6dc96d5d94f3e8ad8a88b9aa33d1c21349a3ffe665",
+   "success-declared-register-fields": "2d9381d788ff191149d28236dc869ad0b07bd3df6471da2c176abf812408bb91",
+   "success-declared-token-exemption": "ffbe1ed32218cc3c41f5fb5f135508f5f3683606a10bd2b56d2dbdd95e9f6320",
+   "success-key-token-run-32-allowed": "4afd70d8a9a27c07e519699c94908beed933a8943fe92741649abd69392d7779",
+   "success-nested-key-token-run-32-allowed": "0cfd680f5fac1100b36283266ef67a39b3c29849d0c1156a1dd4a89d7edb3975",
+   "success-without-operation": "f5ae5469b0086ff1734b5687b20176ca4b6e5f9681fc050ecaed305534e0865b"
+  },
+  "malformed": {
+   "chess-key-FENString": "691010c001bd2e6bde9fef564e8b65b8dadcab304da54f8079955b39acad83dc",
+   "chess-key-GAMEMoves": "4727a81bb1bc0d5b311353655e16e14aaaa23006f816ef7597dc517bb74dc3e1",
+   "chess-key-GameMoves": "17173c3ac5963952df12ee5d93a22b3a1a8c87b8cd329f18d1ececc4f68f3c9c",
+   "chess-key-game-dot-id": "eee1ac0b74991dee8ade8eb27103e8d61e0ecee33804e57334315435458cee3e",
+   "chess-key-game-dot-moves": "ceb5030c0da2cfb3bd7bde995ae9f386f1e62221b12e4c02bd265f5bae6d127f",
+   "chess-key-game-id": "80abb55f98e025364a98645734721e15f7256cc4c6a4064dba198d5914e3be0d",
+   "chess-key-gameMoves": "b686db8a39a9da7f5a7c2ce447820183b19ee0f0a50246d3b586be0dc5ecfa4d",
+   "chess-key-provider-dot-key": "434fa4b9eaf0c655cbca1109de63525f528294caa5798b49971e3f018ea8e81c",
+   "chess-key-providerKey": "5b7ff32fe24cf0c2c632156795bf8d9f860b87f4801a6f89d0607c3f030bb144",
+   "chess-key-top3Moves": "0f4d010587bfa0f0e16e12c1dcc5c769a355f9a73aa462a87735746394815bc6",
+   "depth-nine-nesting-refused": "2089af2082cf7bb7c4cdd1e087ddb9e46d666545fcaf0a791c3cac88420f05fc",
+   "dict-257-extras-refused": "a02a4aab0dc0bc1a78e5534ce73ed85a5746ed5c81a54091eedb996611d6338a",
+   "error-chess-key-analysis": "c8d332dbcafe77385209bf3f8e7d9023a45938a34ef3b3992d11a6a7b24650fc",
+   "error-code-nonstring": "cea7a7cb8807d6dc40386af6a1c82c79a1a05a705e63f5bea3fe6e225c7ccda4",
+   "error-code-outside-enum": "c733eb5992b74c1ea27c965c81ddf182e19e70965ec85310777d1a2ffdb97cbd",
+   "error-extra-token-run-32-nested-list": "974d54fb49d6cb61c59a28fd2e94994d0d089cdeb0ab07de9b7a913b6f1885a7",
+   "error-key-token-run-32": "30477c4427a955a940a51ec643cd9828cc955f369d67ad6aa8d7d07d5b3fe781",
+   "error-key-token-run-32-dotted-prefix": "e629be14feb786fac9acf131a9b1c2957c453a750458035bcd72bd78c232a07c",
+   "error-key-token-run-32-nested": "1977ae357732f2a825fbb032210fafa9db63297f04db70449fcc615a312c20ea",
+   "error-list": "41f57d6352e7675b490ea6badfee2f7ce9e82a46185821915845fd3f5e0fbb70",
+   "error-message-nonstring": "e99ab4b265b8b85b818ae9119153d195adcbcf06b85cb9ba52cbf311747023e4",
+   "error-message-password-hash": "d71b7131980822a55ed2e650f845d4a302befe8b1d413cb28aec946fc42810f0",
+   "error-message-secret": "9d4bd32b6a8ea1f91e1a928e9c1416bf717292693cbf34455761aef02aed9f79",
+   "error-message-token-run-32": "d6c2eef718be9224a4f56793e580b6aefa5b39e8eef864a129d45696428e7c4c",
+   "error-message-token-run-32-camelcase": "1ccaae1daa6f824d3b29a3a81bc2a35ca53719048fd5bc0b05ad29663588552e",
+   "error-message-token-run-32-digit": "16b3fee206d901b92b9f6ef74c095c99dbe05c5dbad7122a849d69f68383b4ac",
+   "error-message-token-run-32-mixed-alphabet": "f25f9197b34f3a8c3404321258097b578b30e0c83e969a2c032ca060ab4eb96a",
+   "error-message-uppercase-secret": "7fea05a309ba2a5cbb67b68012ea7e412e9d957345c5170b9c10fcbc5623c658",
+   "error-missing": "6a2fee5fe427bb09806f7b696c9b29c4f4b3ed82c74cbabccd2078a2dfc062d8",
+   "error-missing-code": "e4dedd40e2a97abbe455c4f113a2b7ca8e1535417332cbf39044baecc5f3b346",
+   "error-missing-message": "3953d7adfa8bf141bc6e808fa2b9833bd5a505d5e28b1bc2355c30d5c6906d15",
+   "error-missing-retryable": "e08bdddccb77ee9afdd9f802b73faf1bab0ec4e141de4b74348e6c59612c1c39",
+   "error-null": "c7ef53addcb16f2b905ea549faee83d8949c9f07be217e6125275c6af271b04f",
+   "error-retryable-int": "31ce7e2ea238a36695570483fd32b1311cd52a33e14711adc24cac8ed9ca7764",
+   "error-retryable-string": "7da66645f0cbee7b7a47eea0df023b4212394fed7d16a31eb0561f5080cc4d9c",
+   "error-secret-key-material": "6cd27450b799daa8876b5603b07e1e0dc4df0c71df7aa5a5a5eab24ab3cbc879",
+   "error-string": "66bebaa29f467b1a456e83aa9f2e7c8c448674654045f4be40d6969f6d96c895",
+   "fen-glued-colon-prefix": "5ccf1c0059125fd9a1e33986906d05ed85cdb837f75158c7a772f3ff359fd8ac",
+   "fen-glued-suffix-letter": "e10181a2e8e2512701895c8fa415922f9d92413a85fc6fd0ff96899ed818a90f",
+   "fen-in-declared-token-2xx": "ec9eff098ec6dcdc6265a24f62e41338ebb65c690fbbe469db6676fa5bbc094e",
+   "fen-in-error-message-4xx": "0cc1925b30dddbcf79a5ee4c3e8f7665a1da5eb2c423a7190d46aac91a11e2dd",
+   "fen-in-list-2xx": "b2dbbafcb910db5ff131eea3d25afd9c85d62384b4515449a377635959b1d025",
+   "fen-left-edge-digit": "6264dc1fd6c3f0557b40803bcb787cff25692f4f0e1aeff5fbb968605e4b9b54",
+   "fen-nested-extra-4xx": "9d5843020c0ad8d73cd5894386ef52cb663fa1808840eaff454b95f1924b7a9e",
+   "fen-nine-ranks": "044950a0e8a120962862ebc9043ae275653cb3cd0fef799763447d2363c0c566",
+   "fen-plain-2xx": "f16547987ce0bd01c477a5a6e67ae4261847138d42551b0de2368252aae6075d",
+   "fen-right-edge-digit": "f6c3634997d2fb81d6038fb607c38e9100d6a1bd7703807f3cc8c26d44e24cbc",
+   "fen-slash-prefix": "eaa3871beb6dfc1fcf449fe9011f7462e69a87ae715040b2b9978cab207e7c58",
+   "fen-spaced-slash-prefix": "ba85b2b171bbd3e2ce838df749523e1e8435af7d7eeac5fce28900bc1b5e3f89",
+   "fen-trailing-piece": "c4f7e536776cc7d08a6f92bb72b08f2c130f9c986e43dd7383c2314f1dea0e77",
+   "fen-zero-digit-08": "279135acb1ac24cc94a6288f958825d85ecd4274ecc79c1fe8683e11fef0024d",
+   "fen-zero-digit-0p7": "39993a2a11e56f13647b07f8aee50f08800fcb18c0ca077b34c927a562cf6391",
+   "hostile-source-enum-nonstring-member": "50afd53fa55db519dbceb023c4f73c9e27d06cd27920dfba75fb7e023e82e968",
+   "hostile-source-schema-version-bool": "2bef3c5e5691792973436c4df0975c5044e0bb5100a0e9b943de5d682a236578",
+   "hostile-source-shape-required-flipped": "b611c4b919a8e296c63745f1969a5319484e530fcc33c4d815a9501ff8c17205",
+   "list-257-extras-refused": "25babf5c34419804d3b81997d51536976e77a397a6aa709d323259d403ce2aab",
+   "nested-declared-token-2xx": "72e9839fe935e7aad5bc6ef1ff4e357a00ea339efc9cff8bb09361d1591b663b",
+   "operation-nonstring": "c21001c18674dc588d1a03616559a5961dd859bd2fefc7956f2d62190ca128aa",
+   "operation-three-segments": "8f00f067e90d5810ab68b0ac49f8ae70ad811333a065e6994fa1601ef6bc0a7d",
+   "operation-unknown-area": "203a834975ad155040ec90f427ee35da56cfe3689b45fe022096d330fc1b5764",
+   "operation-unknown-operation": "973c3443edba25eec869f96777462a64316170d85c680ae3255e5e0003b48245",
+   "payload-list": "6b1362f88339d15f9f1432aa0acb374140b6cbb7c638061fcd2db0bc58c86135",
+   "payload-null": "e95b1e904c9558cdc090cea816f5927a7a72887129f8ff67d6cffb1f50fe9d95",
+   "payload-string": "506d7f1bf5628900bdb98ac0499a6b5f3b8758c67eebb87513309eec66c388b2",
+   "status-100": "5dbec36bef13b16409f132e76f6f842a3462768f89088f14342663ccd5a64aca",
+   "status-199": "a0120bb09f0ec19553d1213af7ab4c647b03f1ad8b19e13bcd87320e3e39c327",
+   "status-300": "2720f5e2cac43904e02b3ca83e840ee41108125bffeb92c55e13ad4d8046e3e0",
+   "status-399": "f506bbdd31b6f6cda791676a1020a4fc25cf9b56a83c11fd8cdd9030676b6d95",
+   "status-600": "be59fe3c616e77bb00e99d757229438c4fe35fb65c8f2c0825080fdf9b2d2b70",
+   "status-bool-true": "3e0dc1a56216925034067242768100346bfc48730c03f535aaad96be0573d010",
+   "status-float": "8da46959b1c757c1ba3a2a9ec7e2f2b781e7eb67342a190c66085320c6638b11",
+   "status-null": "f8da168479122506fc42b74d0f3573a91b6344e5f6329e391d0cfda460fc6115",
+   "status-string": "8b639a6248876a826d74a4562c3edfbf88f74494daba6bb99731784403b9a602",
+   "status-zero": "27f739ec8d120880e74b0c67994fb37d4245215ad6fadad586df7675d58ff3a6",
+   "top-level-case-secret-key": "28e5b71538a4d631cc548f35ba7d249f9b20aa08ef0d87346d9180a2b288a097",
+   "top-level-password-hash-extra": "255112bc28fb663c9c6039920e688323223dc42f1dc979ece912e4173149da5d",
+   "top-level-secret-extra": "612315b4146c6139042740b166186938f9ea1c06b82c54d2432a17eb6a48f0ef",
+   "top-level-token-extra-2xx-without-operation": "d5127c58ec55720a52f511b8dc1bc9a63d6e4c3d83eb87a99e57874c19826f66",
+   "undeclared-token-2xx": "52b1f2289aa78944fe837ea3538cac5cf365879964f8e9ceed60804e8bc01fe0",
+   "undeclared-token-error-with-operation": "1e804c0c1e7d6e1e720e92bbeebbf344c7f16d9cff35995428014d943af171f2"
+  },
+  "rollback": {
+   "accepted-result-detached-from-payload": "3905a73d5294f365986ccd4d5da5594ff3d3a9993aab80027efc9411474710e6",
+   "classify-refuse-classify": "f06442d4520d22b30dba7621e06b5998cc99dd25828f2a177d3fc2a7deb5ac1a",
+   "refusal-leaves-nested-inputs-bit-identical": "e60092e9ed9531d67017e52b74d5057e4d73f324ee2a0dadc977ed40bf930f42",
+   "refuse-then-classify-unchanged": "5ab80e850f17d1f0927484796f95c01c8ab6ecec9ab2685f40c07e72fc0c8681",
+   "refuse-with-hostile-source-then-clean-source": "9005471ba31fafa43145b3e477cc99f129bd0b4799df298173fd364aa9a11f46",
+   "repeated-refusals-fresh-errors": "eba3538fcee278feb459e02436623ff06f5d7aae76af5378eb9d6d2353b774d6"
+  }
+ },
+ "source": "data/contracts/control-plane.yaml",
+ "source_manifest": "d858e45e694cc74ba35a993a6d5bf628b030382632867e90ad1c5614ca5a96bb"
+}
