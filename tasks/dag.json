@@ -10106,10 +10106,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "a6201001c70991af6208e1ec27c921fa4dff7242",
+   "evidence_manifest": "evidence/T0478.md"
   },
   {
    "id": "T0479",
