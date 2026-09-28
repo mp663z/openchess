@@ -120,16 +120,28 @@ def _snapshot(client):
 def test_full_session_flow_integration():
     server = MockControlPlane()
     client, wire = _registered(server)
+    assert EMAIL["email"] in server.accounts  # account created server-side
     ent = client.entitlements()
     assert client.entitlements_source == "live" and ent["tier"] == "free"
     r = client.call("quota.reserve", dict(RESERVE, estimated_units=5))
+    assert server.quota_units == 995
     out = client.call("quota.commit", {"reservation_id": r["reservation_id"], "actual_units": 3})
     assert out == {"remaining_units": 997} and server.quota_units == 997
+    assert server.reservations == {}
+    r2 = client.call("quota.reserve", dict(RESERVE, estimated_units=4))
+    assert server.quota_units == 993
+    assert client.call("quota.release", {"reservation_id": r2["reservation_id"]}) == {}
+    assert server.quota_units == 997 and server.reservations == {}  # hold refunded
     key = client.call(
         "provider_routing.register_key", {"provider_kind": "generic-a", "key_material": SECRET}
     )
+    assert server.keys[key["key_ref"]] == {"provider_kind": "generic-a"}  # server key registry
     route = client.call("provider_routing.route", {"capability": "analysis-fast"})
     assert route["provider_kind"] == "generic-a" and route["key_ref"] == key["key_ref"]
+    assert client.call("provider_routing.revoke_key", {"key_ref": key["key_ref"]}) == {}
+    assert server.keys == {}  # key gone from the registry
+    route = client.call("provider_routing.route", {"capability": "analysis-fast"})
+    assert route["provider_kind"] == "platform" and "key_ref" not in route  # fallback
     checkout = client.call(
         "billing.create_checkout",
         {
@@ -144,17 +156,33 @@ def test_full_session_flow_integration():
     old_token = client.token
     client.call("identity.refresh")
     assert client.token != old_token and client.account_id is not None
+    session_token = client.token  # refresh does not revoke the previous token
     assert client.call("identity.logout") == {}
     assert client.token is None and client.account_id is None
     assert client._entitlements is None and client._reservations == {}
+    assert session_token not in server.tokens  # the credential is revoked server-side
+    status, payload = server.handle(
+        "GET", "/entitlements", {"Authorization": f"Bearer {session_token}"}, {}
+    )
+    assert status == 401 and payload["error"]["code"] == "auth_invalid"  # revoked bearer fails
+    client.call("identity.login", dict(EMAIL))
+    assert client.account_id is not None and client.token in server.tokens
+    account_id = client.account_id
+    assert client.call("identity.delete_account", {"confirm": "DELETE"}) == {}
+    assert EMAIL["email"] not in server.accounts  # account removed server-side
+    assert not [t for t in server.tokens.values() if t["account_id"] == account_id]
+    assert client.token is None and client.account_id is None and client._reservations == {}
     by_route = {(op["method"], op["path"]): op for op in prod.OPS.values()}
     idem_keys = []
+    seen_ops = set()
     for method, path, headers, _body in wire.calls:
         op = by_route[(method, path)]
+        seen_ops.add((method, path))
         assert ("Authorization" in headers) == (op["auth"] == "required")
         assert ("Idempotency-Key" in headers) == op["mutating"]
         if "Idempotency-Key" in headers:
             idem_keys.append(headers["Idempotency-Key"])
+    assert seen_ops == set(by_route)  # every one of the 14 contract operations
     assert len(idem_keys) == len(set(idem_keys))  # one fresh key per logical call
 
 
