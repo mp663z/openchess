@@ -79,6 +79,11 @@ RELEASE_TARGETS = {
 # silent (mypy-extensions: MIT, github.com/python/mypy_extensions LICENSE).
 LICENSE_OVERRIDES = {"colorama": "BSD-3-Clause", "mypy-extensions": "MIT"}
 
+# Keep the previously shipped mypy runtime wheel while the new upstream
+# librt 0.16.0 publication receives separate provenance review. This is a
+# transitive resolution constraint, not a new direct distribution dependency.
+TRANSITIVE_PINS = {"librt": Requirement("librt==0.15.0")}
+
 _LICENSE_NORMALIZE = {
     "mit license": "MIT",
     "apache software license": "Apache-2.0",
@@ -248,9 +253,12 @@ def _resolve_target(target_name: str, target: dict) -> list[dict]:
                 except Exception:
                     continue
             dkey = dep.name.lower().replace("_", "-")
-            constraints.setdefault(dkey, []).append(dep)
+            edges = [dep]
+            if dkey in TRANSITIVE_PINS and dkey not in constraints:
+                edges.append(TRANSITIVE_PINS[dkey])
+            constraints.setdefault(dkey, []).extend(edges)
             if dkey not in resolved:
-                pending.setdefault(dkey, []).append(dep)
+                pending.setdefault(dkey, []).extend(edges)
     # Post-closure validation: the resolved version must satisfy EVERY
     # requirement edge accumulated for it, including ones discovered after
     # the package was first resolved. Fail-closed on conflict.
