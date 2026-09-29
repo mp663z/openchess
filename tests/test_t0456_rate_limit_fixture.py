@@ -339,6 +339,7 @@ def _check(cases):
     assert cases["source_manifest"] == hashlib.sha256(_canon(SOURCE_DOC)).hexdigest()
     assert type(cases["notes"]) is str and "separate binding" in cases["notes"]
     assert "no production semantics" in cases["notes"].lower()
+    assert "skips all request, policy, state and store validation" in cases["notes"]
     assert set(cases["section_manifests"]) == set(SECTIONS)
     names = []
     for section in SECTIONS:
@@ -533,6 +534,11 @@ def test_malformed_section_pins():
         "replay-token-nonstring",
         "body-same-nonbool-int",
         "body-same-nonbool-null",
+        "body-same-nonbool-int-cached",
+        "body-same-nonbool-zero-cached",
+        "body-same-nonbool-string-cached",
+        "body-same-nonbool-list-cached",
+        "body-same-nonbool-null-cached",
         "malformed-operation-with-corrupt-state",
         "malformed-policy-with-corrupt-state",
         "conflict-cached-different-body",
@@ -714,6 +720,47 @@ def test_opaque_key_lone_surrogate_is_a_declared_gap():
     )
 
 
+def test_replay_branch_skips_request_policy_state_and_store_validation():
+    """Declared in the fixture notes: with a boolean body_same the replay
+    branch replays or conflicts without request, policy, state or store
+    validation. Pinned here with every one of those inputs hostile."""
+    hostile = {
+        "operation": object(),
+        "account": object(),
+        "source": object(),
+        "now": -1,
+        "policy": None,
+        "store_available": False,
+        "effect_ok": False,
+    }
+    corrupt_state = {("identity.login", "account", "opaque:account"): (0, -1)}
+    corrupt_records = [
+        {
+            "operation": "identity.login",
+            "scope": "account",
+            "opaque": "opaque:account",
+            "window": 0,
+            "count": -1,
+        }
+    ]
+    call = _probe_base()
+    call.update(replay="cached", body_same=True, **hostile)
+    _run_verdict_call(
+        call,
+        {"outcome": "replay", "state": corrupt_records},
+        "probe:replay-skips-validation",
+        ref_state=corrupt_state,
+    )
+    conflict = _probe_base()
+    conflict.update(replay="cached", body_same=False, **hostile)
+    _run_refusal_call(
+        conflict,
+        "idempotency_conflict",
+        "probe:replay-skips-validation-conflict",
+        ref_state=corrupt_state,
+    )
+
+
 @pytest.mark.parametrize("label", [label for label, _, _ in _FIELD_PROBES])
 def test_derived_field_probes_refuse_typed(label):
     (probe,) = [probe for probe in _FIELD_PROBES if probe[0] == label]
@@ -764,6 +811,10 @@ def _fixture_red():
         test_opaque_key_lone_surrogate_is_a_declared_gap()
     except BaseException:  # noqa: BLE001
         red.append("probe:opaque-key-lone-surrogate")
+    try:
+        test_replay_branch_skips_request_policy_state_and_store_validation()
+    except BaseException:  # noqa: BLE001
+        red.append("probe:replay-skips-validation")
     return red
 
 

@@ -33,12 +33,21 @@ def decision(
     store_available=True,
     effect_ok=True,
 ):
-    """Synthetic transactional model: returns (result, detached new state)."""
+    """Synthetic transactional model: returns (result, detached new state).
+
+    body_same is validated as an exact bool before the replay branch, so a
+    cached replay with a nonbool body_same refuses as malformed instead of
+    being coerced by truthiness. The replay branch itself deliberately skips
+    all request, policy, state and store validation; that skip is declared
+    and pinned in the T0456 fixture notes.
+    """
+    if type(body_same) is not bool:
+        raise Refusal("malformed_request")
     if replay == "cached" and body_same:
         return "replay", copy.deepcopy(state)
     if replay == "cached" and not body_same:
         raise Refusal("idempotency_conflict")
-    if replay != "new" or type(body_same) is not bool:
+    if replay != "new":
         raise Refusal("malformed_request")
     if (
         type(operation) is not str
@@ -238,6 +247,18 @@ def test_failure_atomicity(flags, code):
     with pytest.raises(Refusal, match=code):
         decision(**p)
     assert p == before
+
+
+@pytest.mark.parametrize("body_same", [1, 0, "yes", "", None, [1], 1.5])
+def test_cached_replay_validates_body_same_before_the_replay_branch(body_same):
+    """A cached replay with a nonbool body_same refuses as malformed: the
+    exact-bool check fires before the replay branch, so truthiness never
+    coerces a replay or a conflict."""
+    p = params(replay="cached", body_same=body_same)
+    original = copy.deepcopy(p)
+    with pytest.raises(Refusal, match="malformed_request"):
+        decision(**p)
+    assert p == original
 
 
 def test_cached_replay_does_not_consume_or_remint():
