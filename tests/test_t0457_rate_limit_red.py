@@ -1,10 +1,11 @@
 """T0457: executable rate-limit acceptance and red-test battery.
 
-One binding, currently the T0455 test-only synthetic decision; T0458 must
-replace it with an independent implementation. The T0456 closed corpus owns
-hand-authored verdicts and row manifests. Both the green gate and every red
-mutant run the same corpus, rollback chains and Python-only hostile probes.
-No production limiter, HTTP middleware or normalization policy is claimed.
+One binding to the independent T0458 production decision. The T0455
+test-only synthetic decision remains the mutant baseline, not the shipped
+implementation. The T0456 closed corpus owns hand-authored verdicts and row
+manifests. Both green and red gates use the same corpus and hostile probes.
+This binds production admission logic, but does not claim live middleware,
+normalization policy or an atomic persistence/identity-effect integration.
 """
 
 from __future__ import annotations
@@ -13,12 +14,13 @@ import copy
 
 import pytest
 
+from server import identity_admission as production
 from tests import test_t0455_rate_limit_contract as reference
 from tests import test_t0456_rate_limit_fixture as fixture
 
 # Single rebinding point for T0458. The error type is part of this binding.
 BASE_DECISION = reference.decision
-PRODUCTION_BINDING = (BASE_DECISION, reference.Refusal)
+PRODUCTION_BINDING = (production.decide, production.AdmissionRefusal)
 
 
 def _run(binding):
@@ -253,3 +255,45 @@ def test_unimplemented_binding_is_demonstrably_red():
         raise NotImplementedError("T0458 not implemented")
 
     assert "happy:admit-first-empty-login" in _run((missing, reference.Refusal))
+
+
+class _EqualCached:
+    def __eq__(self, other):
+        return other == "cached"
+
+
+class _CachedSubclass(str):
+    pass
+
+
+class _Truthy:
+    def __bool__(self):
+        return True
+
+
+class _ExplosiveBool:
+    def __bool__(self):
+        raise AssertionError("hostile operator executed")
+
+
+@pytest.mark.parametrize("replay", [_EqualCached(), _CachedSubclass("cached")])
+def test_production_replay_token_rejects_hostile_equality(replay):
+    decision, refusal = PRODUCTION_BINDING
+    args = reference.params(replay=replay, operation=object())
+    with pytest.raises(refusal) as caught:
+        decision(**args)
+    assert type(caught.value) is refusal
+    assert caught.value.code == "malformed_request"
+    assert args["state"] == {}
+
+
+@pytest.mark.parametrize("flag", ["store_available", "effect_ok"])
+@pytest.mark.parametrize("value", [_Truthy(), _ExplosiveBool(), 1])
+def test_production_internal_flags_require_exact_bool(flag, value):
+    decision, refusal = PRODUCTION_BINDING
+    args = reference.params(**{flag: value})
+    with pytest.raises(refusal) as caught:
+        decision(**args)
+    assert type(caught.value) is refusal
+    assert caught.value.code == "internal"
+    assert args["state"] == {}
