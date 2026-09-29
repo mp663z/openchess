@@ -56,10 +56,16 @@ NOTES = (
     "injected fixtures per the contract's injected-policy rule "
     "(unresolved.thresholds); opaque: keys are synthetic stand-ins for "
     "normalizer output (unresolved.account_normalization and "
-    "unresolved.source_normalization). The replay decision does not consult "
-    "bucket state, and any opaque:-prefixed str is admitted as a key "
-    "including bytes a real normalizer would never emit; both are pinned "
-    "as the synthetic model's declared behavior, not production choices. "
+    "unresolved.source_normalization). body_same is validated as an exact "
+    "bool before the replay branch, so a cached replay with a nonbool "
+    "body_same refuses as malformed. The replay branch skips all request, "
+    "policy, state and store validation: a cached replay with a boolean "
+    "body_same replays or conflicts without inspecting the operation, keys, "
+    "clock, policy, stored records or store availability. The replay "
+    "decision does not consult bucket state, and any opaque:-prefixed str "
+    "is admitted as a key including bytes a real normalizer would never "
+    "emit; these are pinned as the synthetic model's declared behavior, "
+    "not production choices. "
     "State records outside the two declared scopes are carried unchanged. "
     "The source document is pinned by source_manifest. All values are "
     "plain JSON data; Python-level hostile objects are out of "
@@ -585,14 +591,44 @@ def _malformed():
         ),
         refusal(
             "body-same-nonbool-int",
-            "body-same is a boolean; the synthetic model validates its exact type on the new-attempt path",
+            "body-same is a boolean; the synthetic model validates its exact type before the replay branch",
             call(body_same=1),
             "malformed_request",
         ),
         refusal(
             "body-same-nonbool-null",
-            "body-same is a boolean; the synthetic model validates its exact type on the new-attempt path",
+            "body-same is a boolean; the synthetic model validates its exact type before the replay branch",
             call(body_same=None),
+            "malformed_request",
+        ),
+        refusal(
+            "body-same-nonbool-int-cached",
+            "body-same is validated as an exact bool before the replay branch: a cached replay with a truthy nonbool refuses as malformed instead of replaying by truthiness",
+            call(replay="cached", body_same=1),
+            "malformed_request",
+        ),
+        refusal(
+            "body-same-nonbool-zero-cached",
+            "body-same is validated as an exact bool before the replay branch: a cached replay with a falsy nonbool refuses as malformed instead of conflicting by truthiness",
+            call(replay="cached", body_same=0),
+            "malformed_request",
+        ),
+        refusal(
+            "body-same-nonbool-string-cached",
+            "body-same is validated as an exact bool before the replay branch: a cached replay with a string refuses as malformed",
+            call(replay="cached", body_same="yes"),
+            "malformed_request",
+        ),
+        refusal(
+            "body-same-nonbool-list-cached",
+            "body-same is validated as an exact bool before the replay branch: a cached replay with a list refuses as malformed",
+            call(replay="cached", body_same=[1]),
+            "malformed_request",
+        ),
+        refusal(
+            "body-same-nonbool-null-cached",
+            "body-same is validated as an exact bool before the replay branch: a cached replay with null refuses as malformed",
+            call(replay="cached", body_same=None),
             "malformed_request",
         ),
         refusal(

@@ -1615,7 +1615,63 @@
    },
    "expect_failure": "malformed_request",
    "name": "body-same-nonbool-int",
-   "why": "body-same is a boolean; the synthetic model validates its exact type on the new-attempt path"
+   "why": "body-same is a boolean; the synthetic model validates its exact type before the replay branch"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": 1,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "body-same-nonbool-int-cached",
+   "why": "body-same is validated as an exact bool before the replay branch: a cached replay with a truthy nonbool refuses as malformed instead of replaying by truthiness"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": [
+     1
+    ],
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "body-same-nonbool-list-cached",
+   "why": "body-same is validated as an exact bool before the replay branch: a cached replay with a list refuses as malformed"
   },
   {
    "call": {
@@ -1642,7 +1698,88 @@
    },
    "expect_failure": "malformed_request",
    "name": "body-same-nonbool-null",
-   "why": "body-same is a boolean; the synthetic model validates its exact type on the new-attempt path"
+   "why": "body-same is a boolean; the synthetic model validates its exact type before the replay branch"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": null,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "body-same-nonbool-null-cached",
+   "why": "body-same is validated as an exact bool before the replay branch: a cached replay with null refuses as malformed"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": "yes",
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "body-same-nonbool-string-cached",
+   "why": "body-same is validated as an exact bool before the replay branch: a cached replay with a string refuses as malformed"
+  },
+  {
+   "call": {
+    "account": "opaque:account",
+    "body_same": 0,
+    "effect_ok": true,
+    "now": 0,
+    "operation": "identity.login",
+    "policy": {
+     "account": {
+      "capacity": 2,
+      "window_ms": 100
+     },
+     "source": {
+      "capacity": 3,
+      "window_ms": 100
+     },
+     "version": 1
+    },
+    "replay": "cached",
+    "source": "opaque:source",
+    "state": [],
+    "store_available": true
+   },
+   "expect_failure": "malformed_request",
+   "name": "body-same-nonbool-zero-cached",
+   "why": "body-same is validated as an exact bool before the replay branch: a cached replay with a falsy nonbool refuses as malformed instead of conflicting by truthiness"
   },
   {
    "call": {
@@ -2774,7 +2911,7 @@
    "why": "store availability precedes bucket admission: an outage at full buckets is internal, not a denial"
   }
  ],
- "notes": "Closed fixture for the public identity rate-limit reference contract (data/contracts/rate_limit.yaml), executed against the T0455 test-only synthetic reference decision() as a separate binding; a later implement task (T0458) must independently implement the admission decision and rebind these rows. Expectations are authored from the structured contract, never computed by the reference. No production semantics are shipped here: no HTTP middleware, no live enforcement, no account or source normalization, no production thresholds. Policies are synthetic injected fixtures per the contract's injected-policy rule (unresolved.thresholds); opaque: keys are synthetic stand-ins for normalizer output (unresolved.account_normalization and unresolved.source_normalization). The replay decision does not consult bucket state, and any opaque:-prefixed str is admitted as a key including bytes a real normalizer would never emit; both are pinned as the synthetic model's declared behavior, not production choices. State records outside the two declared scopes are carried unchanged. The source document is pinned by source_manifest. All values are plain JSON data; Python-level hostile objects are out of representational scope and owned by the fixture battery's derived probes and the T0455 reference battery.",
+ "notes": "Closed fixture for the public identity rate-limit reference contract (data/contracts/rate_limit.yaml), executed against the T0455 test-only synthetic reference decision() as a separate binding; a later implement task (T0458) must independently implement the admission decision and rebind these rows. Expectations are authored from the structured contract, never computed by the reference. No production semantics are shipped here: no HTTP middleware, no live enforcement, no account or source normalization, no production thresholds. Policies are synthetic injected fixtures per the contract's injected-policy rule (unresolved.thresholds); opaque: keys are synthetic stand-ins for normalizer output (unresolved.account_normalization and unresolved.source_normalization). body_same is validated as an exact bool before the replay branch, so a cached replay with a nonbool body_same refuses as malformed. The replay branch skips all request, policy, state and store validation: a cached replay with a boolean body_same replays or conflicts without inspecting the operation, keys, clock, policy, stored records or store availability. The replay decision does not consult bucket state, and any opaque:-prefixed str is admitted as a key including bytes a real normalizer would never emit; these are pinned as the synthetic model's declared behavior, not production choices. State records outside the two declared scopes are carried unchanged. The source document is pinned by source_manifest. All values are plain JSON data; Python-level hostile objects are out of representational scope and owned by the fixture battery's derived probes and the T0455 reference battery.",
  "rollback": [
   {
    "calls": [
@@ -5196,8 +5333,13 @@
    "account-missing-opaque-prefix": "8abc07c6129ad7459b27dd970431049480eec06d8841995cb13fbf1ccf3ae1f0",
    "account-nonstring": "5dfdad283cd4cb8122df658cd89ab7687604c303d19a0cec177adfa7630d1006",
    "account-raw-email": "83bc5662263e2bb5200159e87a01a6a141369a4f08e07e80f161c3db689ea3ec",
-   "body-same-nonbool-int": "8bd9d4b728c5f57f3f6f902267701e0ce64c8addeda818004c2737945b3d7ead",
-   "body-same-nonbool-null": "df3df6862aa20239e0f7356e7df822fd1dddc33fa0e93e9e91c13d0c20fcdb44",
+   "body-same-nonbool-int": "4a815862517d5b8344edff50caa4bfab841cba55838db0d6fe858da59f90a759",
+   "body-same-nonbool-int-cached": "a3c6f30c373536bd3d1b4f6f381fec6c4f23b3de25713381a8d9ec75cadb3aaa",
+   "body-same-nonbool-list-cached": "fd213127bfd3f5dba31daa2ff073f2231df71f9b659464cbd7e98852d6258c7d",
+   "body-same-nonbool-null": "537cf2d8b93bb4bcd2123c0f754bec3b962c918d9a20e8d3362ee7fd2e616ad2",
+   "body-same-nonbool-null-cached": "1172e7b39f5a22d05066425c008f59bb6f4478209816a20c9d7b4b27d36e69bd",
+   "body-same-nonbool-string-cached": "a038c0609fcbcdcc4417c520aa56d9a1090feb40d68e65fa96655700c05b2b5a",
+   "body-same-nonbool-zero-cached": "d3bcfce8f4caf480e095b62eb5da99e8e38748d642acbe9541e66215ed416847",
    "conflict-at-full-bucket": "e0713ae71d34cb4ccf00715a658b58dba3708c9267de032307949bba980e9930",
    "conflict-cached-different-body": "162023bb523a9604b5eecc66b5c8ad404f8e48251c0219da30a7900fea9b95b8",
    "conflict-with-malformed-operation": "afa069dc4cfc87baf501a6db32dcc4bb177b7b2da93e456df75fa6eb2a531999",
