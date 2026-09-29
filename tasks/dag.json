@@ -9730,10 +9730,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "b77b20d00f1bdb1d3961ae5b853f3a22cc445eb2",
+   "evidence_manifest": "evidence/T0459.md"
   },
   {
    "id": "T0460",
