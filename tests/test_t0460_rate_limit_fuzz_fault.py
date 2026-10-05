@@ -136,40 +136,71 @@ def _mutate_request(rng):
     return request
 
 
+def _freeze(x):
+    """Identity-faithful structural snapshot (NaN-safe, equality-liar-safe)."""
+    if type(x) in (dict, DictSub):
+        return (type(x).__name__, tuple((_freeze(k), _freeze(v)) for k, v in x.items()))
+    if type(x) in (list, tuple):
+        return (type(x).__name__, tuple(_freeze(v) for v in x))
+    return (type(x).__name__, repr(x))
+
+
 def campaign(module_decide, seed, n=400):
     log = []
     rng = random.Random(seed)
     for _ in range(n):
         request = _mutate_request(rng)
-        before = copy.deepcopy(request) if _deepcopyable(request) else None
+        before = _freeze(request)
         kind, snap = _run(module_decide, request)
-        if before is not None and type(request["state"]) is dict:
-            assert request["state"] == before["state"]
+        # every path, admit or refuse, leaves the whole request untouched
+        assert _freeze(request) == before, (seed, kind)
         flags_ok = (
             request.get("store_available", True) is True and request.get("effect_ok", True) is True
         )
-        if kind in ("admit", "replay"):
+        if kind == "replay":
+            assert type(request["replay"]) is str and request["replay"] == "cached"
+            assert request.get("body_same", True) is True
             assert snap is not request["state"]
-            if kind == "replay":
-                assert type(request["replay"]) is str and request["replay"] == "cached"
-                assert request.get("body_same", True) is True
-            if kind == "admit":
-                assert _well_formed(request) and flags_ok
+        elif kind == "admit":
+            assert _well_formed(request) and flags_ok
+            assert snap is not request["state"]
         elif _well_formed(request) and flags_ok:
-            assert kind == "rate_limited" or kind in CODES
+            # empty state, well formed, unfaulted: a refusal would be a false refusal
+            raise AssertionError(f"false refusal {kind}: {before}")
         else:
-            # ill-formed or faulted input must never be admitted
             assert kind in CODES
         log.append(kind)
     return log
 
 
-def _deepcopyable(request):
-    try:
-        copy.deepcopy(request)
-        return True
-    except Exception:
-        return False
+def stateful_campaign(module_decide, seed, steps=300):
+    """Well-formed sequences judged by an independent ledger; must hit rate_limited."""
+    rng = random.Random(seed)
+    policy = {
+        "version": 1,
+        "account": {"capacity": 2, "window_ms": 6},
+        "source": {"capacity": 3, "window_ms": 6},
+    }
+    state, ledger, log, now = {}, [], [], 0
+    for _ in range(steps):
+        now += rng.choice((0, 0, 1, 3, 6))
+        op = rng.choice(OPS)
+        acc, src = f"opaque:a{rng.randrange(2)}", f"opaque:s{rng.randrange(2)}"
+        request = dict(operation=op, account=acc, source=src, now=now, policy=policy, state=state)
+        before = _freeze(request)
+        room = all(
+            sum(1 for o, a, s, t in ledger if o == op and (a if sc == "account" else s) == k
+                and t // 6 == now // 6) < policy[sc]["capacity"]
+            for sc, k in (("account", acc), ("source", src))
+        )  # fmt: skip
+        kind, snap = _run(module_decide, request)
+        assert _freeze(request) == before
+        assert kind == ("admit" if room else "rate_limited"), (seed, now, kind)
+        if room:
+            state = snap
+            ledger.append((op, acc, src, now))
+        log.append(kind)
+    return log
 
 
 @pytest.mark.parametrize("seed", [60, 460, 4600, 20261005])
@@ -177,6 +208,12 @@ def test_campaign_classifies_every_case_and_never_admits_bad_input(seed):
     log = campaign(decide, seed)
     assert set(log) <= {"admit", "replay"} | CODES
     assert "malformed_request" in log and "internal" in log
+
+
+@pytest.mark.parametrize("seed", [5, 50, 500])
+def test_stateful_campaign_matches_ledger_and_hits_rate_limit(seed):
+    log = stateful_campaign(decide, seed)
+    assert "rate_limited" in log and "admit" in log
 
 
 def test_campaign_is_deterministic_in_its_seed():
@@ -201,9 +238,9 @@ def test_refusal_rolls_back_state_exactly(seed):
         )
         if rng.random() < 0.3:
             request[rng.choice(("store_available", "effect_ok"))] = False
-        before = copy.deepcopy(state)
+        before = _freeze(request)
         kind, snap = _run(decide, request)
-        assert state == before
+        assert _freeze(request) == before
         if kind == "admit":
             state = snap
 
@@ -254,6 +291,8 @@ def _mutant(old, new):
 
 
 MUTANTS = [
+    ("updates = {}", "policy['version'] = 999\n    updates = {}"),
+    ("previous_slot > slot or ", ""),
     ("if count >= capacity:", "if count > capacity:"),
     ("type(now) is not int", "not isinstance(now, int)"),
     ("type(replay) is not str or", "False or"),
@@ -274,7 +313,8 @@ def test_every_mutant_is_caught_by_a_detector(old, new):
     for seed in (60, 460, 4600):
         try:
             campaign(mutant.decide, seed)
-        except (AssertionError, TypeError, AttributeError):
+            stateful_campaign(mutant.decide, seed)
+        except AssertionError:
             caught = True
             break
     if not caught:
@@ -321,6 +361,10 @@ def _targeted_detectors_fail(mutant):
         r8 = _good()
         r8.update(replay="cached", body_same=False)
         if _run(d, r8)[0] != "idempotency_conflict":
+            return True
+        r9 = _good()
+        r9["state"] = {("identity.login", "account", "opaque:a"): (99, 1)}
+        if _run(d, r9)[0] != "internal":
             return True
         # window rollover
         r7 = _good()
