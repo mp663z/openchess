@@ -330,6 +330,15 @@ EDITS = {
         'f"{key}\\n{fingerprint}\\n{entry_id}"',
     ),
     "receipt-not-recorded": _once("            ledger.append(dict(receipt))", "            pass"),
+    "replayed-outcome-constant": _once(
+        'outcome, receipt, staged = "replayed", dict(stored), None',
+        'outcome, receipt, staged = "applied", dict(stored), None',
+    ),
+    "applied-outcome-constant": _once('outcome = "applied"', 'outcome = "replayed"'),
+    "replayed-receipt-dropped": _once(
+        'outcome, receipt, staged = "replayed", dict(stored), None',
+        'outcome, receipt, staged = "replayed", dict(stored, entry_id="x"), None',
+    ),
 }
 EXPECTED_KILL = {
     "dedupe-disabled": "retry",
@@ -338,6 +347,9 @@ EXPECTED_KILL = {
     "ledger-not-validated": "forged-ledger",
     "receipt-id-ignores-sequence": "applied",
     "receipt-not-recorded": "applied",
+    "replayed-outcome-constant": "retry",
+    "applied-outcome-constant": "applied",
+    "replayed-receipt-dropped": "retry",
 }
 
 
@@ -363,12 +375,19 @@ def _deviations(source):
         assert "crash" not in run, f"{name}: mutant crashed instead of deviating: {run}"
     found = set()
     a = runs["applied"]
-    if not (a["ok"] and a["log"] == jround(ref_log) and a["ledger"] == jround(ref_ledger)):
+    if not (
+        a["ok"]
+        and a["log"] == jround(ref_log)
+        and a["ledger"] == jround(ref_ledger)
+        and a["results"] == jround(ref_results)
+        and [x["outcome"] for x in a["results"]] == ["applied"] * len(REQUESTS)
+    ):
         found.add("applied")
     r = runs["retry"]
     if not (
         r["ok"]
         and [x["outcome"] for x in r["results"]] == ["replayed"] * 2
+        and [x["receipt"] for x in r["results"]] == ledger[:2]
         and r["log"] == log
         and r["ledger"] == ledger
     ):
