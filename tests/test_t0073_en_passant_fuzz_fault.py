@@ -23,6 +23,7 @@ import hashlib
 import json
 import random
 import types
+from pathlib import Path
 
 import pytest
 
@@ -264,3 +265,135 @@ def test_each_planted_fault_is_caught_by_its_own_property(name):
         if expected in found:
             break
     assert expected in found, (name, found)
+
+
+# -- move corruptions ---------------------------------------------------------------
+
+
+class _MoveDict(dict):
+    pass
+
+
+class _MoveStr(str):
+    pass
+
+
+def _move_corruptions():
+    def extra_key(m):
+        return dict(m, extra="x")
+
+    def missing_key(m):
+        return {k: v for k, v in m.items() if k != "to"}
+
+    def dict_subclass(m):
+        return _MoveDict(m)
+
+    def wrong_type_from(m):
+        return dict(m, **{"from": 12})
+
+    def wrong_type_kind(m):
+        return dict(m, type=None)
+
+    def undeclared_square(m):
+        return dict(m, to="z9")
+
+    def undeclared_kind(m):
+        return dict(m, type="castle")
+
+    def str_subclass_square(m):
+        return dict(m, **{"from": _MoveStr(m["from"])})
+
+    def not_a_dict(m):
+        return [(k, v) for k, v in m.items()]
+
+    return dict(locals())
+
+
+MOVE_CORRUPTIONS = {k: v for k, v in _move_corruptions().items() if callable(v)}
+
+
+def _valid_move(move):
+    return (
+        type(move) is dict
+        and set(move) == {"type", "from", "to"}
+        and all(type(v) is str for v in move.values())
+        and move["type"] in {"pawn-advance", "ep-capture", "quiet"}
+        and move["from"] in SQUARES
+        and move["to"] in SQUARES
+    )
+
+
+@pytest.mark.parametrize("name", sorted(MOVE_CORRUPTIONS))
+def test_move_corruptions_fail_closed_target_malformed(name):
+    rng = random.Random(f"move/{name}")
+    for _ in range(60):
+        state = t72._state(rng)
+        move = next(m for m in t72._moves(rng, state) if isinstance(m, dict))
+        assert _valid_move(move)
+        bad = MOVE_CORRUPTIONS[name](move)
+        assert not _valid_move(bad), name
+        before_state, before_move = copy.deepcopy(state), copy.deepcopy(bad)
+        got = _classify(state, bad)
+        assert got[:2] == ("err", "target_malformed"), (name, got)
+        assert state == before_state
+        assert bad == before_move and type(bad) is type(before_move)
+
+
+# -- source mutants of the move guard ----------------------------------------------
+
+_SRC = Path(prod.__file__).read_text()
+_GUARD = [
+    ("if not _exact_dict(move, _MOVE_KEYS):", "if False:"),
+    ("if type(kind) is not str or kind not in _MOVE_TYPES:", "if False:"),
+    (
+        "if type(frm) is not str or frm not in _SQUARES or type(to) is not str"
+        " or to not in _SQUARES:",
+        "if False:",
+    ),
+]
+
+
+def _exec_mutant(old, new):
+    assert _SRC.count(old) == 1, old
+    ns = {"__name__": "mutant_en_passant", "__file__": prod.__file__}
+    exec(compile(_SRC.replace(old, new), "mutant", "exec"), ns)
+    return ns
+
+
+@pytest.mark.parametrize("old,new", _GUARD)
+def test_move_guard_mutants_are_killed_by_move_corruptions(old, new):
+    ns = _exec_mutant(old, new)
+    rng = random.Random(4242)
+    killed = False
+    for _ in range(80):
+        state = t72._state(rng)
+        move = next(m for m in t72._moves(rng, state) if isinstance(m, dict))
+        for gen in MOVE_CORRUPTIONS.values():
+            try:
+                ns["apply"](state, gen(move))
+            except AssertionError:
+                raise
+            except ns["EnPassantError"] as exc:
+                if exc.failure_class != "target_malformed":
+                    killed = True
+            except Exception:
+                killed = True
+            else:
+                killed = True
+        if killed:
+            break
+    assert killed, (old, new)
+
+
+def test_unmutated_source_exec_is_clean():
+    ns = _exec_mutant(
+        "if not _exact_dict(move, _MOVE_KEYS):", "if not _exact_dict(move, _MOVE_KEYS):"
+    )
+    rng = random.Random(4242)
+    for _ in range(30):
+        state = t72._state(rng)
+        move = next(m for m in t72._moves(rng, state) if isinstance(m, dict))
+        for gen in MOVE_CORRUPTIONS.values():
+            with pytest.raises(ns["EnPassantError"]) as exc:
+                ns["apply"](state, gen(move))
+            assert exc.value.failure_class == "target_malformed"
