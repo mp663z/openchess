@@ -9,6 +9,11 @@ the same final state as an uninterrupted run. Leases that were live at the
 crash lapse by the injected clock and the job is re-claimed. A torn state
 file is refused by the engine as corrupt_queue and never half-applied.
 Single process, no real clock, no concurrency.
+
+Scope: this is an integration and restart test. Unit-level validator edges
+(isinstance guards, bool/int bounds, payload depth and digit limits) belong to
+the unit battery (T0288/T0289) and are out of scope here; the rows below pin
+only the boundaries a restarted process can reach through the state file.
 """
 
 from __future__ import annotations
@@ -28,6 +33,25 @@ from server.jobs_queue import (
     job_id_for,
     state_id_for,
 )
+
+
+class _raises:
+    """pytest.raises that reports a missing refusal as a plain AssertionError."""
+
+    def __init__(self, expected):
+        self.expected = expected
+        self.value = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, kind, value, tb):
+        if kind is None:
+            raise AssertionError(f"expected {self.expected.__name__}, nothing was raised")
+        if not issubclass(kind, self.expected):
+            return False
+        self.value = value
+        return True
 
 
 def _save(path, state):
@@ -143,7 +167,7 @@ def test_lease_live_at_crash_lapses_and_the_job_is_reclaimed_after_restart(tmp_p
     # once the lease lapses the work is claimable by another worker, attempt 2
     again = restarted.apply(state, {"op": "claim", "worker": "w2", "now": 100, "lease_ms": 100})
     assert (again["job_id"], again["attempts"]) == (first["job_id"], 2)
-    with pytest.raises(QueueError) as info:
+    with _raises(QueueError) as info:
         restarted.apply(state, {**ack, "now": 101})
     assert info.value.failure_class == "lease_conflict"
 
@@ -160,7 +184,7 @@ def test_ack_at_the_exact_expiry_tick_is_refused_after_restart(tmp_path):
         if ok:
             assert QueueEngine().apply(fresh, {**ack, "now": tick})["status"] == "done"
         else:
-            with pytest.raises(QueueError) as info:
+            with _raises(QueueError) as info:
                 QueueEngine().apply(fresh, {**ack, "now": tick})
             assert info.value.failure_class == "lease_conflict"
             assert fresh == _load(path)  # a refusal leaves the loaded state untouched
@@ -174,7 +198,7 @@ def test_reenqueue_with_a_different_priority_or_payload_conflicts_after_restart(
     _save(path, state)
     for change in ({"priority": 1}, {"payload": {"x": 2}}, {"priority": 0, "payload": {"y": 1}}):
         fresh = _load(path)
-        with pytest.raises(QueueError) as info:
+        with _raises(QueueError) as info:
             QueueEngine().apply(fresh, {**base, **change})
         assert info.value.failure_class == "dedupe_conflict"
         assert fresh == _load(path)
@@ -228,7 +252,7 @@ def test_torn_state_file_is_refused_and_the_last_good_file_still_works(tmp_path)
             loaded = json.loads(torn)
         except json.JSONDecodeError:
             continue  # a host must not hand unparsable bytes to the engine
-        with pytest.raises(QueueError) as info:
+        with _raises(QueueError) as info:
             QueueEngine().apply(loaded, claim)
         assert info.value.failure_class == "corrupt_queue"
         refused += 1
@@ -262,7 +286,7 @@ def test_torn_state_file_is_refused_and_the_last_good_file_still_works(tmp_path)
         },
     ]
     for bad in malformed:
-        with pytest.raises(QueueError) as info:
+        with _raises(QueueError) as info:
             QueueEngine().apply(copy.deepcopy(bad), claim)
         assert info.value.failure_class == "corrupt_queue"
         refused += 1
@@ -325,7 +349,7 @@ def test_queue_size_bound_is_inclusive_and_state_survives_the_file_round_trip(tm
     state = _load(path)
     assert QueueEngine().apply(state, claim)["job_id"] == job_id_for("k0")
     over = {"jobs": [job(i) for i in range(MAX_JOBS + 1)], "next_seq": MAX_JOBS + 1}
-    with pytest.raises(QueueError) as info:
+    with _raises(QueueError) as info:
         QueueEngine().apply(over, claim)
     assert info.value.failure_class == "corrupt_queue"
 
@@ -355,7 +379,7 @@ def _ready(i, **kw):
 
 def _refused(state, request, failure):
     before = copy.deepcopy(state)
-    with pytest.raises(QueueError) as info:
+    with _raises(QueueError) as info:
         QueueEngine().apply(state, request)
     assert info.value.failure_class == failure
     assert state == before  # a refusal never touches the caller's state
