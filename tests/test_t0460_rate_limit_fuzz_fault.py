@@ -351,6 +351,115 @@ def _boundary_rows_fail(d):
     return False
 
 
+def _validation_rows():
+    """(name, request overrides, expected code). One violation per row, except the last
+    (which pins that policy validation precedes the state check)."""
+    key = ("identity.login", "account", "opaque:a")
+    good_bucket = {"capacity": 2, "window_ms": 10}
+    return [
+        (
+            "policy-bucket-dict-subclass",
+            {"policy": {"version": 1, "account": DictSub(good_bucket), "source": good_bucket}},
+            "malformed_request",
+        ),
+        ("account-str-subclass", {"account": StrSub("opaque:a")}, "malformed_request"),
+        ("account-without-prefix", {"account": "plain"}, "malformed_request"),
+        ("source-str-subclass", {"source": StrSub("opaque:s")}, "malformed_request"),
+        ("source-without-prefix", {"source": "plain"}, "malformed_request"),
+        ("state-negative-number", {"state": {key: (1, -1)}}, "internal"),
+        ("state-bool-number", {"state": {key: (True, 1)}}, "internal"),
+        (
+            "policy-capacity-zero",
+            {
+                "policy": {
+                    "version": 1,
+                    "account": {"capacity": 0, "window_ms": 10},
+                    "source": good_bucket,
+                }
+            },
+            "malformed_request",
+        ),
+        (
+            "source-policy-malformed-and-state-not-a-dict",
+            {
+                "policy": {
+                    "version": 1,
+                    "account": good_bucket,
+                    "source": {"capacity": "x", "window_ms": 10},
+                },
+                "state": [],
+            },
+            "malformed_request",
+        ),
+    ]
+
+
+def _validation_rows_fail(d, names=None):
+    """True when any named row's outcome differs from its literal expectation."""
+    for name, overrides, expected in _validation_rows():
+        if names is not None and name not in names:
+            continue
+        kind, _ = _run(d, dict(_good(), **overrides))
+        if kind != expected:
+            return True
+    return False
+
+
+def test_validation_rows_hold_on_production():
+    assert _validation_rows_fail(decide) is False
+
+
+VALIDATION_MUTANTS = {
+    "bucket-type-or-to-and": (
+        'if type(value) is not dict or set(value) != {"capacity", "window_ms"}:',
+        'if type(value) is not dict and set(value) != {"capacity", "window_ms"}:',
+        ("policy-bucket-dict-subclass",),
+    ),
+    "bucket-minimum-zero": (
+        "type(n) is not int or n < 1 or n > _MAX_INTEGER",
+        "type(n) is not int or n < 0 or n > _MAX_INTEGER",
+        ("policy-capacity-zero",),
+    ),
+    "account-type-or-to-and": (
+        "or type(account) is not str\n",
+        "and type(account) is not str\n",
+        ("account-str-subclass",),
+    ),
+    "account-prefix-or-to-and": (
+        "or not account.startswith",
+        "and not account.startswith",
+        ("account-without-prefix",),
+    ),
+    "source-type-or-to-and": (
+        "or type(source) is not str\n",
+        "and type(source) is not str\n",
+        ("source-str-subclass",),
+    ),
+    "source-prefix-or-to-and": (
+        "or not source.startswith",
+        "and not source.startswith",
+        ("source-without-prefix",),
+    ),
+    "state-value-check-or-to-and": (
+        "or len(value) != 2\n            or any(",
+        "or len(value) != 2\n            and any(",
+        ("state-negative-number", "state-bool-number"),
+    ),
+    "source-policy-not-validated": (
+        'for scope in ("account", "source")}',
+        'for scope in ("account",)}',
+        ("source-policy-malformed-and-state-not-a-dict",),
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(VALIDATION_MUTANTS))
+def test_each_validation_mutant_dies_on_a_semantic_row(name):
+    old, new, rows = VALIDATION_MUTANTS[name]
+    mutant = _mutant(old, new)
+    assert _validation_rows_fail(mutant.decide, set(rows)), name
+
+
 def _mutant(old, new):
     source = inspect.getsource(prod)
     assert source.count(old) == 1, old
