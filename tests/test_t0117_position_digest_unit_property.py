@@ -16,6 +16,7 @@ Stated over the runtime alone (no T0113 reference):
 
 from __future__ import annotations
 
+import hashlib
 import inspect
 import random
 import re
@@ -41,6 +42,43 @@ SEEDS = [
     "4k3/8/8/8/8/8/4P3/4K3 b - - 5 9",
 ]
 
+VECTORS = [
+    (
+        START,
+        "standard rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -",
+        "66157a24a6668babbcec26794a4cf7449818d5cfc7769cdaae2cae32a8b88ffe",
+    ),
+    (
+        "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+        "standard 4k3/8/8/8/8/8/8/4K3 w - -",
+        "5a52f52530c2a06135595264d05d0e93dc422ee8fb28818eef7d85a706bb949b",
+    ),
+    (
+        "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 3",
+        "standard 4k3/8/8/3pP3/8/8/8/4K3 w - d6",
+        "a47758824cb6f3b306247c58860fd0f2bfc9207b9cdd7370a6b6ecb049b1adaf",
+    ),
+    (
+        "4k3/8/8/8/3Pp3/8/8/4K3 b - d3 0 3",
+        "standard 4k3/8/8/8/3Pp3/8/8/4K3 b - d3",
+        "8e244350ce416780efc5181e7bae3fb83b745f83d7e70e18f0726fa0f03138da",
+    ),
+]
+# black to move, target on rank 3: lower-file (c4), a-file (a4) and h-file (h4) capturers
+BLACK_EP = [
+    "4k3/8/8/8/2pP4/8/8/4K3 b - d3 0 2",
+    "4k3/8/8/8/pP6/8/8/4K3 b - b3 0 2",
+    "4k3/8/8/8/6Pp/8/8/4K3 b - g3 0 2",
+    "4k3/8/8/8/3Pp3/8/8/4K3 b - d3 0 2",
+]
+# the capture is legal only because the capturer lands on the target square
+WHITE_EP_LANDING = [
+    "3r3k/8/8/3pP3/8/8/8/3K4 w - d6 0 2",
+    "3k4/8/8/8/3Pp3/8/8/3R3K b - d3 0 2",
+]
+# black pawn captures en passant but its own king would be exposed on the rank
+BLACK_EP_PINNED = ["8/8/8/8/k2Pp2R/8/8/4K3 b - d3 0 2"]
+
 
 def _fields(text):
     return text.split(" ")
@@ -55,6 +93,14 @@ def _with(text, **kw):
 
 class Crash(Exception):
     """Foreign exception: not a semantic failure, never an AssertionError."""
+
+
+def accept(module, variant, text):
+    """Digest of a legal position; a refusal of legal input is a semantic failure."""
+    try:
+        return module.digest_fen(variant, text)
+    except module.DigestError as exc:
+        raise AssertionError(f"refused legal position {text!r}: {exc.failure_class}") from exc
 
 
 def properties(module, variants=("standard",)):
@@ -75,10 +121,10 @@ def _properties(module, variants):
             assert re.fullmatch(REGEX, d) and module.emit_digest(module.parse_digest(d)) == d
             # counters are not identity
             ep = _fields(text)[3]
-            far = "17" if ep == "-" else "0"  # an en-passant target needs halfmove 0
-            assert module.digest_fen(
-                variant, _with(text, half="0", full="40")
-            ) == module.digest_fen(variant, _with(text, half=far, full="321"))
+            far = "99" if ep == "-" else "0"  # an en-passant target needs halfmove 0
+            assert accept(module, variant, _with(text, half="0", full="40")) == accept(
+                module, variant, _with(text, half=far, full="321")
+            )
 
     base = module.digest_fen("standard", SEEDS[2])
     assert base != module.digest_fen("standard", _with(SEEDS[2], color="b"))
@@ -119,6 +165,26 @@ def _properties(module, variants):
         )
         if flipped != placement:
             assert module.digest_fen("standard", text) != module.digest_fen("standard", mirrored)
+    # known-answer vectors: literal encodings hashed independently, then the runtime must agree
+    for fen, encoding, hexdigest in VECTORS:
+        assert hashlib.sha256(encoding.encode()).hexdigest() == hexdigest
+        assert module.digest_fen("standard", fen) == "pdv1:" + hexdigest
+    # large counters are legal and never identity (no halfmove or fullmove refusal)
+    for text in (START, SEEDS[4], SEEDS[6]):
+        if _fields(text)[3] == "-":
+            assert accept(module, "standard", _with(text, half="150", full="9999")) == accept(
+                module, "standard", _with(text, half="0", full="1")
+            )
+    # usable en passant, black to move: lower-file, upper-file, a-file and h-file capturers
+    for text in BLACK_EP + WHITE_EP_LANDING:
+        assert module.digest_fen("standard", text) != module.digest_fen(
+            "standard", _with(text, ep="-")
+        ), text
+    # black-to-move en passant that exposes the capturer's own king is not usable
+    for text in BLACK_EP_PINNED:
+        assert module.digest_fen("standard", text) == module.digest_fen(
+            "standard", _with(text, ep="-")
+        ), text
     if len(variants) > 1:
         assert module.digest_fen(variants[0], START) != module.digest_fen(variants[1], START)
 
@@ -193,6 +259,22 @@ MUTANTS = [
     ('if type(variant_id) is not str or variant_id not in ids:', 'if variant_id not in ids:'),
     ("    return d[\"format\"][\"prefix\"] + text" if False else 'return d["format"]["prefix"] + text', 'return d["format"]["prefix"] + text.upper()'),
     ("position = parse_fen(fc, fen_text)", "position = parse_fen(fc, fen_text.strip())"),
+    ('return " ".join(components[field] for field in order)', 'return "".join(components[field] for field in order)'),
+    ('return " ".join(components[field] for field in order)', 'return "  ".join(components[field] for field in order)'),
+    ('for field in order)', 'for field in reversed(order))'),
+    ('for field in order)', 'for field in sorted(order))'),
+    ("    return digest(dc, encode(dc, vc, ec, fc, variant_id, position))", "    if position[4] > 50:\n        _fail(dc, \"malformed_position\")\n    return digest(dc, encode(dc, vc, ec, fc, variant_id, position))"),
+    ("    for df in (-1, 1):", "    for df in (1,):"),
+    ("    for df in (-1, 1):", "    for df in (-1,):"),
+    ("if not 0 <= f < len(files):", "if not 0 < f < len(files):"),
+    ("if not 0 <= f < len(files):", "if not 0 <= f < len(files) - 1:"),
+    ('white_to_move = color == fen_contract["active_color"]["values"][0]', "white_to_move = True"),
+    ('own_pawn = "P" if white_to_move else "p"', 'own_pawn = "P"'),
+    ('own_pawn = "P" if white_to_move else "p"', 'own_pawn = "p"'),
+    ('own_king = "K" if white_to_move else "k"', 'own_king = "K"'),
+    ('own_king = "K" if white_to_move else "k"', 'own_king = "k"'),
+    ("        after[(tf, target_rank)] = own_pawn\n", "        pass\n"),
+    ("        del after[(tf, captured_rank)]\n", "        pass\n"),
 ]  # fmt: skip
 
 
