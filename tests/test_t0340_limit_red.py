@@ -246,6 +246,21 @@ def check_semantics(impl, err):
     _rejects(impl, err, big, "clock_overflow")
     a, b = impl(_req(now=7)), impl(_req(now=7))
     assert a == b and a is not b
+    # previous-bucket boundaries, accepted side and refused side
+    deny = {"decision": "deny", "cost": 2, "tokens": 1, "retry_after_ms": 1000}
+    edge = _forge(**deny, updated_at=MAX - 1000)  # updated_at + retry_after == 2**53 - 1
+    got = impl(_req(cost=1, now=MAX - 1000, previous=edge))
+    assert got["previous_id"] == edge["limit_id"]
+    over = _forge(**deny, updated_at=MAX - 999)  # one past the clock
+    _rejects(impl, err, _req(cost=1, now=MAX - 999, previous=over), "corrupt_previous_bucket")
+    short = _forge(**{**deny, "tokens": 1, "retry_after_ms": 1}, updated_at=10)
+    assert impl(_req(cost=1, now=10, previous=short))["previous_id"] == short["limit_id"]
+    full = _forge(**{**deny, "tokens": 2, "retry_after_ms": 1}, updated_at=10)  # tokens == cost
+    _rejects(impl, err, _req(cost=1, now=10, previous=full), "corrupt_previous_bucket")
+    top = _forge(decision="admit", cost=1, tokens=2, updated_at=10)  # tokens == capacity - cost
+    assert impl(_req(cost=1, now=10, previous=top))["previous_id"] == top["limit_id"]
+    past = _forge(decision="admit", cost=1, tokens=3, updated_at=10)
+    _rejects(impl, err, _req(cost=1, now=10, previous=past), "corrupt_previous_bucket")
 
 
 def check_order(impl, err):
