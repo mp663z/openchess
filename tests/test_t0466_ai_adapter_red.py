@@ -83,6 +83,19 @@ def battery(adapter, error):
     request, state = fx.materialize(local)
     state["sensitive"] = True  # sensitive gates the hosted path only
     _expect(adapter, error, request, state, "succeeded", ["local"])
+    # str-subclass values that equal valid ones are still outside the closed domain
+    for mode_row, field, value in (
+        ("hosted-opted-in", "mode", _SubStr("hosted_byom")),
+        ("local-offline", "mode", _SubStr("local")),
+        ("hosted-opted-in", "capability", _SubStr("summarize")),
+        ("hosted-opted-in", "provider_ref", _SubStr("byok:test")),
+    ):
+        base = next(r for r in fx.CASES["happy"] if r["name"] == mode_row)
+        request, state = fx.materialize(base)
+        if field != "mode":
+            value = _SubStr(request[field])
+        request[field] = value
+        _expect(adapter, error, request, state, "malformed_request", [])
     for _section, row in ROWS:
         request, state = fx.materialize(row)
         before = copy.deepcopy((request, state))
@@ -226,6 +239,16 @@ MUTANTS = [
         "reference",
         'if state.get("cancelled", False):',
         'if mode == "hosted_byom" and state.get("cancelled", False):',
+    ),
+    (
+        "_envelope",
+        'type(request["mode"]) is not str or',
+        'not isinstance(request["mode"], str) or',
+    ),
+    (
+        "_envelope",
+        'if type(request[field]) is not str or not request[field]:',
+        'if not isinstance(request[field], str) or not request[field]:',
     ),
     ("_envelope", "if type(request) is not dict or any(", "if type(request) is not dict and any("),
     (
