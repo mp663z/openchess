@@ -28,6 +28,7 @@ import json
 import random
 import re
 import types
+from pathlib import Path
 
 import pytest
 
@@ -323,3 +324,90 @@ FAULTS = {
 def test_each_planted_fault_is_caught_by_the_checker(name):
     triples = t189._triples(seed=SEEDS[0], n=120) + t189._enumerated()[:120]
     assert t189._problems(_wrap(FAULTS[name]), triples) != [], name
+
+
+# -- left == right and digest-only rows: literal expectations ------------------------------
+
+_SRC = Path(cf.__file__).read_text()
+
+
+def _mutant_cf(old, new):
+    assert _SRC.count(old) == 1, old
+    ns = {"__name__": "mutant_conflict", "__file__": cf.__file__}
+    exec(compile(_SRC.replace(old, new), "mutant_conflict", "exec"), ns)
+    return ns
+
+
+def _report(ns, base, left, right):
+    """The detector's report; ConflictError is a typed outcome, anything else propagates and
+    fails the test (a foreign exception is never a kill)."""
+    try:
+        return ns["ConflictDetector"]().detect(base, left, right)
+    except ns["ConflictError"] as exc:
+        return {"err": exc.failure_class}
+
+
+def _k(i):
+    return t189.KEYS[i]
+
+
+# name -> (base spec, left spec, right spec, expected conflicts as {key index: (kind, left, right)})
+ROWS = {
+    # left == right != base: an identical outcome, never divergent_base, never a conflict
+    "identical-sides-digest-change": ({3: 0}, {3: 1}, {3: 1}, {}),
+    "identical-sides-added": ({3: 0}, {3: 0, 4: 0}, {3: 0, 4: 0}, {}),
+    "identical-sides-removed": ({3: 0, 4: 0}, {3: 0}, {3: 0}, {}),
+    # same identity, same snapshot: only the digest differs
+    "digest-only-both-changed": ({3: 0}, {3: 1}, {3: 2}, {3: ("both_changed_differently", 1, 2)}),
+    "digest-only-both-added": ({4: 0}, {3: 1, 4: 0}, {3: 2, 4: 0}, {3: ("added_differently", 1, 2)}),
+    "digest-only-one-side-changed": ({3: 0}, {3: 1}, {3: 0, 4: 0}, {}),
+}
+
+
+def _expected(spec):
+    return {
+        _k(i): {"kind": kind, "left": t189._version(i, lv), "right": t189._version(i, rv)}
+        for i, (kind, lv, rv) in spec.items()
+    }
+
+
+@pytest.mark.parametrize("name", sorted(ROWS))
+def test_acceptance_rows_hold_on_production(name):
+    base, left, right, conflicts = ROWS[name]
+    states = [t189._state(s) for s in (base, left, right)]
+    before = copy.deepcopy(states)
+    got = _report(vars(cf), *states)
+    assert "err" not in got, got
+    assert got["conflicts"] == _expected(conflicts)
+    assert got["left_id"] == t189._model_id(states[1]) and got["right_id"] == t189._model_id(
+        states[2]
+    )
+    assert (got["left_id"] == got["right_id"]) == (left == right)
+    assert states == before
+
+
+MUTANTS_ROWS = {
+    "equal-sides-treated-as-divergent": (
+        ("if base_id in (left_id, right_id):", "if base_id in (left_id, right_id) or left_id == right_id:"),
+        ("identical-sides-digest-change", "identical-sides-added", "identical-sides-removed"),
+    ),
+    "digest-ignored-in-change-derivation": (
+        ("elif base[key] != rec:", 'elif {k: v for k, v in base[key].items() if k != "digest"} != {k: v for k, v in rec.items() if k != "digest"}:'),
+        ("digest-only-both-changed",),
+    ),
+    "digest-ignored-in-witness-comparison": (
+        ("if lrec != rrec:", 'if {k: v for k, v in lrec.items() if k != "digest"} != {k: v for k, v in rrec.items() if k != "digest"}:'),
+        ("digest-only-both-changed", "digest-only-both-added"),
+    ),
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("name", sorted(MUTANTS_ROWS))
+def test_each_row_mutant_is_killed_by_a_semantic_row(name):
+    (old, new), rows = MUTANTS_ROWS[name]
+    ns = _mutant_cf(old, new)
+    for row in rows:
+        base, left, right, conflicts = ROWS[row]
+        states = [t189._state(s) for s in (base, left, right)]
+        got = _report(ns, *states)
+        assert got.get("conflicts") != _expected(conflicts), (name, row, got)
