@@ -38,6 +38,7 @@ if str(ROOT) not in sys.path:
 
 from graph.node import make_record, record_identity  # noqa: E402
 from store import wal  # noqa: E402
+from tools.crash_resume_contract_lint import MAX_DEPTH  # noqa: E402
 
 SOURCE = (ROOT / "store" / "crash_resume.py").read_text()
 CONTRACT = yaml.safe_load((ROOT / "data" / "contracts" / "crash_resume.yaml").read_text())[
@@ -274,6 +275,62 @@ def test_resume_is_idempotent_across_a_second_restart():
     assert again["log"] == first["log"]
 
 
+def _nest_list(levels):
+    node = []
+    for _ in range(levels):
+        node = [node]
+    return node
+
+
+def _nest_dict(levels):
+    node = {}
+    for _ in range(levels):
+        node = {"k": node}
+    return node
+
+
+def _admission_rows():
+    """(name, tail entry, admitted): the closed-domain boundary of a discarded
+    entry. The entry itself is depth 1, so a nest of n levels reaches depth n + 1."""
+    limit = MAX_DEPTH
+    return [
+        ("list-at-limit", {"x": _nest_list(limit - 2)}, True),
+        ("list-over-limit", {"x": _nest_list(limit - 1)}, False),
+        ("dict-at-limit", {"x": _nest_dict(limit - 2)}, True),
+        ("dict-over-limit", {"x": _nest_dict(limit - 1)}, False),
+        ("dict-nesting-300", {"x": _nest_dict(300)}, False),
+        ("list-nesting-300", {"x": _nest_list(300)}, False),
+        ("none-and-bool-scalars", {"a": None, "b": True, "c": False}, True),
+        ("none-in-list", {"a": [None, True, False]}, True),
+        ("lone-surrogate-value", {"x": "\ud800"}, False),
+        ("lone-surrogate-key", {"\ud800": 1}, False),
+        ("float-nan-free", {"x": 1.5}, True),
+    ]
+
+
+def _admission_failure(source):
+    base = jround(REF_LOG[:3])
+    for name, entry, admitted in _admission_rows():
+        log = [*base, entry]
+        run = child_run(log, 3, source=source)
+        assert "crash" not in run, f"{name}: crashed instead of deviating: {run}"
+        if admitted:
+            ok = run["ok"] and run["receipt"]["discarded_count"] == 1 and run["log"] == base
+        else:
+            ok = (
+                run["ok"] is False
+                and run.get("failure_class") == "malformed_resume_record"
+                and run["log"] == log
+            )
+        if not ok:
+            return name
+    return None
+
+
+def test_tail_admission_boundary_after_restart():
+    assert _admission_failure(None) is None
+
+
 # -- one-edit mutants of the runtime, executed in the fresh process ----------------
 
 
@@ -292,6 +349,27 @@ EDITS = {
     "resume-id-ignores-discarded": _once(
         "{resumed}\\n{discarded}\\n{token}", "{resumed}\\n{token}"
     ),
+    "depth-bound-off-by-one": _once("if depth > MAX_DEPTH or", "if depth >= MAX_DEPTH or"),
+    "dict-depth-not-counted": _once(
+        "                    stack.append((value, depth + 1))\n            else:",
+        "                    stack.append((value, depth))\n            else:",
+    ),
+    "list-depth-not-counted": _once(
+        "                for value in node:\n                    stack.append((value, depth + 1))",
+        "                for value in node:\n                    stack.append((value, depth))",
+    ),
+    "none-bool-inadmissible": _once(
+        "    if obj is None or kind is bool:\n        return True",
+        "    if False:\n        return True",
+    ),
+    "surrogate-admitted": _once(
+        '        try:\n            obj.encode("utf-8")\n        except UnicodeEncodeError:\n'
+        "            return False\n        return True",
+        "        return True",
+    ),
+    "key-scalar-unchecked": _once(
+        "if type(key) is not str or not _scalar_ok(key):", "if type(key) is not str:"
+    ),
     "tail-truncated-to-first-entry": _once(
         "        tail = log[k:]", "        tail = log[k : k + 1]"
     ),
@@ -303,6 +381,12 @@ EXPECTED_KILL = {
     "quarantine-unbound-to-tail": "unbound-sink",
     "resume-id-ignores-discarded": "torn",
     "tail-truncated-to-first-entry": "multi-entry-tail",
+    "depth-bound-off-by-one": "admit",
+    "dict-depth-not-counted": "admit",
+    "list-depth-not-counted": "admit",
+    "none-bool-inadmissible": "admit",
+    "surrogate-admitted": "admit",
+    "key-scalar-unchecked": "admit",
 }
 
 
@@ -354,6 +438,8 @@ def _deviations(source):
     u = runs["unbound-sink"]
     if not (u["ok"] is False and u.get("failure_class") == "divergent_quarantine"):
         found.add("unbound-sink")
+    if _admission_failure(source) is not None:
+        found.add("admit")
     return found
 
 
