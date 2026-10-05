@@ -375,6 +375,25 @@ def _validation_rows():
             "malformed_request",
         ),
         ("state-value-tuple-subclass", {"state": {key: TupleSub((1, 1))}}, "internal"),
+        (
+            "policy-version-zero",
+            {"policy": dict(_good()["policy"], version=0)},
+            "malformed_request",
+        ),
+        (
+            "policy-version-bool",
+            {"policy": dict(_good()["policy"], version=True)},
+            "malformed_request",
+        ),
+        ("policy-extra-key", {"policy": dict(_good()["policy"], extra=1)}, "malformed_request"),
+        ("state-dict-subclass", {"state": DictSub()}, "internal"),
+        ("plain-admit", {}, "admit"),
+        ("cached-replay", {"replay": "cached"}, "replay"),
+        (
+            "cached-replay-body-differs",
+            {"replay": "cached", "body_same": False},
+            "idempotency_conflict",
+        ),
         ("source-str-subclass", {"source": StrSub("opaque:s")}, "malformed_request"),
         ("source-without-prefix", {"source": "plain"}, "malformed_request"),
         ("state-negative-number", {"state": {key: (1, -1)}}, "internal"),
@@ -421,6 +440,36 @@ def test_validation_rows_hold_on_production():
 
 
 VALIDATION_MUTANTS = {
+    "policy-version-minimum-zero": (
+        'policy["version"] < 1',
+        'policy["version"] < 0',
+        ("policy-version-zero",),
+    ),
+    "policy-version-isinstance": (
+        'type(policy["version"]) is not int',
+        'not isinstance(policy["version"], int)',
+        ("policy-version-bool",),
+    ),
+    "policy-keys-unchecked": (
+        'or set(policy) != {"version", "account", "source"}\n',
+        "\n",
+        ("policy-extra-key",),
+    ),
+    "state-type-isinstance": (
+        "type(state) is not dict",
+        "not isinstance(state, dict)",
+        ("state-dict-subclass",),
+    ),
+    "replay-conflict-inverted": (
+        "if not body_same:\n            raise",
+        "if body_same:\n            raise",
+        ("cached-replay", "cached-replay-body-differs"),
+    ),
+    "replay-branch-inverted": (
+        'if replay == "cached":',
+        'if replay != "cached":',
+        ("plain-admit", "cached-replay"),
+    ),
     "operation-type-isinstance": (
         "type(operation) is not str",
         "not isinstance(operation, str)",
