@@ -255,12 +255,22 @@ def _deep(levels):
     return node
 
 
+def _deep_dict(levels):
+    node = {}
+    for _ in range(levels):
+        node = {"k": node}
+    return node
+
+
 def test_logs_outside_the_scan_domain_are_refused_after_restart():
     base = jround(REF_LOG[:2])
     cases = {
         "float_entry": [*base, {"x": 1.5}],
         "lone_surrogate": [*base, {"x": "\ud800"}],
         "too_deep": [*base, {"x": _deep(corruption.MAX_DEPTH + 2)}],
+        "too_deep_dict": [*base, {"x": _deep_dict(corruption.MAX_DEPTH + 2)}],
+        "dict_nesting_300": [*base, {"x": _deep_dict(300)}],
+        "int_over_range": [*base, {"x": 1 << (corruption.MAX_INT_BITS + 1)}],
     }
     for name, log in cases.items():
         child = subprocess.run(
@@ -330,6 +340,11 @@ EDITS = {
     "quarantine-unbound-to-suffix": _once(
         "            if token != quarantine_suffix(frozen_suffix):", "            if False:"
     ),
+    "int-range-unchecked": _once('raise _OutOfDomain("int-range")', "pass"),
+    "dict-depth-not-counted": _once(
+        "copied[key] = _encode(item, depth + 1, seen, out)",
+        "copied[key] = _encode(item, depth, seen, out)",
+    ),
     "scan-id-ignores-loss": _once(
         'f"{verdict}\\n{head}\\n{count}\\n{lost}\\n"', 'f"{verdict}\\n{head}\\n{count}\\n"'
     ),
@@ -341,6 +356,8 @@ EXPECTED_KILL = {
     "prefix-one-entry-short": "salvage",
     "quarantine-unbound-to-suffix": "unbound-sink",
     "scan-id-ignores-loss": "salvage",
+    "int-range-unchecked": "domain-int",
+    "dict-depth-not-counted": "domain-dict",
 }
 
 
@@ -355,6 +372,12 @@ def _deviations(source):
         "excessive": child_run(log, lost - 1, source=source),
         "clean": child_run(jround(REF_LOG), 0, source=source),
         "unbound-sink": child_run(log, lost, source=source, sink="wrong"),
+        "domain-int": child_run(
+            [*jround(REF_LOG[:2]), {"x": 1 << (corruption.MAX_INT_BITS + 1)}], 9, source=source
+        ),
+        "domain-dict": child_run(
+            [*jround(REF_LOG[:2]), {"x": _deep_dict(corruption.MAX_DEPTH + 2)}], 9, source=source
+        ),
     }
     for name, run in runs.items():
         assert "crash" not in run, f"{name}: mutant crashed instead of deviating: {run}"
@@ -378,6 +401,10 @@ def _deviations(source):
     u = runs["unbound-sink"]
     if not (u["ok"] is False and u.get("failure_class") == "divergent_quarantine"):
         found.add("unbound-sink")
+    for name in ("domain-int", "domain-dict"):
+        d = runs[name]
+        if not (d["ok"] is False and d.get("failure_class") == "malformed_corruption_record"):
+            found.add(name)
     return found
 
 
