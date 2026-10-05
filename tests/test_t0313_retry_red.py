@@ -291,7 +291,7 @@ class RawEscape(AssertionError):
     """A non-contract exception escaped the implementation (a crash, not a decision)."""
 
 
-def _guard(impl, err, oracle=None):
+def _guard(impl, err, oracle=None, crash=None):
     """Any exception that is not the typed contract error is a crash and becomes
     RawEscape (an AssertionError raised inside the implementation included),
     except Touched, which is the semantic detection of a caller object being
@@ -309,11 +309,9 @@ def _guard(impl, err, oracle=None):
         except Touched:
             raise
         except Exception as exc:  # noqa: BLE001
-            crash = type(exc).__name__
-        else:  # pragma: no cover
-            crash = None
+            crashed = type(exc).__name__
         if refusal is None:
-            raise RawEscape(f"raw {crash} escaped") from None
+            raise (crash or RawEscape)(f"raw {crashed} escaped") from None
         if oracle is not None:
             try:
                 oracle(*copy.deepcopy(args))
@@ -338,6 +336,37 @@ def _inert(mapping):
     return {_InertKey(k): v for k, v in mapping.items()}
 
 
+class _StrSub(str):
+    pass
+
+
+class _IntSub(int):
+    pass
+
+
+class _DictSub(dict):
+    pass
+
+
+def check_inert_values(impl, err):
+    # str / int / dict subclasses and bools are not the exact built-in types
+    for field, bad in (
+        ("op", _StrSub("decide")),
+        ("job_id", _StrSub(JOB)),
+        ("failure", _StrSub("transient")),
+        ("attempts", True),
+        ("attempts", _IntSub(1)),
+        ("now", True),
+        ("now", _IntSub(0)),
+    ):
+        _rejects(impl, err, _req(**{field: bad}), "malformed_retry_request")
+    _rejects(impl, err, _DictSub(_req()), "malformed_retry_request")
+    _rejects(impl, err, _req(policy=_DictSub(POLICY)), "malformed_retry_request")
+    for key in POLICY:
+        for bad in (True, _IntSub(POLICY[key])):
+            _rejects(impl, err, _req(policy={**POLICY, key: bad}), "invalid_retry_policy")
+
+
 def check_inert_keys(impl, err):
     # exact str keys only: a valid request whose keys are a str subclass is refused
     _rejects(impl, err, _inert(_req()), "malformed_retry_request")
@@ -350,12 +379,13 @@ CHECKS = (
     check_precedence_and_purity,
     check_totality,
     check_inert_keys,
+    check_inert_values,
 )
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_bound_implementation_passes(check):
-    check(_guard(decide, RetryError), RetryError)
+    check(_guard(decide, RetryError, crash=AssertionError), RetryError)
 
 
 def test_fixture_is_closed_over_every_failure_class_and_decision():
@@ -505,7 +535,7 @@ def test_mutant_is_red_on_its_target(name):
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_guard_with_oracle_is_identity_on_the_reference(check):
-    check(_guard(decide, RetryError, decide), RetryError)
+    check(_guard(decide, RetryError, decide, crash=AssertionError), RetryError)
 
 
 def test_raw_exception_is_a_totality_failure_not_a_mutant_kill():
