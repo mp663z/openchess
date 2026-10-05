@@ -456,11 +456,6 @@ def _m_refuses_everything(request, real):
     raise ProgressError("malformed_progress_request")
 
 
-    "refuses_valid",
-    "refuses_everything",
-    "strict_clock",
-}  # strict_clock refuses an equal-now report, which is valid
-
 MUTANTS = {
     "refuses_valid": (_m_refuses_valid, "check_semantics"),
     "refuses_everything": (_m_refuses_everything, "check_fixture"),
