@@ -60,8 +60,62 @@ KNOWN_VALID = (
     "r3k3/8/8/8/8/8/8/4K3 b q - 0 1",
     "4k3/p7/8/8/8/8/P7/4K3 w - - 0 1",
 )
+ATTACK_ROWS = (
+    "8/8/8/3k4/2P5/8/8/7K w - - 0 1",
+    "8/8/8/3k4/4P3/8/8/7K w - - 0 1",
+    "7k/8/8/2p5/3K4/8/8/8 b - - 0 1",
+    "7k/8/8/4p3/3K4/8/8/8 b - - 0 1",
+    "8/8/8/3k4/1N6/8/8/7K w - - 0 1",
+    "8/8/8/3k4/5N2/8/8/7K w - - 0 1",
+    "8/8/1N6/3k4/8/8/8/7K w - - 0 1",
+    "8/8/5N2/3k4/8/8/8/7K w - - 0 1",
+    "8/8/8/3k4/8/2N5/8/7K w - - 0 1",
+    "8/8/8/3k4/8/4N3/8/7K w - - 0 1",
+    "8/2N5/8/3k4/8/8/8/7K w - - 0 1",
+    "8/4N3/8/3k4/8/8/8/7K w - - 0 1",
+    "3R4/8/7K/8/3k4/8/8/8 w - - 0 1",
+    "8/8/7K/8/3k4/8/8/3R4 w - - 0 1",
+    "8/8/7K/8/R2k4/8/8/8 w - - 0 1",
+    "8/8/7K/8/3k3R/8/8/8 w - - 0 1",
+    "8/8/7K/8/3k4/8/8/B7 w - - 0 1",
+    "8/8/7K/8/3k4/8/8/6B1 w - - 0 1",
+    "8/B7/7K/8/3k4/8/8/8 w - - 0 1",
+    "8/6B1/7K/8/3k4/8/8/8 w - - 0 1",
+    "3Q4/8/7K/8/3k4/8/8/8 w - - 0 1",
+    "8/6Q1/7K/8/3k4/8/8/8 w - - 0 1",
+    "8/8/7K/8/Q2k4/8/8/8 w - - 0 1",
+    "8/8/8/4K3/k6R/8/8/8 w - - 0 1",
+    "8/8/8/4K3/R6k/8/8/8 w - - 0 1",
+    "R7/8/8/4K3/8/8/8/k7 w - - 0 1",
+    "k7/8/8/4K3/8/8/8/R7 w - - 0 1",
+    "7B/8/8/8/8/8/8/k1K5 w - - 0 1",
+    "7k/8/8/8/8/8/8/B1K5 w - - 0 1",
+    "k7/8/8/8/8/8/8/2K4B w - - 0 1",
+    "B7/8/8/8/8/8/8/2K4k w - - 0 1",
+    "7k/8/8/1n6/3K4/8/8/8 b - - 0 1",
+    "7k/8/8/8/3K4/5n2/8/8 b - - 0 1",
+    "7k/8/8/8/r2K4/8/8/8 b - - 0 1",
+    "7k/8/8/8/3K3r/8/8/8 b - - 0 1",
+    "7k/8/8/8/3K4/8/8/b7 b - - 0 1",
+    "7k/6b1/8/8/3K4/8/8/8 b - - 0 1",
+)
+KING_ROWS = (
+    "8/8/8/8/3k4/2K5/8/8 w - - 0 1",
+    "8/8/8/8/2Kk4/8/8/8 w - - 0 1",
+    "8/8/8/2K5/3k4/8/8/8 w - - 0 1",
+    "8/8/8/8/3k4/3K4/8/8 w - - 0 1",
+    "8/8/8/3K4/3k4/8/8/8 w - - 0 1",
+    "8/8/8/8/3k4/4K3/8/8 w - - 0 1",
+    "8/8/8/8/3kK3/8/8/8 w - - 0 1",
+    "8/8/8/4K3/3k4/8/8/8 w - - 0 1",
+)
 # Known-invalid positions with the exact refusal class they must raise.
 KNOWN_INVALID = (
+    ("4k3/8/8/8/8/8/8/4K03 w - - 0 1", "malformed_fen"),  # zero digit
+    ("4k3/8/8/8/8/8/8/31K3 w - - 0 1", "malformed_fen"),  # adjacent digits
+    ("4k3/8/8/8/8/8/8/4K3 w  - 0 1", "malformed_fen"),  # empty castling field
+    *((text, "impossible_position") for text in ATTACK_ROWS),
+    *((text, "impossible_position") for text in KING_ROWS),
     (
         "4k3/8/8/8/8/8/4R3/4K3 w - - 0 1",
         "impossible_position",
@@ -241,6 +295,24 @@ MUTANTS = [
 
 # one-gate mutants: each must be killed by the one-violation row paired with it
 GATE_MUTANTS = (
+    (
+        "4k3/8/8/8/8/8/8/4K03 w - - 0 1",
+        ('elif ch == "0" and', 'else:\n                fail("malformed_fen")\n        if f !='),
+        ('elif ch == "1" and', "else:\n                pass\n        if f !="),
+    ),
+    (
+        "4k3/8/8/8/8/8/8/4K03 w - - 0 1",
+        (
+            'g["zero_digit"] == "forbidden"',
+            'else:\n                fail("malformed_fen")\n        if f !=',
+        ),
+        ('g["zero_digit"] != "forbidden"', "else:\n                pass\n        if f !="),
+    ),
+    (
+        "4k3/8/8/8/8/8/8/31K3 w - - 0 1",
+        'g["adjacent_digits"] == "forbidden"',
+        'g["adjacent_digits"] != "forbidden"',
+    ),
     ("4k3/8/8/8/8/8/4K3 w - - 0 1", 'if len(rank_list) != g["rank_count"]:', "if False:"),
     (
         "r3k2r/8/8/8/8/8/8/R3K2R w KKkq - 0 1",
@@ -429,3 +501,57 @@ def test_each_refusal_gate_mutant_is_killed_by_its_own_row(row, old, new):
 def test_known_valid_boundary_rows_are_accepted():
     for text in KNOWN_VALID[-6:]:
         assert verdict(text) == ("ok", None), text
+
+
+ATTACK_MUTANTS = (
+    ("board.get((f - df, r - dr)) == pawn", "board.get((f + df, r + dr)) == pawn"),
+    ("board.get((f - df, r - dr)) == pawn", "board.get((f - df, r + dr)) == pawn"),
+    ('for df, dr in a["knight_deltas"]:', 'for df, dr in a["knight_deltas"][1:]:'),
+    ('for df, dr in a["knight_deltas"]:', 'for df, dr in a["knight_deltas"][:-1]:'),
+    (
+        'board.get((f + df, r + dr)) == ("N" if by_white else "n")',
+        'board.get((f, r + dr)) == ("N" if by_white else "n")',
+    ),
+    (
+        'board.get((f + df, r + dr)) == ("N" if by_white else "n")',
+        'board.get((f + df, r)) == ("N" if by_white else "n")',
+    ),
+    ("        for df, dr in directions:", "        for df, dr in directions[1:]:"),
+    ("        for df, dr in directions:", "        for df, dr in directions[:-1]:"),
+    ("while 0 <= nf < len(files)", "while 1 <= nf < len(files)"),
+    ("while 0 <= nf < len(files)", "while 0 <= nf < len(files) - 1"),
+    ("and 1 <= nr <= max_rank:", "and 2 <= nr <= max_rank:"),
+    ("and 1 <= nr <= max_rank:", "and 1 <= nr < max_rank:"),
+    ("want = tuple(ch if by_white else ch.lower() for ch in kinds)", "want = tuple(kinds)"),
+    ('(("R", "Q")', '(("R",') if False else ('("R", "Q")', '("R",)'),
+    ('("B", "Q")', '("B",)'),
+)
+
+
+@pytest.mark.parametrize(
+    "old,new", ATTACK_MUTANTS, ids=[f"attack{i}" for i in range(len(ATTACK_MUTANTS))]
+)
+def test_attack_geometry_mutants_are_killed_by_an_asymmetric_attacked_king_row(old, new):
+    failures = _failures(_mutant_module(old, new))
+    own = [
+        d
+        for kind, d in failures
+        if kind == "semantic" and any(d.startswith(f"refuse {row}") for row in ATTACK_ROWS)
+    ]
+    assert own, failures
+
+
+def test_king_attack_deltas_are_live_once_the_adjacency_gate_is_off():
+    off = "if max(abs(wf - bf), abs(wr - br)) <= 1:"
+    for old, new in (
+        ('for df, dr in a["king_deltas"]:', 'for df, dr in a["king_deltas"][1:]:'),
+        ('for df, dr in a["king_deltas"]:', 'for df, dr in a["king_deltas"][:-1]:'),
+        ('board.get((f + df, r + dr)) == ("K" if by_white else "k")', "False"),
+    ):
+        failures = _failures(_mutant_module((off, old), ("if False:", new)))
+        own = [
+            d
+            for kind, d in failures
+            if kind == "semantic" and any(d.startswith(f"refuse {row}") for row in KING_ROWS)
+        ]
+        assert own, (old, new, failures)
