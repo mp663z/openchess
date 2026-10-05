@@ -133,6 +133,13 @@ def _nested(depth):
     return node
 
 
+def _nested_dict(depth):
+    node = 1
+    for _ in range(depth):
+        node = {"k": node}
+    return node
+
+
 # ---- checks shared by the tests and the mutant harness ---------------------------------
 
 
@@ -182,6 +189,8 @@ def check_semantics(impl, err):
     _rejects(impl, err, _req(job=_job(lease_expires_at=5)), "corrupt_job")
     _rejects(impl, err, _req(job=_job(payload=_nested(65))), "corrupt_job")
     assert impl(_req(job=_job(payload=_nested(64))))["op"] == "bury"
+    _rejects(impl, err, _req(job=_job(payload=_nested_dict(65))), "corrupt_job")
+    assert impl(_req(job=_job(payload=_nested_dict(64))))["op"] == "bury"
     _rejects(impl, err, _req(job=_job(payload="\ud800")), "corrupt_job")
     _rejects(impl, err, _req(job=_job(payload={"a": float("nan")})), "corrupt_job")
     _rejects(impl, err, _req(job=_job(payload=10**4001)), "corrupt_job")
