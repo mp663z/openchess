@@ -310,7 +310,7 @@ MUTANTS = {
     ),
     "drop-crash-reraise": (
         "                }\n            )\n            raise\n        self._append_total(",
-        "                }\n            )\n        self._append_total(",
+        "                }\n            )\n            return None\n        self._append_total(",
     ),
     "seq-constant": ('"seq": self._seq()', '"seq": 0'),
     "wrong-outcome-label": ('"outcome": "accept"', '"outcome": "ok"'),
@@ -319,6 +319,23 @@ MUTANTS = {
         "json.dumps(record))\n            except",
     ),
     "drop-code": ('"code": _attribute(error, "code"),', ""),
+    "copy-args": (
+        "getattr(self._engine, operation)(*args)",
+        'getattr(self._engine, operation)(*__import__("copy").deepcopy(args))',
+    ),
+    "truncate-arguments": (
+        '"arguments": before}',
+        '"arguments": before[:1]}',
+    ),
+    "crash-unchanged-constant": (
+        '"error_type": _type_name(type(error)),\n'
+        '                    "arguments_unchanged": [_snapshot(a) for a in args] == before,',
+        '"error_type": _type_name(type(error)),\n                    "arguments_unchanged": True,',
+    ),
+    "append-fallback-empty": (
+        '[_opaque("trace-append-failed")]',
+        "[]",
+    ),
 }
 
 
@@ -335,47 +352,148 @@ def _mutant(label):
     return _load(SOURCE.replace(before, after))
 
 
-def _is_red(module):
+class _Spy:
+    """An engine that records the exact argument objects it receives."""
+
+    def __init__(self):
+        self.seen = []
+
+    def __getattr__(self, name):
+        def method(*args):
+            self.seen.append(args)
+
+        return method
+
+
+class _MutatingCrash:
+    """An engine whose every operation mutates its first argument, then crashes."""
+
+    def __init__(self, boom):
+        self.boom = boom
+
+    def __getattr__(self, name):
+        def method(*args):
+            args[0].append("junk")
+            raise self.boom
+
+        return method
+
+
+def _first_deviation(module):
+    """The name of the first semantic check the module fails, or None.
+
+    Only assertion-style deviations count: an unexpected exception from the
+    instrument propagates and errors the test instead of counting as a kill."""
     tracer = module.RollbackTracer(_engine())
     tracer.rollback(*OK_ARGS())
     tracer.rollback(*OK_ARGS())
     records = tracer.records
     if [r["seq"] for r in records] != [0, 1]:
-        return True
+        return "check-1"
     if any(r["outcome"] != "accept" for r in records):
-        return True
+        return "check-2"
     if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
-        return True
+        return "check-3"
     make_args, oracle, _ = next(iter(REJECTS.values()))
     rejecting = module.RollbackTracer(_engine(oracle))
     try:
         rejecting.rollback(*make_args())
-        return True
+        return "check-4"
     except ERR:
         pass
     last = rejecting.records[-1]
     if last.get("outcome") != "reject" or "code" not in last:
-        return True
+        return "check-5"
+    spy = _Spy()
+    probe = module.RollbackTracer(spy)
+    given = ([0], [1], [2])
+    probe._call("probe", given)
+    if len(spy.seen) != 1 or len(spy.seen[0]) != 3:
+        return "args-identity"
+    if any(a is not b for a, b in zip(spy.seen[0], given, strict=True)):
+        return "args-identity"
+    if probe.records[0]["arguments"] != [[0], [1], [2]]:
+        return "arguments-full"
+    lost = module.RollbackTracer(spy)
+    del lost._trace
+    lost._call("probe", given)
+    if lost.records != ({"__opaque__": "trace-append-failed"},):
+        return "append-fallback"
+    boom = KeyError("x")
 
     class Crasher:
         def rollback(self, *args):
-            raise KeyError("x")
+            raise boom
 
     crash = module.RollbackTracer(Crasher())
     try:
         crash.rollback([], {})
+    except KeyError as caught:
+        if caught is not boom:
+            return "crash-reraise-identity"
+    else:
+        return "crash-swallowed"
+    if (
+        crash.records[-1].get("outcome") != "crash"
+        or crash.records[-1].get("error_type") != "KeyError"
+    ):
+        return "crash-record"
+    mutating = module.RollbackTracer(_MutatingCrash(boom))
+    try:
+        mutating._call("probe", ([0],))
     except KeyError:
-        return False
-    except Exception as error:
-        # a different exception type is a semantic deviation
-        return type(error) is not KeyError
-    return True
+        pass
+    else:
+        return "crash-swallowed"
+    if mutating.records[-1].get("arguments_unchanged") is not False:
+        return "crash-arguments-unchanged"
+    return None
+
+
+def _is_red(module):
+    return _first_deviation(module) is not None
+
+
+def _from_source(source):
+    module = types.ModuleType("instrument_under_test")
+    module.__file__ = str(ROOT / "store" / "rollback_instrument.py")
+    exec(compile(source, module.__file__, "exec"), module.__dict__)
+    return module
+
+
+def _edited(label):
+    before, after = MUTANTS[label]
+    assert SOURCE.count(before) == 1, label
+    return _from_source(SOURCE.replace(before, after))
 
 
 def test_unmutated_instrument_is_green_on_the_mutant_check():
-    assert not _is_red(_load(SOURCE))
+    assert _first_deviation(_from_source(SOURCE)) is None
 
 
 @pytest.mark.parametrize("label", sorted(MUTANTS))
 def test_mutant_is_red(label):
-    assert _is_red(_mutant(label)), label
+    assert _is_red(_edited(label)) is True, label
+    assert isinstance(_first_deviation(_edited(label)), str), label
+
+
+# the check that must catch each of these, so a kill is never an accident
+EXPECTED_KILL = {
+    "drop-crash-reraise": "crash-swallowed",
+    "copy-args": "args-identity",
+    "truncate-arguments": "arguments-full",
+    "crash-unchanged-constant": "crash-arguments-unchanged",
+    "append-fallback-empty": "append-fallback",
+}
+
+
+@pytest.mark.parametrize("label", sorted(EXPECTED_KILL))
+def test_mutant_dies_on_its_own_check(label):
+    assert _first_deviation(_edited(label)) == EXPECTED_KILL[label]
+
+
+def test_a_crashing_instrument_is_an_error_not_a_kill():
+    broken = SOURCE.replace('"outcome": "crash",', '"outcome": undefined_name,')
+    assert broken != SOURCE
+    with pytest.raises(NameError):
+        _first_deviation(_from_source(broken))
