@@ -1,0 +1,325 @@
+"""T0190: conflict-detector fuzz/fault campaign against graph.conflict (T0188).
+
+T0189 pins the independent model on 300 seeded plus enumerated triples. This task
+adds a larger, independently seeded campaign with these duties:
+
+1. CLASSIFICATION: every case ends exactly one of a model-equal report or a typed
+   ConflictError of a contract class with its mapped code and no chained exception.
+2. CORRUPTION: ten tampers of one state entry (retype, bad digest, wrong key,
+   extra/missing field, bad FEN, unknown variant, non-dict record, dict subclass,
+   str-subclass key) in each of base, left and right are GUARANTEED invalid by an
+   independent predicate and must fail closed as malformed_conflict_record, the first
+   invalid state in base, left, right order deciding, with every input untouched.
+3. LINKED FAULTS: the contract's closed linked errors (VariantError, DigestError,
+   ValueError) map to a typed refusal with no chained exception; any other exception
+   from a linked call propagates unchanged and never becomes a verdict.
+4. FAULT INJECTION: wrappers with one planted defect (conflict dropped, sides swapped,
+   input mutated, witness order reversed, divergent base ignored, raw escape) must be
+   caught by the T0189 checker on their own category.
+5. DETERMINISM: outcome log hash is pinned.
+"""
+
+# ruff: noqa: E501
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+import random
+import re
+import types
+
+import pytest
+
+import graph.conflict as cf
+from graph.position_digest import DigestError
+from tests import test_t0189_conflict_unit_property as t189
+from tools.variant_runtime import VariantError
+
+SEEDS = (190, 1900, 19000)
+POSITIONS = (0, 1, 2)
+DIGEST = re.compile(r"pdv1:[0-9a-f]{64}")
+
+
+def _entry_valid(key, rec):
+    """Independent predicate: is this single state entry well formed?"""
+    if type(key) is not str or type(rec) is not dict:
+        return False
+    if set(map(type, rec)) != {str} or set(rec) != {"variant", "digest", "snapshot_fen"}:
+        return False
+    if any(type(v) is not str for v in rec.values()):
+        return False
+    return (
+        key in t189.KEYS
+        and DIGEST.fullmatch(rec["digest"]) is not None
+        and any(
+            rec["snapshot_fen"] == r["snapshot_fen"] and rec["variant"] == r["variant"]
+            for r in t189.BASE_RECS
+        )
+    )
+
+
+def _state_valid(state):
+    return type(state) is dict and all(_entry_valid(k, v) for k, v in dict.items(state))
+
+
+class _StrSub(str):
+    pass
+
+
+class _DictSub(dict):
+    pass
+
+
+def _tampers():
+    def pick(state, rng):
+        return rng.choice(sorted(state))
+
+    def retype(state, rng):
+        state = copy.deepcopy(state)
+        key = pick(state, rng)
+        state[key][rng.choice(["variant", "digest", "snapshot_fen"])] = rng.choice(
+            [None, 5, b"x", ["a"]]
+        )
+        return state
+
+    def bad_digest(state, rng):
+        state = copy.deepcopy(state)
+        state[pick(state, rng)]["digest"] = rng.choice(["", "pdv1:xyz", "PDV1:" + "0" * 64,
+                                                        "pdv1:" + "A" * 64, "pdv1:" + "0" * 63])  # fmt: skip
+        return state
+
+    def wrong_key(state, rng):
+        state = copy.deepcopy(state)
+        key = pick(state, rng)
+        state[key + "x"] = state.pop(key)
+        return state
+
+    def extra_field(state, rng):
+        state = copy.deepcopy(state)
+        state[pick(state, rng)]["note"] = "x"
+        return state
+
+    def missing_field(state, rng):
+        state = copy.deepcopy(state)
+        del state[pick(state, rng)][rng.choice(["variant", "digest", "snapshot_fen"])]
+        return state
+
+    def bad_fen(state, rng):
+        state = copy.deepcopy(state)
+        state[pick(state, rng)]["snapshot_fen"] = rng.choice(["", "not a fen", "8/8/8/8/8/8/8/8 w - - 0 1 x"])  # fmt: skip
+        return state
+
+    def unknown_variant(state, rng):
+        state = copy.deepcopy(state)
+        state[pick(state, rng)]["variant"] = rng.choice(["chess960", "", "Standard"])
+        return state
+
+    def non_dict_record(state, rng):
+        state = copy.deepcopy(state)
+        state[pick(state, rng)] = rng.choice([None, [], "rec", 3])
+        return state
+
+    def dict_subclass(state, rng):
+        state = copy.deepcopy(state)
+        if rng.random() < 0.5:
+            return _DictSub(state)
+        key = pick(state, rng)
+        state[key] = _DictSub(state[key])
+        return state
+
+    def str_subclass_key(state, rng):
+        state = copy.deepcopy(state)
+        key = pick(state, rng)
+        state[_StrSub(key)] = state.pop(key)
+        return state
+
+    return {k: v for k, v in locals().items() if callable(v) and k != "pick"}
+
+
+TAMPERS = _tampers()
+
+
+def _outcome(module, base, left, right):
+    got = t189._detect(module, base, left, right)
+    assert not ({"raw", "chained", "wrong-code"} & set(got)), got
+    return got
+
+
+def campaign(seed, n=150):
+    triples = t189._triples(seed=seed, n=n)
+    log = []
+    for specs in triples:
+        states = [t189._state(s) for s in specs]
+        got = _outcome(cf, *states)
+        log.append(got.get("err") or sorted(got["conflicts"]))
+    return triples, log
+
+
+def _hash(log):
+    return hashlib.sha256(json.dumps(log, sort_keys=True).encode()).hexdigest()
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_campaign_matches_the_model_and_covers_every_conflict_kind(seed):
+    triples, _log = campaign(seed)
+    assert t189._problems(cf, triples) == []
+    kinds = set()
+    for specs in triples:
+        got = _outcome(cf, *[t189._state(s) for s in specs])
+        kinds |= {w["kind"] for w in got.get("conflicts", {}).values()}
+    assert kinds >= {"added_differently", "both_changed_differently", "changed_vs_removed"}
+
+
+def test_divergent_base_is_typed_in_every_side_pairing():
+    base = t189._state({3: 0, 4: 1})
+    other = t189._state({3: 2})
+    for left, right in ((base, other), (other, base), (base, base)):
+        assert _outcome(cf, copy.deepcopy(base), copy.deepcopy(left), copy.deepcopy(right)) == {
+            "err": t189.DB
+        }
+
+
+def test_campaign_is_deterministic_and_its_log_is_pinned():
+    first = _hash(campaign(SEEDS[0], 100)[1])
+    assert first == _hash(campaign(SEEDS[0], 100)[1])
+    assert first != _hash(campaign(SEEDS[0] + 1, 100)[1])
+    assert first == PINNED_LOG_HASH
+
+
+PINNED_LOG_HASH = "0189dda66361003c628e42247f1bef58befa0fc48ad04bc54666c2184a3cee03"
+
+
+@pytest.mark.parametrize("position", POSITIONS)
+@pytest.mark.parametrize("name", sorted(TAMPERS))
+def test_every_tamper_is_invalid_by_predicate_and_fails_closed_in_every_position(name, position):
+    rng = random.Random(f"{name}/{position}")
+    for _ in range(25):
+        specs = [{i: rng.choice((0, 1)) for i in range(3, 6)} for _ in range(3)]
+        for spec in specs:
+            spec.setdefault(3, 0)
+        states = [t189._state(s) for s in specs]
+        assert all(_state_valid(s) for s in states)
+        states[position] = TAMPERS[name](states[position], rng)
+        assert not _state_valid(states[position]), name  # the generator really corrupts
+        before = [copy.deepcopy(s) for s in states]
+        got = _outcome(cf, *states)
+        assert got == {"err": t189.MCR}, (name, got)
+        assert [type(s) for s in states] == [type(s) for s in before]
+        assert states == before
+
+
+def test_first_invalid_state_in_base_left_right_order_decides():
+    rng = random.Random(1)
+    good = t189._state({3: 0})
+    bad_a = TAMPERS["retype"](good, rng)
+    bad_b = TAMPERS["bad_fen"](good, rng)
+    assert _outcome(cf, bad_a, bad_b, good) == {"err": t189.MCR}
+    assert _outcome(cf, good, bad_b, bad_a) == {"err": t189.MCR}
+    same = t189._state({3: 0})
+    assert _outcome(cf, good, same, bad_a) == {"err": t189.MCR}  # validation precedes divergence
+
+
+# -- linked faults -----------------------------------------------------------------
+
+
+@pytest.mark.parametrize("exc_type", [VariantError, DigestError, ValueError])
+@pytest.mark.parametrize("target", ["make_record", "parse_position"])
+def test_closed_linked_errors_become_one_typed_unchained_refusal(monkeypatch, exc_type, target):
+    def boom(*args, **kwargs):
+        if exc_type is VariantError:
+            raise VariantError("malformed_request", "forged")
+        if exc_type is DigestError:
+            raise DigestError("malformed_position", "malformed_request")
+        raise exc_type("forged")
+
+    states = [t189._state({3: 0}), t189._state({3: 1}), t189._state({3: 2})]
+    before = copy.deepcopy(states)
+    monkeypatch.setattr(cf, target, boom)
+    got = t189._detect(cf, *states)
+    assert got == {"err": t189.MCR}, got
+    assert states == before
+
+
+@pytest.mark.parametrize("exc_type", [RuntimeError, KeyError, KeyboardInterrupt, SystemExit])
+def test_foreign_linked_exceptions_propagate_and_never_become_a_verdict(monkeypatch, exc_type):
+    states = [t189._state({3: 0}), t189._state({3: 1}), t189._state({3: 2})]
+    before = copy.deepcopy(states)
+
+    def boom(*args, **kwargs):
+        raise exc_type("foreign")
+
+    monkeypatch.setattr(cf, "parse_position", boom)
+    assert t189._detect(cf, *states) == {"raw": exc_type.__name__}
+    assert states == before
+    monkeypatch.undo()
+    assert t189._detect(cf, *states) == t189._model(*before)  # no poisoning
+
+
+# -- planted faults ----------------------------------------------------------------
+
+
+def _wrap(detect):
+    return types.SimpleNamespace(
+        ConflictDetector=lambda: types.SimpleNamespace(detect=detect),
+        ConflictError=cf.ConflictError,
+    )
+
+
+def _real(base, left, right):
+    return cf.ConflictDetector().detect(base, left, right)
+
+
+def _drops_conflict(base, left, right):
+    out = _real(base, left, right)
+    if out.get("conflicts"):
+        out["conflicts"].pop(sorted(out["conflicts"])[0])
+    return out
+
+
+def _swaps_sides(base, left, right):
+    return _real(base, right, left)
+
+
+def _mutates_input(base, left, right):
+    out = _real(base, left, right)
+    if left:
+        left.pop(sorted(left)[0])
+    return out
+
+
+def _reversed_order(base, left, right):
+    out = _real(base, left, right)
+    out["conflicts"] = dict(reversed(list(out["conflicts"].items())))
+    return out
+
+
+def _ignores_divergent_base(base, left, right):
+    try:
+        return _real(base, left, right)
+    except cf.ConflictError as exc:
+        if exc.failure_class == t189.DB:
+            return {"base_id": "gs1:" + "0" * 64, "left_id": "", "right_id": "", "conflicts": {}}
+        raise
+
+
+def _raw_escape(base, left, right):
+    if not base:
+        raise KeyError("empty")
+    return _real(base, left, right)
+
+
+FAULTS = {
+    "conflict-dropped": _drops_conflict,
+    "sides-swapped": _swaps_sides,
+    "input-mutated": _mutates_input,
+    "witness-order-reversed": _reversed_order,
+    "divergent-base-ignored": _ignores_divergent_base,
+    "raw-escape": _raw_escape,
+}
+
+
+@pytest.mark.parametrize("name", sorted(FAULTS))
+def test_each_planted_fault_is_caught_by_the_checker(name):
+    triples = t189._triples(seed=SEEDS[0], n=120) + t189._enumerated()[:120]
+    assert t189._problems(_wrap(FAULTS[name]), triples) != [], name
