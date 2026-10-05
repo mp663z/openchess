@@ -322,40 +322,40 @@ def _mutant(label):
 
 
 def _is_red(module):
-    try:
-        tracer = module.ProvenanceTracer(_engine())
-        tracer.insert(*OK_ARGS())
-        tracer.insert(*OK_ARGS())
-        records = tracer.records
-        if [r["seq"] for r in records] != [0, 1]:
-            return True
-        if any(r["outcome"] != "accept" for r in records):
-            return True
-        if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
-            return True
-        make_args, oracle, _ = next(iter(REJECTS.values()))
-        rejecting = module.ProvenanceTracer(_engine(oracle))
-        try:
-            rejecting.insert(*make_args())
-            return True
-        except ERR:
-            pass
-        last = rejecting.records[-1]
-        if last.get("outcome") != "reject" or "code" not in last:
-            return True
-
-        class Crasher:
-            def insert(self, *args):
-                raise KeyError("x")
-
-        crash = module.ProvenanceTracer(Crasher())
-        try:
-            crash.insert({})
-            return True
-        except KeyError:
-            return False
-    except BaseException:  # noqa: BLE001
+    tracer = module.ProvenanceTracer(_engine())
+    tracer.insert(*OK_ARGS())
+    tracer.insert(*OK_ARGS())
+    records = tracer.records
+    if [r["seq"] for r in records] != [0, 1]:
         return True
+    if any(r["outcome"] != "accept" for r in records):
+        return True
+    if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
+        return True
+    make_args, oracle, _ = next(iter(REJECTS.values()))
+    rejecting = module.ProvenanceTracer(_engine(oracle))
+    try:
+        rejecting.insert(*make_args())
+        return True
+    except ERR:
+        pass
+    last = rejecting.records[-1]
+    if last.get("outcome") != "reject" or "code" not in last:
+        return True
+
+    class Crasher:
+        def insert(self, *args):
+            raise KeyError("x")
+
+    crash = module.ProvenanceTracer(Crasher())
+    try:
+        crash.insert({})
+    except KeyError:
+        return False
+    except Exception as error:
+        # a different exception type is a semantic deviation
+        return type(error) is not KeyError
+    return True
 
 
 def test_unmutated_instrument_is_green_on_the_mutant_check():
