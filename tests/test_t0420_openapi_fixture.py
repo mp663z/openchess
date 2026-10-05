@@ -396,7 +396,8 @@ def _lose_unmapped(document):
 
 def _status_group(document):
     responses = document["paths"]["/identity/refresh"]["post"]["responses"]
-    responses["401"]["x-error-codes"] = ["auth_invalid", "auth_expired"]
+    if "401" in responses:
+        responses["401"]["x-error-codes"] = ["auth_invalid", "auth_expired"]
 
 
 def _public_is_listed_only(derive):
@@ -561,3 +562,12 @@ def test_unmutated_reference_fails_no_row():
 def test_mutant_is_killed_by_a_failed_row(label, monkeypatch):
     killed = _killing_rows(label, monkeypatch)
     assert killed, f"mutant {label} survived every fixture row"
+
+
+def test_non_ascii_example_bytes_are_written_as_utf8_not_escaped():
+    row = next(r for r in CASES["boundary"] if r["name"] == "example-non-ascii-string")
+    (kind, document), problems = _outcome(_materialize(row["mutations"], row["name"]))
+    assert (kind, problems) == ("document", [])
+    data = _REF.canonical_bytes(document)
+    assert "caf\u00e9 \u2603".encode() in data
+    assert b"\\u00e9" not in data

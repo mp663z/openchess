@@ -381,8 +381,189 @@ def _deep(depth):
     return node
 
 
+REG_SCHEMA = [
+    "paths",
+    "/identity/register",
+    "post",
+    "requestBody",
+    "content",
+    "application/json",
+    "schema",
+    "properties",
+]
+
+
+def _nest(levels):
+    """register.request gains `box` holding `levels` wrapping objects above a string leaf."""
+    inner = {"leaf": _field("string", required=False)}
+    for _ in range(levels):
+        inner = {"wrap": {"type": "object", "required": False, "fields": inner}}
+    return _set([*REG_REQ, "box"], {"type": "object", "required": False, "fields": inner})
+
+
+def _nest_leaf_path(levels):
+    return [*REG_SCHEMA, "box", "properties", *(["wrap", "properties"] * levels), "leaf"]
+
+
+def _new_op(path):
+    return {
+        "method": "POST",
+        "path": path,
+        "auth": "required",
+        "mutating": True,
+        "request": {"fields": {}},
+        "response": {"fields": {}},
+        "errors": ["malformed_request"],
+    }
+
+
+def _extra_areas(total):
+    """Grow the source to exactly `total` areas (the shipped source has five)."""
+    existing = 5
+    return [
+        _set(
+            ["areas", f"extra_{chr(97 + i // 26)}{chr(97 + i % 26)}"],
+            {"ops": {"do": _new_op(f"/extra/a{i}")}},
+        )
+        for i in range(total - existing)
+    ]
+
+
+def _extra_ops(total):
+    """Grow quota to exactly `total` ops (the shipped quota area has three)."""
+    existing = 3
+    return [
+        _set([*QUOTA_OPS, f"op_{chr(97 + i // 26)}{chr(97 + i % 26)}"], _new_op(f"/quota/x{i}"))
+        for i in range(total - existing)
+    ]
+
+
+def _fields_of(total):
+    return _set(
+        [*RESERVE, "request", "fields"],
+        {f"f{i}": _field("integer", required=False) for i in range(total)},
+    )
+
+
+QUOTA_OPS = ["areas", "quota", "ops"]
+RESERVE_SCHEMA = [
+    "paths",
+    "/quota/reserve",
+    "post",
+    "requestBody",
+    "content",
+    "application/json",
+    "schema",
+    "properties",
+]
+
+
+def _single_code_mutations():
+    muts = [
+        _set(["contract", "transport", "errors", "closed_enum"], ["malformed_request"]),
+        _set(
+            ["contract", "transport", "errors", "shape", "error", "fields", "code", "example"],
+            "malformed_request",
+        ),
+    ]
+    for area, spec in _SOURCE_DOC["areas"].items():
+        for op in spec["ops"]:
+            muts.append(_set(["areas", area, "ops", op, "errors"], ["malformed_request"]))
+    return muts
+
+
 def boundary():
     return [
+        row(
+            "object-depth-at-ceiling",
+            "Objects nested to exactly the depth ceiling of 8 are accepted.",
+            [_nest(6)],
+            doc(eq(_nest_leaf_path(6), {"type": "string"})),
+        ),
+        row(
+            "object-depth-over-ceiling",
+            "One object level beyond the ceiling of 8 is refused.",
+            [_nest(7)],
+            REFUSAL,
+        ),
+        row(
+            "fields-per-object-at-ceiling",
+            "An object with exactly 256 fields is accepted.",
+            [_fields_of(256)],
+            doc(
+                eq([*RESERVE_SCHEMA, "f255"], {"type": "integer"}),
+                absent([*RESERVE_SCHEMA, "f256"]),
+            ),
+        ),
+        row(
+            "fields-per-object-over-ceiling",
+            "An object with 257 fields is refused.",
+            [_fields_of(257)],
+            REFUSAL,
+        ),
+        row(
+            "areas-at-ceiling",
+            "Exactly 64 areas are accepted.",
+            _extra_areas(64),
+            doc(eq(["paths", "/extra/a58", "post", "operationId"], "extra_cg.do")),
+        ),
+        row(
+            "areas-over-ceiling",
+            "65 areas are refused.",
+            _extra_areas(65),
+            REFUSAL,
+        ),
+        row(
+            "ops-per-area-at-ceiling",
+            "Exactly 64 operations in one area are accepted.",
+            _extra_ops(64),
+            doc(eq(["paths", "/quota/x60", "post", "operationId"], "quota.op_ci")),
+        ),
+        row(
+            "ops-per-area-over-ceiling",
+            "65 operations in one area are refused.",
+            _extra_ops(65),
+            REFUSAL,
+        ),
+        row(
+            "example-integer-negative-at-magnitude",
+            "The magnitude bound is inclusive on the negative side: -(2^53-1) is accepted.",
+            [
+                _set(
+                    [*RESERVE, "request", "fields", "estimated_units", "example"], -9007199254740991
+                )
+            ],
+            doc(eq([*RESERVE_SCHEMA, "estimated_units", "examples"], [-9007199254740991])),
+        ),
+        row(
+            "example-non-ascii-string",
+            "A non-ASCII string example is kept as written.",
+            [_set([*REG_REQ, "email", "example"], "caf\u00e9 \u2603")],
+            doc(eq([*REG_SCHEMA, "email", "examples"], ["caf\u00e9 \u2603"])),
+        ),
+        row(
+            "array-example-copied",
+            "A string array example is carried into the schema in order.",
+            [
+                _set(
+                    [*REG_REQ, "tags"],
+                    _field("array", required=False, items="string", example=["a", "b"]),
+                )
+            ],
+            doc(eq([*REG_SCHEMA, "tags", "examples"], [["a", "b"]])),
+        ),
+        row(
+            "single-code-closed-enum",
+            "A closed enum of one code is accepted when every op and the shape use only it.",
+            _single_code_mutations(),
+            doc(
+                eq(
+                    ["paths", "/identity/register", "post", "responses", "400", "x-error-codes"],
+                    ["malformed_request"],
+                ),
+                eq(["x-unmapped-error-codes"], []),
+            ),
+        ),
         row(
             "base-path-major-ceiling",
             "Major 999 is the largest three-digit major and is accepted.",
@@ -663,6 +844,46 @@ def malformed():
             "example-lone-surrogate",
             "A string example must be UTF-8 encodable, with no lone surrogate.",
             [_set([*REG_REQ, "email", "example"], "\ud800")],
+            REFUSAL,
+        ),
+        row(
+            "array-example-with-a-bad-item",
+            "Every item of an array example must have the declared item type.",
+            [
+                _set(
+                    [*REG_REQ, "tags"],
+                    _field("array", required=False, items="string", example=["a", 5]),
+                )
+            ],
+            REFUSAL,
+        ),
+        row(
+            "array-example-first-item-bad",
+            "One valid later item does not excuse an invalid first item.",
+            [
+                _set(
+                    [*REG_REQ, "tags"],
+                    _field("array", required=False, items="string", example=[5, "a"]),
+                )
+            ],
+            REFUSAL,
+        ),
+        row(
+            "field-without-type",
+            "A field descriptor must declare its type.",
+            [_set([*REG_REQ, "nick"], {"required": False})],
+            REFUSAL,
+        ),
+        row(
+            "field-without-required",
+            "A field descriptor must declare required.",
+            [_set([*REG_REQ, "nick"], {"type": "string"})],
+            REFUSAL,
+        ),
+        row(
+            "closed-enum-empty",
+            "The closed error enum must list at least one code.",
+            [_set(["contract", "transport", "errors", "closed_enum"], [])],
             REFUSAL,
         ),
         row(
