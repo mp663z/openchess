@@ -149,6 +149,17 @@ def battery(adapter, error):
     state["bounded_cost"] = 1  # one over a zero cap
     _expect(adapter, error, request, state, "cost_cap_exceeded", [])
 
+    # a bool is not a cost estimate (isolated: everything else on the hosted row is valid)
+    for flag in (False, True):
+        request, state = _hosted()
+        state["bounded_cost"] = flag
+        _expect(adapter, error, request, state, "cost_cap_exceeded", [])
+    # cancellation before dispatch applies to the local mode too
+    local = next(r for r in fx.CASES["happy"] if r["name"] == "local-offline")
+    request, state = fx.materialize(local)
+    state["cancelled"] = True
+    _expect(adapter, error, request, state, "cancelled", [])
+
 
 def test_green_binding_passes_the_whole_battery():
     battery(*BINDING)
@@ -185,6 +196,16 @@ MUTANTS = [
     ("reference", 'not state.get("cloud", False) or', 'not state.get("cloud", True) or'),
     ("reference", 'cap = request.get("max_cost_usd")', 'cap = request.get("max_cost_usd", 0)'),
     ("reference", 'bounded = state.get("bounded_cost")', 'bounded = state.get("bounded_cost", 0)'),
+    (
+        "reference",
+        "type(bounded) not in (int, float)",
+        "not isinstance(bounded, (int, float))",
+    ),
+    (
+        "reference",
+        'if state.get("cancelled", False):',
+        'if mode == "hosted_byom" and state.get("cancelled", False):',
+    ),
     ("_envelope", 'if type(request["version"]) is not int or request["version"] != 1:',
      'if request["version"] != 1:'),
     ("_envelope", 'if type(cap) not in (float, int) or not math.isfinite(cap) or cap < 0:',
