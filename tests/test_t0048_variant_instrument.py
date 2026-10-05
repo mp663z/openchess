@@ -306,40 +306,40 @@ def _mutant(label):
 
 
 def _is_red(module):
-    try:
-        tracer = module.VariantTracer(_engine())
-        tracer.parse_position(*OK_ARGS())
-        tracer.parse_position(*OK_ARGS())
-        records = tracer.records
-        if [r["seq"] for r in records] != [0, 1]:
-            return True
-        if any(r["outcome"] != "accept" for r in records):
-            return True
-        if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
-            return True
-        make_args, oracle, _ = next(iter(REJECTS.values()))
-        rejecting = module.VariantTracer(_engine(oracle))
-        try:
-            rejecting.parse_position(*make_args())
-            return True
-        except ERR:
-            pass
-        last = rejecting.records[-1]
-        if last.get("outcome") != "reject" or "code" not in last:
-            return True
-
-        class Crasher:
-            def parse_position(self, *args):
-                raise KeyError("x")
-
-        crash = module.VariantTracer(Crasher())
-        try:
-            crash.parse_position("standard", "")
-            return True
-        except KeyError:
-            return False
-    except BaseException:  # noqa: BLE001
+    tracer = module.VariantTracer(_engine())
+    tracer.parse_position(*OK_ARGS())
+    tracer.parse_position(*OK_ARGS())
+    records = tracer.records
+    if [r["seq"] for r in records] != [0, 1]:
         return True
+    if any(r["outcome"] != "accept" for r in records):
+        return True
+    if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
+        return True
+    make_args, oracle, _ = next(iter(REJECTS.values()))
+    rejecting = module.VariantTracer(_engine(oracle))
+    try:
+        rejecting.parse_position(*make_args())
+        return True
+    except ERR:
+        pass
+    last = rejecting.records[-1]
+    if last.get("outcome") != "reject" or "code" not in last:
+        return True
+
+    class Crasher:
+        def parse_position(self, *args):
+            raise KeyError("x")
+
+    crash = module.VariantTracer(Crasher())
+    try:
+        crash.parse_position("standard", "")
+    except KeyError:
+        return False
+    except Exception as error:
+        # a different exception type is a semantic deviation
+        return type(error) is not KeyError
+    return True
 
 
 def test_unmutated_instrument_is_green_on_the_mutant_check():
