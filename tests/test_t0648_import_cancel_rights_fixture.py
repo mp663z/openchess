@@ -79,6 +79,9 @@ def _cancelled_state_holds(binding, source_id, cancel_at):
         raise AssertionError(f"refused a valid scenario: {error.code}") from None
     assert result["kind"] == SCENARIO["visible_output"]
     assert result["source_id"] == source_id
+    assert type(store.summary) is dict, "no cancelled summary stored"
+    assert store.summary == result
+    assert store.summary.get("source_id") == source_id
     committed = cancel_at - 1
     assert len(store.records) == committed
     assert sorted(entry["record"] for entry in store.index) == sorted(store.records)
@@ -119,6 +122,16 @@ def _refuse_valid(payload, store, **kwargs):
     raise Refusal("unknown_rights")
 
 
+def _allow_trimmed_source(payload, store, *, source_id="pgn-multi", **kwargs):
+    return reference_cancel(payload, store, source_id=source_id.strip(), **kwargs)
+
+
+def _wrong_summary_source(payload, store, **kwargs):
+    result = reference_cancel(payload, store, **kwargs)
+    store.summary = {**store.summary, "source_id": "pgn-watch"}
+    return result
+
+
 def _allow_outside_source(payload, store, *, source_id="pgn-multi", **kwargs):
     if source_id == "pgn-watch":
         source_id = "pgn-multi"
@@ -146,7 +159,7 @@ def _persist_inflight(payload, store, *, cancel_at=2, **kwargs):
 
 def _rights_probe(binding):
     """Every rights assertion this fixture makes, as one callable probe."""
-    for source_id in (*OUTSIDE, "not-a-source", "PGN-MULTI"):
+    for source_id in (*OUTSIDE, "not-a-source", "PGN-MULTI", " pgn-multi", "pgn-multi ", ""):
         _refused_plain(binding, source_id)
     for source_id in SCENARIO["sources"]:
         for cancel_at in (1, 2, 3):
@@ -178,6 +191,8 @@ def test_probe_is_green_for_the_production_binding():
         _telemetry_before_refusal,
         _persist_inflight,
         _refuse_valid,
+        _allow_trimmed_source,
+        _wrong_summary_source,
     ],
     ids=lambda f: f.__name__.lstrip("_"),
 )
