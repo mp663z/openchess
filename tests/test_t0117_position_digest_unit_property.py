@@ -77,6 +77,13 @@ WHITE_EP_LANDING = [
     "3k4/8/8/8/3Pp3/8/8/3R3K b - d3 0 2",
 ]
 # black pawn captures en passant but its own king would be exposed on the rank
+# the neighbour on the mover rank is not the mover's pawn: the target is unusable
+EP_WRONG_NEIGHBOUR = [
+    "4k3/8/8/2Np4/8/8/8/4K3 w - d6 0 2",  # own knight on the capturer square
+    "4k3/8/8/2pp4/8/8/8/4K3 w - d6 0 2",  # enemy pawn on the capturer square
+    "4k3/8/8/3pN3/8/8/8/4K3 w - d6 0 2",  # upper-file knight
+    "4k3/8/8/8/3Pn3/8/8/4K3 b - d3 0 2",  # black to move, enemy knight on the capturer square
+]
 BLACK_EP_PINNED = ["8/8/8/8/k2Pp2R/8/8/4K3 b - d3 0 2"]
 
 
@@ -147,6 +154,11 @@ def _properties(module, variants):
     assert module.digest_fen("standard", SEEDS[4]) != module.digest_fen(
         "standard", "4K3/8/8/8/8/8/8/4k3 w - - 0 1"
     )
+    # a non-pawn or enemy-pawn neighbour never makes the target usable
+    for text in EP_WRONG_NEIGHBOUR:
+        assert accept(module, "standard", text) == accept(
+            module, "standard", _with(text, ep="-")
+        ), text
     # an en-passant capture that would expose the capturer's own king is not usable
     pinned = "4k3/8/8/2KpP2r/8/8/8/8 w - d6 0 2"
     assert module.digest_fen("standard", pinned) == module.digest_fen(
@@ -198,9 +210,9 @@ def test_properties_hold_for_the_shipped_runtime():
 
 @pytest.mark.parametrize("variant", VARIANTS)
 def test_every_declared_variant_is_deterministic_and_distinct(variant):
-    first = pd.digest_fen(variant, START)
-    assert first == pd.digest_fen(variant, START)
-    others = {pd.digest_fen(v, START) for v in VARIANTS if v != variant}
+    first = accept(pd, variant, START)
+    assert first == accept(pd, variant, START)
+    others = {accept(pd, v, START) for v in VARIANTS if v != variant}
     assert first not in others
 
 
@@ -249,7 +261,7 @@ class _DigestStr(str):
     pass
 
 
-_GOOD_DIGEST = pd.digest_fen("standard", START)
+_GOOD_DIGEST = "pdv1:" + VECTORS[0][2]  # literal vector: no runtime call at import
 _DIGEST_REFUSALS = [
     None,
     5,
@@ -271,7 +283,11 @@ def test_malformed_digest_text_is_typed(fn, bad):
 
 @pytest.mark.parametrize("fn", ["parse_digest", "emit_digest"])
 def test_exact_digest_text_is_accepted_unchanged(fn):
-    assert getattr(pd, fn)(_GOOD_DIGEST) == _GOOD_DIGEST
+    try:
+        got = getattr(pd, fn)(_GOOD_DIGEST)
+    except pd.DigestError as exc:
+        raise AssertionError(f"{fn} refused a valid digest: {exc.failure_class}") from exc
+    assert got == _GOOD_DIGEST
 
 
 MUTANTS = [
@@ -291,6 +307,8 @@ MUTANTS = [
     ("    return digest(dc, encode(dc, vc, ec, fc, variant_id, position))", "    if position[4] > 50:\n        _fail(dc, \"malformed_position\")\n    return digest(dc, encode(dc, vc, ec, fc, variant_id, position))"),
     ("if type(text) is not str or re.fullmatch", "if not isinstance(text, str) or re.fullmatch"),
     ("    return digest(dc, encode(dc, vc, ec, fc, variant_id, position))", "    _fail(dc, \"malformed_position\")"),
+    ("if board.get((f, mover_rank)) != own_pawn:", "if board.get((f, mover_rank)) is None:"),
+    ("    raise DigestError(cls, contract[\"failures\"][\"mapping\"][cls])", "    pass"),
     ("    for df in (-1, 1):", "    for df in (1,):"),
     ("    for df in (-1, 1):", "    for df in (-1,):"),
     ("if not 0 <= f < len(files):", "if not 0 < f < len(files):"),
@@ -352,3 +370,18 @@ def test_every_mutant_is_killed(old, new):
 
     with pytest.raises(AssertionError):
         hostile(module)
+
+
+def test_docs_are_detached_copies_on_every_call():
+    first = pd._docs()
+    second = pd._docs()
+    assert first is not second and all(a is not b for a, b in zip(first, second, strict=True))
+    first[0]["digest"]["format"]["prefix"] = "tampered:"
+    assert pd._docs()[0]["digest"]["format"]["prefix"] == "pdv1:"
+
+
+def test_docs_aliasing_mutant_is_killed():
+    module = _mutant("return copy.deepcopy(_parsed_docs())", "return _parsed_docs()")
+    first = module._docs()
+    first[0]["digest"]["format"]["prefix"] = "tampered:"
+    assert module._docs()[0]["digest"]["format"]["prefix"] != "pdv1:"  # the mutant leaks
