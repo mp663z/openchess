@@ -278,6 +278,8 @@ def test_logs_outside_the_scan_domain_are_refused_after_restart():
         "too_deep_dict": [*base, {"x": _deep_dict(corruption.MAX_DEPTH + 2)}],
         "dict_nesting_300": [*base, {"x": _deep_dict(300)}],
         "int_over_range": [*base, {"x": 1 << (corruption.MAX_INT_BITS + 1)}],
+        "int_one_bit_over": [*base, {"x": 1 << corruption.MAX_INT_BITS}],
+        "negative_int_one_bit_over": [*base, {"x": -(1 << corruption.MAX_INT_BITS)}],
     }
     for name, log in cases.items():
         child = subprocess.run(
@@ -368,6 +370,12 @@ EDITS = {
         "return [_encode(item, depth + 1, seen, out) for item in values]",
         "return [_encode(item, depth, seen, out) for item in values]",
     ),
+    "int-bit-bound-exclusive": _once(
+        "value.bit_length() > MAX_INT_BITS", "value.bit_length() >= MAX_INT_BITS"
+    ),
+    "int-bit-bound-high": _once(
+        "value.bit_length() > MAX_INT_BITS", "value.bit_length() > MAX_INT_BITS + 1"
+    ),
     "snapshot-skips-dicts": _once(
         "    elif type(value) is dict:\n        saved.append",
         "    elif False:\n        saved.append",
@@ -388,6 +396,8 @@ EXPECTED_KILL = {
     "depth-bound-off-by-one": "domain-depth",
     "list-depth-not-counted": "domain-depth",
     "snapshot-skips-dicts": "nested-restore",
+    "int-bit-bound-exclusive": "domain-scalars",
+    "int-bit-bound-high": "domain-int-edge",
     "int-range-unchecked": "domain-int",
     "dict-depth-not-counted": "domain-dict",
 }
@@ -427,6 +437,9 @@ def test_depth_boundary_is_exact_through_the_log_tail():
 
 
 SCALAR_ROWS = [
+    ("int-at-bit-limit", {"x": 1 << (corruption.MAX_INT_BITS - 1)}),
+    ("int-max-bits-all-ones", {"x": (1 << corruption.MAX_INT_BITS) - 1}),
+    ("negative-int-at-bit-limit", {"x": -(1 << (corruption.MAX_INT_BITS - 1))}),
     ("true", {"x": True}),
     ("false", {"x": False}),
     ("none", {"x": None}),
@@ -495,6 +508,9 @@ def _deviations(source):
         n["ok"] is False and n.get("failure_class") == "divergent_quarantine" and n["log"] == log
     ):
         found.add("nested-restore")
+    edge = child_run([*jround(REF_LOG[:2]), {"x": 1 << corruption.MAX_INT_BITS}], 9, source=source)
+    if not (edge["ok"] is False and edge.get("failure_class") == "malformed_corruption_record"):
+        found.add("domain-int-edge")
     if _depth_failure(source) is not None:
         found.add("domain-depth")
     if _scalar_failure(source) is not None:
