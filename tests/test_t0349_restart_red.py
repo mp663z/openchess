@@ -478,7 +478,35 @@ def check_inert_keys(impl, err):
     _rejects(impl, err, _state(_inert(_leased("a", 0))), _rq(), "corrupt_queue")
 
 
-CHECKS = (check_fixture, check_semantics, check_order, check_totality, check_inert_keys)
+class _Opaque:
+    def __deepcopy__(self, memo):
+        return self
+
+
+_OPAQUE = _Opaque()
+
+
+def check_payload_integrity(impl, err):
+    # each row is a typed corrupt_queue refusal (an assertion on the failure class)
+    for bad in ("\ud800", {"k": "\udfff"}, {"k": (1, 2)}, {"k": {1, 2}}, {"k": _OPAQUE}):
+        _rejects(impl, err, _state(_job("a", 0, payload=bad)), _rq(), "corrupt_queue")
+    _rejects(impl, err, _state(_job("a", 0, payload={1: 2})), _rq(), "corrupt_queue")
+    _rejects(impl, err, _state(_job("a", 0, payload={"k": float("inf")})), _rq(), "corrupt_queue")
+    for jobs in ((), (_job("a", 0),), {"a": 1}, "jobs"):
+        _rejects(impl, err, {"jobs": jobs, "next_seq": 1}, _rq(), "corrupt_queue")
+    # their accepted twins
+    for good in ("snow \u2603", {"k": [1, 2.5, None, True, "x"]}, {"": 0}):
+        assert impl(_state(_job("a", 0, payload=good)), _rq())["op"] == "restart"
+
+
+CHECKS = (
+    check_fixture,
+    check_semantics,
+    check_order,
+    check_totality,
+    check_inert_keys,
+    check_payload_integrity,
+)
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
