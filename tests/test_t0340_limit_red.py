@@ -381,12 +381,32 @@ def check_totality(impl, err):
     _rejects(impl, err, missing, "malformed_limit_request")
 
 
+class RawEscape(AssertionError):
+    """A non-contract exception escaped the implementation (a crash, not a decision)."""
+
+
+def _guard(impl, err):
+    """Typed contract errors and assertion failures pass through; any other
+    exception is a crash and becomes RawEscape: a totality failure that is
+    never counted as a semantic mutant kill."""
+
+    def guarded(*args):
+        try:
+            return impl(*args)
+        except (err, AssertionError):
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise RawEscape(f"raw {type(exc).__name__} escaped") from None
+
+    return guarded
+
+
 CHECKS = (check_fixture, check_differential, check_semantics, check_order, check_totality)
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_bound_implementation_passes(check):
-    check(admit, LimitError)
+    check(_guard(admit, LimitError), LimitError)
 
 
 def test_fixture_covers_every_failure_class_and_decision():
@@ -540,7 +560,21 @@ def _m_raw_exception(request, real):
     return real(request)
 
 
+def _m_refuses_valid(request, real):
+    if isinstance(request, dict) and request.get("previous") is not None:
+        raise LimitError("limit_conflict")
+    return real(request)
+
+
+def _m_refuses_everything(request, real):
+    raise LimitError("malformed_limit_request")
+
+
+RAW_MUTANTS = {"raw_exception"}
+
 MUTANTS = {
+    "refuses_valid": (_m_refuses_valid, "check_semantics"),
+    "refuses_everything": (_m_refuses_everything, "check_fixture"),
     "banks_partial_at_cap": (_m_banks_partial_at_cap, "check_differential"),
     "drops_partial": (_m_drops_partial, "check_differential"),
     "ceil_gain": (_m_ceil_gain, "check_differential"),
@@ -559,8 +593,11 @@ def test_mutant_is_red_on_its_target(name):
     mutate, target = MUTANTS[name]
     check = next(c for c in CHECKS if c.__name__ == target)
     try:
-        check(_wrap(mutate), LimitError)
-    except BaseException as exc:  # noqa: BLE001 - pytest.fail is a BaseException
-        assert not isinstance(exc, KeyboardInterrupt)
+        check(_guard(_wrap(mutate), LimitError), LimitError)
+    except RawEscape:
+        # only the mutant that raises a raw exception on purpose may die this way
+        assert name in RAW_MUTANTS, f"mutant {name} crashed instead of being refuted"
+    except (AssertionError, LimitError, pytest.fail.Exception):
+        assert name not in RAW_MUTANTS, f"mutant {name} was not refuted by the raw-exception probe"
     else:
         raise AssertionError(f"mutant {name} survived {target}")
