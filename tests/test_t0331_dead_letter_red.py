@@ -300,13 +300,14 @@ class RawEscape(AssertionError):
 
 def _guard(impl, err):
     """Typed contract errors and assertion failures pass through; any other
-    exception is a crash and becomes RawEscape: a totality failure that is
+    exception (an AssertionError raised inside the implementation included)
+    is a crash and becomes RawEscape: a totality failure that is
     never counted as a semantic mutant kill."""
 
     def guarded(*args):
         try:
             return impl(*args)
-        except (err, AssertionError):
+        except err:
             raise
         except Exception as exc:  # noqa: BLE001
             raise RawEscape(f"raw {type(exc).__name__} escaped") from None
@@ -451,6 +452,7 @@ def _m_refuses_everything(request, real):
 
 
 RAW_MUTANTS = {"raw_exception"}
+REFUSAL_MUTANTS = {"refuses_valid", "refuses_everything"}
 
 MUTANTS = {
     "refuses_valid": (_m_refuses_valid, "check_semantics"),
@@ -477,7 +479,10 @@ def test_mutant_is_red_on_its_target(name):
     except RawEscape:
         # only the mutant that raises a raw exception on purpose may die this way
         assert name in RAW_MUTANTS, f"mutant {name} crashed instead of being refuted"
-    except (AssertionError, DeadLetterError, pytest.fail.Exception):
+    except DeadLetterError:
+        # a typed refusal of valid input is a kill only for the acceptance-oracle mutants
+        assert name in REFUSAL_MUTANTS, f"mutant {name} died of a typed error, not an assertion"
+    except (AssertionError, pytest.fail.Exception):
         assert name not in RAW_MUTANTS, f"mutant {name} was not refuted by the raw-exception probe"
     else:
         raise AssertionError(f"mutant {name} survived {target}")
