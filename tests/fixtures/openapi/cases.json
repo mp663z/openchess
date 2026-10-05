@@ -634,6 +634,9049 @@
  ],
  "boundary": [
   {
+   "name": "object-depth-at-ceiling",
+   "why": "Objects nested to exactly the depth ceiling of 8 are accepted.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "box"
+      ],
+      "value": {
+       "type": "object",
+       "required": false,
+       "fields": {
+        "wrap": {
+         "type": "object",
+         "required": false,
+         "fields": {
+          "wrap": {
+           "type": "object",
+           "required": false,
+           "fields": {
+            "wrap": {
+             "type": "object",
+             "required": false,
+             "fields": {
+              "wrap": {
+               "type": "object",
+               "required": false,
+               "fields": {
+                "wrap": {
+                 "type": "object",
+                 "required": false,
+                 "fields": {
+                  "wrap": {
+                   "type": "object",
+                   "required": false,
+                   "fields": {
+                    "leaf": {
+                     "type": "string",
+                     "required": false
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "box",
+       "properties",
+       "wrap",
+       "properties",
+       "wrap",
+       "properties",
+       "wrap",
+       "properties",
+       "wrap",
+       "properties",
+       "wrap",
+       "properties",
+       "wrap",
+       "properties",
+       "leaf"
+      ],
+      "equals": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "object-depth-over-ceiling",
+   "why": "One object level beyond the ceiling of 8 is refused.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "box"
+      ],
+      "value": {
+       "type": "object",
+       "required": false,
+       "fields": {
+        "wrap": {
+         "type": "object",
+         "required": false,
+         "fields": {
+          "wrap": {
+           "type": "object",
+           "required": false,
+           "fields": {
+            "wrap": {
+             "type": "object",
+             "required": false,
+             "fields": {
+              "wrap": {
+               "type": "object",
+               "required": false,
+               "fields": {
+                "wrap": {
+                 "type": "object",
+                 "required": false,
+                 "fields": {
+                  "wrap": {
+                   "type": "object",
+                   "required": false,
+                   "fields": {
+                    "wrap": {
+                     "type": "object",
+                     "required": false,
+                     "fields": {
+                      "leaf": {
+                       "type": "string",
+                       "required": false
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "fields-per-object-at-ceiling",
+   "why": "An object with exactly 256 fields is accepted.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "request",
+       "fields"
+      ],
+      "value": {
+       "f0": {
+        "type": "integer",
+        "required": false
+       },
+       "f1": {
+        "type": "integer",
+        "required": false
+       },
+       "f2": {
+        "type": "integer",
+        "required": false
+       },
+       "f3": {
+        "type": "integer",
+        "required": false
+       },
+       "f4": {
+        "type": "integer",
+        "required": false
+       },
+       "f5": {
+        "type": "integer",
+        "required": false
+       },
+       "f6": {
+        "type": "integer",
+        "required": false
+       },
+       "f7": {
+        "type": "integer",
+        "required": false
+       },
+       "f8": {
+        "type": "integer",
+        "required": false
+       },
+       "f9": {
+        "type": "integer",
+        "required": false
+       },
+       "f10": {
+        "type": "integer",
+        "required": false
+       },
+       "f11": {
+        "type": "integer",
+        "required": false
+       },
+       "f12": {
+        "type": "integer",
+        "required": false
+       },
+       "f13": {
+        "type": "integer",
+        "required": false
+       },
+       "f14": {
+        "type": "integer",
+        "required": false
+       },
+       "f15": {
+        "type": "integer",
+        "required": false
+       },
+       "f16": {
+        "type": "integer",
+        "required": false
+       },
+       "f17": {
+        "type": "integer",
+        "required": false
+       },
+       "f18": {
+        "type": "integer",
+        "required": false
+       },
+       "f19": {
+        "type": "integer",
+        "required": false
+       },
+       "f20": {
+        "type": "integer",
+        "required": false
+       },
+       "f21": {
+        "type": "integer",
+        "required": false
+       },
+       "f22": {
+        "type": "integer",
+        "required": false
+       },
+       "f23": {
+        "type": "integer",
+        "required": false
+       },
+       "f24": {
+        "type": "integer",
+        "required": false
+       },
+       "f25": {
+        "type": "integer",
+        "required": false
+       },
+       "f26": {
+        "type": "integer",
+        "required": false
+       },
+       "f27": {
+        "type": "integer",
+        "required": false
+       },
+       "f28": {
+        "type": "integer",
+        "required": false
+       },
+       "f29": {
+        "type": "integer",
+        "required": false
+       },
+       "f30": {
+        "type": "integer",
+        "required": false
+       },
+       "f31": {
+        "type": "integer",
+        "required": false
+       },
+       "f32": {
+        "type": "integer",
+        "required": false
+       },
+       "f33": {
+        "type": "integer",
+        "required": false
+       },
+       "f34": {
+        "type": "integer",
+        "required": false
+       },
+       "f35": {
+        "type": "integer",
+        "required": false
+       },
+       "f36": {
+        "type": "integer",
+        "required": false
+       },
+       "f37": {
+        "type": "integer",
+        "required": false
+       },
+       "f38": {
+        "type": "integer",
+        "required": false
+       },
+       "f39": {
+        "type": "integer",
+        "required": false
+       },
+       "f40": {
+        "type": "integer",
+        "required": false
+       },
+       "f41": {
+        "type": "integer",
+        "required": false
+       },
+       "f42": {
+        "type": "integer",
+        "required": false
+       },
+       "f43": {
+        "type": "integer",
+        "required": false
+       },
+       "f44": {
+        "type": "integer",
+        "required": false
+       },
+       "f45": {
+        "type": "integer",
+        "required": false
+       },
+       "f46": {
+        "type": "integer",
+        "required": false
+       },
+       "f47": {
+        "type": "integer",
+        "required": false
+       },
+       "f48": {
+        "type": "integer",
+        "required": false
+       },
+       "f49": {
+        "type": "integer",
+        "required": false
+       },
+       "f50": {
+        "type": "integer",
+        "required": false
+       },
+       "f51": {
+        "type": "integer",
+        "required": false
+       },
+       "f52": {
+        "type": "integer",
+        "required": false
+       },
+       "f53": {
+        "type": "integer",
+        "required": false
+       },
+       "f54": {
+        "type": "integer",
+        "required": false
+       },
+       "f55": {
+        "type": "integer",
+        "required": false
+       },
+       "f56": {
+        "type": "integer",
+        "required": false
+       },
+       "f57": {
+        "type": "integer",
+        "required": false
+       },
+       "f58": {
+        "type": "integer",
+        "required": false
+       },
+       "f59": {
+        "type": "integer",
+        "required": false
+       },
+       "f60": {
+        "type": "integer",
+        "required": false
+       },
+       "f61": {
+        "type": "integer",
+        "required": false
+       },
+       "f62": {
+        "type": "integer",
+        "required": false
+       },
+       "f63": {
+        "type": "integer",
+        "required": false
+       },
+       "f64": {
+        "type": "integer",
+        "required": false
+       },
+       "f65": {
+        "type": "integer",
+        "required": false
+       },
+       "f66": {
+        "type": "integer",
+        "required": false
+       },
+       "f67": {
+        "type": "integer",
+        "required": false
+       },
+       "f68": {
+        "type": "integer",
+        "required": false
+       },
+       "f69": {
+        "type": "integer",
+        "required": false
+       },
+       "f70": {
+        "type": "integer",
+        "required": false
+       },
+       "f71": {
+        "type": "integer",
+        "required": false
+       },
+       "f72": {
+        "type": "integer",
+        "required": false
+       },
+       "f73": {
+        "type": "integer",
+        "required": false
+       },
+       "f74": {
+        "type": "integer",
+        "required": false
+       },
+       "f75": {
+        "type": "integer",
+        "required": false
+       },
+       "f76": {
+        "type": "integer",
+        "required": false
+       },
+       "f77": {
+        "type": "integer",
+        "required": false
+       },
+       "f78": {
+        "type": "integer",
+        "required": false
+       },
+       "f79": {
+        "type": "integer",
+        "required": false
+       },
+       "f80": {
+        "type": "integer",
+        "required": false
+       },
+       "f81": {
+        "type": "integer",
+        "required": false
+       },
+       "f82": {
+        "type": "integer",
+        "required": false
+       },
+       "f83": {
+        "type": "integer",
+        "required": false
+       },
+       "f84": {
+        "type": "integer",
+        "required": false
+       },
+       "f85": {
+        "type": "integer",
+        "required": false
+       },
+       "f86": {
+        "type": "integer",
+        "required": false
+       },
+       "f87": {
+        "type": "integer",
+        "required": false
+       },
+       "f88": {
+        "type": "integer",
+        "required": false
+       },
+       "f89": {
+        "type": "integer",
+        "required": false
+       },
+       "f90": {
+        "type": "integer",
+        "required": false
+       },
+       "f91": {
+        "type": "integer",
+        "required": false
+       },
+       "f92": {
+        "type": "integer",
+        "required": false
+       },
+       "f93": {
+        "type": "integer",
+        "required": false
+       },
+       "f94": {
+        "type": "integer",
+        "required": false
+       },
+       "f95": {
+        "type": "integer",
+        "required": false
+       },
+       "f96": {
+        "type": "integer",
+        "required": false
+       },
+       "f97": {
+        "type": "integer",
+        "required": false
+       },
+       "f98": {
+        "type": "integer",
+        "required": false
+       },
+       "f99": {
+        "type": "integer",
+        "required": false
+       },
+       "f100": {
+        "type": "integer",
+        "required": false
+       },
+       "f101": {
+        "type": "integer",
+        "required": false
+       },
+       "f102": {
+        "type": "integer",
+        "required": false
+       },
+       "f103": {
+        "type": "integer",
+        "required": false
+       },
+       "f104": {
+        "type": "integer",
+        "required": false
+       },
+       "f105": {
+        "type": "integer",
+        "required": false
+       },
+       "f106": {
+        "type": "integer",
+        "required": false
+       },
+       "f107": {
+        "type": "integer",
+        "required": false
+       },
+       "f108": {
+        "type": "integer",
+        "required": false
+       },
+       "f109": {
+        "type": "integer",
+        "required": false
+       },
+       "f110": {
+        "type": "integer",
+        "required": false
+       },
+       "f111": {
+        "type": "integer",
+        "required": false
+       },
+       "f112": {
+        "type": "integer",
+        "required": false
+       },
+       "f113": {
+        "type": "integer",
+        "required": false
+       },
+       "f114": {
+        "type": "integer",
+        "required": false
+       },
+       "f115": {
+        "type": "integer",
+        "required": false
+       },
+       "f116": {
+        "type": "integer",
+        "required": false
+       },
+       "f117": {
+        "type": "integer",
+        "required": false
+       },
+       "f118": {
+        "type": "integer",
+        "required": false
+       },
+       "f119": {
+        "type": "integer",
+        "required": false
+       },
+       "f120": {
+        "type": "integer",
+        "required": false
+       },
+       "f121": {
+        "type": "integer",
+        "required": false
+       },
+       "f122": {
+        "type": "integer",
+        "required": false
+       },
+       "f123": {
+        "type": "integer",
+        "required": false
+       },
+       "f124": {
+        "type": "integer",
+        "required": false
+       },
+       "f125": {
+        "type": "integer",
+        "required": false
+       },
+       "f126": {
+        "type": "integer",
+        "required": false
+       },
+       "f127": {
+        "type": "integer",
+        "required": false
+       },
+       "f128": {
+        "type": "integer",
+        "required": false
+       },
+       "f129": {
+        "type": "integer",
+        "required": false
+       },
+       "f130": {
+        "type": "integer",
+        "required": false
+       },
+       "f131": {
+        "type": "integer",
+        "required": false
+       },
+       "f132": {
+        "type": "integer",
+        "required": false
+       },
+       "f133": {
+        "type": "integer",
+        "required": false
+       },
+       "f134": {
+        "type": "integer",
+        "required": false
+       },
+       "f135": {
+        "type": "integer",
+        "required": false
+       },
+       "f136": {
+        "type": "integer",
+        "required": false
+       },
+       "f137": {
+        "type": "integer",
+        "required": false
+       },
+       "f138": {
+        "type": "integer",
+        "required": false
+       },
+       "f139": {
+        "type": "integer",
+        "required": false
+       },
+       "f140": {
+        "type": "integer",
+        "required": false
+       },
+       "f141": {
+        "type": "integer",
+        "required": false
+       },
+       "f142": {
+        "type": "integer",
+        "required": false
+       },
+       "f143": {
+        "type": "integer",
+        "required": false
+       },
+       "f144": {
+        "type": "integer",
+        "required": false
+       },
+       "f145": {
+        "type": "integer",
+        "required": false
+       },
+       "f146": {
+        "type": "integer",
+        "required": false
+       },
+       "f147": {
+        "type": "integer",
+        "required": false
+       },
+       "f148": {
+        "type": "integer",
+        "required": false
+       },
+       "f149": {
+        "type": "integer",
+        "required": false
+       },
+       "f150": {
+        "type": "integer",
+        "required": false
+       },
+       "f151": {
+        "type": "integer",
+        "required": false
+       },
+       "f152": {
+        "type": "integer",
+        "required": false
+       },
+       "f153": {
+        "type": "integer",
+        "required": false
+       },
+       "f154": {
+        "type": "integer",
+        "required": false
+       },
+       "f155": {
+        "type": "integer",
+        "required": false
+       },
+       "f156": {
+        "type": "integer",
+        "required": false
+       },
+       "f157": {
+        "type": "integer",
+        "required": false
+       },
+       "f158": {
+        "type": "integer",
+        "required": false
+       },
+       "f159": {
+        "type": "integer",
+        "required": false
+       },
+       "f160": {
+        "type": "integer",
+        "required": false
+       },
+       "f161": {
+        "type": "integer",
+        "required": false
+       },
+       "f162": {
+        "type": "integer",
+        "required": false
+       },
+       "f163": {
+        "type": "integer",
+        "required": false
+       },
+       "f164": {
+        "type": "integer",
+        "required": false
+       },
+       "f165": {
+        "type": "integer",
+        "required": false
+       },
+       "f166": {
+        "type": "integer",
+        "required": false
+       },
+       "f167": {
+        "type": "integer",
+        "required": false
+       },
+       "f168": {
+        "type": "integer",
+        "required": false
+       },
+       "f169": {
+        "type": "integer",
+        "required": false
+       },
+       "f170": {
+        "type": "integer",
+        "required": false
+       },
+       "f171": {
+        "type": "integer",
+        "required": false
+       },
+       "f172": {
+        "type": "integer",
+        "required": false
+       },
+       "f173": {
+        "type": "integer",
+        "required": false
+       },
+       "f174": {
+        "type": "integer",
+        "required": false
+       },
+       "f175": {
+        "type": "integer",
+        "required": false
+       },
+       "f176": {
+        "type": "integer",
+        "required": false
+       },
+       "f177": {
+        "type": "integer",
+        "required": false
+       },
+       "f178": {
+        "type": "integer",
+        "required": false
+       },
+       "f179": {
+        "type": "integer",
+        "required": false
+       },
+       "f180": {
+        "type": "integer",
+        "required": false
+       },
+       "f181": {
+        "type": "integer",
+        "required": false
+       },
+       "f182": {
+        "type": "integer",
+        "required": false
+       },
+       "f183": {
+        "type": "integer",
+        "required": false
+       },
+       "f184": {
+        "type": "integer",
+        "required": false
+       },
+       "f185": {
+        "type": "integer",
+        "required": false
+       },
+       "f186": {
+        "type": "integer",
+        "required": false
+       },
+       "f187": {
+        "type": "integer",
+        "required": false
+       },
+       "f188": {
+        "type": "integer",
+        "required": false
+       },
+       "f189": {
+        "type": "integer",
+        "required": false
+       },
+       "f190": {
+        "type": "integer",
+        "required": false
+       },
+       "f191": {
+        "type": "integer",
+        "required": false
+       },
+       "f192": {
+        "type": "integer",
+        "required": false
+       },
+       "f193": {
+        "type": "integer",
+        "required": false
+       },
+       "f194": {
+        "type": "integer",
+        "required": false
+       },
+       "f195": {
+        "type": "integer",
+        "required": false
+       },
+       "f196": {
+        "type": "integer",
+        "required": false
+       },
+       "f197": {
+        "type": "integer",
+        "required": false
+       },
+       "f198": {
+        "type": "integer",
+        "required": false
+       },
+       "f199": {
+        "type": "integer",
+        "required": false
+       },
+       "f200": {
+        "type": "integer",
+        "required": false
+       },
+       "f201": {
+        "type": "integer",
+        "required": false
+       },
+       "f202": {
+        "type": "integer",
+        "required": false
+       },
+       "f203": {
+        "type": "integer",
+        "required": false
+       },
+       "f204": {
+        "type": "integer",
+        "required": false
+       },
+       "f205": {
+        "type": "integer",
+        "required": false
+       },
+       "f206": {
+        "type": "integer",
+        "required": false
+       },
+       "f207": {
+        "type": "integer",
+        "required": false
+       },
+       "f208": {
+        "type": "integer",
+        "required": false
+       },
+       "f209": {
+        "type": "integer",
+        "required": false
+       },
+       "f210": {
+        "type": "integer",
+        "required": false
+       },
+       "f211": {
+        "type": "integer",
+        "required": false
+       },
+       "f212": {
+        "type": "integer",
+        "required": false
+       },
+       "f213": {
+        "type": "integer",
+        "required": false
+       },
+       "f214": {
+        "type": "integer",
+        "required": false
+       },
+       "f215": {
+        "type": "integer",
+        "required": false
+       },
+       "f216": {
+        "type": "integer",
+        "required": false
+       },
+       "f217": {
+        "type": "integer",
+        "required": false
+       },
+       "f218": {
+        "type": "integer",
+        "required": false
+       },
+       "f219": {
+        "type": "integer",
+        "required": false
+       },
+       "f220": {
+        "type": "integer",
+        "required": false
+       },
+       "f221": {
+        "type": "integer",
+        "required": false
+       },
+       "f222": {
+        "type": "integer",
+        "required": false
+       },
+       "f223": {
+        "type": "integer",
+        "required": false
+       },
+       "f224": {
+        "type": "integer",
+        "required": false
+       },
+       "f225": {
+        "type": "integer",
+        "required": false
+       },
+       "f226": {
+        "type": "integer",
+        "required": false
+       },
+       "f227": {
+        "type": "integer",
+        "required": false
+       },
+       "f228": {
+        "type": "integer",
+        "required": false
+       },
+       "f229": {
+        "type": "integer",
+        "required": false
+       },
+       "f230": {
+        "type": "integer",
+        "required": false
+       },
+       "f231": {
+        "type": "integer",
+        "required": false
+       },
+       "f232": {
+        "type": "integer",
+        "required": false
+       },
+       "f233": {
+        "type": "integer",
+        "required": false
+       },
+       "f234": {
+        "type": "integer",
+        "required": false
+       },
+       "f235": {
+        "type": "integer",
+        "required": false
+       },
+       "f236": {
+        "type": "integer",
+        "required": false
+       },
+       "f237": {
+        "type": "integer",
+        "required": false
+       },
+       "f238": {
+        "type": "integer",
+        "required": false
+       },
+       "f239": {
+        "type": "integer",
+        "required": false
+       },
+       "f240": {
+        "type": "integer",
+        "required": false
+       },
+       "f241": {
+        "type": "integer",
+        "required": false
+       },
+       "f242": {
+        "type": "integer",
+        "required": false
+       },
+       "f243": {
+        "type": "integer",
+        "required": false
+       },
+       "f244": {
+        "type": "integer",
+        "required": false
+       },
+       "f245": {
+        "type": "integer",
+        "required": false
+       },
+       "f246": {
+        "type": "integer",
+        "required": false
+       },
+       "f247": {
+        "type": "integer",
+        "required": false
+       },
+       "f248": {
+        "type": "integer",
+        "required": false
+       },
+       "f249": {
+        "type": "integer",
+        "required": false
+       },
+       "f250": {
+        "type": "integer",
+        "required": false
+       },
+       "f251": {
+        "type": "integer",
+        "required": false
+       },
+       "f252": {
+        "type": "integer",
+        "required": false
+       },
+       "f253": {
+        "type": "integer",
+        "required": false
+       },
+       "f254": {
+        "type": "integer",
+        "required": false
+       },
+       "f255": {
+        "type": "integer",
+        "required": false
+       }
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/quota/reserve",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "f255"
+      ],
+      "equals": {
+       "type": "integer"
+      }
+     },
+     {
+      "at": [
+       "paths",
+       "/quota/reserve",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "f256"
+      ],
+      "absent": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "fields-per-object-over-ceiling",
+   "why": "An object with 257 fields is refused.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "request",
+       "fields"
+      ],
+      "value": {
+       "f0": {
+        "type": "integer",
+        "required": false
+       },
+       "f1": {
+        "type": "integer",
+        "required": false
+       },
+       "f2": {
+        "type": "integer",
+        "required": false
+       },
+       "f3": {
+        "type": "integer",
+        "required": false
+       },
+       "f4": {
+        "type": "integer",
+        "required": false
+       },
+       "f5": {
+        "type": "integer",
+        "required": false
+       },
+       "f6": {
+        "type": "integer",
+        "required": false
+       },
+       "f7": {
+        "type": "integer",
+        "required": false
+       },
+       "f8": {
+        "type": "integer",
+        "required": false
+       },
+       "f9": {
+        "type": "integer",
+        "required": false
+       },
+       "f10": {
+        "type": "integer",
+        "required": false
+       },
+       "f11": {
+        "type": "integer",
+        "required": false
+       },
+       "f12": {
+        "type": "integer",
+        "required": false
+       },
+       "f13": {
+        "type": "integer",
+        "required": false
+       },
+       "f14": {
+        "type": "integer",
+        "required": false
+       },
+       "f15": {
+        "type": "integer",
+        "required": false
+       },
+       "f16": {
+        "type": "integer",
+        "required": false
+       },
+       "f17": {
+        "type": "integer",
+        "required": false
+       },
+       "f18": {
+        "type": "integer",
+        "required": false
+       },
+       "f19": {
+        "type": "integer",
+        "required": false
+       },
+       "f20": {
+        "type": "integer",
+        "required": false
+       },
+       "f21": {
+        "type": "integer",
+        "required": false
+       },
+       "f22": {
+        "type": "integer",
+        "required": false
+       },
+       "f23": {
+        "type": "integer",
+        "required": false
+       },
+       "f24": {
+        "type": "integer",
+        "required": false
+       },
+       "f25": {
+        "type": "integer",
+        "required": false
+       },
+       "f26": {
+        "type": "integer",
+        "required": false
+       },
+       "f27": {
+        "type": "integer",
+        "required": false
+       },
+       "f28": {
+        "type": "integer",
+        "required": false
+       },
+       "f29": {
+        "type": "integer",
+        "required": false
+       },
+       "f30": {
+        "type": "integer",
+        "required": false
+       },
+       "f31": {
+        "type": "integer",
+        "required": false
+       },
+       "f32": {
+        "type": "integer",
+        "required": false
+       },
+       "f33": {
+        "type": "integer",
+        "required": false
+       },
+       "f34": {
+        "type": "integer",
+        "required": false
+       },
+       "f35": {
+        "type": "integer",
+        "required": false
+       },
+       "f36": {
+        "type": "integer",
+        "required": false
+       },
+       "f37": {
+        "type": "integer",
+        "required": false
+       },
+       "f38": {
+        "type": "integer",
+        "required": false
+       },
+       "f39": {
+        "type": "integer",
+        "required": false
+       },
+       "f40": {
+        "type": "integer",
+        "required": false
+       },
+       "f41": {
+        "type": "integer",
+        "required": false
+       },
+       "f42": {
+        "type": "integer",
+        "required": false
+       },
+       "f43": {
+        "type": "integer",
+        "required": false
+       },
+       "f44": {
+        "type": "integer",
+        "required": false
+       },
+       "f45": {
+        "type": "integer",
+        "required": false
+       },
+       "f46": {
+        "type": "integer",
+        "required": false
+       },
+       "f47": {
+        "type": "integer",
+        "required": false
+       },
+       "f48": {
+        "type": "integer",
+        "required": false
+       },
+       "f49": {
+        "type": "integer",
+        "required": false
+       },
+       "f50": {
+        "type": "integer",
+        "required": false
+       },
+       "f51": {
+        "type": "integer",
+        "required": false
+       },
+       "f52": {
+        "type": "integer",
+        "required": false
+       },
+       "f53": {
+        "type": "integer",
+        "required": false
+       },
+       "f54": {
+        "type": "integer",
+        "required": false
+       },
+       "f55": {
+        "type": "integer",
+        "required": false
+       },
+       "f56": {
+        "type": "integer",
+        "required": false
+       },
+       "f57": {
+        "type": "integer",
+        "required": false
+       },
+       "f58": {
+        "type": "integer",
+        "required": false
+       },
+       "f59": {
+        "type": "integer",
+        "required": false
+       },
+       "f60": {
+        "type": "integer",
+        "required": false
+       },
+       "f61": {
+        "type": "integer",
+        "required": false
+       },
+       "f62": {
+        "type": "integer",
+        "required": false
+       },
+       "f63": {
+        "type": "integer",
+        "required": false
+       },
+       "f64": {
+        "type": "integer",
+        "required": false
+       },
+       "f65": {
+        "type": "integer",
+        "required": false
+       },
+       "f66": {
+        "type": "integer",
+        "required": false
+       },
+       "f67": {
+        "type": "integer",
+        "required": false
+       },
+       "f68": {
+        "type": "integer",
+        "required": false
+       },
+       "f69": {
+        "type": "integer",
+        "required": false
+       },
+       "f70": {
+        "type": "integer",
+        "required": false
+       },
+       "f71": {
+        "type": "integer",
+        "required": false
+       },
+       "f72": {
+        "type": "integer",
+        "required": false
+       },
+       "f73": {
+        "type": "integer",
+        "required": false
+       },
+       "f74": {
+        "type": "integer",
+        "required": false
+       },
+       "f75": {
+        "type": "integer",
+        "required": false
+       },
+       "f76": {
+        "type": "integer",
+        "required": false
+       },
+       "f77": {
+        "type": "integer",
+        "required": false
+       },
+       "f78": {
+        "type": "integer",
+        "required": false
+       },
+       "f79": {
+        "type": "integer",
+        "required": false
+       },
+       "f80": {
+        "type": "integer",
+        "required": false
+       },
+       "f81": {
+        "type": "integer",
+        "required": false
+       },
+       "f82": {
+        "type": "integer",
+        "required": false
+       },
+       "f83": {
+        "type": "integer",
+        "required": false
+       },
+       "f84": {
+        "type": "integer",
+        "required": false
+       },
+       "f85": {
+        "type": "integer",
+        "required": false
+       },
+       "f86": {
+        "type": "integer",
+        "required": false
+       },
+       "f87": {
+        "type": "integer",
+        "required": false
+       },
+       "f88": {
+        "type": "integer",
+        "required": false
+       },
+       "f89": {
+        "type": "integer",
+        "required": false
+       },
+       "f90": {
+        "type": "integer",
+        "required": false
+       },
+       "f91": {
+        "type": "integer",
+        "required": false
+       },
+       "f92": {
+        "type": "integer",
+        "required": false
+       },
+       "f93": {
+        "type": "integer",
+        "required": false
+       },
+       "f94": {
+        "type": "integer",
+        "required": false
+       },
+       "f95": {
+        "type": "integer",
+        "required": false
+       },
+       "f96": {
+        "type": "integer",
+        "required": false
+       },
+       "f97": {
+        "type": "integer",
+        "required": false
+       },
+       "f98": {
+        "type": "integer",
+        "required": false
+       },
+       "f99": {
+        "type": "integer",
+        "required": false
+       },
+       "f100": {
+        "type": "integer",
+        "required": false
+       },
+       "f101": {
+        "type": "integer",
+        "required": false
+       },
+       "f102": {
+        "type": "integer",
+        "required": false
+       },
+       "f103": {
+        "type": "integer",
+        "required": false
+       },
+       "f104": {
+        "type": "integer",
+        "required": false
+       },
+       "f105": {
+        "type": "integer",
+        "required": false
+       },
+       "f106": {
+        "type": "integer",
+        "required": false
+       },
+       "f107": {
+        "type": "integer",
+        "required": false
+       },
+       "f108": {
+        "type": "integer",
+        "required": false
+       },
+       "f109": {
+        "type": "integer",
+        "required": false
+       },
+       "f110": {
+        "type": "integer",
+        "required": false
+       },
+       "f111": {
+        "type": "integer",
+        "required": false
+       },
+       "f112": {
+        "type": "integer",
+        "required": false
+       },
+       "f113": {
+        "type": "integer",
+        "required": false
+       },
+       "f114": {
+        "type": "integer",
+        "required": false
+       },
+       "f115": {
+        "type": "integer",
+        "required": false
+       },
+       "f116": {
+        "type": "integer",
+        "required": false
+       },
+       "f117": {
+        "type": "integer",
+        "required": false
+       },
+       "f118": {
+        "type": "integer",
+        "required": false
+       },
+       "f119": {
+        "type": "integer",
+        "required": false
+       },
+       "f120": {
+        "type": "integer",
+        "required": false
+       },
+       "f121": {
+        "type": "integer",
+        "required": false
+       },
+       "f122": {
+        "type": "integer",
+        "required": false
+       },
+       "f123": {
+        "type": "integer",
+        "required": false
+       },
+       "f124": {
+        "type": "integer",
+        "required": false
+       },
+       "f125": {
+        "type": "integer",
+        "required": false
+       },
+       "f126": {
+        "type": "integer",
+        "required": false
+       },
+       "f127": {
+        "type": "integer",
+        "required": false
+       },
+       "f128": {
+        "type": "integer",
+        "required": false
+       },
+       "f129": {
+        "type": "integer",
+        "required": false
+       },
+       "f130": {
+        "type": "integer",
+        "required": false
+       },
+       "f131": {
+        "type": "integer",
+        "required": false
+       },
+       "f132": {
+        "type": "integer",
+        "required": false
+       },
+       "f133": {
+        "type": "integer",
+        "required": false
+       },
+       "f134": {
+        "type": "integer",
+        "required": false
+       },
+       "f135": {
+        "type": "integer",
+        "required": false
+       },
+       "f136": {
+        "type": "integer",
+        "required": false
+       },
+       "f137": {
+        "type": "integer",
+        "required": false
+       },
+       "f138": {
+        "type": "integer",
+        "required": false
+       },
+       "f139": {
+        "type": "integer",
+        "required": false
+       },
+       "f140": {
+        "type": "integer",
+        "required": false
+       },
+       "f141": {
+        "type": "integer",
+        "required": false
+       },
+       "f142": {
+        "type": "integer",
+        "required": false
+       },
+       "f143": {
+        "type": "integer",
+        "required": false
+       },
+       "f144": {
+        "type": "integer",
+        "required": false
+       },
+       "f145": {
+        "type": "integer",
+        "required": false
+       },
+       "f146": {
+        "type": "integer",
+        "required": false
+       },
+       "f147": {
+        "type": "integer",
+        "required": false
+       },
+       "f148": {
+        "type": "integer",
+        "required": false
+       },
+       "f149": {
+        "type": "integer",
+        "required": false
+       },
+       "f150": {
+        "type": "integer",
+        "required": false
+       },
+       "f151": {
+        "type": "integer",
+        "required": false
+       },
+       "f152": {
+        "type": "integer",
+        "required": false
+       },
+       "f153": {
+        "type": "integer",
+        "required": false
+       },
+       "f154": {
+        "type": "integer",
+        "required": false
+       },
+       "f155": {
+        "type": "integer",
+        "required": false
+       },
+       "f156": {
+        "type": "integer",
+        "required": false
+       },
+       "f157": {
+        "type": "integer",
+        "required": false
+       },
+       "f158": {
+        "type": "integer",
+        "required": false
+       },
+       "f159": {
+        "type": "integer",
+        "required": false
+       },
+       "f160": {
+        "type": "integer",
+        "required": false
+       },
+       "f161": {
+        "type": "integer",
+        "required": false
+       },
+       "f162": {
+        "type": "integer",
+        "required": false
+       },
+       "f163": {
+        "type": "integer",
+        "required": false
+       },
+       "f164": {
+        "type": "integer",
+        "required": false
+       },
+       "f165": {
+        "type": "integer",
+        "required": false
+       },
+       "f166": {
+        "type": "integer",
+        "required": false
+       },
+       "f167": {
+        "type": "integer",
+        "required": false
+       },
+       "f168": {
+        "type": "integer",
+        "required": false
+       },
+       "f169": {
+        "type": "integer",
+        "required": false
+       },
+       "f170": {
+        "type": "integer",
+        "required": false
+       },
+       "f171": {
+        "type": "integer",
+        "required": false
+       },
+       "f172": {
+        "type": "integer",
+        "required": false
+       },
+       "f173": {
+        "type": "integer",
+        "required": false
+       },
+       "f174": {
+        "type": "integer",
+        "required": false
+       },
+       "f175": {
+        "type": "integer",
+        "required": false
+       },
+       "f176": {
+        "type": "integer",
+        "required": false
+       },
+       "f177": {
+        "type": "integer",
+        "required": false
+       },
+       "f178": {
+        "type": "integer",
+        "required": false
+       },
+       "f179": {
+        "type": "integer",
+        "required": false
+       },
+       "f180": {
+        "type": "integer",
+        "required": false
+       },
+       "f181": {
+        "type": "integer",
+        "required": false
+       },
+       "f182": {
+        "type": "integer",
+        "required": false
+       },
+       "f183": {
+        "type": "integer",
+        "required": false
+       },
+       "f184": {
+        "type": "integer",
+        "required": false
+       },
+       "f185": {
+        "type": "integer",
+        "required": false
+       },
+       "f186": {
+        "type": "integer",
+        "required": false
+       },
+       "f187": {
+        "type": "integer",
+        "required": false
+       },
+       "f188": {
+        "type": "integer",
+        "required": false
+       },
+       "f189": {
+        "type": "integer",
+        "required": false
+       },
+       "f190": {
+        "type": "integer",
+        "required": false
+       },
+       "f191": {
+        "type": "integer",
+        "required": false
+       },
+       "f192": {
+        "type": "integer",
+        "required": false
+       },
+       "f193": {
+        "type": "integer",
+        "required": false
+       },
+       "f194": {
+        "type": "integer",
+        "required": false
+       },
+       "f195": {
+        "type": "integer",
+        "required": false
+       },
+       "f196": {
+        "type": "integer",
+        "required": false
+       },
+       "f197": {
+        "type": "integer",
+        "required": false
+       },
+       "f198": {
+        "type": "integer",
+        "required": false
+       },
+       "f199": {
+        "type": "integer",
+        "required": false
+       },
+       "f200": {
+        "type": "integer",
+        "required": false
+       },
+       "f201": {
+        "type": "integer",
+        "required": false
+       },
+       "f202": {
+        "type": "integer",
+        "required": false
+       },
+       "f203": {
+        "type": "integer",
+        "required": false
+       },
+       "f204": {
+        "type": "integer",
+        "required": false
+       },
+       "f205": {
+        "type": "integer",
+        "required": false
+       },
+       "f206": {
+        "type": "integer",
+        "required": false
+       },
+       "f207": {
+        "type": "integer",
+        "required": false
+       },
+       "f208": {
+        "type": "integer",
+        "required": false
+       },
+       "f209": {
+        "type": "integer",
+        "required": false
+       },
+       "f210": {
+        "type": "integer",
+        "required": false
+       },
+       "f211": {
+        "type": "integer",
+        "required": false
+       },
+       "f212": {
+        "type": "integer",
+        "required": false
+       },
+       "f213": {
+        "type": "integer",
+        "required": false
+       },
+       "f214": {
+        "type": "integer",
+        "required": false
+       },
+       "f215": {
+        "type": "integer",
+        "required": false
+       },
+       "f216": {
+        "type": "integer",
+        "required": false
+       },
+       "f217": {
+        "type": "integer",
+        "required": false
+       },
+       "f218": {
+        "type": "integer",
+        "required": false
+       },
+       "f219": {
+        "type": "integer",
+        "required": false
+       },
+       "f220": {
+        "type": "integer",
+        "required": false
+       },
+       "f221": {
+        "type": "integer",
+        "required": false
+       },
+       "f222": {
+        "type": "integer",
+        "required": false
+       },
+       "f223": {
+        "type": "integer",
+        "required": false
+       },
+       "f224": {
+        "type": "integer",
+        "required": false
+       },
+       "f225": {
+        "type": "integer",
+        "required": false
+       },
+       "f226": {
+        "type": "integer",
+        "required": false
+       },
+       "f227": {
+        "type": "integer",
+        "required": false
+       },
+       "f228": {
+        "type": "integer",
+        "required": false
+       },
+       "f229": {
+        "type": "integer",
+        "required": false
+       },
+       "f230": {
+        "type": "integer",
+        "required": false
+       },
+       "f231": {
+        "type": "integer",
+        "required": false
+       },
+       "f232": {
+        "type": "integer",
+        "required": false
+       },
+       "f233": {
+        "type": "integer",
+        "required": false
+       },
+       "f234": {
+        "type": "integer",
+        "required": false
+       },
+       "f235": {
+        "type": "integer",
+        "required": false
+       },
+       "f236": {
+        "type": "integer",
+        "required": false
+       },
+       "f237": {
+        "type": "integer",
+        "required": false
+       },
+       "f238": {
+        "type": "integer",
+        "required": false
+       },
+       "f239": {
+        "type": "integer",
+        "required": false
+       },
+       "f240": {
+        "type": "integer",
+        "required": false
+       },
+       "f241": {
+        "type": "integer",
+        "required": false
+       },
+       "f242": {
+        "type": "integer",
+        "required": false
+       },
+       "f243": {
+        "type": "integer",
+        "required": false
+       },
+       "f244": {
+        "type": "integer",
+        "required": false
+       },
+       "f245": {
+        "type": "integer",
+        "required": false
+       },
+       "f246": {
+        "type": "integer",
+        "required": false
+       },
+       "f247": {
+        "type": "integer",
+        "required": false
+       },
+       "f248": {
+        "type": "integer",
+        "required": false
+       },
+       "f249": {
+        "type": "integer",
+        "required": false
+       },
+       "f250": {
+        "type": "integer",
+        "required": false
+       },
+       "f251": {
+        "type": "integer",
+        "required": false
+       },
+       "f252": {
+        "type": "integer",
+        "required": false
+       },
+       "f253": {
+        "type": "integer",
+        "required": false
+       },
+       "f254": {
+        "type": "integer",
+        "required": false
+       },
+       "f255": {
+        "type": "integer",
+        "required": false
+       },
+       "f256": {
+        "type": "integer",
+        "required": false
+       }
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "areas-at-ceiling",
+   "why": "Exactly 64 areas are accepted.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_aa"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a0",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ab"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a1",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ac"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a2",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ad"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a3",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ae"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a4",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_af"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a5",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ag"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a6",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ah"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a7",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ai"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a8",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_aj"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a9",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ak"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a10",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_al"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a11",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_am"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a12",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_an"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a13",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ao"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a14",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ap"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a15",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_aq"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a16",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ar"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a17",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_as"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a18",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_at"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a19",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_au"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a20",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_av"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a21",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_aw"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a22",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ax"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a23",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ay"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a24",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_az"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a25",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ba"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a26",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bb"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a27",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bc"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a28",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bd"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a29",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_be"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a30",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bf"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a31",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bg"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a32",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bh"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a33",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bi"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a34",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bj"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a35",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bk"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a36",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bl"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a37",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bm"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a38",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bn"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a39",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bo"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a40",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bp"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a41",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bq"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a42",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_br"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a43",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bs"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a44",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bt"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a45",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bu"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a46",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bv"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a47",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bw"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a48",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bx"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a49",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_by"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a50",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bz"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a51",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ca"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a52",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cb"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a53",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cc"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a54",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cd"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a55",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ce"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a56",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cf"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a57",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cg"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a58",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/extra/a58",
+       "post",
+       "operationId"
+      ],
+      "equals": "extra_cg.do"
+     }
+    ]
+   }
+  },
+  {
+   "name": "areas-over-ceiling",
+   "why": "65 areas are refused.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_aa"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a0",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ab"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a1",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ac"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a2",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ad"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a3",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ae"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a4",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_af"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a5",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ag"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a6",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ah"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a7",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ai"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a8",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_aj"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a9",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ak"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a10",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_al"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a11",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_am"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a12",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_an"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a13",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ao"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a14",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ap"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a15",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_aq"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a16",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ar"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a17",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_as"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a18",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_at"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a19",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_au"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a20",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_av"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a21",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_aw"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a22",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ax"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a23",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ay"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a24",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_az"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a25",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ba"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a26",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bb"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a27",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bc"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a28",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bd"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a29",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_be"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a30",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bf"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a31",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bg"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a32",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bh"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a33",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bi"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a34",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bj"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a35",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bk"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a36",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bl"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a37",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bm"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a38",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bn"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a39",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bo"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a40",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bp"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a41",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bq"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a42",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_br"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a43",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bs"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a44",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bt"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a45",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bu"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a46",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bv"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a47",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bw"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a48",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bx"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a49",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_by"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a50",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_bz"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a51",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ca"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a52",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cb"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a53",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cc"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a54",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cd"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a55",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ce"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a56",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cf"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a57",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_cg"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a58",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "extra_ch"
+      ],
+      "value": {
+       "ops": {
+        "do": {
+         "method": "POST",
+         "path": "/extra/a59",
+         "auth": "required",
+         "mutating": true,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "malformed_request"
+         ]
+        }
+       }
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "ops-per-area-at-ceiling",
+   "why": "Exactly 64 operations in one area are accepted.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_aa"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x0",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ab"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x1",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ac"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x2",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ad"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x3",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ae"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x4",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_af"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x5",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ag"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x6",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ah"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x7",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ai"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x8",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_aj"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x9",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ak"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x10",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_al"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x11",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_am"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x12",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_an"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x13",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ao"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x14",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ap"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x15",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_aq"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x16",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ar"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x17",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_as"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x18",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_at"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x19",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_au"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x20",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_av"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x21",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_aw"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x22",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ax"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x23",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ay"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x24",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_az"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x25",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ba"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x26",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bb"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x27",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bc"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x28",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bd"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x29",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_be"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x30",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bf"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x31",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bg"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x32",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bh"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x33",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bi"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x34",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bj"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x35",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bk"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x36",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bl"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x37",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bm"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x38",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bn"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x39",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bo"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x40",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bp"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x41",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bq"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x42",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_br"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x43",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bs"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x44",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bt"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x45",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bu"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x46",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bv"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x47",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bw"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x48",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bx"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x49",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_by"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x50",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bz"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x51",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ca"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x52",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cb"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x53",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cc"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x54",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cd"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x55",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ce"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x56",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cf"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x57",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cg"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x58",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ch"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x59",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ci"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x60",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/quota/x60",
+       "post",
+       "operationId"
+      ],
+      "equals": "quota.op_ci"
+     }
+    ]
+   }
+  },
+  {
+   "name": "ops-per-area-over-ceiling",
+   "why": "65 operations in one area are refused.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_aa"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x0",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ab"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x1",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ac"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x2",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ad"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x3",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ae"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x4",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_af"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x5",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ag"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x6",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ah"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x7",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ai"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x8",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_aj"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x9",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ak"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x10",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_al"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x11",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_am"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x12",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_an"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x13",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ao"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x14",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ap"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x15",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_aq"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x16",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ar"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x17",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_as"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x18",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_at"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x19",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_au"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x20",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_av"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x21",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_aw"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x22",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ax"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x23",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ay"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x24",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_az"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x25",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ba"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x26",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bb"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x27",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bc"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x28",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bd"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x29",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_be"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x30",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bf"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x31",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bg"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x32",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bh"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x33",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bi"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x34",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bj"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x35",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bk"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x36",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bl"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x37",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bm"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x38",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bn"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x39",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bo"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x40",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bp"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x41",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bq"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x42",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_br"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x43",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bs"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x44",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bt"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x45",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bu"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x46",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bv"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x47",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bw"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x48",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bx"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x49",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_by"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x50",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_bz"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x51",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ca"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x52",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cb"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x53",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cc"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x54",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cd"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x55",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ce"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x56",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cf"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x57",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cg"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x58",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ch"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x59",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_ci"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x60",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "op_cj"
+      ],
+      "value": {
+       "method": "POST",
+       "path": "/quota/x61",
+       "auth": "required",
+       "mutating": true,
+       "request": {
+        "fields": {}
+       },
+       "response": {
+        "fields": {}
+       },
+       "errors": [
+        "malformed_request"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "example-integer-negative-at-magnitude",
+   "why": "The magnitude bound is inclusive on the negative side: -(2^53-1) is accepted.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "request",
+       "fields",
+       "estimated_units",
+       "example"
+      ],
+      "value": -9007199254740991
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/quota/reserve",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "estimated_units",
+       "examples"
+      ],
+      "equals": [
+       -9007199254740991
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "example-non-ascii-string",
+   "why": "A non-ASCII string example is kept as written.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "email",
+       "example"
+      ],
+      "value": "caf\u00e9 \u2603"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "email",
+       "examples"
+      ],
+      "equals": [
+       "caf\u00e9 \u2603"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "array-example-copied",
+   "why": "A string array example is carried into the schema in order.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "tags"
+      ],
+      "value": {
+       "type": "array",
+       "required": false,
+       "items": "string",
+       "example": [
+        "a",
+        "b"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "tags",
+       "examples"
+      ],
+      "equals": [
+       [
+        "a",
+        "b"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "single-code-closed-enum",
+   "why": "A closed enum of one code is accepted when every op and the shape use only it.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "transport",
+       "errors",
+       "closed_enum"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "contract",
+       "transport",
+       "errors",
+       "shape",
+       "error",
+       "fields",
+       "code",
+       "example"
+      ],
+      "value": "malformed_request"
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "refresh",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "logout",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "delete_account",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "get",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "commit",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "release",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "billing",
+       "ops",
+       "create_checkout",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "billing",
+       "ops",
+       "get_subscription",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "provider_routing",
+       "ops",
+       "register_key",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "provider_routing",
+       "ops",
+       "revoke_key",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    },
+    {
+     "set": {
+      "path": [
+       "areas",
+       "provider_routing",
+       "ops",
+       "route",
+       "errors"
+      ],
+      "value": [
+       "malformed_request"
+      ]
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "responses",
+       "400",
+       "x-error-codes"
+      ],
+      "equals": [
+       "malformed_request"
+      ]
+     },
+     {
+      "at": [
+       "x-unmapped-error-codes"
+      ],
+      "equals": []
+     }
+    ]
+   }
+  },
+  {
    "name": "base-path-major-ceiling",
    "why": "Major 999 is the largest three-digit major and is accepted.",
    "mutations": [
@@ -1481,6 +10524,138 @@
    }
   },
   {
+   "name": "array-example-with-a-bad-item",
+   "why": "Every item of an array example must have the declared item type.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "tags"
+      ],
+      "value": {
+       "type": "array",
+       "required": false,
+       "items": "string",
+       "example": [
+        "a",
+        5
+       ]
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "array-example-first-item-bad",
+   "why": "One valid later item does not excuse an invalid first item.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "tags"
+      ],
+      "value": {
+       "type": "array",
+       "required": false,
+       "items": "string",
+       "example": [
+        5,
+        "a"
+       ]
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "field-without-type",
+   "why": "A field descriptor must declare its type.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "nick"
+      ],
+      "value": {
+       "required": false
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "field-without-required",
+   "why": "A field descriptor must declare required.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "nick"
+      ],
+      "value": {
+       "type": "string"
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "closed-enum-empty",
+   "why": "The closed error enum must list at least one code.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "transport",
+       "errors",
+       "closed_enum"
+      ],
+      "value": []
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
    "name": "unknown-field-key",
    "why": "A field descriptor carries only the declared keys.",
    "mutations": [
@@ -1835,6 +11010,18 @@
    "base-path-major-two": "b0a7932d815cf94bb695e67da33d5cf0362bd6891fd22e16a7d894f36db0e55c"
   },
   "boundary": {
+   "object-depth-at-ceiling": "89851ad1fb3b99baf301e59ddf5d6a48a2a0f5736955ddfcf56338c6220413f1",
+   "object-depth-over-ceiling": "a7e62e5a6064fe1e9d0994078549d55304ba9e94f922b62a7a314e38c797d556",
+   "fields-per-object-at-ceiling": "fdbc992cf822a63afd9710a7fac759ffe05fdbacfc0b1ff3e4bcabe253b4679e",
+   "fields-per-object-over-ceiling": "8c0488815e47305c755b42e55abe7589fa11616362bca5a314735e0bd60520e7",
+   "areas-at-ceiling": "765a215a9f30f9f9308ae493206aef7a33846d187289bac15e6837664eef05f5",
+   "areas-over-ceiling": "4e55dc23cd0538428cf7b1efda3a701c0d4bcc1abbdf9c9cc7f1eeea6be96cbe",
+   "ops-per-area-at-ceiling": "022a6a96dc37546a3fbdecd5b6359307052de2d88a7484957d7e8f0cae2b4fad",
+   "ops-per-area-over-ceiling": "be9336db989229401ccb499abafe5b4a3c01bbfb3933d1e39950c3f47b1bdeac",
+   "example-integer-negative-at-magnitude": "27551345c260960354f8e5aeed9886a3b5c100bf0f0cabb7e1a0374a21fe70e6",
+   "example-non-ascii-string": "e3869825d92384bb0b4e5ee945518a7328712fd90b079a3277dacfedae6ac4ba",
+   "array-example-copied": "487ff73328b895e26baf11805a9319712b6c59a2ccd32ab118ccc24c64d4ea24",
+   "single-code-closed-enum": "680b2a690e8e36c1d4086224dcc14462324d53b5316e581cfb0c99e01523ec7d",
    "base-path-major-ceiling": "405963c8b76b5d492d68a8f0bfe4ec96d1f669911cb35076ff49b6e67dcb6db1",
    "base-path-major-over-ceiling": "d8dc50e1db0766b55d4ed8817f9f8ef9aafff96dc8752b4d59db68ba8c464e83",
    "base-path-major-zero": "89090f7e5d3c7ac21604b6f3df144410665d3a865185f3fe4b59eeff7a1cbf35",
@@ -1870,6 +11057,11 @@
    "example-bool-for-integer": "252a29ec72a640337b493e0ecbc2efcd5faaf69abb72a21adcc30e767a976d8a",
    "example-string-for-integer": "465393e5cd22af331931e69bb7ae731399b4ba5599ad4d57ef9050f765610f15",
    "example-lone-surrogate": "d20b7899d17986b4d2cdc11ccbd2489caa3323a30f7f223bed7667c1bf174beb",
+   "array-example-with-a-bad-item": "8cd9f9e0a1a61409999fe5ed0485b6d8103ba15c90ccd62d9b209589a4c6526d",
+   "array-example-first-item-bad": "dc24abdb0a77ccedcc599a83c35a198b069de6a741ef6940e20931d440f673a7",
+   "field-without-type": "3d5f1a1d6760aff30c275f853bc298fc80796ff27c690df6e2d88cb35f05f8d1",
+   "field-without-required": "df1c1d706f1ad0911ea4ae40e313ea2f22e232720c8aedc1143e30fa36acb777",
+   "closed-enum-empty": "6224a3bd2b8827a4d4f5a199816c1f5897a857bec1cdfd7fd54584f4f45db53d",
    "unknown-field-key": "81c6e4da14c9aaffc496148394c1b4b293dc864313dfd3ab5a895b920895550c",
    "unknown-field-type": "e9ddc50b464b8c7ec2830f98d21af4bec576656281ef59cd9b82eb03341d4548",
    "array-without-items": "ba5518fcac0de9925acf19a7a49cb3ba5a09861e2205f0bde0114e3fd4ae15b7",
