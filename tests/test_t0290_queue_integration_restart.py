@@ -13,6 +13,7 @@ Single process, no real clock, no concurrency.
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import random
@@ -179,6 +180,7 @@ def test_torn_state_file_is_refused_and_the_last_good_file_still_works(tmp_path)
     _save(path, state)
     good = path.read_text()
     claim = {"op": "claim", "worker": "w1", "now": 0, "lease_ms": 10}
+    refused = 0
     for cut in range(1, len(good), 17):
         torn = good[:cut]
         try:
@@ -188,6 +190,26 @@ def test_torn_state_file_is_refused_and_the_last_good_file_still_works(tmp_path)
         with pytest.raises(QueueError) as info:
             QueueEngine().apply(loaded, claim)
         assert info.value.failure_class == "corrupt_queue"
+        refused += 1
+    # parseable-but-malformed states (what a torn write can leave after a lenient
+    # host repair) must be refused by the engine, whatever the byte-level cuts do
+    good_state = json.loads(good)
+    malformed = [
+        {},
+        {"jobs": good_state["jobs"]},
+        {"jobs": good_state["jobs"], "next_seq": 0},
+        {"jobs": [{"job_id": "x"}], "next_seq": 1},
+        {"jobs": "[]", "next_seq": 0},
+        [],
+        None,
+    ]
+    for bad in malformed:
+        with pytest.raises(QueueError) as info:
+            QueueEngine().apply(copy.deepcopy(bad), claim)
+        assert info.value.failure_class == "corrupt_queue"
+        refused += 1
+    assert refused >= len(malformed)
+    assert QueueEngine().apply(copy.deepcopy(good_state), claim)["job_id"] == job_id_for("a")
     # an interrupted write goes to the temp file only; the live file stays intact
     path.with_suffix(".tmp").write_text(good[: len(good) // 2])
     state = _load(path)
