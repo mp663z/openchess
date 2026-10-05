@@ -180,6 +180,18 @@ def check_fixture(impl, err):
 
 
 def check_semantics(impl, err):
+    # canonical identity: payload key order never changes the state ids
+    ab = impl(_state(_job("a", 0, payload={"b": 1, "a": 2})), _rq())
+    ba = impl(_state(_job("a", 0, payload={"a": 2, "b": 1})), _rq())
+    assert ab["prior_state_id"] == ba["prior_state_id"] and ab["state_id"] == ba["state_id"]
+    # the queue-size bound is inclusive: exactly 10000 jobs are accepted
+    full = {"jobs": [_job(f"k{i}", i) for i in range(10000)], "next_seq": 10000}
+    kept = impl(full, _rq())
+    assert kept["released"] == [] and len(full["jobs"]) == 10000
+    over = {"jobs": [_job(f"k{i}", i) for i in range(10001)], "next_seq": 10001}
+    with pytest.raises(err) as caught:
+        impl(over, _rq())
+    assert caught.value.failure_class == "corrupt_queue"
     st = _state(
         _leased("a", 0, "w1", 2000, attempts=2),
         _leased("b", 1, "w2", 2000),
