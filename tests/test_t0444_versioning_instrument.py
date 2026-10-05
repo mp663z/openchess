@@ -369,6 +369,15 @@ MUTANTS = {
         "                    == before,",
         '"code": _attribute(error, "code"),\n                    "arguments_unchanged": True,',
     ),
+    "base-path-unchecked": (
+        'return path if type(path) is str else _opaque("base_path")',
+        "return path",
+    ),
+    "operation-constant": ('"operation": "compare",', '"operation": "cmp",'),
+    "swap-base-paths": (
+        '"old_base_path": _base_path(old),\n            "new_base_path": _base_path(new),',
+        '"old_base_path": _base_path(new),\n            "new_base_path": _base_path(old),',
+    ),
     "append-no-snapshot": ("list.append(trace, _snapshot(record))", "list.append(trace, record)"),
 }
 
@@ -505,6 +514,20 @@ def _extra_deviation(module):
             return "result-identity"
         if returned.records[-1].get("compatible") is not verdict:
             return "compatible-recorded"
+    based = module.VersionTracer(_Verdict(True))
+    good = {"contract": {"versioning": {"base_path": "/cp/v1"}}}
+    other = {"contract": {"versioning": {"base_path": "/cp/v2"}}}
+    based.compare(good, other, 0, 0)
+    rec = based.records[-1]
+    if rec.get("operation") != "compare":
+        return "operation-field"
+    if (rec.get("old_base_path"), rec.get("new_base_path")) != ("/cp/v1", "/cp/v2"):
+        return "base-path-recorded"
+    for bad in (7, None, ["/cp/v1"]):
+        doc = {"contract": {"versioning": {"base_path": bad}}}
+        based.compare(doc, doc, 0, 0)
+        if based.records[-1].get("old_base_path") != {"__opaque__": "base_path"}:
+            return "base-path-non-str"
     odd = module.VersionTracer(_Verdict(5))
     if odd.compare([0], [1], 0, 0) != 5:
         return "result-identity"
@@ -577,6 +600,9 @@ EXPECTED_KILL = {
     "reject-unchanged-negated": "reject-arguments-unchanged",
     "reject-unchanged-constant": "reject-arguments-unchanged",
     "append-no-snapshot": "append-aliasing",
+    "base-path-unchecked": "base-path-non-str",
+    "operation-constant": "operation-field",
+    "swap-base-paths": "base-path-recorded",
 }
 
 
