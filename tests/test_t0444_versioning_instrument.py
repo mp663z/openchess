@@ -345,6 +345,31 @@ MUTANTS = {
         '"error_type": _type_name(type(error)),\n                    "arguments_unchanged": True,',
     ),
     "append-fallback-empty": ('[_opaque("trace-append-failed")]', "[]"),
+    "compatible-else-true": (
+        '"compatible": result if type(result) is bool else None',
+        '"compatible": result if type(result) is bool else True',
+    ),
+    "return-none": (
+        "        )\n        return result\n",
+        "        )\n        return None\n",
+    ),
+    "drop-failure-class": ('"failure_class": _attribute(error, "failure_class"),', ""),
+    "reject-unchanged-negated": (
+        "[_snapshot(a) for a in (old, new, old_minor, new_minor)]\n"
+        "                    == before,\n                }\n            )\n            raise\n"
+        "        except BaseException",
+        "[_snapshot(a) for a in (old, new, old_minor, new_minor)]\n"
+        "                    != before,\n                }\n            )\n            raise\n"
+        "        except BaseException",
+    ),
+    "reject-unchanged-constant": (
+        '"code": _attribute(error, "code"),\n'
+        '                    "arguments_unchanged": '
+        "[_snapshot(a) for a in (old, new, old_minor, new_minor)]\n"
+        "                    == before,",
+        '"code": _attribute(error, "code"),\n                    "arguments_unchanged": True,',
+    ),
+    "append-no-snapshot": ("list.append(trace, _snapshot(record))", "list.append(trace, record)"),
 }
 
 
@@ -389,7 +414,7 @@ class _MutatingCrash:
         raise self.boom
 
 
-def _first_deviation(module):
+def _first_deviation_raw(module):
     """The name of the first semantic check the module fails, or None.
 
     An unexpected exception from the instrument propagates and errors the
@@ -447,7 +472,83 @@ def _first_deviation(module):
         return "crash-record"
     if record.get("arguments_unchanged") is not False:
         return "crash-arguments-unchanged"
+    return _extra_deviation(module)
+
+
+class _Verdict:
+    """A comparator returning one fixed object."""
+
+    def __init__(self, out):
+        self.out = out
+
+    def __call__(self, *args):
+        return self.out
+
+
+class _RejectingComparator:
+    """Optionally mutates its first argument, then raises one fixed VersionError."""
+
+    def __init__(self, err, mutate):
+        self.err = err
+        self.mutate = mutate
+
+    def __call__(self, first, *rest):
+        if self.mutate:
+            first.append("junk")
+        raise self.err
+
+
+def _extra_deviation(module):
+    for verdict in (True, False):
+        returned = module.VersionTracer(_Verdict(verdict))
+        if returned.compare([0], [1], 0, 0) is not verdict:
+            return "result-identity"
+        if returned.records[-1].get("compatible") is not verdict:
+            return "compatible-recorded"
+    odd = module.VersionTracer(_Verdict(5))
+    if odd.compare([0], [1], 0, 0) != 5:
+        return "result-identity"
+    if odd.records[-1].get("compatible") is not None:
+        return "compatible-non-bool"
+    for mutate, expected in ((True, False), (False, True)):
+        err = cpv.VersionError()
+        tracer = module.VersionTracer(_RejectingComparator(err, mutate))
+        try:
+            tracer.compare([0], [1], 0, 0)
+        except cpv.VersionError as caught:
+            if caught is not err:
+                return "reject-reraise-identity"
+        else:
+            return "reject-swallowed"
+        rec = tracer.records[-1]
+        if rec.get("outcome") != "reject":
+            return "reject-record"
+        if rec.get("arguments_unchanged") is not expected:
+            return "reject-arguments-unchanged"
+        if rec.get("failure_class") != "malformed_version_request":
+            return "reject-record-fields"
+        if rec.get("code") != "malformed_request":
+            return "reject-record-fields"
+    held = module.VersionTracer(_Verdict(True))
+    held.compare([0], [1], 0, 0)
+    stored = held._trace[-1]
+    held._trace[-1]["seq"] = 99
+    if stored is held._trace[-1] and held.records[-1]["seq"] != 99:
+        return "append-aliasing"
+    probe = module.VersionTracer(_Verdict(True))
+    sample = {"seq": 7}
+    probe._append_total(sample)
+    if probe._trace[-1] is sample:
+        return "append-aliasing"
     return None
+
+
+def _first_deviation(module):
+    """The first failing check; a valid call the instrument refuses is a semantic failure."""
+    try:
+        return _first_deviation_raw(module)
+    except cpv.VersionError:
+        return "valid-refused"
 
 
 def _is_red(module):
@@ -470,6 +571,12 @@ EXPECTED_KILL = {
     "copy-args": "args-identity",
     "crash-unchanged-constant": "crash-arguments-unchanged",
     "append-fallback-empty": "append-fallback",
+    "compatible-else-true": "compatible-non-bool",
+    "return-none": "result-identity",
+    "drop-failure-class": "reject-record-fields",
+    "reject-unchanged-negated": "reject-arguments-unchanged",
+    "reject-unchanged-constant": "reject-arguments-unchanged",
+    "append-no-snapshot": "append-aliasing",
 }
 
 
@@ -483,3 +590,13 @@ def test_a_crashing_instrument_is_an_error_not_a_kill():
     assert broken != SOURCE
     with pytest.raises(NameError):
         _first_deviation(_load(broken))
+
+
+def test_a_valid_call_the_instrument_refuses_is_an_assertion_failure():
+    refusing = SOURCE.replace(
+        "result = self._comparator(old, new, old_minor, new_minor)",
+        "result = self._comparator(old, new, old_minor, new_minor)\n"
+        "            raise VersionError()",
+    )
+    assert refusing != SOURCE
+    assert _first_deviation(_load(refusing)) == "valid-refused"
