@@ -291,6 +291,7 @@ def _mutant(old, new):
 
 
 MUTANTS = [
+    ("previous_slot == slot and previous_count > capacity", "False"),
     ("updates = {}", "policy['version'] = 999\n    updates = {}"),
     ("previous_slot > slot or ", ""),
     ("if count >= capacity:", "if count > capacity:"),
@@ -365,6 +366,13 @@ def _targeted_detectors_fail(mutant):
         r9 = _good()
         r9["state"] = {("identity.login", "account", "opaque:a"): (99, 1)}
         if _run(d, r9)[0] != "internal":
+            return True
+        r10 = _good()
+        r10["state"] = {
+            ("identity.login", "account", "opaque:a"): (1, 99)
+        }  # over capacity in-window
+        r10["now"] = 10
+        if _run(d, r10)[0] != "internal":
             return True
         # window rollover
         r7 = _good()
