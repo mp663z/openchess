@@ -294,12 +294,32 @@ def check_totality(impl, err):
     _rejects(impl, err, _req(job={**_job(), "extra": 1}), "corrupt_job")
 
 
+class RawEscape(AssertionError):
+    """A non-contract exception escaped the implementation (a crash, not a decision)."""
+
+
+def _guard(impl, err):
+    """Typed contract errors and assertion failures pass through; any other
+    exception is a crash and becomes RawEscape: a totality failure that is
+    never counted as a semantic mutant kill."""
+
+    def guarded(*args):
+        try:
+            return impl(*args)
+        except (err, AssertionError):
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise RawEscape(f"raw {type(exc).__name__} escaped") from None
+
+    return guarded
+
+
 CHECKS = (check_fixture, check_semantics, check_order, check_totality)
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_bound_implementation_passes(check):
-    check(bury, DeadLetterError)
+    check(_guard(bury, DeadLetterError), DeadLetterError)
 
 
 def test_fixture_covers_every_failure_class_and_reason():
@@ -420,7 +440,21 @@ def _m_payload_unbounded(request, real):
         raise
 
 
+def _m_refuses_valid(request, real):
+    if isinstance(request, dict) and request.get("reason") == "permanent":
+        raise DeadLetterError("job_not_dead")
+    return real(request)
+
+
+def _m_refuses_everything(request, real):
+    raise DeadLetterError("malformed_bury_request")
+
+
+RAW_MUTANTS = {"raw_exception"}
+
 MUTANTS = {
+    "refuses_valid": (_m_refuses_valid, "check_semantics"),
+    "refuses_everything": (_m_refuses_everything, "check_fixture"),
     "buries_ready": (_m_buries_ready, "check_semantics"),
     "stores_payload": (_m_stores_payload, "check_fixture"),
     "digest_unsorted": (_m_digest_unsorted, "check_semantics"),
@@ -439,8 +473,11 @@ def test_mutant_is_red_on_its_target(name):
     mutate, target = MUTANTS[name]
     check = next(c for c in CHECKS if c.__name__ == target)
     try:
-        check(_wrap(mutate), DeadLetterError)
-    except BaseException as exc:  # noqa: BLE001 - pytest.fail is a BaseException
-        assert not isinstance(exc, KeyboardInterrupt)
+        check(_guard(_wrap(mutate), DeadLetterError), DeadLetterError)
+    except RawEscape:
+        # only the mutant that raises a raw exception on purpose may die this way
+        assert name in RAW_MUTANTS, f"mutant {name} crashed instead of being refuted"
+    except (AssertionError, DeadLetterError, pytest.fail.Exception):
+        assert name not in RAW_MUTANTS, f"mutant {name} was not refuted by the raw-exception probe"
     else:
         raise AssertionError(f"mutant {name} survived {target}")
