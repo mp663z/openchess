@@ -112,7 +112,14 @@ def raising(suffix):
     raise RuntimeError("boom")
 
 
+def mutating(suffix):
+    log[0]["payload"]["record"]["digest"] = "changed"
+    log[0]["entry_id"] = "tampered"
+    return "qrn1:" + "0" * 64
+
+
 sink = {
+    "mutate-nested": mutating,
     "honest": mod.quarantine_suffix,
     "wrong": lambda suffix: "qrn1:" + "0" * 64,
     "raise": raising,
@@ -297,6 +304,15 @@ def test_logs_outside_the_scan_domain_are_refused_after_restart():
         assert out["log"] == log, name
 
 
+def test_a_sink_mutating_nested_log_state_is_undone_after_the_refusal():
+    log = jround(damage(3)["payload-flipped"][0])
+    child = child_run(log, 99, sink="mutate-nested")
+    assert child["ok"] is False and "crash" not in child, child
+    assert child["failure_class"] == "divergent_quarantine"
+    assert child["log"] == log, "the caller's nested log state must be restored exactly"
+    assert child["log"][0]["payload"]["record"]["digest"] != "changed"
+
+
 @pytest.mark.parametrize("sink", ["wrong", "raise", "nonstr"])
 def test_divergent_sink_refused_and_the_suffix_is_not_removed(sink):
     log = jround(damage(3)["payload-flipped"][0])
@@ -352,6 +368,10 @@ EDITS = {
         "return [_encode(item, depth + 1, seen, out) for item in values]",
         "return [_encode(item, depth, seen, out) for item in values]",
     ),
+    "snapshot-skips-dicts": _once(
+        "    elif type(value) is dict:\n        saved.append",
+        "    elif False:\n        saved.append",
+    ),
     "scan-id-ignores-loss": _once(
         'f"{verdict}\\n{head}\\n{count}\\n{lost}\\n"', 'f"{verdict}\\n{head}\\n{count}\\n"'
     ),
@@ -367,6 +387,7 @@ EXPECTED_KILL = {
     "none-scalar-unsupported": "domain-scalars",
     "depth-bound-off-by-one": "domain-depth",
     "list-depth-not-counted": "domain-depth",
+    "snapshot-skips-dicts": "nested-restore",
     "int-range-unchecked": "domain-int",
     "dict-depth-not-counted": "domain-dict",
 }
@@ -439,6 +460,7 @@ def _deviations(source):
         "excessive": child_run(log, lost - 1, source=source),
         "clean": child_run(jround(REF_LOG), 0, source=source),
         "unbound-sink": child_run(log, lost, source=source, sink="wrong"),
+        "nested-restore": child_run(log, lost, source=source, sink="mutate-nested"),
         "domain-int": child_run(
             [*jround(REF_LOG[:2]), {"x": 1 << (corruption.MAX_INT_BITS + 1)}], 9, source=source
         ),
@@ -468,6 +490,11 @@ def _deviations(source):
     u = runs["unbound-sink"]
     if not (u["ok"] is False and u.get("failure_class") == "divergent_quarantine"):
         found.add("unbound-sink")
+    n = runs["nested-restore"]
+    if not (
+        n["ok"] is False and n.get("failure_class") == "divergent_quarantine" and n["log"] == log
+    ):
+        found.add("nested-restore")
     if _depth_failure(source) is not None:
         found.add("domain-depth")
     if _scalar_failure(source) is not None:
