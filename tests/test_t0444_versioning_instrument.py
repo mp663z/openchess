@@ -378,6 +378,10 @@ MUTANTS = {
         '"old_base_path": _base_path(old),\n            "new_base_path": _base_path(new),',
         '"old_base_path": _base_path(new),\n            "new_base_path": _base_path(old),',
     ),
+    "seq-fallback-one": (
+        "return list.__len__(trace) if type(trace) is list else 0",
+        "return list.__len__(trace) if type(trace) is list else 1",
+    ),
     "append-no-snapshot": ("list.append(trace, _snapshot(record))", "list.append(trace, record)"),
 }
 
@@ -528,6 +532,14 @@ def _extra_deviation(module):
         based.compare(doc, doc, 0, 0)
         if based.records[-1].get("old_base_path") != {"__opaque__": "base_path"}:
             return "base-path-non-str"
+    for broken in ((), None, "x", 7):
+        flat = module.VersionTracer(_Verdict(True))
+        flat._trace = broken
+        flat.compare([0], [1], 0, 0)
+        if flat.records != () and flat.records[-1].get("seq") != 0:
+            return "seq-non-list-trace"
+        if type(flat._trace) is not list or flat._trace[-1].get("seq") != 0:
+            return "seq-non-list-trace"
     odd = module.VersionTracer(_Verdict(5))
     if odd.compare([0], [1], 0, 0) != 5:
         return "result-identity"
@@ -600,6 +612,7 @@ EXPECTED_KILL = {
     "reject-unchanged-negated": "reject-arguments-unchanged",
     "reject-unchanged-constant": "reject-arguments-unchanged",
     "append-no-snapshot": "append-aliasing",
+    "seq-fallback-one": "seq-non-list-trace",
     "base-path-unchecked": "base-path-non-str",
     "operation-constant": "operation-field",
     "swap-base-paths": "base-path-recorded",
