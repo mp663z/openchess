@@ -54,6 +54,10 @@ class DictSub(dict):
     pass
 
 
+class TupleSub(tuple):
+    pass
+
+
 def _good():
     return dict(
         operation="identity.login",
@@ -364,6 +368,13 @@ def _validation_rows():
         ),
         ("account-str-subclass", {"account": StrSub("opaque:a")}, "malformed_request"),
         ("account-without-prefix", {"account": "plain"}, "malformed_request"),
+        ("operation-str-subclass", {"operation": StrSub("identity.login")}, "malformed_request"),
+        (
+            "policy-dict-subclass",
+            {"policy": DictSub(_good()["policy"])},
+            "malformed_request",
+        ),
+        ("state-value-tuple-subclass", {"state": {key: TupleSub((1, 1))}}, "internal"),
         ("source-str-subclass", {"source": StrSub("opaque:s")}, "malformed_request"),
         ("source-without-prefix", {"source": "plain"}, "malformed_request"),
         ("state-negative-number", {"state": {key: (1, -1)}}, "internal"),
@@ -410,6 +421,21 @@ def test_validation_rows_hold_on_production():
 
 
 VALIDATION_MUTANTS = {
+    "operation-type-isinstance": (
+        "type(operation) is not str",
+        "not isinstance(operation, str)",
+        ("operation-str-subclass",),
+    ),
+    "policy-type-isinstance": (
+        "type(policy) is not dict",
+        "not isinstance(policy, dict)",
+        ("policy-dict-subclass",),
+    ),
+    "state-value-type-isinstance": (
+        "type(value) is not tuple",
+        "not isinstance(value, tuple)",
+        ("state-value-tuple-subclass",),
+    ),
     "bucket-type-or-to-and": (
         'if type(value) is not dict or set(value) != {"capacity", "window_ms"}:',
         'if type(value) is not dict and set(value) != {"capacity", "window_ms"}:',
