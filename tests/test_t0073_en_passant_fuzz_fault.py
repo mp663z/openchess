@@ -481,6 +481,19 @@ def _str_key_move():
     return {"type": "ep-capture", _StrSub("from"): "c5", "to": "d6"}
 
 
+def _raw(target, side, *pieces):
+    return {"ep_target": target, "occupied": dict(pieces), "side_to_move": side}
+
+
+def _err(failure_class):
+    return ("err", failure_class, prod.FAILURE_MAPPING[failure_class])
+
+
+def _tt(halfmove, fullmove):
+    return ("ok", {"halfmove_clock": halfmove, "fullmove_number": fullmove})
+
+
+TT = "turn_transition"
 ID = "identity_value"
 AP = "apply"
 CAP_OK = None  # filled by test via apply on the reference state
@@ -541,6 +554,125 @@ ROWS = {
         (_state_of("d66", "w", ("c5", "wp"), ("d5", "bp")),),
         ("ok", "-"),
     ),
+    # ---- geometry, victim and mover rows (one violation each) ----
+    "capture-target-occupied": (
+        AP,
+        (
+            _raw("d6", "w", ("g1", "wk"), ("g8", "bk"), ("c5", "wp"), ("d5", "bp"), ("d6", "bn")),
+            _ep("c5", "d6"),
+        ),
+        _err("target_inconsistent"),
+    ),
+    "capture-victim-not-a-pawn": (
+        AP,
+        (_raw("d6", "w", ("g1", "wk"), ("g8", "bk"), ("c5", "wp"), ("d5", "bn")), _ep("c5", "d6")),
+        _err("target_inconsistent"),
+    ),
+    "capture-victim-own-pawn": (
+        AP,
+        (_raw("d6", "w", ("g1", "wk"), ("g8", "bk"), ("c5", "wp"), ("d5", "wp")), _ep("c5", "d6")),
+        _err("target_inconsistent"),
+    ),
+    "capture-mover-not-a-pawn": (
+        AP,
+        (_raw("d6", "w", ("g1", "wk"), ("g8", "bk"), ("c5", "wn"), ("d5", "bp")), _ep("c5", "d6")),
+        _err("capture_precondition"),
+    ),
+    "capture-mover-is-enemy-pawn": (
+        AP,
+        (_raw("d6", "w", ("g1", "wk"), ("g8", "bk"), ("c5", "bp"), ("d5", "bp")), _ep("c5", "d6")),
+        _err("capture_precondition"),
+    ),
+    "capture-straight-ahead": (
+        AP,
+        (_raw("d6", "w", ("g1", "wk"), ("g8", "bk"), ("d5", "bp")), _ep("d5", "d6")),
+        _err("capture_precondition"),
+    ),
+    # ---- the resulting-position pin check, one ray direction per row ----
+    "pin-rank-rook-right": (
+        AP,
+        (
+            _raw("d6", "w", ("a5", "wk"), ("g8", "bk"), ("c5", "wp"), ("d5", "bp"), ("h5", "br")),
+            _ep("c5", "d6"),
+        ),
+        _err("pinned_capture"),
+    ),
+    "pin-rank-rook-left": (
+        AP,
+        (
+            _raw("d6", "w", ("h5", "wk"), ("g8", "bk"), ("c5", "wp"), ("d5", "bp"), ("a5", "br")),
+            _ep("c5", "d6"),
+        ),
+        _err("pinned_capture"),
+    ),
+    "pin-diagonal-bishop-down": (
+        AP,
+        (
+            _raw("d6", "w", ("a7", "wk"), ("g8", "bk"), ("c5", "wp"), ("d5", "bp"), ("e3", "bb")),
+            _ep("c5", "d6"),
+        ),
+        _err("pinned_capture"),
+    ),
+    "pin-diagonal-bishop-up": (
+        AP,
+        (
+            _raw("d6", "w", ("g1", "wk"), ("h8", "bk"), ("c5", "wp"), ("d5", "bp"), ("a7", "bb")),
+            _ep("c5", "d6"),
+        ),
+        _err("pinned_capture"),
+    ),
+    "pin-file-rook-above": (
+        AP,
+        (
+            _raw("d6", "w", ("c1", "wk"), ("g8", "bk"), ("c5", "wp"), ("d5", "bp"), ("c8", "br")),
+            _ep("c5", "d6"),
+        ),
+        _err("pinned_capture"),
+    ),
+    "pin-adjacent-rook-above-king": (
+        AP,
+        (
+            _raw("d6", "w", ("g1", "wk"), ("a8", "bk"), ("c5", "wp"), ("d5", "bp"), ("g2", "br")),
+            _ep("c5", "d6"),
+        ),
+        _err("pinned_capture"),
+    ),
+    "pin-blocked-by-own-piece": (
+        AP,
+        (
+            _raw(
+                "d6",
+                "w",
+                ("a5", "wk"),
+                ("g8", "bk"),
+                ("c5", "wp"),
+                ("d5", "bp"),
+                ("h5", "br"),
+                ("e5", "wn"),
+            ),
+            _ep("c5", "d6"),
+        ),
+        (
+            "ok",
+            {
+                "ep_target": "-",
+                "occupied": {"a5": "wk", "g8": "bk", "h5": "br", "e5": "wn", "d6": "wp"},
+                "side_to_move": "b",
+            },
+        ),
+    ),
+    # ---- turn_transition over its closed domain, and its refusals ----
+    "turn-pawn-advance-white": (TT, ("pawn-advance", "w"), _tt("reset", "same")),
+    "turn-pawn-advance-black": (TT, ("pawn-advance", "b"), _tt("reset", "increment")),
+    "turn-ep-capture-white": (TT, ("ep-capture", "w"), _tt("reset", "same")),
+    "turn-ep-capture-black": (TT, ("ep-capture", "b"), _tt("reset", "increment")),
+    "turn-quiet-white": (TT, ("quiet", "w"), _tt("increment", "same")),
+    "turn-quiet-black": (TT, ("quiet", "b"), _tt("increment", "increment")),
+    "turn-unknown-move-type": (TT, ("castle", "w"), MALFORMED),
+    "turn-non-str-move-type": (TT, (5, "w"), MALFORMED),
+    "turn-unknown-side": (TT, ("quiet", "x"), MALFORMED),
+    "turn-empty-side": (TT, ("pawn-advance", ""), MALFORMED),
+    "turn-non-str-side": (TT, ("quiet", 5), MALFORMED),
 }
 
 
@@ -592,6 +724,113 @@ MUTANTS = {
         ),
         ("identity-target-overlong",),
     ),
+    "capture-target-occupied-check-dropped": (
+        (("    if target in occ:", "    if False:"),),
+        ("capture-target-occupied",),
+    ),
+    "capture-victim-check-weakened-to-presence": (
+        (('if occ.get(captured) != _OTHER[side] + "p":', "if occ.get(captured) is None:"),),
+        ("capture-victim-not-a-pawn", "capture-victim-own-pawn"),
+    ),
+    "capture-mover-check-weakened-to-presence": (
+        (('or occ.get(frm) != side + "p"', "or occ.get(frm) is None"),),
+        ("capture-mover-not-a-pawn", "capture-mover-is-enemy-pawn"),
+    ),
+    "turn-ep-capture-not-pawnish": (
+        (
+            (
+                'pawnish = move_type in ("pawn-advance", "ep-capture")',
+                'pawnish = move_type in ("pawn-advance",)',
+            ),
+        ),
+        ("turn-ep-capture-white", "turn-ep-capture-black"),
+    ),
+    "turn-fullmove-increments-after-white": (
+        (('and side == "b")', 'and side == "w")'),),
+        ("turn-pawn-advance-white", "turn-quiet-black"),
+    ),
+    "turn-halfmove-pawnish-or-reset": (
+        (
+            (
+                'if pawnish and _TURN["halfmove_clock"] == "reset"',
+                'if pawnish or _TURN["halfmove_clock"] == "reset"',
+            ),
+        ),
+        ("turn-quiet-white", "turn-quiet-black"),
+    ),
+    "turn-guard-negated": (
+        (
+            (
+                "    if (\n        type(move_type) is not str",
+                "    if not (\n        type(move_type) is not str",
+            ),
+        ),
+        ("turn-quiet-white", "turn-ep-capture-black"),
+    ),
+    "turn-guard-move-type-or-to-and": (
+        (
+            (
+                "type(move_type) is not str\n        or move_type not in _MOVE_TYPES",
+                "type(move_type) is not str\n        and move_type not in _MOVE_TYPES",
+            ),
+        ),
+        ("turn-unknown-move-type",),
+    ),
+    "turn-guard-move-type-side-or-to-and": (
+        (
+            (
+                "move_type not in _MOVE_TYPES\n        or type(side) is not str",
+                "move_type not in _MOVE_TYPES\n        and type(side) is not str",
+            ),
+        ),
+        ("turn-unknown-move-type",),
+    ),
+    "turn-guard-side-or-to-and": (
+        (
+            (
+                "type(side) is not str\n        or side not in _OTHER",
+                "type(side) is not str\n        and side not in _OTHER",
+            ),
+        ),
+        ("turn-unknown-side", "turn-empty-side"),
+    ),
+    "clear-start-file-steps-backwards": (
+        (("- 97 + step_f, int(a[1]) + step_r", "- 97 - step_f, int(a[1]) + step_r"),),
+        ("pin-rank-rook-right", "pin-diagonal-bishop-up"),
+    ),
+    "clear-start-rank-steps-backwards": (
+        (("int(a[1]) + step_r", "int(a[1]) - step_r"),),
+        ("pin-diagonal-bishop-down", "pin-file-rook-above"),
+    ),
+    "clear-start-file-from-rank-digit": (
+        (("f, r = ord(a[0]) - 97", "f, r = ord(a[1]) - 97"),),
+        ("pin-rank-rook-right",),
+    ),
+    "clear-start-file-offset": (
+        (("f, r = ord(a[0]) - 97 + step_f", "f, r = ord(a[0]) - 98 + step_f"),),
+        ("pin-rank-rook-right",),
+    ),
+    "clear-end-file-from-rank-digit": (
+        (("end = (ord(b[0]) - 97", "end = (ord(b[1]) - 97"),),
+        ("pin-rank-rook-right", "pin-diagonal-bishop-down"),
+    ),
+    "attacked-excludes-vertical-adjacent": (
+        (("and (df, dr) != (0, 0)", "and (df, dr) != (0, 1)"),),
+        ("pin-adjacent-rook-above-king",),
+    ),
+    "attacked-alignment-or-distinct": (
+        (
+            (
+                'or (piece in "bq" and abs(df) == abs(dr)))\n            and (df, dr)',
+                'or (piece in "bq" and abs(df) == abs(dr)))\n            or (df, dr)',
+            ),
+        ),
+        ("pin-blocked-by-own-piece",),
+    ),
+    "attacked-ignores-blockers": (
+        (("and _clear(occ, square", "or _clear(occ, square"),),
+        ("pin-blocked-by-own-piece",),
+    ),
 }
 
 
@@ -635,3 +874,19 @@ def test_a_foreign_exception_is_a_crash_never_a_property_violation():
             for item in t72._moves(rng, state):
                 case_state, move = item if isinstance(item, tuple) else (state, item)
                 _check(module, case_state, move)
+
+
+def test_straight_ahead_distance_mutant_is_equivalent():
+    """abs(file distance) != 1 -> > 1 differs only at distance 0, which is the victim square;
+    that square holds the enemy pawn, so the own-pawn check refuses it with the same class."""
+    ns = _exec_edits(
+        (
+            (
+                "abs(ord(frm[0]) - ord(target[0])) != 1",
+                "abs(ord(frm[0]) - ord(target[0])) > 1",
+            ),
+        )
+    )
+    for name in ("capture-straight-ahead", "capture-mover-not-a-pawn"):
+        fn, args, expected = ROWS[name]
+        assert _outcome(ns, fn, *copy.deepcopy(args)) == expected
