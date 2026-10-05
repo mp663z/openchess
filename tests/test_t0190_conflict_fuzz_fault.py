@@ -462,7 +462,13 @@ def _tamper_renamed_field(rec):
     return {("note" if k == "digest" else k): v for k, v in rec.items()}
 
 
+def _tamper_key_str_subclass(rec):
+    # same name and value, but the key is a str subclass
+    return {(_StrSub(k) if k == "variant" else k): v for k, v in rec.items()}
+
+
 VALIDATION_ROWS = {
+    "record-key-str-subclass": _tamper_key_str_subclass,
     "snapshot-not-canonical": _tamper_snapshot_clocks,
     "digest-trailing-newline": _tamper_digest_trailing_newline,
     "digest-trailing-text": _tamper_digest_trailing_text,
@@ -485,6 +491,10 @@ def test_validation_rows_are_typed_refusals_on_production(name):
 
 
 VALIDATION_MUTANTS = {
+    "record-key-type-guard-dropped": (
+        ("    if not all(type(k) is str for k in rec_keys):\n        _fail(_MCR)\n", ""),
+        "record-key-str-subclass",
+    ),
     "snapshot-text-not-compared": (
         ('if variant != derived["variant"] or snapshot != derived["snapshot_fen"]:', 'if variant != derived["variant"]:'),
         "snapshot-not-canonical",
@@ -576,3 +586,13 @@ def test_conflict_error_without_super_init_is_killed_by_args():
     ns = _mutant_cf("        super().__init__(failure_class)\n", "")
     exc = ns["ConflictError"]("malformed_conflict_record", "code-x")
     assert exc.args != ("malformed_conflict_record",)
+
+
+def test_state_id_refuses_a_str_subclass_record_key():
+    a, _ = _state_pair()
+    bad = {k: _tamper_key_str_subclass(v) for k, v in a.items()}
+    assert _sid(vars(cf), bad) == {"err": "malformed_conflict_record"}
+    assert _sid(
+        _mutant_cf("    if not all(type(k) is str for k in rec_keys):\n        _fail(_MCR)\n", ""),
+        bad,
+    ) != {"err": "malformed_conflict_record"}
