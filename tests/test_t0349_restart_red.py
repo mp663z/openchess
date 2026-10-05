@@ -424,7 +424,7 @@ class RawEscape(AssertionError):
     """A non-contract exception escaped the implementation (a crash, not a decision)."""
 
 
-def _guard(impl, err, oracle=None):
+def _guard(impl, err, oracle=None, crash=None):
     """Any exception that is not the typed contract error is a crash and becomes
     RawEscape (an AssertionError raised inside the implementation included),
     except Touched, which is the semantic detection of a caller object being
@@ -442,11 +442,9 @@ def _guard(impl, err, oracle=None):
         except Touched:
             raise
         except Exception as exc:  # noqa: BLE001
-            crash = type(exc).__name__
-        else:  # pragma: no cover
-            crash = None
+            crashed = type(exc).__name__
         if refusal is None:
-            raise RawEscape(f"raw {crash} escaped") from None
+            raise (crash or RawEscape)(f"raw {crashed} escaped") from None
         if oracle is not None:
             try:
                 oracle(*copy.deepcopy(args))
@@ -486,6 +484,77 @@ class _Opaque:
 _OPAQUE = _Opaque()
 
 
+class _StrSub(str):
+    pass
+
+
+class _IntSub(int):
+    pass
+
+
+class _DictSub(dict):
+    pass
+
+
+def check_inert_values(impl, err):
+    # str / int / dict subclasses and bools are not the exact built-in types
+    st = _state(_leased("a", 0))
+    for field, bad in (
+        ("op", _StrSub("restart")),
+        ("worker", _StrSub("w1")),
+        ("now", True),
+        ("now", _IntSub(1000)),
+    ):
+        _rejects(impl, err, st, _rq(**{field: bad}), "malformed_restart_request")
+    _rejects(impl, err, st, _DictSub(_rq()), "malformed_restart_request")
+    _rejects(impl, err, _DictSub(st), _rq(), "corrupt_queue")
+    _rejects(impl, err, _state(_DictSub(_leased("a", 0))), _rq(), "corrupt_queue")
+    _rejects(impl, err, {"jobs": st["jobs"], "next_seq": True}, _rq(), "corrupt_queue")
+    _rejects(impl, err, {"jobs": st["jobs"], "next_seq": _IntSub(1)}, _rq(), "corrupt_queue")
+    for field, bad in (
+        ("job_id", _StrSub(_jid("a"))),
+        ("seq", True),
+        ("seq", _IntSub(0)),
+        ("priority", _IntSub(5)),
+        ("status", _StrSub("leased")),
+        ("attempts", _IntSub(1)),
+        ("attempts", True),
+        ("lease_owner", _StrSub("w1")),
+        ("lease_expires_at", _IntSub(2000)),
+        ("lease_expires_at", True),
+        ("payload", _DictSub({"k": "a"})),
+    ):
+        job = {**_leased("a", 0), field: bad}
+        _rejects(impl, err, _state(job), _rq(), "corrupt_queue")
+
+
+def check_lease_shape(impl, err):
+    # a lease needs an owner, an expiry and an attempt; other states carry none
+    for job in (
+        _job("a", 0, "leased", 1, None, 2000),
+        _job("a", 0, "leased", 1, "w1", None),
+        _job("a", 0, "leased", 0, "w1", 2000),
+        _job("a", 0, "leased", 1, "w1", 0),
+        _job("a", 0, "ready", 0, "w1", None),
+        _job("a", 0, "ready", 0, None, 2000),
+        _job("a", 0, "done", 1, "w1", 2000),
+        _job("a", 0, "dead", 5, "w1", None),
+        _job("a", 0, "dead", 4),
+        _job("a", 0, "done", 0),
+        _job("a", 0, "bogus", 0),
+    ):
+        _rejects(impl, err, _state(job), _rq(), "corrupt_queue")
+    for good in (
+        _job("a", 0, "leased", 1, "w1", 1),
+        _job("a", 0, "done", 1),
+        _job("a", 0, "dead", 5),
+    ):
+        assert impl(_state(good), _rq())["op"] == "restart"
+    # a list or tuple nested in a payload is checked element by element
+    for bad in ([["\ud800"]], {"k": [{"j": ["\ud800"]}]}, [[1, (2,)]], {"k": [_DictSub()]}):
+        _rejects(impl, err, _state(_job("a", 0, payload=bad)), _rq(), "corrupt_queue")
+
+
 def check_payload_integrity(impl, err):
     # each row is a typed corrupt_queue refusal (an assertion on the failure class)
     for bad in ("\ud800", {"k": "\udfff"}, {"k": (1, 2)}, {"k": {1, 2}}, {"k": _OPAQUE}):
@@ -506,12 +575,14 @@ CHECKS = (
     check_totality,
     check_inert_keys,
     check_payload_integrity,
+    check_inert_values,
+    check_lease_shape,
 )
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_bound_implementation_passes(check):
-    check(_guard(restart, RestartError), RestartError)
+    check(_guard(restart, RestartError, crash=AssertionError), RestartError)
 
 
 def test_fixture_covers_every_failure_class():
@@ -688,7 +759,7 @@ def test_mutant_is_red_on_its_target(name):
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_guard_with_oracle_is_identity_on_the_reference(check):
-    check(_guard(restart, RestartError, restart), RestartError)
+    check(_guard(restart, RestartError, restart, crash=AssertionError), RestartError)
 
 
 def test_raw_exception_is_a_totality_failure_not_a_mutant_kill():
