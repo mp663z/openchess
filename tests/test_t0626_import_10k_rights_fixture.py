@@ -7,6 +7,7 @@ rights_policy.yaml, and every source outside the scenario is refused as
 is T0625's PRODUCTION_BINDING, so the implementation task re-runs these rows
 without edits. No new fixture file: inputs come from the T0625 contract battery.
 """
+
 from __future__ import annotations
 
 import pytest
