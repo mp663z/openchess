@@ -301,40 +301,40 @@ def _mutant(label):
 
 
 def _mutant_is_red(module):
-    try:
-        tracer = module.WalTracer(_engine())
-        log = []
-        tracer.append(log, _request("put", 0))
-        tracer.append(log, _request("put", 1))
-        if [r["seq"] for r in tracer.records] != [0, 1]:
-            return True
-        if any(r["outcome"] != "accept" for r in tracer.records):
-            return True
-        if [json.dumps(r) for r in tracer.records] != [
-            json.dumps(r) for r in map(dict, tracer.records)
-        ] or "\n".join(json.dumps(r, sort_keys=True) for r in tracer.records) != tracer.to_jsonl():
-            return True
-        try:
-            tracer.append(log, "nope")
-            return True
-        except wal.WalError:
-            pass
-        last = tracer.records[-1]
-        if last.get("outcome") != "reject" or "code" not in last:
-            return True
-
-        class Crasher:
-            def replay(self, log):
-                raise KeyError("x")
-
-        crash = module.WalTracer(Crasher())
-        try:
-            crash.replay([])
-            return True
-        except KeyError:
-            return False
-    except BaseException:  # noqa: BLE001
+    tracer = module.WalTracer(_engine())
+    log = []
+    tracer.append(log, _request("put", 0))
+    tracer.append(log, _request("put", 1))
+    if [r["seq"] for r in tracer.records] != [0, 1]:
         return True
+    if any(r["outcome"] != "accept" for r in tracer.records):
+        return True
+    if [json.dumps(r) for r in tracer.records] != [
+        json.dumps(r) for r in map(dict, tracer.records)
+    ] or "\n".join(json.dumps(r, sort_keys=True) for r in tracer.records) != tracer.to_jsonl():
+        return True
+    try:
+        tracer.append(log, "nope")
+        return True
+    except wal.WalError:
+        pass
+    last = tracer.records[-1]
+    if last.get("outcome") != "reject" or "code" not in last:
+        return True
+
+    class Crasher:
+        def replay(self, log):
+            raise KeyError("x")
+
+    crash = module.WalTracer(Crasher())
+    try:
+        crash.replay([])
+    except KeyError:
+        return False
+    except Exception as error:
+        # a different exception type is a semantic deviation
+        return type(error) is not KeyError
+    return True
 
 
 def test_unmutated_instrument_is_green_on_the_mutant_check():
