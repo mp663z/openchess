@@ -338,7 +338,7 @@ class RawEscape(AssertionError):
     """A non-contract exception escaped the implementation (a crash, not a decision)."""
 
 
-def _guard(impl, err, oracle=None):
+def _guard(impl, err, oracle=None, crash=None):
     """Any exception that is not the typed contract error is a crash and becomes
     RawEscape (an AssertionError raised inside the implementation included),
     except Touched, which is the semantic detection of a caller object being
@@ -356,11 +356,9 @@ def _guard(impl, err, oracle=None):
         except Touched:
             raise
         except Exception as exc:  # noqa: BLE001
-            crash = type(exc).__name__
-        else:  # pragma: no cover
-            crash = None
+            crashed = type(exc).__name__
         if refusal is None:
-            raise RawEscape(f"raw {crash} escaped") from None
+            raise (crash or RawEscape)(f"raw {crashed} escaped") from None
         if oracle is not None:
             try:
                 oracle(*copy.deepcopy(args))
@@ -385,6 +383,54 @@ def _inert(mapping):
     return {_InertKey(k): v for k, v in mapping.items()}
 
 
+class _StrSub(str):
+    pass
+
+
+class _IntSub(int):
+    pass
+
+
+class _DictSub(dict):
+    pass
+
+
+def check_inert_values(impl, err):
+    # str / int / dict subclasses and bools are not the exact built-in types
+    for field, bad in (
+        ("op", _StrSub("report")),
+        ("job_id", _StrSub(JOB)),
+        ("worker", _StrSub("w-1")),
+        ("done", True),
+        ("done", _IntSub(1)),
+        ("total", True),
+        ("total", _IntSub(10)),
+        ("now", True),
+        ("now", _IntSub(0)),
+    ):
+        _rejects(impl, err, _req(**{field: bad}), "malformed_progress_request")
+    _rejects(impl, err, _DictSub(_req()), "malformed_progress_request")
+    _rejects(impl, err, _req(previous=_DictSub(_forge())), "malformed_progress_request")
+    for field, bad in (
+        ("op", _StrSub("report")),
+        ("job_id", _StrSub(JOB)),
+        ("worker", _StrSub("w-1")),
+        ("done", _IntSub(2)),
+        ("total", _IntSub(10)),
+        ("percent_bp", True),
+        ("percent_bp", _IntSub(2000)),
+        ("reported_at", _IntSub(50)),
+        ("previous_id", _StrSub("pg1:" + "0" * 64)),
+    ):
+        prev = _forge(**{field: bad})
+        _rejects(
+            impl, err, _req(done=3, total=10, now=60, previous=prev), "corrupt_previous_record"
+        )
+    prev = _forge(done=1, percent_bp=1000)
+    prev["done"] = True  # a bool is never an int field, even when equal to 1
+    _rejects(impl, err, _req(done=3, total=10, now=60, previous=prev), "corrupt_previous_record")
+
+
 def check_inert_keys(impl, err):
     _rejects(impl, err, _inert(_req()), "malformed_progress_request")
     _rejects(
@@ -395,12 +441,19 @@ def check_inert_keys(impl, err):
     )
 
 
-CHECKS = (check_fixture, check_semantics, check_order, check_totality, check_inert_keys)
+CHECKS = (
+    check_fixture,
+    check_semantics,
+    check_order,
+    check_totality,
+    check_inert_keys,
+    check_inert_values,
+)
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_bound_implementation_passes(check):
-    check(_guard(report, ProgressError), ProgressError)
+    check(_guard(report, ProgressError, crash=AssertionError), ProgressError)
 
 
 def test_fixture_covers_every_failure_class():
@@ -556,7 +609,7 @@ def test_mutant_is_red_on_its_target(name):
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_guard_with_oracle_is_identity_on_the_reference(check):
-    check(_guard(report, ProgressError, report), ProgressError)
+    check(_guard(report, ProgressError, report, crash=AssertionError), ProgressError)
 
 
 def test_raw_exception_is_a_totality_failure_not_a_mutant_kill():
