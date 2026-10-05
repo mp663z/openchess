@@ -1,0 +1,1891 @@
+{
+ "schema_version": 1,
+ "contract": "data/contracts/openapi.yaml",
+ "contract_schema_version": 1,
+ "source": "data/contracts/control-plane.yaml",
+ "notes": "Closed fixture for the OpenAPI derivation contract (data/contracts/openapi.yaml), executed against the T0419 test-only reference derive() as a separate binding; a later implement task must rebind these rows to its production derivation. Expectations are authored from the structured contract, never computed by the reference. Rows are mutation lists over the shipped control-plane source, whose canonical digest is pinned in source_manifest.",
+ "source_manifest": "d858e45e694cc74ba35a993a6d5bf628b030382632867e90ad1c5614ca5a96bb",
+ "happy": [
+  {
+   "name": "baseline-document-shape",
+   "why": "The shipped source derives the one 3.1.0 document with the pinned top level, info, server, route order and unmapped-code list.",
+   "mutations": [],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "openapi"
+      ],
+      "equals": "3.1.0"
+     },
+     {
+      "at": [
+       "paths"
+      ],
+      "keys": [
+       "/identity/register",
+       "/identity/login",
+       "/identity/refresh",
+       "/identity/logout",
+       "/identity/delete-account",
+       "/entitlements",
+       "/quota/reserve",
+       "/quota/commit",
+       "/quota/release",
+       "/billing/checkout",
+       "/billing/subscription",
+       "/provider-keys/register",
+       "/provider-keys/revoke",
+       "/provider-routing/route"
+      ]
+     },
+     {
+      "at": [
+       "info"
+      ],
+      "equals": {
+       "title": "replaceable-control-plane",
+       "version": "1"
+      }
+     },
+     {
+      "at": [
+       "servers"
+      ],
+      "equals": [
+       {
+        "url": "/cp/v1"
+       }
+      ]
+     },
+     {
+      "at": [
+       "x-unmapped-error-codes"
+      ],
+      "equals": [
+       "entitlement_missing",
+       "provider_unavailable",
+       "cost_cap_exceeded",
+       "rate_limited",
+       "internal"
+      ]
+     },
+     {
+      "at": [],
+      "keys": [
+       "openapi",
+       "info",
+       "servers",
+       "paths",
+       "components",
+       "x-unmapped-error-codes"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "baseline-public-and-bearer-security",
+   "why": "Public operations carry an empty security list; auth-required ones reference bearerAuth.",
+   "mutations": [],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "security"
+      ],
+      "equals": []
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/login",
+       "post",
+       "security"
+      ],
+      "equals": []
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/refresh",
+       "post",
+       "security"
+      ],
+      "equals": [
+       {
+        "bearerAuth": []
+       }
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/entitlements",
+       "get",
+       "security"
+      ],
+      "equals": [
+       {
+        "bearerAuth": []
+       }
+      ]
+     },
+     {
+      "at": [
+       "components",
+       "securitySchemes"
+      ],
+      "equals": {
+       "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "baseline-idempotency-only-on-mutating",
+   "why": "Every mutating operation references the idempotency header; read-only ones have none.",
+   "mutations": [],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/quota/reserve",
+       "post",
+       "parameters"
+      ],
+      "equals": [
+       {
+        "$ref": "#/components/parameters/IdempotencyKey"
+       }
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/entitlements",
+       "get",
+       "parameters"
+      ],
+      "equals": []
+     },
+     {
+      "at": [
+       "paths",
+       "/billing/subscription",
+       "get",
+       "parameters"
+      ],
+      "equals": []
+     },
+     {
+      "at": [
+       "components",
+       "parameters",
+       "IdempotencyKey"
+      ],
+      "equals": {
+       "name": "Idempotency-Key",
+       "in": "header",
+       "required": true,
+       "schema": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+       }
+      }
+     },
+     {
+      "at": [
+       "paths",
+       "/entitlements",
+       "get",
+       "requestBody"
+      ],
+      "absent": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "baseline-request-schema-rules",
+   "why": "Request properties keep source order; required lists required fields in source order; additionalProperties is true; examples are carried.",
+   "mutations": [],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "required"
+      ],
+      "equals": true
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties"
+      ],
+      "keys": [
+       "email",
+       "password_hash_client",
+       "display_name"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "required"
+      ],
+      "equals": [
+       "email",
+       "password_hash_client"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "additionalProperties"
+      ],
+      "equals": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "baseline-error-responses-grouped-by-status",
+   "why": "Contract-fixed statuses 401 and 409 hold their codes in op order; codes with no status stay unmapped, never invented.",
+   "mutations": [],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/refresh",
+       "post",
+       "responses"
+      ],
+      "keys": [
+       "200",
+       "401",
+       "409"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/refresh",
+       "post",
+       "responses",
+       "401",
+       "x-error-codes"
+      ],
+      "equals": [
+       "auth_expired",
+       "auth_invalid"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/refresh",
+       "post",
+       "responses",
+       "409",
+       "x-error-codes"
+      ],
+      "equals": [
+       "idempotency_conflict"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/refresh",
+       "post",
+       "x-unmapped-errors"
+      ],
+      "equals": [
+       "internal"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "x-unmapped-errors"
+      ],
+      "equals": [
+       "rate_limited",
+       "internal"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "new-optional-request-field",
+   "why": "A new optional request field is appended to the properties and left out of required.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "new_flag"
+      ],
+      "value": {
+       "type": "boolean",
+       "required": false
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties"
+      ],
+      "keys": [
+       "email",
+       "password_hash_client",
+       "display_name",
+       "new_flag"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "required"
+      ],
+      "equals": [
+       "email",
+       "password_hash_client"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "new-required-request-field",
+   "why": "A new required request field also lands in required, after the existing ones.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "new_flag"
+      ],
+      "value": {
+       "type": "boolean",
+       "required": true,
+       "example": true
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "required"
+      ],
+      "equals": [
+       "email",
+       "password_hash_client",
+       "new_flag"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "new_flag"
+      ],
+      "equals": {
+       "type": "boolean",
+       "examples": [
+        true
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "write-only-request-field",
+   "why": "A write-only request field carries writeOnly true in the request schema.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "secret"
+      ],
+      "value": {
+       "type": "string",
+       "required": false,
+       "write_only": true
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "secret"
+      ],
+      "equals": {
+       "type": "string",
+       "writeOnly": true
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "new-response-field-is-optional",
+   "why": "A new optional response field appears in the success schema and not in required.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "trace_label"
+      ],
+      "value": {
+       "type": "string",
+       "required": false
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "responses",
+       "200",
+       "content",
+       "application/json",
+       "schema",
+       "required"
+      ],
+      "equals": [
+       "account_id",
+       "token",
+       "token_expires_at"
+      ]
+     },
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "responses",
+       "200",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "trace_label"
+      ],
+      "equals": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "base-path-major-two",
+   "why": "A major-2 base path becomes the one server URL and the decimal info version.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "servers"
+      ],
+      "equals": [
+       {
+        "url": "/cp/v2"
+       }
+      ]
+     },
+     {
+      "at": [
+       "info",
+       "version"
+      ],
+      "equals": "2"
+     }
+    ]
+   }
+  }
+ ],
+ "boundary": [
+  {
+   "name": "base-path-major-ceiling",
+   "why": "Major 999 is the largest three-digit major and is accepted.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v999"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "info",
+       "version"
+      ],
+      "equals": "999"
+     },
+     {
+      "at": [
+       "servers"
+      ],
+      "equals": [
+       {
+        "url": "/cp/v999"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "base-path-major-over-ceiling",
+   "why": "Major 1000 has four digits, outside the base path grammar.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v1000"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "base-path-major-zero",
+   "why": "Major 0 is outside [1-9][0-9]{0,2}.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v0"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "base-path-leading-zero-major",
+   "why": "A leading zero is outside the major grammar.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v01"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "example-integer-at-magnitude",
+   "why": "An integer example of exactly 2^53-1 is the largest interoperable example.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "request",
+       "fields",
+       "estimated_units",
+       "example"
+      ],
+      "value": 9007199254740991
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/quota/reserve",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "estimated_units",
+       "examples"
+      ],
+      "equals": [
+       9007199254740991
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "example-integer-over-magnitude",
+   "why": "An integer example of 2^53 is outside the interoperable range.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "request",
+       "fields",
+       "estimated_units",
+       "example"
+      ],
+      "value": 9007199254740992
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "example-integer-negative-over-magnitude",
+   "why": "The magnitude bound is symmetric: -(2^53) is refused.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "request",
+       "fields",
+       "estimated_units",
+       "example"
+      ],
+      "value": -9007199254740992
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "field-name-at-64-characters",
+   "why": "A 64-character field name is the grammar ceiling.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "value": {
+       "type": "string",
+       "required": false
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/identity/register",
+       "post",
+       "requestBody",
+       "content",
+       "application/json",
+       "schema",
+       "properties",
+       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "equals": {
+       "type": "string"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "field-name-over-64-characters",
+   "why": "A 65-character field name is outside the grammar.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "value": {
+       "type": "string",
+       "required": false
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "area-name-at-32-characters",
+   "why": "A 32-character area name is the grammar ceiling.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "value": {
+       "ops": {
+        "ping": {
+         "method": "GET",
+         "path": "/ping",
+         "auth": "required",
+         "mutating": false,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "internal"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ping"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/ping",
+       "get",
+       "operationId"
+      ],
+      "equals": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ping"
+     },
+     {
+      "at": [
+       "paths",
+       "/ping",
+       "get",
+       "parameters"
+      ],
+      "equals": []
+     }
+    ]
+   }
+  },
+  {
+   "name": "area-name-over-32-characters",
+   "why": "A 33-character area name is outside the grammar.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "value": {
+       "ops": {
+        "ping": {
+         "method": "GET",
+         "path": "/ping",
+         "auth": "required",
+         "mutating": false,
+         "request": {
+          "fields": {}
+         },
+         "response": {
+          "fields": {}
+         },
+         "errors": [
+          "internal"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ping"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "route-with-eight-segments",
+   "why": "A route of eight segments is the path grammar ceiling.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "path"
+      ],
+      "value": "/a/b/c/d/e/f/g/h"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/a/b/c/d/e/f/g/h",
+       "post",
+       "operationId"
+      ],
+      "equals": "identity.login"
+     }
+    ]
+   }
+  },
+  {
+   "name": "route-with-nine-segments",
+   "why": "A route of nine segments is outside the grammar.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "path"
+      ],
+      "value": "/a/b/c/d/e/f/g/h/i"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "route-segment-at-32-characters",
+   "why": "A 32-character route segment is the ceiling.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "path"
+      ],
+      "value": "/ssssssssssssssssssssssssssssssss"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "paths",
+       "/ssssssssssssssssssssssssssssssss",
+       "post",
+       "operationId"
+      ],
+      "equals": "identity.login"
+     }
+    ]
+   }
+  },
+  {
+   "name": "route-segment-over-32-characters",
+   "why": "A 33-character route segment is outside the grammar.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "path"
+      ],
+      "value": "/sssssssssssssssssssssssssssssssss"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  }
+ ],
+ "malformed": [
+  {
+   "name": "schema-version-one",
+   "why": "Only schema_version 2 is read.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "schema_version"
+      ],
+      "value": 1
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "schema-version-boolean-true",
+   "why": "A boolean is never the integer schema version.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "schema_version"
+      ],
+      "value": true
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "missing-areas",
+   "why": "The top level is exactly schema_version, contract, areas.",
+   "mutations": [
+    {
+     "del": {
+      "path": [
+       "areas"
+      ]
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "extra-top-level-key",
+   "why": "An extra top-level key breaks the exact key set.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "extra"
+      ],
+      "value": 1
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "base-path-uppercase",
+   "why": "The base path grammar is lowercase.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/CP/v1"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "base-path-trailing-newline",
+   "why": "A trailing newline is outside the anchored grammar.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v1\n"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "base-path-not-a-string",
+   "why": "The base path must be a string.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": 1
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "get-op-with-request-fields",
+   "why": "A GET operation must declare no request fields.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "entitlements",
+       "ops",
+       "get",
+       "request",
+       "fields"
+      ],
+      "value": {
+       "q": {
+        "type": "string",
+        "required": false
+       }
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "unknown-method",
+   "why": "Only GET and POST are declared methods.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "method"
+      ],
+      "value": "DELETE"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "unknown-auth-value",
+   "why": "auth is public or required.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "auth"
+      ],
+      "value": "optional"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "public-op-missing-from-public-list",
+   "why": "An op is public exactly when its auth is public and it is listed.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "transport",
+       "auth",
+       "public_operations"
+      ],
+      "value": [
+       "identity.register"
+      ]
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "required-op-listed-public",
+   "why": "An auth-required op listed as public breaks the public rule.",
+   "mutations": [
+    {
+     "append": {
+      "path": [
+       "contract",
+       "transport",
+       "auth",
+       "public_operations"
+      ],
+      "value": "identity.refresh"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "read-only-flag-without-list-entry",
+   "why": "mutating false and the read-only list must agree both ways.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "transport",
+       "read_only_operations"
+      ],
+      "value": [
+       "entitlements.get",
+       "billing.get_subscription"
+      ]
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "error-code-outside-closed-enum",
+   "why": "An op error code outside the closed enum is malformed.",
+   "mutations": [
+    {
+     "append": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "errors"
+      ],
+      "value": "teapot"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "duplicate-error-code-in-op",
+   "why": "An op lists distinct error codes.",
+   "mutations": [
+    {
+     "append": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "errors"
+      ],
+      "value": "internal"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "example-bool-for-integer",
+   "why": "A boolean is never an integer example.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "request",
+       "fields",
+       "estimated_units",
+       "example"
+      ],
+      "value": true
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "example-string-for-integer",
+   "why": "An example must have the declared type.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "quota",
+       "ops",
+       "reserve",
+       "request",
+       "fields",
+       "estimated_units",
+       "example"
+      ],
+      "value": "10"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "example-lone-surrogate",
+   "why": "A string example must be UTF-8 encodable, with no lone surrogate.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "email",
+       "example"
+      ],
+      "value": "\ud800"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "unknown-field-key",
+   "why": "A field descriptor carries only the declared keys.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "email",
+       "format"
+      ],
+      "value": "email"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "unknown-field-type",
+   "why": "Field types are a closed set.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "email",
+       "type"
+      ],
+      "value": "uuid"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "array-without-items",
+   "why": "Only arrays carry items and an array must declare them.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "tags"
+      ],
+      "value": {
+       "type": "array",
+       "required": false
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "items-on-a-string-field",
+   "why": "Only arrays have items.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "email",
+       "items"
+      ],
+      "value": "string"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "object-field-with-example",
+   "why": "An object field has fields and no example.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "prefs"
+      ],
+      "value": {
+       "type": "object",
+       "required": false,
+       "fields": {},
+       "example": {}
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "write-only-in-a-response",
+   "why": "A write-only field may appear only in request schemas.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "response",
+       "fields",
+       "secret"
+      ],
+      "value": {
+       "type": "string",
+       "required": false,
+       "write_only": true
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "chess-token-field-name",
+   "why": "No derived property name contains a chess content token.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "fen"
+      ],
+      "value": {
+       "type": "string",
+       "required": false
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "chess-token-nested-field-name",
+   "why": "The chess token rule holds at every depth.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "register",
+       "request",
+       "fields",
+       "prefs"
+      ],
+      "value": {
+       "type": "object",
+       "required": false,
+       "fields": {
+        "best_move": {
+         "type": "string",
+         "required": false
+        }
+       }
+      }
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "duplicate-route",
+   "why": "Two operations may not share a method and path.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "path"
+      ],
+      "value": "/identity/register"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "op-with-unknown-key",
+   "why": "An operation carries exactly the declared keys.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "identity",
+       "ops",
+       "login",
+       "deprecated"
+      ],
+      "value": true
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  },
+  {
+   "name": "hostile-source-is-a-list",
+   "why": "The source must be a mapping.",
+   "mutations": [
+    {
+     "replace_root": {
+      "value": []
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   }
+  }
+ ],
+ "rollback": [
+  {
+   "name": "refusal-then-baseline-is-identical",
+   "why": "A refused derivation leaves no state: deriving the shipped source afterwards gives the pinned golden bytes.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v0"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   },
+   "then_baseline": true
+  },
+  {
+   "name": "accept-then-refusal-then-accept",
+   "why": "An accepted derivation, a refusal and another accepted derivation do not disturb one another.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "contract",
+       "versioning",
+       "base_path"
+      ],
+      "value": "/cp/v2"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "document",
+    "checks": [
+     {
+      "at": [
+       "info",
+       "version"
+      ],
+      "equals": "2"
+     }
+    ]
+   },
+   "then_baseline": true
+  },
+  {
+   "name": "late-failure-returns-no-partial-document",
+   "why": "The last operation is malformed: the whole derivation is refused, never a partial document.",
+   "mutations": [
+    {
+     "set": {
+      "path": [
+       "areas",
+       "provider_routing",
+       "ops",
+       "route",
+       "auth"
+      ],
+      "value": "optional"
+     }
+    }
+   ],
+   "expect": {
+    "kind": "refusal"
+   },
+   "then_baseline": true
+  }
+ ],
+ "section_manifests": {
+  "happy": {
+   "baseline-document-shape": "2223194bfbbd44f659daea7a13d905f30ae2441801be4ef1c6a947918617a8bf",
+   "baseline-public-and-bearer-security": "9e3c6e0d50e95a9751d53bf45ba05b8da40bb76ff7ba292cf8afc2202531b562",
+   "baseline-idempotency-only-on-mutating": "dcecb31ecd624a3e8d0f9ccaafec974076b0db088a15c66953c816f41566283b",
+   "baseline-request-schema-rules": "60b86e55a44cb31fb09a734c02efa2b314ceba129cb929943204966e7f7fb859",
+   "baseline-error-responses-grouped-by-status": "c0cf5ab96e51a930947d12affe5c1be67c80f3058c3dade800e3981716c92c03",
+   "new-optional-request-field": "4230383f056608f8fc524d0b5b0fdb6e718f7c13c5e3d0f81e596e549ca39368",
+   "new-required-request-field": "83d8bc0f3b6f0df1bcc4a585c2964cb0b4e019e566c6d0c8cb9f4fa0cc83b409",
+   "write-only-request-field": "72f7fc7bba5ff7f33ed47cab2b7fff019c1f0ca72061a70a496e8934c22f9399",
+   "new-response-field-is-optional": "9ab7694836d6f0941871bcaeda7c8a9e52dcb4335f93e96c31a0c17257ceb6c3",
+   "base-path-major-two": "b0a7932d815cf94bb695e67da33d5cf0362bd6891fd22e16a7d894f36db0e55c"
+  },
+  "boundary": {
+   "base-path-major-ceiling": "405963c8b76b5d492d68a8f0bfe4ec96d1f669911cb35076ff49b6e67dcb6db1",
+   "base-path-major-over-ceiling": "d8dc50e1db0766b55d4ed8817f9f8ef9aafff96dc8752b4d59db68ba8c464e83",
+   "base-path-major-zero": "89090f7e5d3c7ac21604b6f3df144410665d3a865185f3fe4b59eeff7a1cbf35",
+   "base-path-leading-zero-major": "ea8c53df8013a8582e819dd2a80a359c0b8f3f8e1b1acc93deacdb93f6ff7f21",
+   "example-integer-at-magnitude": "fae16e947446bf846c2e3a8b0fbbd93cc52789551c40c516d56221aff3d43a1a",
+   "example-integer-over-magnitude": "ce73bcda83af7309b69d741ecc3ff648483dfaceae7a33d702a1decfc21883c5",
+   "example-integer-negative-over-magnitude": "c03664c268886527cab7e3f0f70537ed0e2578c27ec49503b4dcdef106f5e98a",
+   "field-name-at-64-characters": "d0d2707955648c47a5dd42321933894f316196010acbebdca162dce1a6a18981",
+   "field-name-over-64-characters": "894f0870fedd4399e6d6abfbcb1963f85ad9720435a0fed3d1d3ac83b39d51d0",
+   "area-name-at-32-characters": "fca3b5031598844ab63d76bf23c9f05ba1b62e67d6dda2b10d654b8212b3c0b4",
+   "area-name-over-32-characters": "695f284ebe58ca58c5e6f6169a21c613b0d70e6188c0071b2714b4e0991d3dd6",
+   "route-with-eight-segments": "a3d802cf11446758661c89c427d3a4fa2630dee4c6fd995c40fb3a0b9ef6c465",
+   "route-with-nine-segments": "91963d8367f6fb7fb412b1fad48466deabcf313cc5af40feaa70f2a251f507eb",
+   "route-segment-at-32-characters": "678db2d79e45e44aaa9784aa70a5b3e9393ca31b7d2b1ed4d408105fb07d4751",
+   "route-segment-over-32-characters": "03dee8752aa15e948361badaec577712f7225b457ace2d154279d41c3f821a86"
+  },
+  "malformed": {
+   "schema-version-one": "172c769afb94e41edff96ec872dd882c24e0e817aa24e8cf227cb0dbd374de53",
+   "schema-version-boolean-true": "3decbfbdf801fa8f25c70df8a032fb8e6fe0046c34e6ed42413ea140acc1cadb",
+   "missing-areas": "b05b7aa0e50f8ee450fa1fa47385e56213a4aee9d0838f8ef8b303ec677330f8",
+   "extra-top-level-key": "fe996a945493934edbdb220a7c23aaabb2b958f6680df0ac3e047a2ea389c809",
+   "base-path-uppercase": "6e788d427687e85921dfd0884d8117eff4a93bcc6b763f7b4e025c2ea66eeaeb",
+   "base-path-trailing-newline": "79fc76833912d14f01886119274323ea28b2762f5c3491a75def6feb8dc6d141",
+   "base-path-not-a-string": "75c46b8875a26cb8b4272868b7ba3e02407f6064d03723398fd0687840c44d39",
+   "get-op-with-request-fields": "558581e9c9ad6198058179557b0146b0537ccc8030f45ae475cb4e6556914f01",
+   "unknown-method": "9a7462b386b37426d7e462580b6cef868b02c7be9e6f3aa0d8a57786a86a8465",
+   "unknown-auth-value": "d7bc96e714372db1984e5c646cc4305e154a460b15cccc77cbf74651c8fe297e",
+   "public-op-missing-from-public-list": "44be4527d1ae26222f76c5a59329fa33c302432fe0a049910ba71cc434bd3b53",
+   "required-op-listed-public": "117d9c6c11f724de377ac31d70d32d10f45bce01c8d8a407313bb965f2daf79c",
+   "read-only-flag-without-list-entry": "c1cc92f199161af1b2720bd6a862cb9b99073d1f5ddea7271925722a119a932e",
+   "error-code-outside-closed-enum": "c348987d941f3c050ac40cb8fe59f299f6f58da1fe80d86a7e3c391fbc1296b1",
+   "duplicate-error-code-in-op": "0a8f5ddb5ac2213309757e8af5c1502b20340af8413ecce803e043fc2bcc6e56",
+   "example-bool-for-integer": "252a29ec72a640337b493e0ecbc2efcd5faaf69abb72a21adcc30e767a976d8a",
+   "example-string-for-integer": "465393e5cd22af331931e69bb7ae731399b4ba5599ad4d57ef9050f765610f15",
+   "example-lone-surrogate": "d20b7899d17986b4d2cdc11ccbd2489caa3323a30f7f223bed7667c1bf174beb",
+   "unknown-field-key": "81c6e4da14c9aaffc496148394c1b4b293dc864313dfd3ab5a895b920895550c",
+   "unknown-field-type": "e9ddc50b464b8c7ec2830f98d21af4bec576656281ef59cd9b82eb03341d4548",
+   "array-without-items": "ba5518fcac0de9925acf19a7a49cb3ba5a09861e2205f0bde0114e3fd4ae15b7",
+   "items-on-a-string-field": "5e7706bf601d934ce4f2ff3389678042f23d271952d038930652c2791a4d4200",
+   "object-field-with-example": "dd6098a52c11c2cbf62bf6af5fec1a4798c77a4eacb9e89bf7a55eb8acd33bfa",
+   "write-only-in-a-response": "86b014f2329078f7d6ef4596bdb646b5a19fd3c7b8aee50b72cd0553eb9c2b3c",
+   "chess-token-field-name": "3ee0d786dfe7791bd19aa94fe7910db31a89263979c21adf951dede0f8aa3a1f",
+   "chess-token-nested-field-name": "e064cbb237b566508daab3277a6df27ec7014d088914da3f13eae1d4d4326d6e",
+   "duplicate-route": "fcb4959972960dad93dcca811dc7045a4465471cd0221479821737b5d9dcd69e",
+   "op-with-unknown-key": "0ac418c476f8a3d21231767cccc135a2c11df5c64fc58c8a3cf876e828572f35",
+   "hostile-source-is-a-list": "df29696602687afdf86e166accdc1c558ab1f9cf9f1ccc075eb36418e1ae6032"
+  },
+  "rollback": {
+   "refusal-then-baseline-is-identical": "a0e53ac41cdf668a79ef7da9bda8ae66233f59a4bd097995c563d5432428b5b4",
+   "accept-then-refusal-then-accept": "1cf2955aacb904bfc77dcf544c2647e90d3c6f32495db7761a8f63caa699bfb3",
+   "late-failure-returns-no-partial-document": "461c393f508146ac9e58c60e39426b42b1e545b0200639c902b552562087ed70"
+  }
+ }
+}
