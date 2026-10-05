@@ -336,7 +336,7 @@ class RawEscape(AssertionError):
     """A non-contract exception escaped the implementation (a crash, not a decision)."""
 
 
-def _guard(impl, err, oracle=None):
+def _guard(impl, err, oracle=None, crash=None):
     """Any exception that is not the typed contract error is a crash and becomes
     RawEscape (an AssertionError raised inside the implementation included),
     except Touched, which is the semantic detection of a caller object being
@@ -354,11 +354,9 @@ def _guard(impl, err, oracle=None):
         except Touched:
             raise
         except Exception as exc:  # noqa: BLE001
-            crash = type(exc).__name__
-        else:  # pragma: no cover
-            crash = None
+            crashed = type(exc).__name__
         if refusal is None:
-            raise RawEscape(f"raw {crash} escaped") from None
+            raise (crash or RawEscape)(f"raw {crashed} escaped") from None
         if oracle is not None:
             try:
                 oracle(*copy.deepcopy(args))
@@ -383,17 +381,65 @@ def _inert(mapping):
     return {_InertKey(k): v for k, v in mapping.items()}
 
 
+class _StrSub(str):
+    pass
+
+
+class _IntSub(int):
+    pass
+
+
+class _DictSub(dict):
+    pass
+
+
+def check_inert_values(impl, err):
+    # str / int / dict subclasses and bools are not the exact built-in types
+    for field, bad in (
+        ("op", _StrSub("bury")),
+        ("reason", _StrSub("exhausted")),
+        ("now", True),
+        ("now", _IntSub(100)),
+    ):
+        _rejects(impl, err, _req(**{field: bad}), "malformed_bury_request")
+    _rejects(impl, err, _DictSub(_req()), "malformed_bury_request")
+    _rejects(impl, err, _req(job=_DictSub(_job())), "malformed_bury_request")
+    for field, bad in (
+        ("job_id", _StrSub(JOB)),
+        ("seq", True),
+        ("seq", _IntSub(3)),
+        ("priority", _IntSub(4)),
+        ("status", _StrSub("dead")),
+        ("attempts", _IntSub(5)),
+        ("lease_owner", _StrSub("w1")),
+        ("payload", _DictSub({"k": 1})),
+        ("payload", [_StrSub("x")]),
+        ("payload", [_IntSub(1)]),
+    ):
+        _rejects(impl, err, _req(job=_job(**{field: bad})), "corrupt_job")
+    # container kinds are exact: a dict subclass or a tuple inside a payload is not JSON
+    for bad in ({"k": _DictSub()}, [(1,)], {"k": [{"x": (1,)}]}, [["\ud800"]], {"k": ["\ud800"]}):
+        _rejects(impl, err, _req(job=_job(payload=bad)), "corrupt_job")
+
+
 def check_inert_keys(impl, err):
     _rejects(impl, err, _inert(_req()), "malformed_bury_request")
     _rejects(impl, err, _req(job=_inert(_job())), "corrupt_job")
 
 
-CHECKS = (check_fixture, check_semantics, check_order, check_totality, check_inert_keys)
+CHECKS = (
+    check_fixture,
+    check_semantics,
+    check_order,
+    check_totality,
+    check_inert_keys,
+    check_inert_values,
+)
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_bound_implementation_passes(check):
-    check(_guard(bury, DeadLetterError), DeadLetterError)
+    check(_guard(bury, DeadLetterError, crash=AssertionError), DeadLetterError)
 
 
 def test_fixture_covers_every_failure_class_and_reason():
@@ -557,7 +603,7 @@ def test_mutant_is_red_on_its_target(name):
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_guard_with_oracle_is_identity_on_the_reference(check):
-    check(_guard(bury, DeadLetterError, bury), DeadLetterError)
+    check(_guard(bury, DeadLetterError, bury, crash=AssertionError), DeadLetterError)
 
 
 def test_raw_exception_is_a_totality_failure_not_a_mutant_kill():
