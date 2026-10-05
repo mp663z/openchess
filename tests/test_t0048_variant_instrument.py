@@ -306,6 +306,30 @@ MUTANTS = {
         '[_opaque("trace-append-failed")]',
         "[]",
     ),
+    "reject-unchanged-constant": (
+        '"retryable": _attribute(error, "retryable"),\n                    "arguments_unchanged": [_snapshot(a) for a in args] == before,',  # noqa: E501
+        '"retryable": _attribute(error, "retryable"),\n                    "arguments_unchanged": True,',  # noqa: E501
+    ),
+    "reject-unchanged-negated": (
+        '"retryable": _attribute(error, "retryable"),\n                    "arguments_unchanged": [_snapshot(a) for a in args] == before,',  # noqa: E501
+        '"retryable": _attribute(error, "retryable"),\n                    "arguments_unchanged": [_snapshot(a) for a in args] != before,',  # noqa: E501
+    ),
+    "drop-accept-result": (
+        '"result": _summary(operation, result),',
+        "",
+    ),
+    "return-none": (
+        "        return result\n\n    def",
+        "        return None\n\n    def",
+    ),
+    "drop-failure-class": (
+        '"failure_class": _attribute(error, "failure_class"),',
+        "",
+    ),
+    "append-no-snapshot": (
+        "list.append(trace, _snapshot(record))",
+        "list.append(trace, record)",
+    ),
 }
 
 
@@ -349,7 +373,7 @@ class _MutatingCrash:
         return method
 
 
-def _first_deviation(module):
+def _first_deviation_raw(module):
     """The name of the first semantic check the module fails, or None.
 
     Only assertion-style deviations count: an unexpected exception from the
@@ -417,7 +441,129 @@ def _first_deviation(module):
         return "crash-swallowed"
     if mutating.records[-1].get("arguments_unchanged") is not False:
         return "crash-arguments-unchanged"
+    return _extra_deviation(module)
+
+
+def _error_class(module):
+    found = [
+        v
+        for v in vars(module).values()
+        if isinstance(v, type) and issubclass(v, Exception) and v.__name__.endswith("Error")
+    ]
+    assert found, "no typed error class in the instrument module"
+    return found[0]
+
+
+def _typed_error(cls):
+    names = [("malformed", "malformed_request"), ("malformed",), ("malformed_request", "m")]
+    scope = getattr(cls.__init__, "__globals__", {})
+    for key in ("FAILURE_MAPPING", "_FAILURE_CLASSES", "FAILURE_CLASSES", "_CODE_FOR_CLASS"):
+        for name in sorted(scope.get(key, ())):
+            names.append((name,))
+            names.append((scope[key][name] if isinstance(scope[key], dict) else name, "m"))
+    for args in names:
+        try:
+            return cls(*args)
+        except Exception:
+            continue
+    raise AssertionError("cannot build a typed error")
+
+
+def _tracer_class(module):
+    found = [
+        v
+        for v in vars(module).values()
+        if isinstance(v, type) and v.__name__.endswith("Tracer") and hasattr(v, "_call")
+    ]
+    assert found, "no tracer class"
+    return found[0]
+
+
+class _Ret:
+    """An engine whose every operation returns one fixed dict."""
+
+    def __init__(self, out):
+        self.out = out
+
+    def __getattr__(self, name):
+        def method(*args):
+            return self.out
+
+        return method
+
+
+class _Rejecting:
+    """An engine whose operations optionally mutate their first argument, then raise `err`."""
+
+    def __init__(self, err, mutate):
+        self.err, self.mutate = err, mutate
+
+    def __getattr__(self, name):
+        def method(*args):
+            if self.mutate:
+                args[0].append("junk")
+            raise self.err
+
+        return method
+
+
+def _extra_deviation(module):
+    tracer_cls, err_cls = _tracer_class(module), _error_class(module)
+    out = {"field": 1}
+    ret = tracer_cls(_Ret(out))
+    if ret._call("probe", ([0],)) is not out:
+        return "result-identity"
+    record = ret.records[0]
+    if "result" not in record or record["result"] != module._summary("probe", out):
+        return "accept-summary"
+    err = _typed_error(err_cls)
+    for mutate, label in ((True, "reject-arguments-unchanged"), (False, "reject-unchanged-clean")):
+        rej = tracer_cls(_Rejecting(err, mutate))
+        try:
+            rej._call("probe", ([0],))
+        except err_cls as caught:
+            if caught is not err:
+                return "reject-reraise-identity"
+        else:
+            return "reject-swallowed"
+        rec = rej.records[0]
+        if rec.get("outcome") != "reject":
+            return "reject-record-fields"
+        want = module._attribute(err, "failure_class")
+        if "failure_class" not in rec or rec["failure_class"] != want:
+            return "reject-record-fields"
+        want = module._attribute(err, "code")
+        if "code" not in rec or rec["code"] != want:
+            return "reject-record-fields"
+        if rec.get("arguments_unchanged") is not (not mutate):
+            return label
+    probe = tracer_cls(_Ret(out))
+    raw = {"a": [1]}
+    probe._append_total(raw)
+    raw["a"].append(2)
+    if object.__getattribute__(probe, "_trace")[-1] != {"a": [1]}:
+        return "append-aliasing"
     return None
+
+
+def test_a_valid_call_the_instrument_refuses_is_an_assertion_failure():
+    """Acceptance oracle: a valid call the instrument turns into a typed refusal is a
+    semantic failure (AssertionError), never a raw typed error."""
+    module = _from_source(SOURCE)
+    err_cls = _error_class(module)
+    try:
+        assert _first_deviation(module) is None
+    except err_cls as error:
+        raise AssertionError("the instrument refused a valid call") from error
+
+
+def _first_deviation(module):
+    """Tag of the first failed semantic check, or None; a typed refusal of a valid call is the
+    named deviation "valid-refused", any other exception propagates (an error, not a kill)."""
+    try:
+        return _first_deviation_raw(module)
+    except _error_class(module):
+        return "valid-refused"
 
 
 def _is_red(module):
@@ -449,6 +595,12 @@ def test_mutant_is_red(label):
 
 # the check that must catch each of these, so a kill is never an accident
 EXPECTED_KILL = {
+    "reject-unchanged-constant": "reject-arguments-unchanged",
+    "reject-unchanged-negated": "reject-arguments-unchanged",
+    "drop-accept-result": "accept-summary",
+    "return-none": "result-identity",
+    "drop-failure-class": "reject-record-fields",
+    "append-no-snapshot": "append-aliasing",
     "drop-crash-reraise": "crash-swallowed",
     "copy-args": "args-identity",
     "truncate-arguments": "arguments-full",
