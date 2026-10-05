@@ -304,16 +304,24 @@ class RawEscape(AssertionError):
     """A non-contract exception escaped the implementation (a crash, not a decision)."""
 
 
-def _guard(impl, err):
-    """Typed contract errors and assertion failures pass through; any other
-    exception (an AssertionError raised inside the implementation included)
-    is a crash and becomes RawEscape: a totality failure that is
-    never counted as a semantic mutant kill."""
+def _guard(impl, err, oracle=None):
+    """Any exception that is not the typed contract error (an AssertionError
+    raised inside the implementation included) is a crash and becomes RawEscape.
+    With an oracle (the reference), a typed refusal of an input the reference
+    accepts is an acceptance failure and surfaces as a plain AssertionError."""
 
     def guarded(*args):
         try:
             return impl(*args)
-        except err:
+        except err as refusal:
+            if oracle is not None:
+                try:
+                    oracle(*copy.deepcopy(args))
+                except Exception:  # noqa: BLE001 - reference refuses too: legitimate refusal
+                    raise refusal from None
+                raise AssertionError(
+                    f"refused an input the reference accepts: {refusal.failure_class}"
+                ) from None
             raise
         except Exception as exc:  # noqa: BLE001
             raise RawEscape(f"raw {type(exc).__name__} escaped") from None
@@ -448,8 +456,6 @@ def _m_refuses_everything(request, real):
     raise ProgressError("malformed_progress_request")
 
 
-RAW_MUTANTS = {"raw_exception"}
-REFUSAL_MUTANTS = {
     "refuses_valid",
     "refuses_everything",
     "strict_clock",
@@ -467,7 +473,6 @@ MUTANTS = {
     "worker_ignored": (_m_worker_ignored, "check_semantics"),
     "chain_dropped": (_m_chain_dropped, "check_semantics"),
     "conflict_before_corrupt": (_m_conflict_before_corrupt, "check_order"),
-    "raw_exception": (_m_raw_exception, "check_totality"),
     "bool_done": (_m_bool_done, "check_totality"),
 }
 
@@ -477,14 +482,19 @@ def test_mutant_is_red_on_its_target(name):
     mutate, target = MUTANTS[name]
     check = next(c for c in CHECKS if c.__name__ == target)
     try:
-        check(_guard(_wrap(mutate), ProgressError), ProgressError)
+        check(_guard(_wrap(mutate), ProgressError, report), ProgressError)
     except RawEscape:
-        # only the mutant that raises a raw exception on purpose may die this way
-        assert name in RAW_MUTANTS, f"mutant {name} crashed instead of being refuted"
+        raise AssertionError(f"mutant {name} crashed, not refuted") from None
     except ProgressError:
-        # a typed refusal of valid input is a kill only for the acceptance-oracle mutants
-        assert name in REFUSAL_MUTANTS, f"mutant {name} died of a typed error, not an assertion"
+        raise AssertionError(f"mutant {name} died of a typed error, not an assertion") from None
     except (AssertionError, pytest.fail.Exception):
-        assert name not in RAW_MUTANTS, f"mutant {name} was not refuted by the raw-exception probe"
+        pass
     else:
         raise AssertionError(f"mutant {name} survived {target}")
+
+
+def test_raw_exception_is_a_totality_failure_not_a_mutant_kill():
+    """A crash is detected by the totality check as RawEscape; it is not
+    counted among the semantic mutant kills above."""
+    with pytest.raises(RawEscape):
+        check_totality(_guard(_wrap(_m_raw_exception), ProgressError), ProgressError)
