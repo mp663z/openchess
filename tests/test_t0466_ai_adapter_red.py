@@ -41,6 +41,10 @@ def _expect(adapter, error, request, state, code, effects_expected):
     assert (request, state) == before
 
 
+class Crash(Exception):
+    """A foreign exception: never a semantic kill, never an AssertionError."""
+
+
 def _guarded(adapter, error):
     """An exception outside the closed refusal type is a failed battery."""
 
@@ -50,7 +54,7 @@ def _guarded(adapter, error):
         except error:
             raise
         except Exception as exc:  # noqa: BLE001
-            raise AssertionError(f"crash {type(exc).__name__}") from exc
+            raise Crash(f"crash {type(exc).__name__}") from exc
 
     return run
 
@@ -151,8 +155,7 @@ MUTANTS = [
     ("reference", 'if state.get("accepted_terms") != "current":', "if False:"),
     ("reference", "if bounded < 0 or bounded > cap:", "if bounded < 0 or bounded >= cap:"),
     ("reference", "if bounded < 0 or bounded > cap:", "if bounded > cap:"),
-    ("reference", "if cap is None or type(bounded) not in",
-     "if type(bounded) not in"),
+    ("reference", " or not math.isfinite(bounded):", ":"),
     ("reference", 'if state.get("cancelled", False):', "if False:"),
     ("reference", 'effects.append("hosted" if mode == "hosted_byom" else "local")\n',
      'effects.append("hosted" if mode == "hosted_byom" else "local")\n    state["touched"] = 1\n'),
