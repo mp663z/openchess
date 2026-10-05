@@ -70,9 +70,9 @@ def head_sha(root: Path = ROOT) -> str:
 # 13ed690 after the contract-parse cache (#211), when this was 900s.
 # At bb3c047 (after the batch A fuzz/fault batteries) the same step took
 # 16m56s and 17m04s on the GitHub runner, and the canary gate timed out
-# at 900s. Aligned with test_gate's own PYTEST_TIMEOUT_S (1800s): a hang
+# at 900s. Aligned with test_gate's own PYTEST_TIMEOUT_S (3600s): a hang
 # still fails, and the canary no longer reds before CI's own bound would.
-GATE_TIMEOUT_S = 1800
+GATE_TIMEOUT_S = 3600
 
 
 def check(root: Path = ROOT, gates: list[list[str]] | None = None,

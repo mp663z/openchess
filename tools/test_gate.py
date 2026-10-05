@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT))  # sibling-tool import when run as a script
 
 from tools import flake_quarantine  # noqa: E402
 
-PYTEST_TIMEOUT_S = 1800  # a hung test run is a failed gate
+PYTEST_TIMEOUT_S = 3600  # a hung test run is a failed gate (suite outgrew 1800s)
 # --max-worker-restart 0: a crashed worker fails the run at once instead of
 # hanging it when -n auto resolves to a single worker
 XDIST_ARGS = ("-n", "auto", "--dist", "loadfile", "--max-worker-restart", "0")
