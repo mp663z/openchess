@@ -493,6 +493,14 @@ def _black_ep_state():
     return _raw("e3", "b", ("g1", "wk"), ("g8", "bk"), ("e4", "wp"), ("d4", "bp"))
 
 
+def _quiet_state(square="e1", token="wk"):
+    return {
+        "ep_target": "-",
+        "occupied": {square: token, "e8": "bk"},
+        "side_to_move": "w",
+    }
+
+
 def _tt(halfmove, fullmove):
     return ("ok", {"halfmove_clock": halfmove, "fullmove_number": fullmove})
 
@@ -717,6 +725,16 @@ ROWS = {
     ),
     "turn-move-type-str-subclass": (TT, (_StrSub("ep-capture"), "b"), MALFORMED),
     "turn-side-str-subclass": (TT, ("ep-capture", _StrSub("b")), MALFORMED),
+    "occupied-square-str-subclass": (
+        AP,
+        (_quiet_state(_StrSub("e1")), {"type": "quiet", "from": "e1", "to": "e2"}),
+        MALFORMED,
+    ),
+    "occupied-token-str-subclass": (
+        AP,
+        (_quiet_state("e1", _StrSub("wk")), {"type": "quiet", "from": "e1", "to": "e2"}),
+        MALFORMED,
+    ),
 }
 
 
@@ -902,6 +920,14 @@ MUTANTS = {
     "turn-side-type-check-dropped": (
         (("type(side) is not str\n        or ", ""),),
         ("turn-side-str-subclass",),
+    ),
+    "occupied-square-type-check-dropped": (
+        (("type(square) is not str\n            or ", ""),),
+        ("occupied-square-str-subclass",),
+    ),
+    "occupied-token-type-check-dropped": (
+        (("type(token) is not str\n            or ", ""),),
+        ("occupied-token-str-subclass",),
     ),
 }
 
