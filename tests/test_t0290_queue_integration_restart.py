@@ -328,3 +328,104 @@ def test_queue_size_bound_is_inclusive_and_state_survives_the_file_round_trip(tm
     with pytest.raises(QueueError) as info:
         QueueEngine().apply(over, claim)
     assert info.value.failure_class == "corrupt_queue"
+
+
+class _InertKey(str):
+    """A str subclass with no hooks: only its type differs from a plain str."""
+
+
+def _inert(mapping):
+    return {_InertKey(k): v for k, v in mapping.items()}
+
+
+def _ready(i, **kw):
+    job = {
+        "job_id": job_id_for(f"k{i}"),
+        "seq": i,
+        "priority": 0,
+        "payload": {},
+        "status": "ready",
+        "attempts": 0,
+        "lease_owner": None,
+        "lease_expires_at": None,
+    }
+    job.update(kw)
+    return job
+
+
+def _refused(state, request, failure):
+    before = copy.deepcopy(state)
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(state, request)
+    assert info.value.failure_class == failure
+    assert state == before  # a refusal never touches the caller's state
+
+
+ENQ = {"op": "enqueue", "dedupe_key": "z", "priority": 1, "payload": {"a": 1}}
+CLAIM = {"op": "claim", "worker": "w1", "now": 0, "lease_ms": 10}
+ACK = {"op": "ack", "worker": "w1", "now": 0, "job_id": job_id_for("k0")}
+
+
+def test_inert_str_subclass_keys_are_refused_everywhere():
+    good = {"jobs": [_ready(0)], "next_seq": 1}
+    for request in (ENQ, CLAIM, ACK):
+        _refused(copy.deepcopy(good), _inert(request), "malformed_queue_request")
+    _refused(copy.deepcopy(good), {**ENQ, "payload": _inert({"a": 1})}, "malformed_queue_request")
+    _refused(_inert(copy.deepcopy(good)), CLAIM, "corrupt_queue")
+    _refused({"jobs": [_inert(_ready(0))], "next_seq": 1}, CLAIM, "corrupt_queue")
+    _refused({"jobs": [_ready(0, payload=_inert({"a": 1}))], "next_seq": 1}, CLAIM, "corrupt_queue")
+    assert QueueEngine().apply(copy.deepcopy(good), CLAIM)["job_id"] == job_id_for("k0")
+
+
+def test_non_str_payload_keys_are_refused():
+    good = {"jobs": [_ready(0)], "next_seq": 1}
+    _refused(copy.deepcopy(good), {**ENQ, "payload": {1: 2}}, "malformed_queue_request")
+    _refused(copy.deepcopy(good), {**ENQ, "payload": {"a": {2: 3}}}, "malformed_queue_request")
+    _refused({"jobs": [_ready(0, payload={1: 2})], "next_seq": 1}, CLAIM, "corrupt_queue")
+
+
+def test_request_shape_rows_are_refused_with_the_pinned_class():
+    good = {"jobs": [_ready(0)], "next_seq": 1}
+    rows = (
+        {1: "x", **CLAIM},  # non-str key
+        {k: v for k, v in CLAIM.items() if k != "op"},  # no op
+        {**CLAIM, "op": 7},  # op not a str
+        {**CLAIM, "op": "bogus"},
+        {**CLAIM, "extra": 1},  # a key outside the op's fields
+        {k: v for k, v in CLAIM.items() if k != "lease_ms"},  # a missing field
+        {**CLAIM, "worker": "bad worker!"},
+        {**CLAIM, "lease_ms": 0},
+        {**CLAIM, "lease_ms": 3_600_001},
+        {**CLAIM, "now": -1},
+        {**ACK, "job_id": "nope"},
+        {**ENQ, "priority": 10},
+        {**ENQ, "dedupe_key": ""},
+    )
+    for request in rows:
+        _refused(copy.deepcopy(good), request, "malformed_queue_request")
+    # accepted twins at the edges
+    edge = {**CLAIM, "lease_ms": 3_600_000, "now": 2**53 - 1 - 3_600_000}
+    assert QueueEngine().apply(copy.deepcopy(good), edge)["status"] == "leased"
+    _refused(copy.deepcopy(good), {**edge, "now": edge["now"] + 1}, "malformed_queue_request")
+    assert QueueEngine().apply(copy.deepcopy(good), {**ENQ, "priority": 9})["status"] == "ready"
+
+
+def test_lease_state_rows_and_capacity_bounds():
+    leased = {"status": "leased", "lease_owner": "w1", "lease_expires_at": 5}
+    _refused({"jobs": [_ready(0, attempts=0, **leased)], "next_seq": 1}, CLAIM, "corrupt_queue")
+    _refused(
+        {"jobs": [_ready(0, attempts=1, **{**leased, "lease_expires_at": 0})], "next_seq": 1},
+        CLAIM,
+        "corrupt_queue",
+    )
+    ok = {"jobs": [_ready(0, attempts=1, **leased)], "next_seq": 1}
+    assert QueueEngine().apply(ok, {**CLAIM, "now": 5})["job_id"] == job_id_for("k0")
+    # enqueue at the size bound: 9999 jobs accept one more, 10000 refuse
+    nearly = {"jobs": [_ready(i, status="done", attempts=1) for i in range(MAX_JOBS - 1)]}
+    nearly["next_seq"] = MAX_JOBS - 1
+    assert QueueEngine().apply(nearly, ENQ)["status"] == "ready" and len(nearly["jobs"]) == MAX_JOBS
+    _refused(nearly, {**ENQ, "dedupe_key": "y"}, "capacity_exceeded")
+    # enqueue at the sequence bound: next_seq == 2**53 - 2 accepts, 2**53 - 1 refuses
+    top = 2**53 - 1
+    assert QueueEngine().apply({"jobs": [], "next_seq": top - 1}, ENQ)["status"] == "ready"
+    _refused({"jobs": [], "next_seq": top}, ENQ, "capacity_exceeded")
