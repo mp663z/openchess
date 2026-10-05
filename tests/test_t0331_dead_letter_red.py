@@ -183,6 +183,8 @@ def check_semantics(impl, err):
         ("leased", {"attempts": 1, "lease_owner": "w1", "lease_expires_at": 9}),
     ):
         _rejects(impl, err, _req(job=_job(status=status, **extra)), "job_not_dead")
+    leased_zero = _job(status="leased", attempts=0, lease_owner="w1", lease_expires_at=9)
+    _rejects(impl, err, _req(job=leased_zero), "corrupt_job")  # a lease implies an attempt
     _rejects(impl, err, _req(job=_job(attempts=4)), "corrupt_job")
     _rejects(impl, err, _req(job=_job(attempts=4), reason="permanent"), "corrupt_job")
     _rejects(impl, err, _req(job=_job(lease_owner="w1")), "corrupt_job")
