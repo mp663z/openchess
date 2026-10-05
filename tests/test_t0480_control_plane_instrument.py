@@ -356,6 +356,30 @@ MUTANTS = {
         '"error_type": _type_name(type(error)),\n                    "request_unchanged": True,',
     ),
     "append-fallback-empty": ('[_opaque("trace-append-failed")]', "[]"),
+    "return-none": (
+        '"result": _summary(result)})\n        return result',
+        '"result": _summary(result)})\n        return None',
+    ),
+    "drop-accept-result": (
+        '| {"outcome": "accept", "result": _summary(result)}',
+        '| {"outcome": "accept"}',
+    ),
+    "summary-zero": ('{"fields": dict.__len__(result)}', '{"fields": 0}'),
+    "operation-constant": ('"operation": operation,', '"operation": "x",'),
+    "drop-retryable": ('"retryable": _attribute(error, "retryable"),', ""),
+    "reject-unchanged-constant": (
+        '"retryable": _attribute(error, "retryable"),\n'
+        '                    "request_unchanged": _snapshot(body) == before,',
+        '"retryable": _attribute(error, "retryable"),\n'
+        '                    "request_unchanged": True,',
+    ),
+    "reject-unchanged-negated": (
+        '"retryable": _attribute(error, "retryable"),\n'
+        '                    "request_unchanged": _snapshot(body) == before,',
+        '"retryable": _attribute(error, "retryable"),\n'
+        '                    "request_unchanged": _snapshot(body) != before,',
+    ),
+    "append-no-snapshot": ("list.append(trace, _snapshot(record))", "list.append(trace, record)"),
 }
 
 
@@ -400,7 +424,7 @@ class _MutatingCrash:
         raise self.boom
 
 
-def _first_deviation(module):
+def _first_deviation_raw(module):
     """The name of the first semantic check the module fails, or None.
 
     An unexpected exception from the instrument propagates and errors the
@@ -457,7 +481,76 @@ def _first_deviation(module):
         return "crash-record"
     if record.get("request_unchanged") is not False:
         return "crash-arguments-unchanged"
+    return _extra_deviation(module)
+
+
+class _Stub:
+    """A client returning fixed results, or optionally mutating then raising."""
+
+    def __init__(self, out=None, err=None, mutate=False):
+        self.out = out
+        self.err = err
+        self.mutate = mutate
+
+    def call(self, name, body=None):
+        if self.err is not None:
+            if self.mutate:
+                body.append("junk")
+            raise self.err
+        return self.out
+
+    def entitlements(self):
+        if self.err is not None:
+            raise self.err
+        return self.out
+
+
+def _extra_deviation(module):
+    declared = sorted(client_mod.OPS)[0]
+    for out, count in (({"a": 1}, 1), ({"a": 1, "b": 2}, 2)):
+        tracer = module.ClientTracer(_Stub(out))
+        if tracer.call(declared, [0]) is not out:
+            return "result-identity"
+        if tracer.entitlements() is not out:
+            return "result-identity"
+        first, second = tracer.records
+        if first.get("result") != {"fields": count} or second.get("result") != {"fields": count}:
+            return "accept-summary"
+        if first.get("operation") != declared or second.get("operation") != "entitlements":
+            return "operation-field"
+        op = client_mod.OPS[declared]
+        want = {"declared": True, "auth": op["auth"], "mutating": op["mutating"]}
+        if first.get("shape") != want:
+            return "shape-field"
+    for mutate, expected in ((True, False), (False, True)):
+        err = client_mod.ControlPlaneError("malformed_request", "x", retryable=True)
+        tracer = module.ClientTracer(_Stub(err=err, mutate=mutate))
+        try:
+            tracer.call(declared, [0])
+        except client_mod.ControlPlaneError as caught:
+            if caught is not err:
+                return "reject-reraise-identity"
+        else:
+            return "reject-swallowed"
+        rec = tracer.records[-1]
+        if rec.get("outcome") != "reject" or rec.get("request_unchanged") is not expected:
+            return "reject-request-unchanged"
+        if rec.get("code") != "malformed_request" or rec.get("retryable") is not True:
+            return "reject-record-fields"
+    held = module.ClientTracer(_Stub({"a": 1}))
+    sample = {"seq": 7}
+    held._append_total(sample)
+    if held._trace[-1] is sample:
+        return "append-aliasing"
     return None
+
+
+def _first_deviation(module):
+    """The first failing check; a valid call the instrument refuses is a semantic failure."""
+    try:
+        return _first_deviation_raw(module)
+    except client_mod.ControlPlaneError:
+        return "valid-refused"
 
 
 def _is_red(module):
@@ -480,6 +573,14 @@ EXPECTED_KILL = {
     "copy-args": "args-identity",
     "crash-unchanged-constant": "crash-arguments-unchanged",
     "append-fallback-empty": "append-fallback",
+    "return-none": "result-identity",
+    "drop-accept-result": "accept-summary",
+    "summary-zero": "accept-summary",
+    "operation-constant": "operation-field",
+    "drop-retryable": "reject-record-fields",
+    "reject-unchanged-constant": "reject-request-unchanged",
+    "reject-unchanged-negated": "reject-request-unchanged",
+    "append-no-snapshot": "append-aliasing",
 }
 
 
@@ -493,3 +594,12 @@ def test_a_crashing_instrument_is_an_error_not_a_kill():
     assert broken != SOURCE
     with pytest.raises(NameError):
         _first_deviation(_load(broken))
+
+
+def test_a_valid_call_the_instrument_refuses_is_an_assertion_failure():
+    refusing = SOURCE.replace(
+        "result = fn()",
+        'result = fn()\n            raise ControlPlaneError("malformed_request", "x")',
+    )
+    assert refusing != SOURCE
+    assert _first_deviation(_load(refusing)) == "valid-refused"
