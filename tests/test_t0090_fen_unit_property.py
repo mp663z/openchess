@@ -56,8 +56,14 @@ KNOWN_VALID = (
 )
 # Known-invalid positions with the exact refusal class they must raise.
 KNOWN_INVALID = (
-    ("4k3/8/8/8/8/8/4R3/4K3 w - - 0 1", "impossible_position"),  # black king in check, white to move
-    ("4k3/4r3/8/8/8/8/8/4K3 b - - 0 1", "impossible_position"),  # white king in check, black to move
+    (
+        "4k3/8/8/8/8/8/4R3/4K3 w - - 0 1",
+        "impossible_position",
+    ),  # black king in check, white to move
+    (
+        "4k3/4r3/8/8/8/8/8/4K3 b - - 0 1",
+        "impossible_position",
+    ),  # white king in check, black to move
     ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq e3 0 1", "impossible_position"),
     ("8/8/8/8/8/8/8/4K3 w - - 0 1", "impossible_position"),  # no black king
     ("4k3/8/8/8/8/8/8/4K4 w - - 0 1", "malformed_fen"),  # rank sums to 9 files
