@@ -489,6 +489,10 @@ def _err(failure_class):
     return ("err", failure_class, prod.FAILURE_MAPPING[failure_class])
 
 
+def _black_ep_state():
+    return _raw("e3", "b", ("g1", "wk"), ("g8", "bk"), ("e4", "wp"), ("d4", "bp"))
+
+
 def _tt(halfmove, fullmove):
     return ("ok", {"halfmove_clock": halfmove, "fullmove_number": fullmove})
 
@@ -673,6 +677,46 @@ ROWS = {
     "turn-unknown-side": (TT, ("quiet", "x"), MALFORMED),
     "turn-empty-side": (TT, ("pawn-advance", ""), MALFORMED),
     "turn-non-str-side": (TT, ("quiet", 5), MALFORMED),
+    # ---- move typing: a str subclass equal to a valid value, or an undeclared square ----
+    "move-type-str-subclass": (
+        AP,
+        (_black_ep_state(), {"type": _StrSub("ep-capture"), "from": "d4", "to": "e3"}),
+        MALFORMED,
+    ),
+    "move-from-str-subclass": (
+        AP,
+        (_black_ep_state(), {"type": "ep-capture", "from": _StrSub("d4"), "to": "e3"}),
+        MALFORMED,
+    ),
+    "move-to-str-subclass": (
+        AP,
+        (_black_ep_state(), {"type": "ep-capture", "from": "d4", "to": _StrSub("e3")}),
+        MALFORMED,
+    ),
+    "move-from-undeclared-square": (
+        AP,
+        (_black_ep_state(), {"type": "ep-capture", "from": "z9", "to": "e3"}),
+        MALFORMED,
+    ),
+    "move-to-undeclared-square": (
+        AP,
+        (_black_ep_state(), {"type": "ep-capture", "from": "d4", "to": "z9"}),
+        MALFORMED,
+    ),
+    "move-legal-black-capture": (
+        AP,
+        (_black_ep_state(), {"type": "ep-capture", "from": "d4", "to": "e3"}),
+        (
+            "ok",
+            {
+                "ep_target": "-",
+                "occupied": {"g1": "wk", "g8": "bk", "e3": "bp"},
+                "side_to_move": "w",
+            },
+        ),
+    ),
+    "turn-move-type-str-subclass": (TT, (_StrSub("ep-capture"), "b"), MALFORMED),
+    "turn-side-str-subclass": (TT, ("ep-capture", _StrSub("b")), MALFORMED),
 }
 
 
@@ -831,6 +875,34 @@ MUTANTS = {
         (("and _clear(occ, square", "or _clear(occ, square"),),
         ("pin-blocked-by-own-piece",),
     ),
+    "move-kind-type-check-dropped": (
+        (("type(kind) is not str or ", ""),),
+        ("move-type-str-subclass",),
+    ),
+    "move-from-type-check-dropped": (
+        (("type(frm) is not str or ", ""),),
+        ("move-from-str-subclass",),
+    ),
+    "move-to-type-check-dropped": (
+        (("type(to) is not str or ", ""),),
+        ("move-to-str-subclass",),
+    ),
+    "move-from-square-check-dropped": (
+        (("frm not in _SQUARES or ", ""),),
+        ("move-from-undeclared-square",),
+    ),
+    "move-to-square-check-dropped": (
+        (("or to not in _SQUARES", ""),),
+        ("move-to-undeclared-square",),
+    ),
+    "turn-move-type-check-dropped": (
+        (("type(move_type) is not str\n        or ", ""),),
+        ("turn-move-type-str-subclass",),
+    ),
+    "turn-side-type-check-dropped": (
+        (("type(side) is not str\n        or ", ""),),
+        ("turn-side-str-subclass",),
+    ),
 }
 
 
@@ -890,3 +962,17 @@ def test_straight_ahead_distance_mutant_is_equivalent():
     for name in ("capture-straight-ahead", "capture-mover-not-a-pawn"):
         fn, args, expected = ROWS[name]
         assert _outcome(ns, fn, *copy.deepcopy(args)) == expected
+
+
+def test_error_init_without_super_is_equivalent():
+    """BaseException.__new__ already stores the constructor args, so dropping
+    `super().__init__(failure_class)` changes nothing observable."""
+    ns = _exec_edits((("        super().__init__(failure_class)\n", ""),))
+    got = {}
+    for label, namespace in (("prod", PROD_NS), ("mutant", ns)):
+        try:
+            namespace["apply"](_black_ep_state(), {"type": "castle", "from": "d4", "to": "e3"})
+        except namespace["EnPassantError"] as exc:
+            got[label] = (exc.args, str(exc), exc.failure_class, exc.code)
+    assert got["prod"] == got["mutant"]
+    assert got["prod"][:2] == (("target_malformed",), "target_malformed")
