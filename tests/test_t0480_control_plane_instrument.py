@@ -335,7 +335,7 @@ MUTANTS = {
     ),
     "drop-crash-reraise": (
         "                }\n            )\n            raise\n        self._append_total(",
-        "                }\n            )\n        self._append_total(",
+        "                }\n            )\n            return None\n        self._append_total(",
     ),
     "seq-constant": ('"seq": self._seq()', '"seq": 0'),
     "wrong-outcome-label": ('"outcome": "accept"', '"outcome": "ok"'),
@@ -346,6 +346,16 @@ MUTANTS = {
     "drop-code": ('"code": _attribute(error, "code"),', ""),
     "swap-shape": ('"mutating": op["mutating"]', '"mutating": not op["mutating"]'),
     "entitlements-wrong-shape": ('"entitlements.get"', '"entitlements.nope"'),
+    "copy-args": (
+        "self._client.call(name, body)",
+        "self._client.call(name, __import__('copy').deepcopy(body))",
+    ),
+    "crash-unchanged-constant": (
+        '"error_type": _type_name(type(error)),\n'
+        '                    "request_unchanged": _snapshot(body) == before,',
+        '"error_type": _type_name(type(error)),\n                    "request_unchanged": True,',
+    ),
+    "append-fallback-empty": ('[_opaque("trace-append-failed")]', "[]"),
 }
 
 
@@ -362,50 +372,124 @@ def _mutant(label):
     return _load(SOURCE.replace(before, after))
 
 
-def _is_red(module):
+class _Spy:
+    """A comparator or client that records the exact argument objects it receives."""
+
+    def __init__(self):
+        self.seen = []
+
+    def __call__(self, *args):
+        self.seen.append(args)
+
+    def call(self, *args):
+        self.seen.append(args)
+
+
+class _MutatingCrash:
+    """Mutates its first argument, then crashes with a fixed exception object."""
+
+    def __init__(self, boom):
+        self.boom = boom
+
+    def __call__(self, first, *rest):
+        first.append("junk")
+        raise self.boom
+
+    def call(self, name, body=None):
+        body.append("junk")
+        raise self.boom
+
+
+def _first_deviation(module):
+    """The name of the first semantic check the module fails, or None.
+
+    An unexpected exception from the instrument propagates and errors the
+    test instead of counting as a kill."""
     """True only on a semantic deviation; an unexpected exception errors."""
     tracer = module.ClientTracer(_client()[0])
     tracer.call("identity.register", dict(EMAIL))
     tracer.entitlements()
     records = tracer.records
     if [r["seq"] for r in records] != [0, 1]:
-        return True
+        return "check-1"
     if any(r["outcome"] != "accept" for r in records):
-        return True
+        return "check-2"
     if [r["shape"] for r in records] != [
         {"declared": True, "auth": "public", "mutating": True},
         {"declared": True, "auth": "required", "mutating": False},
     ]:
-        return True
+        return "check-3"
     if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
-        return True
+        return "check-4"
     try:
         tracer.call("identity.register", {"undeclared": True})
-        return True
+        return "check-5"
     except client_mod.ControlPlaneError:
         pass
     last = tracer.records[-1]
     if last.get("outcome") != "reject" or last.get("code") != "malformed_request":
-        return True
-
-    class Crasher:
-        def call(self, name, body=None):
-            raise KeyError("x")
-
-    crash = module.ClientTracer(Crasher())
+        return "check-6"
+    spy = _Spy()
+    probe = module.ClientTracer(spy)
+    given = [0]
+    probe.call("identity.login", given)
+    if len(spy.seen) != 1 or len(spy.seen[0]) != 2:
+        return "args-identity"
+    if spy.seen[0][0] != "identity.login" or spy.seen[0][1] is not given:
+        return "args-identity"
+    lost = module.ClientTracer(spy)
+    del lost._trace
+    lost.call("identity.login", given)
+    if lost.records != ({"__opaque__": "trace-append-failed"},):
+        return "append-fallback"
+    boom = KeyError("x")
+    crash = module.ClientTracer(_MutatingCrash(boom))
+    victim = [0]
     try:
-        crash.call("identity.login", {})
-    except KeyError:
-        return False
-    except Exception as error:  # noqa: BLE001 - another type is a semantic deviation
-        return type(error) is not KeyError
-    return True
+        crash.call("identity.login", victim)
+    except KeyError as caught:
+        if caught is not boom:
+            return "crash-reraise-identity"
+    else:
+        return "crash-swallowed"
+    record = crash.records[-1]
+    if record.get("outcome") != "crash" or record.get("error_type") != "KeyError":
+        return "crash-record"
+    if record.get("request_unchanged") is not False:
+        return "crash-arguments-unchanged"
+    return None
+
+
+def _is_red(module):
+    return _first_deviation(module) is not None
 
 
 def test_unmutated_instrument_is_green_on_the_mutant_check():
-    assert not _is_red(_load(SOURCE))
+    assert _first_deviation(_load(SOURCE)) is None
 
 
 @pytest.mark.parametrize("label", sorted(MUTANTS))
 def test_mutant_is_red(label):
-    assert _is_red(_mutant(label)), label
+    assert _is_red(_mutant(label)) is True, label
+    assert isinstance(_first_deviation(_mutant(label)), str), label
+
+
+# the check that must catch each of these, so a kill is never an accident
+EXPECTED_KILL = {
+    "drop-crash-reraise": "crash-swallowed",
+    "copy-args": "args-identity",
+    "crash-unchanged-constant": "crash-arguments-unchanged",
+    "append-fallback-empty": "append-fallback",
+}
+
+
+@pytest.mark.parametrize("label", sorted(EXPECTED_KILL))
+def test_mutant_dies_on_its_own_check(label):
+    assert _first_deviation(_mutant(label)) == EXPECTED_KILL[label]
+
+
+def test_a_crashing_instrument_is_an_error_not_a_kill():
+    broken = SOURCE.replace('"outcome": "crash",', '"outcome": undefined_name,')
+    assert broken != SOURCE
+    with pytest.raises(NameError):
+        _first_deviation(_load(broken))
