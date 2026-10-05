@@ -84,6 +84,8 @@ EP_WRONG_NEIGHBOUR = [
     "4k3/8/8/3pN3/8/8/8/4K3 w - d6 0 2",  # upper-file knight
     "4k3/8/8/8/3Pn3/8/8/4K3 b - d3 0 2",  # black to move, enemy knight on the capturer square
 ]
+# two adjacent own pawns: the lower-file one is pinned on the c-file, the upper-file one is legal
+EP_TWO_CAPTURERS = ["2r1k3/8/8/2PpP3/8/8/8/2K5 w - d6 0 1"]
 BLACK_EP_PINNED = ["8/8/8/8/k2Pp2R/8/8/4K3 b - d3 0 2"]
 
 
@@ -154,6 +156,11 @@ def _properties(module, variants):
     assert module.digest_fen("standard", SEEDS[4]) != module.digest_fen(
         "standard", "4K3/8/8/8/8/8/8/4k3 w - - 0 1"
     )
+    # one pinned and one legal capturer: the target is usable through the legal one
+    for text in EP_TWO_CAPTURERS:
+        assert accept(module, "standard", text) != accept(
+            module, "standard", _with(text, ep="-")
+        ), text
     # a non-pawn or enemy-pawn neighbour never makes the target usable
     for text in EP_WRONG_NEIGHBOUR:
         assert accept(module, "standard", text) == accept(
@@ -385,3 +392,16 @@ def test_docs_aliasing_mutant_is_killed():
     first = module._docs()
     first[0]["digest"]["format"]["prefix"] = "tampered:"
     assert module._docs()[0]["digest"]["format"]["prefix"] != "pdv1:"  # the mutant leaks
+
+
+def test_board_aliasing_mutant_is_only_observable_as_a_crash():
+    """`after = dict(board)` -> `after = board` mutates the position the loop still reads: the
+    pinned lower-file capturer deletes the victim square, then the upper-file capturer deletes it
+    again (KeyError). No input yields a different digest, so the only observable difference is
+    this foreign exception, pinned here as a Crash by design and never counted as a property
+    kill."""
+    module = _mutant("after = dict(board)", "after = board")
+    text = EP_TWO_CAPTURERS[0]
+    assert accept(pd, "standard", text) != accept(pd, "standard", _with(text, ep="-"))
+    with pytest.raises(KeyError):
+        module.digest_fen("standard", text)
