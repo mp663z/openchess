@@ -109,6 +109,9 @@ def properties(module, variants=("standard",)):
         _properties(module, variants)
     except AssertionError:
         raise
+    except module.DigestError as exc:
+        # every input in the property battery is legal: a refusal is a semantic failure
+        raise AssertionError(f"refused legal input: {exc.failure_class}") from exc
     except Exception as exc:  # noqa: BLE001
         raise Crash(f"crash {type(exc).__name__}: {exc}") from exc
 
@@ -242,11 +245,33 @@ def test_unknown_variant_wins_over_malformed_fen_and_types_are_exact():
         assert caught.value.failure_class == "unknown_variant"
 
 
-@pytest.mark.parametrize("bad", [None, 5, "", "sha256:xyz", "SHA256:" + "0" * 64, START])
-def test_malformed_digest_text_is_typed(bad):
+class _DigestStr(str):
+    pass
+
+
+_GOOD_DIGEST = pd.digest_fen("standard", START)
+_DIGEST_REFUSALS = [
+    None,
+    5,
+    "",
+    "sha256:xyz",
+    "SHA256:" + "0" * 64,
+    START,
+    _DigestStr(_GOOD_DIGEST),  # a str subclass with the exact digest text
+]
+
+
+@pytest.mark.parametrize("bad", _DIGEST_REFUSALS, ids=lambda b: type(b).__name__ + str(b)[:8])
+@pytest.mark.parametrize("fn", ["parse_digest", "emit_digest"])
+def test_malformed_digest_text_is_typed(fn, bad):
     with pytest.raises(pd.DigestError) as caught:
-        pd.parse_digest(bad)
+        getattr(pd, fn)(bad)
     assert caught.value.failure_class == "malformed_digest"
+
+
+@pytest.mark.parametrize("fn", ["parse_digest", "emit_digest"])
+def test_exact_digest_text_is_accepted_unchanged(fn):
+    assert getattr(pd, fn)(_GOOD_DIGEST) == _GOOD_DIGEST
 
 
 MUTANTS = [
@@ -264,6 +289,8 @@ MUTANTS = [
     ('for field in order)', 'for field in reversed(order))'),
     ('for field in order)', 'for field in sorted(order))'),
     ("    return digest(dc, encode(dc, vc, ec, fc, variant_id, position))", "    if position[4] > 50:\n        _fail(dc, \"malformed_position\")\n    return digest(dc, encode(dc, vc, ec, fc, variant_id, position))"),
+    ("if type(text) is not str or re.fullmatch", "if not isinstance(text, str) or re.fullmatch"),
+    ("    return digest(dc, encode(dc, vc, ec, fc, variant_id, position))", "    _fail(dc, \"malformed_position\")"),
     ("    for df in (-1, 1):", "    for df in (1,):"),
     ("    for df in (-1, 1):", "    for df in (-1,):"),
     ("if not 0 <= f < len(files):", "if not 0 < f < len(files):"),
@@ -314,6 +341,14 @@ def test_every_mutant_is_killed(old, new):
             pass
         else:
             raise AssertionError("accepted padded fen")
+        for fn in ("parse_digest", "emit_digest"):
+            for bad in _DIGEST_REFUSALS:
+                try:
+                    getattr(module, fn)(bad)
+                except module.DigestError:
+                    pass
+                else:
+                    raise AssertionError(f"{fn} accepted {bad!r}")
 
     with pytest.raises(AssertionError):
         hostile(module)
