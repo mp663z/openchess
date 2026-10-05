@@ -9,8 +9,10 @@ T0550 swapping the binding re-runs these rows against the shipped importer.
 The fixture file is the digest-pinned tests/fixtures/import_rights/multi_game.pgn
 already owned by T0538; it is not copied.
 """
+
 from __future__ import annotations
 
+import copy
 import hashlib
 from pathlib import Path
 
@@ -38,8 +40,14 @@ USER_OWN_FLAGS = {
     "redistribution": "never",
     "provenance_required": True,
 }
-OTHER_SOURCES = ["pgn-file", "pgn-folder", "pgn-watch", "lichess-public",
-                 "chesscom-public", "cbh-licensed"]
+OTHER_SOURCES = [
+    "pgn-file",
+    "pgn-folder",
+    "pgn-watch",
+    "lichess-public",
+    "chesscom-public",
+    "cbh-licensed",
+]
 
 
 def _text():
@@ -85,13 +93,45 @@ def test_no_record_claims_redistribution_or_third_party_class():
         assert flags["third_party_storage"] == "never"
 
 
-def test_reimport_keeps_rights_and_provenance_unchanged():
+def _reimport_probe(binding):
     store = ReferenceStore()
-    PRODUCTION_BINDING(_text(), store)
-    before = {k: dict(v) for k, v in store.records.items()}
-    again = PRODUCTION_BINDING(_text(), store)
+    binding(_text(), store)
+    before = copy.deepcopy(store.records)
+    index_before = copy.deepcopy(store.index)
+    again = binding(_text(), store)
     assert again["games_already_imported"] == 2 and again["games_imported"] == 0
-    assert store.records == before
+    assert store.records == before  # deep: nested provenance included
+    assert store.index == index_before
+    for rec in store.records.values():
+        assert rec["provenance"]["rights_class"] == "user-own"
+        assert rec["provenance"]["source_id"] == "pgn-multi"
+
+
+def _rights_rewriting_mutant(text, store, **kw):
+    result = PRODUCTION_BINDING(text, store, **kw)
+    if result["games_already_imported"]:
+        for rec in store.records.values():
+            rec["provenance"]["rights_class"] = "cc0"
+    return result
+
+
+def _provenance_dropping_mutant(text, store, **kw):
+    result = PRODUCTION_BINDING(text, store, **kw)
+    if result["games_already_imported"]:
+        for rec in store.records.values():
+            rec["provenance"]["retrieval_detail"] = "changed"
+    return result
+
+
+def test_reimport_keeps_rights_and_provenance_unchanged():
+    _reimport_probe(PRODUCTION_BINDING)
+
+
+@pytest.mark.parametrize("mutant", [_rights_rewriting_mutant, _provenance_dropping_mutant])
+def test_reimport_mutants_rewriting_provenance_are_red(mutant):
+    _reimport_probe(PRODUCTION_BINDING)
+    with pytest.raises(AssertionError):
+        _reimport_probe(mutant)
 
 
 @pytest.mark.parametrize("source_id", OTHER_SOURCES + ["not-a-source", "PGN-MULTI", " pgn-multi"])
@@ -120,8 +160,9 @@ def test_other_registry_sources_keep_their_own_class(source_id):
 def test_shipped_import_pgn_does_not_accept_pgn_multi(tmp_path):
     # T0550 owns the pgn-multi dispatcher; until then the shipped path refuses it
     with pytest.raises(ImportFailure) as ei:
-        run_import_pgn(FIXTURE, tmp_path / "store", "pgn-multi",
-                       retrieved_at="2026-09-25T00:00:00Z")
+        run_import_pgn(
+            FIXTURE, tmp_path / "store", "pgn-multi", retrieved_at="2026-09-25T00:00:00Z"
+        )
     assert ei.value.code == "unknown_rights"
     assert not (tmp_path / "store").exists()
 
