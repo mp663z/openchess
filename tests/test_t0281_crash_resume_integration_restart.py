@@ -38,7 +38,7 @@ if str(ROOT) not in sys.path:
 
 from graph.node import make_record, record_identity  # noqa: E402
 from store import wal  # noqa: E402
-from tools.crash_resume_contract_lint import MAX_DEPTH  # noqa: E402
+from tools.crash_resume_contract_lint import MAX_DEPTH, MAX_INT_DIGITS  # noqa: E402
 
 SOURCE = (ROOT / "store" / "crash_resume.py").read_text()
 CONTRACT = yaml.safe_load((ROOT / "data" / "contracts" / "crash_resume.yaml").read_text())[
@@ -305,6 +305,11 @@ def _admission_rows():
         ("lone-surrogate-value", {"x": "\ud800"}, False),
         ("lone-surrogate-key", {"\ud800": 1}, False),
         ("float-nan-free", {"x": 1.5}, True),
+        ("int-at-digit-limit", {"x": 10 ** (MAX_INT_DIGITS - 1)}, True),
+        ("int-max-digits-all-nines", {"x": 10**MAX_INT_DIGITS - 1}, True),
+        ("negative-int-at-digit-limit", {"x": -(10 ** (MAX_INT_DIGITS - 1))}, True),
+        ("int-over-digit-limit", {"x": 10**MAX_INT_DIGITS}, False),
+        ("negative-int-over-digit-limit", {"x": -(10**MAX_INT_DIGITS)}, False),
     ]
 
 
@@ -367,6 +372,13 @@ EDITS = {
         "            return False\n        return True",
         "        return True",
     ),
+    "int-digit-bound-exclusive": _once(
+        "len(str(abs(obj))) <= MAX_INT_DIGITS", "len(str(abs(obj))) < MAX_INT_DIGITS"
+    ),
+    "int-digit-bound-off-by-one-high": _once(
+        "len(str(abs(obj))) <= MAX_INT_DIGITS", "len(str(abs(obj))) <= MAX_INT_DIGITS + 1"
+    ),
+    "int-sign-counted": _once("len(str(abs(obj)))", "len(str(obj))"),
     "key-scalar-unchecked": _once(
         "if type(key) is not str or not _scalar_ok(key):", "if type(key) is not str:"
     ),
@@ -387,6 +399,9 @@ EXPECTED_KILL = {
     "none-bool-inadmissible": "admit",
     "surrogate-admitted": "admit",
     "key-scalar-unchecked": "admit",
+    "int-digit-bound-exclusive": "admit",
+    "int-digit-bound-off-by-one-high": "admit",
+    "int-sign-counted": "admit",
 }
 
 
