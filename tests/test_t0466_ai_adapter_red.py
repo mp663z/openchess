@@ -128,6 +128,27 @@ def battery(adapter, error):
     state["bounded_cost"] = -1
     _expect(adapter, error, request, state, "cost_cap_exceeded", [])
 
+    # one violation per row: a missing gate input refuses, it is never defaulted
+    request, state = _hosted()
+    assert state["bounded_cost"] == 0 or state["bounded_cost"] <= request["max_cost_usd"]
+    del state["cloud"]  # cloud absent, nothing else wrong
+    _expect(adapter, error, request, state, "cloud_off", [])
+    request, state = _hosted()
+    del request["max_cost_usd"]  # cap absent, bounded cost present
+    state["bounded_cost"] = 0
+    _expect(adapter, error, request, state, "cost_cap_exceeded", [])
+    request, state = _hosted()
+    request["max_cost_usd"] = 0  # cap present and zero: absent differs from zero
+    state["bounded_cost"] = 0
+    _expect(adapter, error, request, state, "succeeded", ["hosted"])
+    request, state = _hosted()
+    del state["bounded_cost"]  # estimate absent, cap present
+    _expect(adapter, error, request, state, "cost_cap_exceeded", [])
+    request, state = _hosted()
+    request["max_cost_usd"] = 0
+    state["bounded_cost"] = 1  # one over a zero cap
+    _expect(adapter, error, request, state, "cost_cap_exceeded", [])
+
 
 def test_green_binding_passes_the_whole_battery():
     battery(*BINDING)
@@ -161,6 +182,9 @@ MUTANTS = [
      'effects.append("hosted" if mode == "hosted_byom" else "local")\n    state["touched"] = 1\n'),
     ("reference", "        _refuse(exc.failure_class)", "        _refuse('internal')"),
     ("reference", 'if state.get("provider_error", False):', "if False:"),
+    ("reference", 'not state.get("cloud", False) or', 'not state.get("cloud", True) or'),
+    ("reference", 'cap = request.get("max_cost_usd")', 'cap = request.get("max_cost_usd", 0)'),
+    ("reference", 'bounded = state.get("bounded_cost")', 'bounded = state.get("bounded_cost", 0)'),
     ("_envelope", 'if type(request["version"]) is not int or request["version"] != 1:',
      'if request["version"] != 1:'),
     ("_envelope", 'if type(cap) not in (float, int) or not math.isfinite(cap) or cap < 0:',
