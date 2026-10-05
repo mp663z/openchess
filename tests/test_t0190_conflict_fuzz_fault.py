@@ -501,3 +501,78 @@ def test_each_validation_mutant_accepts_what_production_refuses(name):
     (old, new), row = VALIDATION_MUTANTS[name]
     got = _report(_mutant_cf(old, new), *_tampered_triple(row))
     assert got != {"err": t189.MCR}, (name, got)
+
+
+# -- state_id: called directly, literal expectations ---------------------------------------
+
+STATE_ID_RE = re.compile(r"gs1:[0-9a-f]{64}")
+
+
+def _sid(ns, state):
+    try:
+        return ns["state_id"](state)
+    except ns["ConflictError"] as exc:
+        return {"err": exc.failure_class}
+
+
+def _state_pair():
+    return t189._state({3: 0, 4: 0}), t189._state({3: 1, 4: 0})
+
+
+def test_state_id_is_the_model_id_stable_and_content_sensitive():
+    a, b = _state_pair()
+    before = copy.deepcopy(a)
+    got = _sid(vars(cf), a)
+    assert STATE_ID_RE.fullmatch(got)
+    assert got == t189._model_id(a)
+    assert got == _sid(vars(cf), copy.deepcopy(a))
+    assert a == before
+    assert _sid(vars(cf), b) == t189._model_id(b) != got
+
+
+def test_state_id_refuses_a_malformed_state_as_a_typed_error():
+    a, _ = _state_pair()
+    key = next(iter(a))
+    bad = copy.deepcopy(a)
+    bad[key]["digest"] = "pdv1:xyz"
+    for state in (bad, [], None, _DictSub(a)):
+        got = _sid(vars(cf), state)
+        assert got == {"err": "malformed_conflict_record"}, got
+
+
+STATE_ID_MUTANTS = {
+    "state-id-skips-validation": (
+        ("    frozen = _validated_state(state)\n    return _state_id(frozen)", "    return _state_id(state)"),
+        "refusal",
+    ),
+    "state-id-constant": (
+        ("    return _state_id(frozen)\n", '    return "gs1:" + "0" * 64\n'),
+        "value",
+    ),
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("name", sorted(STATE_ID_MUTANTS))
+def test_each_state_id_mutant_is_killed(name):
+    (old, new), how = STATE_ID_MUTANTS[name]
+    ns = _mutant_cf(old, new)
+    a, _ = _state_pair()
+    if how == "value":
+        assert _sid(ns, a) != t189._model_id(a)
+    else:
+        bad = copy.deepcopy(a)
+        bad[next(iter(a))]["digest"] = "pdv1:xyz"
+        assert _sid(ns, bad) != {"err": "malformed_conflict_record"}
+
+
+def test_conflict_error_args_carry_only_the_failure_class():
+    exc = cf.ConflictError("malformed_conflict_record", "code-x")
+    assert exc.args == ("malformed_conflict_record",)
+    assert str(exc) == "malformed_conflict_record"
+    assert (exc.failure_class, exc.code) == ("malformed_conflict_record", "code-x")
+
+
+def test_conflict_error_without_super_init_is_killed_by_args():
+    ns = _mutant_cf("        super().__init__(failure_class)\n", "")
+    exc = ns["ConflictError"]("malformed_conflict_record", "code-x")
+    assert exc.args != ("malformed_conflict_record",)
