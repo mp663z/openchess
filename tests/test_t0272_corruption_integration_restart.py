@@ -347,6 +347,11 @@ EDITS = {
     ),
     "bool-scalar-unsupported": _once("    if kind is bool:", "    if False:"),
     "none-scalar-unsupported": _once("    if value is None:", "    if False:"),
+    "depth-bound-off-by-one": _once("    if depth > MAX_DEPTH:", "    if depth >= MAX_DEPTH:"),
+    "list-depth-not-counted": _once(
+        "return [_encode(item, depth + 1, seen, out) for item in values]",
+        "return [_encode(item, depth, seen, out) for item in values]",
+    ),
     "scan-id-ignores-loss": _once(
         'f"{verdict}\\n{head}\\n{count}\\n{lost}\\n"', 'f"{verdict}\\n{head}\\n{count}\\n"'
     ),
@@ -360,9 +365,44 @@ EXPECTED_KILL = {
     "scan-id-ignores-loss": "salvage",
     "bool-scalar-unsupported": "domain-scalars",
     "none-scalar-unsupported": "domain-scalars",
+    "depth-bound-off-by-one": "domain-depth",
+    "list-depth-not-counted": "domain-depth",
     "int-range-unchecked": "domain-int",
     "dict-depth-not-counted": "domain-dict",
 }
+
+
+# Exact depth boundary through the log-tail path: the log is depth 0, the tail entry 1,
+# so {"x": nest(n)} reaches depth n + 2 (n + 3 counting the innermost empty container).
+DEPTH_ROWS = [
+    ("list-at-max", {"x": _deep(corruption.MAX_DEPTH - 3)}, True),
+    ("list-over-max", {"x": _deep(corruption.MAX_DEPTH - 2)}, False),
+    ("dict-at-max", {"x": _deep_dict(corruption.MAX_DEPTH - 3)}, True),
+    ("dict-over-max", {"x": _deep_dict(corruption.MAX_DEPTH - 2)}, False),
+]
+
+
+def _depth_failure(source):
+    base = jround(REF_LOG[:2])
+    for name, entry, admitted in DEPTH_ROWS:
+        log = [*base, entry]
+        run = child_run(log, 9, source=source)
+        assert "crash" not in run, f"{name}: crashed instead of deviating: {run}"
+        if admitted:
+            ok = run["ok"] and run["after_scan"] == base and run["receipt"]["verified_count"] == 2
+        else:
+            ok = (
+                run["ok"] is False
+                and run.get("failure_class") == "malformed_corruption_record"
+                and run["log"] == log
+            )
+        if not ok:
+            return name
+    return None
+
+
+def test_depth_boundary_is_exact_through_the_log_tail():
+    assert _depth_failure(None) is None
 
 
 SCALAR_ROWS = [
@@ -428,6 +468,8 @@ def _deviations(source):
     u = runs["unbound-sink"]
     if not (u["ok"] is False and u.get("failure_class") == "divergent_quarantine"):
         found.add("unbound-sink")
+    if _depth_failure(source) is not None:
+        found.add("domain-depth")
     if _scalar_failure(source) is not None:
         found.add("domain-scalars")
     for name in ("domain-int", "domain-dict"):
