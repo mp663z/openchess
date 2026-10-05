@@ -1,0 +1,396 @@
+"""T0444 Contracts/versioning/instrument: behavior-neutral diagnostics for the
+shipped control-plane version comparator via
+server.control_plane_versioning_instrument.
+
+VersionTracer wraps compare(old, new, old_minor, new_minor). This file proves:
+- happy: additive minor, equal snapshots and a major bump with a new base
+  path are traced as accept with the exact verdict the bare call returns;
+- boundary: minor edges (zero, ceiling) and a same-major breaking change
+  (verdict False, still an accept record);
+- malformed: hostile minors, a malformed snapshot and a backward minor raise
+  the same typed VersionError object, leave every argument unchanged and
+  record reject with the failure class and mapped code;
+- rollback: refusals interleaved with accepts change no snapshot and no
+  later verdict; records are an isolated append-only view with
+  deterministic JSONL;
+- no snapshot content is copied into a record (metadata only);
+- totality: hostile error attributes, a faulting trace container and a
+  hostile snapshot never change the wrapped result;
+- one-edit mutants of the instrument are each red on a semantic assertion.
+"""
+
+from __future__ import annotations
+
+import copy
+import json
+import types
+from pathlib import Path
+
+import pytest
+import yaml
+
+from server import control_plane_versioning as cpv
+from server import control_plane_versioning_instrument as vi
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = (ROOT / "server" / "control_plane_versioning_instrument.py").read_text()
+BASE = yaml.safe_load((ROOT / "data" / "contracts" / "control-plane.yaml").read_text())
+CEILING = 2147483647
+
+
+def _pair():
+    return copy.deepcopy(BASE), copy.deepcopy(BASE)
+
+
+def _additive():
+    old, new = _pair()
+    new["areas"]["identity"]["ops"]["register"]["request"]["fields"]["new_flag"] = {
+        "type": "boolean",
+        "required": False,
+    }
+    return old, new
+
+
+def _breaking():
+    old, new = _pair()
+    new["areas"]["identity"]["ops"]["register"]["request"]["fields"]["display_name"]["required"] = (
+        True
+    )
+    return old, new
+
+
+def _major():
+    old, new = _pair()
+    new["contract"]["versioning"]["base_path"] = "/cp/v2"
+    return old, new
+
+
+def _bare(fn, *args):
+    try:
+        return ("ok", fn(*args))
+    except cpv.VersionError as error:
+        return ("reject", error.failure_class, error.code)
+    except BaseException as error:  # noqa: BLE001
+        return ("crash", type(error).__name__)
+
+
+# -- neutrality and happy/boundary -----------------------------------------------------
+
+ACCEPTS = {
+    "equal": (_pair, 0, 0, True),
+    "additive-minor": (_additive, 0, 1, True),
+    "ceiling-minors": (_additive, CEILING, CEILING, True),
+    "zero-minors": (_pair, 0, 0, True),
+    "major-new-base-path": (_major, 0, 0, True),
+    "same-major-breaking": (_breaking, 0, 1, False),
+}
+
+
+@pytest.mark.parametrize("name", sorted(ACCEPTS))
+def test_accept_matches_bare_and_is_traced(name):
+    make, old_minor, new_minor, verdict = ACCEPTS[name]
+    old, new = make()
+    assert cpv.compare(*make(), old_minor, new_minor) is verdict
+    tracer = vi.VersionTracer()
+    before = copy.deepcopy((old, new))
+    assert tracer.compare(old, new, old_minor, new_minor) is verdict
+    assert (old, new) == before
+    (record,) = tracer.records
+    assert record["outcome"] == "accept" and record["compatible"] is verdict
+    assert (record["old_minor"], record["new_minor"]) == (old_minor, new_minor)
+    assert record["old_base_path"] == "/cp/v1"
+    assert record["new_base_path"] == new["contract"]["versioning"]["base_path"]
+
+
+def test_result_is_the_wrapped_object():
+    sentinel = object()
+
+    tracer = vi.VersionTracer(lambda *args: sentinel)
+    assert tracer.compare(1, 2, 3, 4) is sentinel
+    assert tracer.records[0]["compatible"] is None
+
+
+# -- malformed and rollback -------------------------------------------------------------
+
+
+def _hostile_doc():
+    old, _ = _pair()
+    del old["contract"]["versioning"]
+    return old, copy.deepcopy(BASE)
+
+
+REJECTS = {
+    "bool-minor": (_pair, True, 0),
+    "negative-minor": (_pair, -1, 0),
+    "over-ceiling-minor": (_pair, 0, CEILING + 1),
+    "str-minor": (_pair, "0", 1),
+    "backward-minor": (_pair, 2, 1),
+    "malformed-snapshot": (_hostile_doc, 0, 0),
+}
+
+
+@pytest.mark.parametrize("name", sorted(REJECTS))
+def test_rejections_are_the_same_typed_class(name):
+    make, old_minor, new_minor = REJECTS[name]
+    bare = _bare(cpv.compare, *make(), old_minor, new_minor)
+    assert bare == ("reject", "malformed_version_request", "malformed_request")
+    tracer = vi.VersionTracer()
+    old, new = make()
+    before = copy.deepcopy((old, new))
+    assert _bare(tracer.compare, old, new, old_minor, new_minor) == bare
+    assert (old, new) == before
+    (record,) = tracer.records
+    assert record["outcome"] == "reject"
+    assert (record["failure_class"], record["code"]) == bare[1:]
+    assert record["arguments_unchanged"] is True
+
+
+def test_same_exception_object_is_reraised():
+    boom = cpv.VersionError()
+
+    def raiser(*args):
+        raise boom
+
+    with pytest.raises(cpv.VersionError) as caught:
+        vi.VersionTracer(raiser).compare({}, {}, 0, 0)
+    assert caught.value is boom
+
+
+def test_crash_is_recorded_and_reraised():
+    def crasher(*args):
+        raise KeyError("x")
+
+    tracer = vi.VersionTracer(crasher)
+    with pytest.raises(KeyError):
+        tracer.compare({}, {}, 0, 0)
+    (record,) = tracer.records
+    assert record["outcome"] == "crash" and record["error_type"] == "KeyError"
+
+
+def test_refusals_interleaved_with_accepts_change_nothing():
+    tracer = vi.VersionTracer()
+    verdicts = []
+    for make, old_minor, new_minor in (
+        (_additive, 0, 1),
+        (_pair, 2, 1),
+        (_breaking, 0, 1),
+        (_hostile_doc, 0, 0),
+        (_additive, 0, 1),
+    ):
+        old, new = make()
+        outcome = _bare(tracer.compare, old, new, old_minor, new_minor)
+        assert outcome == _bare(cpv.compare, *make(), old_minor, new_minor)
+        verdicts.append(outcome[0] + ":" + str(outcome[1]))
+    assert verdicts == [
+        "ok:True",
+        "reject:malformed_version_request",
+        "ok:False",
+        "reject:malformed_version_request",
+        "ok:True",
+    ]
+    assert [r["outcome"] for r in tracer.records] == [
+        "accept",
+        "reject",
+        "accept",
+        "reject",
+        "accept",
+    ]
+
+
+def test_arguments_unchanged_false_when_wrapped_mutates_then_rejects():
+    def mutator(old, new, old_minor, new_minor):
+        old["junk"] = 1
+        raise cpv.VersionError()
+
+    tracer = vi.VersionTracer(mutator)
+    with pytest.raises(cpv.VersionError):
+        tracer.compare({}, {}, 0, 0)
+    assert tracer.records[0]["arguments_unchanged"] is False
+
+
+# -- diagnostics ------------------------------------------------------------------------
+
+
+def test_one_record_per_call_in_seq_order_metadata_only():
+    tracer = vi.VersionTracer()
+    tracer.compare(*_additive(), 0, 1)
+    tracer.compare(*_major(), 0, 0)
+    first, second = tracer.records
+    assert (first["seq"], second["seq"]) == (0, 1)
+    assert set(first) == {
+        "seq",
+        "operation",
+        "old_base_path",
+        "new_base_path",
+        "old_minor",
+        "new_minor",
+        "outcome",
+        "compatible",
+    }
+    assert first["operation"] == "compare"
+    assert second["new_base_path"] == "/cp/v2"
+    text = tracer.to_jsonl()
+    for leaked in ("new_flag", "display_name", "password_hash_client", "areas"):
+        assert leaked not in text
+
+
+def test_records_are_an_isolated_append_only_view():
+    tracer = vi.VersionTracer()
+    tracer.compare(*_pair(), 0, 0)
+    view = tracer.records
+    view[0]["operation"] = "tampered"
+    assert tracer.records[0]["operation"] == "compare"
+    tracer.compare(*_pair(), 0, 0)
+    assert len(view) == 1 and len(tracer.records) == 2
+
+
+def test_jsonl_is_deterministic_and_parses():
+    def run():
+        tracer = vi.VersionTracer()
+        tracer.compare(*_additive(), 0, 1)
+        _bare(tracer.compare, *_pair(), 5, 1)
+        return tracer.to_jsonl()
+
+    first = run()
+    assert first == run()
+    assert [json.loads(line)["seq"] for line in first.splitlines()] == [0, 1]
+
+
+# -- totality ---------------------------------------------------------------------------
+
+
+def test_hostile_error_attributes_do_not_change_the_raise():
+    class Evil(cpv.VersionError):
+        @property
+        def failure_class(self):
+            raise RuntimeError("nope")
+
+        @failure_class.setter
+        def failure_class(self, value):
+            pass
+
+    err = Evil()
+
+    def raiser(*args):
+        raise err
+
+    tracer = vi.VersionTracer(raiser)
+    with pytest.raises(Evil) as caught:
+        tracer.compare({}, {}, 0, 0)
+    assert caught.value is err
+    assert tracer.records[0]["failure_class"] == {"__opaque__": "attribute-RuntimeError"}
+
+
+def test_faulting_trace_container_never_changes_the_result():
+    tracer = vi.VersionTracer()
+    object.__setattr__(tracer, "_trace", "not-a-list")
+    assert tracer.compare(*_pair(), 0, 0) is True
+    assert tracer.records[0]["operation"] == "compare"
+
+
+def test_hostile_snapshot_records_an_opaque_marker_and_still_refuses():
+    class DocDict(dict):
+        def __getitem__(self, key):
+            raise RuntimeError("dispatched")
+
+        def get(self, key, default=None):
+            raise RuntimeError("dispatched")
+
+    tracer = vi.VersionTracer()
+    assert _bare(tracer.compare, DocDict(), DocDict(), 0, 0)[0] == "reject"
+    assert tracer.records[0]["old_base_path"] == {"__opaque__": "DocDict"}
+
+
+def test_pathological_depth_is_opaque_and_result_unchanged():
+    deep = []
+    for _ in range(200):
+        deep = [deep]
+    tracer = vi.VersionTracer()
+    assert _bare(tracer.compare, deep, deep, 0, 0)[0] == "reject"
+    assert tracer.records[0]["outcome"] == "reject"
+
+
+# -- one-edit mutants of the instrument -------------------------------------------------
+
+MUTANTS = {
+    "swallow-reject": (
+        "            raise\n        except BaseException as error:",
+        "            return None\n        except BaseException as error:",
+    ),
+    "drop-crash-reraise": (
+        "                }\n            )\n            raise\n        self._append_total(",
+        "                }\n            )\n        self._append_total(",
+    ),
+    "seq-constant": ('"seq": self._seq()', '"seq": 0'),
+    "wrong-outcome-label": ('"outcome": "accept"', '"outcome": "ok"'),
+    "unsorted-jsonl": (
+        "json.dumps(record, sort_keys=True))\n            except",
+        "json.dumps(record))\n            except",
+    ),
+    "drop-code": ('"code": _attribute(error, "code"),', ""),
+    "verdict-inverted": (
+        '"compatible": result if type(result) is bool else None',
+        '"compatible": (not result) if type(result) is bool else None',
+    ),
+    "swap-minors": ('"old_minor": before[2],', '"old_minor": before[3],'),
+}
+
+
+def _load(source):
+    module = types.ModuleType("instrument_under_test")
+    module.__file__ = str(ROOT / "server" / "control_plane_versioning_instrument.py")
+    exec(compile(source, module.__file__, "exec"), module.__dict__)
+    return module
+
+
+def _mutant(label):
+    before, after = MUTANTS[label]
+    assert SOURCE.count(before) == 1, label
+    return _load(SOURCE.replace(before, after))
+
+
+def _is_red(module):
+    """True only on a semantic deviation; an unexpected exception errors."""
+    tracer = module.VersionTracer()
+    tracer.compare(*_additive(), 0, 3)
+    tracer.compare(*_breaking(), 1, 4)
+    records = tracer.records
+    if [r["seq"] for r in records] != [0, 1]:
+        return True
+    if [r["outcome"] for r in records] != ["accept", "accept"]:
+        return True
+    if [r["compatible"] for r in records] != [True, False]:
+        return True
+    if [(r["old_minor"], r["new_minor"]) for r in records] != [(0, 3), (1, 4)]:
+        return True
+    if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
+        return True
+    try:
+        tracer.compare(*_pair(), 2, 1)
+        return True
+    except cpv.VersionError:
+        pass
+    last = tracer.records[-1]
+    if last.get("outcome") != "reject" or last.get("code") != "malformed_request":
+        return True
+
+    def crasher(*args):
+        raise KeyError("x")
+
+    crash = module.VersionTracer(crasher)
+    try:
+        crash.compare({}, {}, 0, 0)
+    except KeyError:
+        return False
+    except Exception as error:  # noqa: BLE001 - another type is a semantic deviation
+        return type(error) is not KeyError
+    return True
+
+
+def test_unmutated_instrument_is_green_on_the_mutant_check():
+    assert not _is_red(_load(SOURCE))
+
+
+@pytest.mark.parametrize("label", sorted(MUTANTS))
+def test_mutant_is_red(label):
+    assert _is_red(_mutant(label)), label
