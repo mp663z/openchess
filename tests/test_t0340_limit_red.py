@@ -423,7 +423,7 @@ class RawEscape(AssertionError):
     """A non-contract exception escaped the implementation (a crash, not a decision)."""
 
 
-def _guard(impl, err, oracle=None):
+def _guard(impl, err, oracle=None, crash=None):
     """Any exception that is not the typed contract error is a crash and becomes
     RawEscape (an AssertionError raised inside the implementation included),
     except Touched, which is the semantic detection of a caller object being
@@ -441,11 +441,9 @@ def _guard(impl, err, oracle=None):
         except Touched:
             raise
         except Exception as exc:  # noqa: BLE001
-            crash = type(exc).__name__
-        else:  # pragma: no cover
-            crash = None
+            crashed = type(exc).__name__
         if refusal is None:
-            raise RawEscape(f"raw {crash} escaped") from None
+            raise (crash or RawEscape)(f"raw {crashed} escaped") from None
         if oracle is not None:
             try:
                 oracle(*copy.deepcopy(args))
@@ -470,6 +468,62 @@ def _inert(mapping):
     return {_InertKey(k): v for k, v in mapping.items()}
 
 
+class _StrSub(str):
+    pass
+
+
+class _IntSub(int):
+    pass
+
+
+class _DictSub(dict):
+    pass
+
+
+def check_inert_values(impl, err):
+    # str / int / dict subclasses and bools are not the exact built-in types
+    for field, bad in (
+        ("op", _StrSub("admit")),
+        ("key", _StrSub("k-1")),
+        ("cost", True),
+        ("cost", _IntSub(1)),
+        ("now", True),
+        ("now", _IntSub(0)),
+    ):
+        _rejects(impl, err, _req(**{field: bad}), "malformed_limit_request")
+    _rejects(impl, err, _DictSub(_req()), "malformed_limit_request")
+    _rejects(impl, err, _req(policy=_DictSub(POLICY)), "malformed_limit_request")
+    _rejects(impl, err, _req(previous=_DictSub(_forge())), "malformed_limit_request")
+    for key, bad in (("capacity", True), ("capacity", _IntSub(3)), ("refill_ms", _IntSub(1000))):
+        _rejects(impl, err, _req(policy={**POLICY, key: bad}), "invalid_limit_policy")
+    for field, bad in (
+        ("op", _StrSub("admit")),
+        ("key", _StrSub("k-1")),
+        ("capacity", _IntSub(3)),
+        ("refill_ms", _IntSub(1000)),
+        ("cost", _IntSub(1)),
+        ("decision", _StrSub("admit")),
+        ("tokens", True),
+        ("tokens", _IntSub(1)),
+        ("updated_at", _IntSub(50)),
+        ("previous_id", _StrSub("lm1:" + "0" * 64)),
+    ):
+        prev = _forge(**{field: bad})
+        _rejects(impl, err, _req(now=60, previous=prev), "corrupt_previous_bucket")
+
+
+def check_chain(impl, err):
+    # each chain clause alone breaks the chain: key, capacity, refill, clock
+    for prev in (
+        _forge(key="k-2"),
+        _forge(capacity=4),
+        _forge(refill_ms=500),
+    ):
+        _rejects(impl, err, _req(now=60, previous=prev), "limit_conflict")
+    _rejects(impl, err, _req(now=49, previous=_forge()), "limit_conflict")
+    assert impl(_req(now=50, previous=_forge()))["previous_id"] == _forge()["limit_id"]
+
+
 def check_inert_keys(impl, err):
     _rejects(impl, err, _inert(_req()), "malformed_limit_request")
     _rejects(impl, err, _req(policy=_inert(POLICY)), "invalid_limit_policy")
@@ -483,12 +537,14 @@ CHECKS = (
     check_order,
     check_totality,
     check_inert_keys,
+    check_inert_values,
+    check_chain,
 )
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_bound_implementation_passes(check):
-    check(_guard(admit, LimitError), LimitError)
+    check(_guard(admit, LimitError, crash=AssertionError), LimitError)
 
 
 def test_fixture_covers_every_failure_class_and_decision():
@@ -685,7 +741,7 @@ def test_mutant_is_red_on_its_target(name):
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
 def test_guard_with_oracle_is_identity_on_the_reference(check):
-    check(_guard(admit, LimitError, admit), LimitError)
+    check(_guard(admit, LimitError, admit, crash=AssertionError), LimitError)
 
 
 def test_raw_exception_is_a_totality_failure_not_a_mutant_kill():
