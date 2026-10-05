@@ -339,18 +339,21 @@ def test_move_corruptions_fail_closed_target_malformed(name):
         assert bad == before_move and type(bad) is type(before_move)
 
 
-# -- source mutants of the move guard ----------------------------------------------
+# -- source mutants ----------------------------------------------------------------
 
 _SRC = Path(prod.__file__).read_text()
-_GUARD = [
-    ("if not _exact_dict(move, _MOVE_KEYS):", "if False:"),
-    ("if type(kind) is not str or kind not in _MOVE_TYPES:", "if False:"),
-    (
-        "if type(frm) is not str or frm not in _SQUARES or type(to) is not str"
-        " or to not in _SQUARES:",
-        "if False:",
-    ),
-]
+MALFORMED = ("err", "target_malformed", prod.FAILURE_MAPPING["target_malformed"])
+
+
+class Crash:
+    """A foreign (non-EnPassantError) exception. It is never an expected outcome and never a
+    kill: any test that observes one fails."""
+
+    def __init__(self, exc):
+        self.exc = exc
+
+    def __repr__(self):
+        return f"Crash({type(self.exc).__name__})"
 
 
 def _exec_mutant(old, new):
@@ -360,29 +363,63 @@ def _exec_mutant(old, new):
     return ns
 
 
-@pytest.mark.parametrize("old,new", _GUARD)
-def test_move_guard_mutants_are_killed_by_move_corruptions(old, new):
+def _outcome(ns, fn, *args):
+    """('ok', value) | ('err', class, code) | Crash. Callers assert no Crash."""
+    try:
+        return ("ok", ns[fn](*args))
+    except ns["EnPassantError"] as exc:
+        return ("err", exc.failure_class, exc.code)
+    except Exception as exc:  # recorded as a Crash value, asserted against by every caller
+        return Crash(exc)
+
+
+PROD_NS = vars(prod)
+
+_GUARD = {
+    "move-shape": ("if not _exact_dict(move, _MOVE_KEYS):", "if False:", "extra_key"),
+    "move-kind": (
+        "if type(kind) is not str or kind not in _MOVE_TYPES:",
+        "if False:",
+        "undeclared_kind",
+    ),
+    "move-squares": (
+        "if type(frm) is not str or frm not in _SQUARES or type(to) is not str"
+        " or to not in _SQUARES:",
+        "if False:",
+        "undeclared_square",
+    ),
+}
+
+
+def _non_capture_move(rng, state):
+    """A well-formed non-capture move whose from-square holds a piece, so a mutant that lets a
+    corrupt move through has a legal-looking continuation (and nothing else is wrong)."""
+    for m in t72._moves(rng, state):
+        if isinstance(m, dict) and m["type"] != "ep-capture" and m["from"] in state["occupied"]:
+            return m
+    return None
+
+
+@pytest.mark.parametrize("name", sorted(_GUARD))
+def test_move_guard_mutants_are_killed_semantically(name):
+    old, new, corruption = _GUARD[name]
     ns = _exec_mutant(old, new)
     rng = random.Random(4242)
-    killed = False
-    for _ in range(80):
+    checked = 0
+    for _ in range(40):
         state = t72._state(rng)
-        move = next(m for m in t72._moves(rng, state) if isinstance(m, dict))
-        for gen in MOVE_CORRUPTIONS.values():
-            try:
-                ns["apply"](state, gen(move))
-            except AssertionError:
-                raise
-            except ns["EnPassantError"] as exc:
-                if exc.failure_class != "target_malformed":
-                    killed = True
-            except Exception:
-                killed = True
-            else:
-                killed = True
-        if killed:
-            break
-    assert killed, (old, new)
+        move = _non_capture_move(rng, state)
+        if move is None:
+            continue
+        checked += 1
+        bad = MOVE_CORRUPTIONS[corruption](move)
+        assert not _valid_move(bad)
+        got = _outcome(ns, "apply", state, bad)
+        assert not isinstance(got, Crash), (name, got)
+        # killed only when the mutant accepts the corrupt move or names a wrong class
+        assert got != MALFORMED, (name, got)
+        assert _outcome(PROD_NS, "apply", state, bad) == MALFORMED
+    assert checked >= 20, checked
 
 
 def test_unmutated_source_exec_is_clean():
@@ -394,6 +431,179 @@ def test_unmutated_source_exec_is_clean():
         state = t72._state(rng)
         move = next(m for m in t72._moves(rng, state) if isinstance(m, dict))
         for gen in MOVE_CORRUPTIONS.values():
-            with pytest.raises(ns["EnPassantError"]) as exc:
-                ns["apply"](state, gen(move))
-            assert exc.value.failure_class == "target_malformed"
+            assert _outcome(ns, "apply", state, gen(move)) == MALFORMED
+
+
+# -- acceptance rows: one violation at a time, literal expected outcomes -------------
+
+
+def _board(*pieces):
+    return {sq: tok for sq, tok in pieces}
+
+
+KINGS = (("g1", "wk"), ("g8", "bk"))
+
+
+def _state_of(target, side, *pieces):
+    return {
+        "ep_target": target,
+        "occupied": _board(*KINGS, *pieces),
+        "side_to_move": side,
+    }
+
+
+def _ep(frm, to):
+    return {"type": "ep-capture", "from": frm, "to": to}
+
+
+def _str_target_state():
+    return _state_of(_StrSub("d6"), "w", ("c5", "wp"), ("d5", "bp"))
+
+
+def _str_key_state():
+    base = _state_of("d6", "w", ("c5", "wp"), ("d5", "bp"))
+    return {_StrSub("ep_target") if k == "ep_target" else k: v for k, v in base.items()}
+
+
+def _str_key_move():
+    return {"type": "ep-capture", _StrSub("from"): "c5", "to": "d6"}
+
+
+ID = "identity_value"
+AP = "apply"
+CAP_OK = None  # filled by test via apply on the reference state
+ROWS = {
+    # identity_value: the capturer stands on the lower file (df=-1) of the target
+    "identity-left-capturer": (
+        ID,
+        (_state_of("d6", "w", ("c5", "wp"), ("d5", "bp")),),
+        ("ok", "d6"),
+    ),
+    "identity-right-capturer": (
+        ID,
+        (_state_of("d6", "w", ("e5", "wp"), ("d5", "bp")),),
+        ("ok", "d6"),
+    ),
+    "identity-left-capturer-black": (
+        ID,
+        (_state_of("d3", "b", ("c4", "bp"), ("d4", "wp")),),
+        ("ok", "d3"),
+    ),
+    "identity-right-capturer-black": (
+        ID,
+        (_state_of("d3", "b", ("e4", "bp"), ("d4", "wp")),),
+        ("ok", "d3"),
+    ),
+    # edge files: the only capturer is on the a-file or the h-file
+    "identity-a-file-capturer": (
+        ID,
+        (_state_of("b6", "w", ("a5", "wp"), ("b5", "bp")),),
+        ("ok", "b6"),
+    ),
+    "identity-h-file-capturer": (
+        ID,
+        (_state_of("g6", "w", ("h5", "wp"), ("g5", "bp")),),
+        ("ok", "g6"),
+    ),
+    "identity-a-file-target-no-capturer": (ID, (_state_of("a6", "w", ("a5", "bp")),), ("ok", "-")),
+    "identity-h-file-target-no-capturer": (ID, (_state_of("h6", "w", ("h5", "bp")),), ("ok", "-")),
+    # a str-subclass target is outside the closed domain, nothing else is wrong
+    "state-target-str-subclass": (AP, (_str_target_state(), _ep("c5", "d6")), MALFORMED),
+    "identity-target-str-subclass": (ID, (_str_target_state(),), MALFORMED),
+    # a str-subclass key equal to a required key, nothing else is wrong
+    "state-key-str-subclass": (AP, (_str_key_state(), _ep("c5", "d6")), MALFORMED),
+    "move-key-str-subclass": (
+        AP,
+        (_state_of("d6", "w", ("c5", "wp"), ("d5", "bp")), _str_key_move()),
+        MALFORMED,
+    ),
+    # target file outside a-h while every other precondition field is well formed
+    "capture-target-bad-file": (
+        AP,
+        (_state_of("i6", "w", ("h5", "wp")), _ep("h5", "e6")),
+        ("err", "target_malformed", prod.FAILURE_MAPPING["target_malformed"]),
+    ),
+    # a three-character target whose rank digit is right and file is right
+    "identity-target-overlong": (
+        ID,
+        (_state_of("d66", "w", ("c5", "wp"), ("d5", "bp")),),
+        ("ok", "-"),
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(ROWS))
+def test_acceptance_rows_hold_on_production(name):
+    fn, args, expected = ROWS[name]
+    before = copy.deepcopy(args)
+    got = _outcome(PROD_NS, fn, *args)
+    assert not isinstance(got, Crash), (name, got)
+    assert got == expected, (name, got)
+    assert args == before
+
+
+_CAPTURE_GRAMMAR = (
+    '    if not _grammar_ok(target):\n        _fail("target_malformed")\n    if target == NONE:'
+)
+# (old, new) source edits applied together; rows that must expose the edit
+MUTANTS = {
+    "identity-skips-lower-file": (
+        (("for df in (-1, 1):", "for df in (1,):"),),
+        ("identity-left-capturer", "identity-left-capturer-black"),
+    ),
+    "identity-lower-bound-strict": (
+        (("if 0 <= f <= 7:", "if 0 < f <= 7:"),),
+        ("identity-a-file-capturer",),
+    ),
+    "identity-upper-bound-strict": (
+        (("if 0 <= f <= 7:", "if 0 <= f < 7:"),),
+        ("identity-h-file-capturer",),
+    ),
+    "target-type-check-dropped": (
+        (("type(target) is not str or ", ""),),
+        ("state-target-str-subclass", "identity-target-str-subclass"),
+    ),
+    "capture-grammar-check-dropped": (
+        ((_CAPTURE_GRAMMAR, "    if target == NONE:"),),
+        ("capture-target-bad-file",),
+    ),
+    "key-type-check-dropped": (
+        (("all(type(k) is str for k in dict.keys(value))", "True"),),
+        ("state-key-str-subclass", "move-key-str-subclass"),
+    ),
+    # identity's own grammar guard is redundant with the one inside _capture, so it is only
+    # observable when both are gone
+    "identity-and-capture-grammar-checks-dropped": (
+        (
+            (_CAPTURE_GRAMMAR, "    if target == NONE:"),
+            ("if target == NONE or not _grammar_ok(target):", "if target == NONE:"),
+        ),
+        ("identity-target-overlong",),
+    ),
+}
+
+
+def _exec_edits(edits):
+    src = _SRC
+    for old, new in edits:
+        assert src.count(old) == 1, old
+        src = src.replace(old, new)
+    ns = {"__name__": "mutant_en_passant", "__file__": prod.__file__}
+    exec(compile(src, "mutant", "exec"), ns)
+    return ns
+
+
+@pytest.mark.parametrize("name", sorted(MUTANTS))
+def test_each_source_mutant_is_killed_by_a_semantic_row(name):
+    edits, rows = MUTANTS[name]
+    ns = _exec_edits(edits)
+    for row in rows:
+        fn, args, expected = ROWS[row]
+        got = _outcome(ns, fn, *copy.deepcopy(args))
+        assert not isinstance(got, Crash), (name, row, got)
+        assert got != expected, (name, row)
+    # a mutant with no edit is not killed: the rows really are the discriminator
+    clean = _exec_edits(((MUTANTS[name][0][0][0],) * 2,))
+    for row in rows:
+        fn, args, expected = ROWS[row]
+        assert _outcome(clean, fn, *copy.deepcopy(args)) == expected
