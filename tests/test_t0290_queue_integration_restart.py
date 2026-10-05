@@ -202,3 +202,15 @@ def test_stale_state_snapshot_replay_is_visible_as_a_different_state_id(tmp_path
     snapshot = _load(path)
     receipt = engine.apply(state, {"op": "claim", "worker": "w1", "now": 0, "lease_ms": 10})
     assert state_id_for(snapshot) != state_id_for(state) == receipt["state_id"]
+
+
+@pytest.mark.parametrize("seed", range(12))
+def test_streams_exercise_accepted_work_not_only_refusals(seed):
+    """Acceptance oracle: an engine that refused everything would make every
+    restart comparison trivially equal; the reference run must really accept."""
+    results, state = _uninterrupted(_stream(seed))
+    kinds = {request_result[0] for request_result in results}
+    assert "ok" in kinds
+    assert sum(1 for kind, _ in results if kind == "ok") >= 10
+    assert state["jobs"] and state["next_seq"] > 0
+    assert any(r[0] == "ok" and isinstance(r[1], dict) for r in results)
