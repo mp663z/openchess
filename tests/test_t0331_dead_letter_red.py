@@ -171,6 +171,7 @@ def check_semantics(impl, err):
     for status, extra in (
         ("ready", {"attempts": 0}),
         ("ready", {"attempts": 3}),
+        ("done", {"attempts": 1}),
         ("done", {"attempts": 2}),
         ("leased", {"attempts": 1, "lease_owner": "w1", "lease_expires_at": 9}),
     ):
@@ -184,6 +185,9 @@ def check_semantics(impl, err):
     _rejects(impl, err, _req(job=_job(payload="\ud800")), "corrupt_job")
     _rejects(impl, err, _req(job=_job(payload={"a": float("nan")})), "corrupt_job")
     _rejects(impl, err, _req(job=_job(payload=10**4001)), "corrupt_job")
+    _rejects(impl, err, _req(job=_job(payload=10**4000)), "corrupt_job")  # 4001 digits
+    assert impl(_req(job=_job(payload=10**3999)))["op"] == "bury"  # exactly 4000 digits
+    assert impl(_req(job=_job(payload=-(10**3999))))["op"] == "bury"
     shared = [1]
     _rejects(impl, err, _req(job=_job(payload={"a": shared, "b": shared})), "corrupt_job")
 
