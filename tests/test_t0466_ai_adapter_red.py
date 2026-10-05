@@ -22,6 +22,14 @@ ROWS = [(s, r) for s in fx.SECTIONS for r in fx.CASES[s]]
 IDS = [r["name"] for _s, r in ROWS]
 
 
+class _SubDict(dict):
+    pass
+
+
+class _SubStr(str):
+    pass
+
+
 def _hosted():
     row = next(r for r in fx.CASES["happy"] if r["name"] == "hosted-opted-in")
     return fx.materialize(row)
@@ -62,6 +70,19 @@ def _guarded(adapter, error):
 def battery(adapter, error):
     """Green iff the adapter passes the whole corpus and every probe."""
     adapter = _guarded(adapter, error)
+    # envelope rows first, so a mutant is judged by outcome before any hostile type can crash it
+    request, state = _hosted()
+    _expect(adapter, error, _SubDict(request), state, "malformed_request", [])
+    request, state = _hosted()
+    request = {(_SubStr(k) if k == "mode" else k): v for k, v in request.items()}
+    _expect(adapter, error, request, state, "malformed_request", [])
+    local = next(r for r in fx.CASES["happy"] if r["name"] == "local-offline")
+    request, state = fx.materialize(local)
+    del request["payload"]  # required key absent; the local path never reads the payload
+    _expect(adapter, error, request, state, "malformed_request", [])
+    request, state = fx.materialize(local)
+    state["sensitive"] = True  # sensitive gates the hosted path only
+    _expect(adapter, error, request, state, "succeeded", ["local"])
     for _section, row in ROWS:
         request, state = fx.materialize(row)
         before = copy.deepcopy((request, state))
@@ -205,6 +226,19 @@ MUTANTS = [
         "reference",
         'if state.get("cancelled", False):',
         'if mode == "hosted_byom" and state.get("cancelled", False):',
+    ),
+    ("_envelope", "if type(request) is not dict or any(", "if type(request) is not dict and any("),
+    (
+        "_envelope",
+        "if not request.keys() >= REQUIRED or not request.keys() <= ALLOWED:",
+        "if not request.keys() <= ALLOWED:",
+    ),
+    (
+        "reference",
+        'effects.append("hosted" if mode == "hosted_byom" else "local")\n',
+        'effects.append("hosted" if mode == "hosted_byom" else "local")\n'
+        '    if mode == "local" and state.get("sensitive", False):\n'
+        '        effects.append("local")\n',
     ),
     ("_envelope", 'if type(request["version"]) is not int or request["version"] != 1:',
      'if request["version"] != 1:'),
