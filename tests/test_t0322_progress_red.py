@@ -449,7 +449,11 @@ def _m_refuses_everything(request, real):
 
 
 RAW_MUTANTS = {"raw_exception"}
-REFUSAL_MUTANTS = {"refuses_valid", "refuses_everything"}
+REFUSAL_MUTANTS = {
+    "refuses_valid",
+    "refuses_everything",
+    "strict_clock",
+}  # strict_clock refuses an equal-now report, which is valid
 
 MUTANTS = {
     "refuses_valid": (_m_refuses_valid, "check_semantics"),
