@@ -319,7 +319,7 @@ MUTANTS = {
     ),
     "drop-crash-reraise": (
         "                }\n            )\n            raise\n        self._append_total(",
-        "                }\n            )\n        self._append_total(",
+        "                }\n            )\n            return None\n        self._append_total(",
     ),
     "seq-constant": ('"seq": self._seq()', '"seq": 0'),
     "wrong-outcome-label": ('"outcome": "accept"', '"outcome": "ok"'),
@@ -333,6 +333,18 @@ MUTANTS = {
         '"compatible": (not result) if type(result) is bool else None',
     ),
     "swap-minors": ('"old_minor": before[2],', '"old_minor": before[3],'),
+    "copy-args": (
+        "self._comparator(old, new, old_minor, new_minor)",
+        "self._comparator(*__import__('copy').deepcopy((old, new, old_minor, new_minor)))",
+    ),
+    "crash-unchanged-constant": (
+        '"error_type": _type_name(type(error)),\n'
+        '                    "arguments_unchanged": '
+        "[_snapshot(a) for a in (old, new, old_minor, new_minor)]\n"
+        "                    == before,",
+        '"error_type": _type_name(type(error)),\n                    "arguments_unchanged": True,',
+    ),
+    "append-fallback-empty": ('[_opaque("trace-append-failed")]', "[]"),
 }
 
 
@@ -349,48 +361,125 @@ def _mutant(label):
     return _load(SOURCE.replace(before, after))
 
 
-def _is_red(module):
+class _Spy:
+    """A comparator or client that records the exact argument objects it receives."""
+
+    def __init__(self):
+        self.seen = []
+
+    def __call__(self, *args):
+        self.seen.append(args)
+
+    def call(self, *args):
+        self.seen.append(args)
+
+
+class _MutatingCrash:
+    """Mutates its first argument, then crashes with a fixed exception object."""
+
+    def __init__(self, boom):
+        self.boom = boom
+
+    def __call__(self, first, *rest):
+        first.append("junk")
+        raise self.boom
+
+    def call(self, name, body=None):
+        body.append("junk")
+        raise self.boom
+
+
+def _first_deviation(module):
+    """The name of the first semantic check the module fails, or None.
+
+    An unexpected exception from the instrument propagates and errors the
+    test instead of counting as a kill."""
     """True only on a semantic deviation; an unexpected exception errors."""
     tracer = module.VersionTracer()
     tracer.compare(*_additive(), 0, 3)
     tracer.compare(*_breaking(), 1, 4)
     records = tracer.records
     if [r["seq"] for r in records] != [0, 1]:
-        return True
+        return "check-1"
     if [r["outcome"] for r in records] != ["accept", "accept"]:
-        return True
+        return "check-2"
     if [r["compatible"] for r in records] != [True, False]:
-        return True
+        return "check-3"
     if [(r["old_minor"], r["new_minor"]) for r in records] != [(0, 3), (1, 4)]:
-        return True
+        return "check-4"
     if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
-        return True
+        return "check-5"
     try:
         tracer.compare(*_pair(), 2, 1)
-        return True
+        return "check-6"
     except cpv.VersionError:
         pass
     last = tracer.records[-1]
     if last.get("outcome") != "reject" or last.get("code") != "malformed_request":
-        return True
-
-    def crasher(*args):
-        raise KeyError("x")
-
-    crash = module.VersionTracer(crasher)
+        return "check-7"
+    spy = _Spy()
+    probe = module.VersionTracer(spy)
+    given = ([0], [1], 2, 3)
+    probe.compare(*given)
+    if len(spy.seen) != 1 or len(spy.seen[0]) != 4:
+        return "args-identity"
+    if spy.seen[0][0] is not given[0] or spy.seen[0][1] is not given[1]:
+        return "args-identity"
+    if (probe.records[0]["old_minor"], probe.records[0]["new_minor"]) != (2, 3):
+        return "minors-recorded"
+    lost = module.VersionTracer(spy)
+    del lost._trace
+    lost.compare(*given)
+    if lost.records != ({"__opaque__": "trace-append-failed"},):
+        return "append-fallback"
+    boom = KeyError("x")
+    crash = module.VersionTracer(_MutatingCrash(boom))
+    victim = [0]
     try:
-        crash.compare({}, {}, 0, 0)
-    except KeyError:
-        return False
-    except Exception as error:  # noqa: BLE001 - another type is a semantic deviation
-        return type(error) is not KeyError
-    return True
+        crash.compare(victim, {}, 0, 0)
+    except KeyError as caught:
+        if caught is not boom:
+            return "crash-reraise-identity"
+    else:
+        return "crash-swallowed"
+    record = crash.records[-1]
+    if record.get("outcome") != "crash" or record.get("error_type") != "KeyError":
+        return "crash-record"
+    if record.get("arguments_unchanged") is not False:
+        return "crash-arguments-unchanged"
+    return None
+
+
+def _is_red(module):
+    return _first_deviation(module) is not None
 
 
 def test_unmutated_instrument_is_green_on_the_mutant_check():
-    assert not _is_red(_load(SOURCE))
+    assert _first_deviation(_load(SOURCE)) is None
 
 
 @pytest.mark.parametrize("label", sorted(MUTANTS))
 def test_mutant_is_red(label):
-    assert _is_red(_mutant(label)), label
+    assert _is_red(_mutant(label)) is True, label
+    assert isinstance(_first_deviation(_mutant(label)), str), label
+
+
+# the check that must catch each of these, so a kill is never an accident
+EXPECTED_KILL = {
+    "drop-crash-reraise": "crash-swallowed",
+    "copy-args": "args-identity",
+    "crash-unchanged-constant": "crash-arguments-unchanged",
+    "append-fallback-empty": "append-fallback",
+}
+
+
+@pytest.mark.parametrize("label", sorted(EXPECTED_KILL))
+def test_mutant_dies_on_its_own_check(label):
+    assert _first_deviation(_mutant(label)) == EXPECTED_KILL[label]
+
+
+def test_a_crashing_instrument_is_an_error_not_a_kill():
+    broken = SOURCE.replace('"outcome": "crash",', '"outcome": undefined_name,')
+    assert broken != SOURCE
+    with pytest.raises(NameError):
+        _first_deviation(_load(broken))
