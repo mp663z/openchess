@@ -73,7 +73,10 @@ def test_sources_outside_scenario_refused_before_state(source_id):
 
 def _cancelled_state_holds(binding, source_id, cancel_at):
     store = ReferenceStore()
-    result = binding(_input(source_id), store, source_id=source_id, cancel_at=cancel_at)
+    try:
+        result = binding(_input(source_id), store, source_id=source_id, cancel_at=cancel_at)
+    except Refusal as error:
+        raise AssertionError(f"refused a valid scenario: {error.code}") from None
     assert result["kind"] == SCENARIO["visible_output"]
     assert result["source_id"] == source_id
     committed = cancel_at - 1
@@ -110,6 +113,10 @@ def _drop_provenance(payload, store, **kwargs):
     for record in store.records.values():
         record.pop("provenance", None)
     return result
+
+
+def _refuse_valid(payload, store, **kwargs):
+    raise Refusal("unknown_rights")
 
 
 def _allow_outside_source(payload, store, *, source_id="pgn-multi", **kwargs):
@@ -170,9 +177,15 @@ def test_probe_is_green_for_the_production_binding():
         _allow_outside_source,
         _telemetry_before_refusal,
         _persist_inflight,
+        _refuse_valid,
     ],
     ids=lambda f: f.__name__.lstrip("_"),
 )
 def test_rights_breaking_binding_is_red_by_an_assertion(binding):
     with pytest.raises(AssertionError):
         _rights_probe(binding)
+
+
+def test_a_refused_valid_scenario_is_an_assertion_failure_not_a_raw_refusal():
+    with pytest.raises(AssertionError, match="refused a valid scenario"):
+        _cancelled_state_holds(_refuse_valid, SCENARIO["sources"][0], 2)
