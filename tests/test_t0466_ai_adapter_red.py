@@ -70,6 +70,16 @@ def _guarded(adapter, error):
 def battery(adapter, error):
     """Green iff the adapter passes the whole corpus and every probe."""
     adapter = _guarded(adapter, error)
+    # cost-value rows first: each is judged by outcome before any hostile type can crash a mutant
+    for cap, code in ((float("nan"), "malformed_request"), (-1, "malformed_request"),
+                      (float("inf"), "malformed_request")):  # fmt: skip
+        request, state = _hosted()
+        request["max_cost_usd"] = cap
+        _expect(adapter, error, request, state, code, [])
+    for bounded in (float("nan"), -1, float("inf")):
+        request, state = _hosted()
+        state["bounded_cost"] = bounded
+        _expect(adapter, error, request, state, "cost_cap_exceeded", [])
     # envelope rows first, so a mutant is judged by outcome before any hostile type can crash it
     request, state = _hosted()
     _expect(adapter, error, _SubDict(request), state, "malformed_request", [])
@@ -250,6 +260,8 @@ MUTANTS = [
         'if type(request[field]) is not str or not request[field]:',
         'if not isinstance(request[field], str) or not request[field]:',
     ),
+    ("_envelope", "or cap < 0:", ":"),
+    ("reference", "if bounded < 0 or bounded > cap:", "if bounded < 0:"),
     ("_envelope", "if type(request) is not dict or any(", "if type(request) is not dict and any("),
     (
         "_envelope",
