@@ -288,6 +288,9 @@ def test_corrupt_persisted_log_refused_in_fresh_process():
             log, 0, payload={"identity": IDENTS[3], "record": dict(RECORDS[3])}
         ),
         "unknown_op": _tamper(log, 0, op="truncate"),
+        "non_dict_entry_int": [*log[:1], 5, *log[2:]],
+        "non_dict_entry_none": [*log[:1], None, *log[2:]],
+        "non_dict_entry_list": [*log[:1], [], *log[2:]],
     }
     for name, bad in cases.items():
         child = child_run([REQUESTS[3]], log=bad, ledger=ledger)
