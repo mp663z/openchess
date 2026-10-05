@@ -110,48 +110,8 @@ MANIFESTS = {
 }
 
 # whole-row sha256 over canonical JSON; key set == manifests
-ROW_DIGESTS = {
-    "happy:collision-free-baseline": "2785ef680f71716535a35ef903ac05b80fc6e0992000080faccbdaa2bdd5c16f",
-    "happy:total-collision-same-set": "d1b20fad37a81a0d61978583d4c0f7937ea34c2f0da538518efcc38aba6057be",
-    "happy:total-collision-four-distinct": "19ec0199b910f9571623fe678311057a282f5a86d40f79e99488e7b7902ec42d",
-    "happy:total-collision-reversed-arrival": "4ea608c8e7c33dba3fb53c446d8f8abd8f607d89f516eb5a77af2cf96e76e556",
-    "happy:total-collision-same-identity-new-clocks": "73028e32031f6c61f831d16dd0d5d0dbd3a1ee19ee1b22b661608763e4794c16",
-    "happy:merge-under-total-collision": "8a2d3315a8ad2f19e1c03b4cbb80ddabc2df802bb59791dc6b253288a7535876",
-    "happy:insert-under-corrupt-then-return-oracle": "fa8d50318e150dd28960401462a8edcd147406f066ea3b3398e5275baa80565d",
-    "happy:merge-under-corrupt-then-return-oracle": "01b90bc53e6449714df9ccd0e20f2160ebbbb6bcbc16566f918753cfb4760cf0",
-    "happy:insert-under-rebind-then-return-oracle": "86c403d1df85ccc845f1022dfffabc420e0f288846236676f1b519205e961084",
-    "happy:merge-under-rebind-then-return-oracle": "20b0d5c20a536460a7ab5a50b6ec9d0d1b8a81ea05db28b138dd5fceb922b3c1",
-    "boundary:first-insert-into-empty-table": "d97b1b3d7e9bdc4fa10b7401265c973aab91ab998cb1f205bc96eb4438a1212c",
-    "boundary:merge-empty-into-empty": "ec658d2b4b5036efe7c7a702499b027cbb701924a9b80872696686f8a14b108f",
-    "boundary:merge-is-idempotent": "c2d4ea33d4a510bca5ee1a81ba7d0b0738ad458c249adc251eb75de92dae58d9",
-    "boundary:real-digest-ignores-clocks": "755807b3ce674c1c0e0def5c64f060a16e27a704d3081f843a30a89ca1f1aa4f",
-    "malformed:insert-bad-fen": "270902796ae32d0e89c5e8a9350539f48164517b71416cb847951ed0377bd0ff",
-    "malformed:insert-unknown-variant": "1dddf82e54e61f7c552442bc3e100516c1c0b8e415d07f7da255c688ed855770",
-    "malformed:merge-record-not-a-dict": "c043c65d30426fb6924ba5b3e362061a98bb2480bd9aa2f715e05969b1edcb9e",
-    "malformed:merge-record-extra-field": "911b58321e9368704775f12f309a70fc0e1cecb446c0d5384e8c8ded63cdf846",
-    "malformed:merge-record-missing-field": "ba664753e53a5acf57044e61f421369292ddc64479bfb877840d51abc2dc28c5",
-    "malformed:merge-cross-oracle-record": "e420530d375d0444d1120f8dc1bd5f428389e8c7223da41e0d1162955b98029e",
-    "malformed:merge-record-bad-snapshot": "29e0d19ec27eae4386b5e9eb87d36bdb81edc08bf5c14af0960890bca7c303f9",
-    "malformed:lookup-by-bucket-key": "2a18a08cdb26162d09ec04dadb97c30c65c0a10284aa852f0150c9fdea98a46d",
-    "malformed:raw-oracle-clock-divergence": "5d88eaf5bf1a27ad042f7d83c5ece81569549a5c90b8429a0b640c2d2011a9d6",
-    "malformed:stateful-oracle-divergence": "cc1031403773646a6b6cb946d96516ab349e5a77107d29ae8bc359484e026d0a",
-    "malformed:raising-oracle": "8b3b1c61d52ce6b0aaba162098e5169d35c2161fe9113f6a955ad5ef7f91e523",
-    "malformed:interrupting-oracle": "240cd3b8f05e531baf452dc79775da789e3d30468467679756188ab84fd63865",
-    "malformed:invalid-format-key": "4f32d773b6fc32520ef25f28491c3a22658f62d8b8d9f55962d23e87adb7d1cf",
-    "malformed:str-subclass-key": "3bd9f25d5e788d42f78a9257385e3540c419f494b2110a83d32369f0eb787384",
-    "malformed:non-str-key": "a1a041c70c85dd59df4b6e962aa89ec1fa0575283ada27f0990bacccf64d34f6",
-    "malformed:reentrant-oracle": "10308937d30cc82823d2a1d6864ab76c45f07a074ab7ec625c357e9441397d1a",
-    "malformed:merge-record-renamed-key": "ec46c2f907f675689a6af9e31ccf4900318a1c2561b435a0daf93406696f8677",
-    "malformed:merge-record-unnormalized-clocks": "03475642fc28fd8e2509acb9da8145afcba80d43adf6001759811c6aee7bfca1",
-    "malformed:malformed-merge-record-under-raising-oracle": "f0264660c471af49d33eca9f694117ea4f6f3b06514f214788dbfdcfd518a00b",
-    "rollback:raw-divergence-then-insert": "e0b4ded1dd543ac064ec1cbba0118619fbeced0272dfcf0bf79c10684cbb672b",
-    "rollback:merge-rejected-midway": "d04ad79ab06b9bae01c1131638f0af0753278f2845b0c51039bbe55234a08d8e",
-    "rollback:corrupting-oracle-restored": "1a241ca68c1628db605f3e71ed1a1d2cb8e00a1f2ae67d78154889e4b34d0942",
-    "rollback:lookup-then-insert": "cc39de62ab8d8367758963c68b25e0d151adafcbad38122e2843e90d103c231c",
-    "rollback:merge-corrupting-oracle-restored": "f6156df0be65bad288c02410173ddfb27e21ae4934119bd52aa766df2490b3fa",
-    "rollback:rebind-oracle-restored": "bf3ecd16d488b3d1172ea47ff872994dab5ab06a3909875f46d52245029bb006",
-    "rollback:merge-rebind-oracle-restored": "588e2489e813b259e5f451b4e6f5e00bfd5ac26e7562fc88cdbda7231dcb94e6",
-}
+_DIGEST_LINES = ["happy:collision-free-baseline", "2785ef680f71716535a35ef903ac05b80fc6e0992000080faccbdaa2bdd5c16f", "happy:total-collision-same-set", "d1b20fad37a81a0d61978583d4c0f7937ea34c2f0da538518efcc38aba6057be", "happy:total-collision-four-distinct", "19ec0199b910f9571623fe678311057a282f5a86d40f79e99488e7b7902ec42d", "happy:total-collision-reversed-arrival", "4ea608c8e7c33dba3fb53c446d8f8abd8f607d89f516eb5a77af2cf96e76e556", "happy:total-collision-same-identity-new-clocks", "73028e32031f6c61f831d16dd0d5d0dbd3a1ee19ee1b22b661608763e4794c16", "happy:merge-under-total-collision", "8a2d3315a8ad2f19e1c03b4cbb80ddabc2df802bb59791dc6b253288a7535876", "happy:insert-under-corrupt-then-return-oracle", "fa8d50318e150dd28960401462a8edcd147406f066ea3b3398e5275baa80565d", "happy:merge-under-corrupt-then-return-oracle", "01b90bc53e6449714df9ccd0e20f2160ebbbb6bcbc16566f918753cfb4760cf0", "happy:insert-under-rebind-then-return-oracle", "86c403d1df85ccc845f1022dfffabc420e0f288846236676f1b519205e961084", "happy:merge-under-rebind-then-return-oracle", "20b0d5c20a536460a7ab5a50b6ec9d0d1b8a81ea05db28b138dd5fceb922b3c1", "boundary:first-insert-into-empty-table", "d97b1b3d7e9bdc4fa10b7401265c973aab91ab998cb1f205bc96eb4438a1212c", "boundary:merge-empty-into-empty", "ec658d2b4b5036efe7c7a702499b027cbb701924a9b80872696686f8a14b108f", "boundary:merge-is-idempotent", "c2d4ea33d4a510bca5ee1a81ba7d0b0738ad458c249adc251eb75de92dae58d9", "boundary:real-digest-ignores-clocks", "755807b3ce674c1c0e0def5c64f060a16e27a704d3081f843a30a89ca1f1aa4f", "malformed:insert-bad-fen", "270902796ae32d0e89c5e8a9350539f48164517b71416cb847951ed0377bd0ff", "malformed:insert-unknown-variant", "1dddf82e54e61f7c552442bc3e100516c1c0b8e415d07f7da255c688ed855770", "malformed:merge-record-not-a-dict", "c043c65d30426fb6924ba5b3e362061a98bb2480bd9aa2f715e05969b1edcb9e", "malformed:merge-record-extra-field", "911b58321e9368704775f12f309a70fc0e1cecb446c0d5384e8c8ded63cdf846", "malformed:merge-record-missing-field", "ba664753e53a5acf57044e61f421369292ddc64479bfb877840d51abc2dc28c5", "malformed:merge-cross-oracle-record", "e420530d375d0444d1120f8dc1bd5f428389e8c7223da41e0d1162955b98029e", "malformed:merge-record-bad-snapshot", "29e0d19ec27eae4386b5e9eb87d36bdb81edc08bf5c14af0960890bca7c303f9", "malformed:lookup-by-bucket-key", "2a18a08cdb26162d09ec04dadb97c30c65c0a10284aa852f0150c9fdea98a46d", "malformed:raw-oracle-clock-divergence", "5d88eaf5bf1a27ad042f7d83c5ece81569549a5c90b8429a0b640c2d2011a9d6", "malformed:stateful-oracle-divergence", "cc1031403773646a6b6cb946d96516ab349e5a77107d29ae8bc359484e026d0a", "malformed:raising-oracle", "8b3b1c61d52ce6b0aaba162098e5169d35c2161fe9113f6a955ad5ef7f91e523", "malformed:interrupting-oracle", "240cd3b8f05e531baf452dc79775da789e3d30468467679756188ab84fd63865", "malformed:invalid-format-key", "4f32d773b6fc32520ef25f28491c3a22658f62d8b8d9f55962d23e87adb7d1cf", "malformed:str-subclass-key", "3bd9f25d5e788d42f78a9257385e3540c419f494b2110a83d32369f0eb787384", "malformed:non-str-key", "a1a041c70c85dd59df4b6e962aa89ec1fa0575283ada27f0990bacccf64d34f6", "malformed:reentrant-oracle", "10308937d30cc82823d2a1d6864ab76c45f07a074ab7ec625c357e9441397d1a", "malformed:merge-record-renamed-key", "ec46c2f907f675689a6af9e31ccf4900318a1c2561b435a0daf93406696f8677", "malformed:merge-record-unnormalized-clocks", "03475642fc28fd8e2509acb9da8145afcba80d43adf6001759811c6aee7bfca1", "malformed:malformed-merge-record-under-raising-oracle", "f0264660c471af49d33eca9f694117ea4f6f3b06514f214788dbfdcfd518a00b", "rollback:raw-divergence-then-insert", "e0b4ded1dd543ac064ec1cbba0118619fbeced0272dfcf0bf79c10684cbb672b", "rollback:merge-rejected-midway", "d04ad79ab06b9bae01c1131638f0af0753278f2845b0c51039bbe55234a08d8e", "rollback:corrupting-oracle-restored", "1a241ca68c1628db605f3e71ed1a1d2cb8e00a1f2ae67d78154889e4b34d0942", "rollback:lookup-then-insert", "cc39de62ab8d8367758963c68b25e0d151adafcbad38122e2843e90d103c231c", "rollback:merge-corrupting-oracle-restored", "f6156df0be65bad288c02410173ddfb27e21ae4934119bd52aa766df2490b3fa", "rollback:rebind-oracle-restored", "bf3ecd16d488b3d1172ea47ff872994dab5ab06a3909875f46d52245029bb006", "rollback:merge-rebind-oracle-restored", "588e2489e813b259e5f451b4e6f5e00bfd5ac26e7562fc88cdbda7231dcb94e6"]
+ROW_DIGESTS = dict(zip(_DIGEST_LINES[::2], _DIGEST_LINES[1::2], strict=True))
 
 
 def _digest(row):
