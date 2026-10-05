@@ -20,7 +20,14 @@ import random
 
 import pytest
 
-from server.jobs_queue import MAX_ATTEMPTS, QueueEngine, QueueError, job_id_for, state_id_for
+from server.jobs_queue import (
+    MAX_ATTEMPTS,
+    MAX_JOBS,
+    QueueEngine,
+    QueueError,
+    job_id_for,
+    state_id_for,
+)
 
 
 def _save(path, state):
@@ -141,6 +148,40 @@ def test_lease_live_at_crash_lapses_and_the_job_is_reclaimed_after_restart(tmp_p
     assert info.value.failure_class == "lease_conflict"
 
 
+def test_ack_at_the_exact_expiry_tick_is_refused_after_restart(tmp_path):
+    state, engine = {"jobs": [], "next_seq": 0}, QueueEngine()
+    engine.apply(state, {"op": "enqueue", "dedupe_key": "a", "priority": 1, "payload": {}})
+    first = engine.apply(state, {"op": "claim", "worker": "w1", "now": 0, "lease_ms": 100})
+    path = tmp_path / "queue.json"
+    _save(path, state)
+    ack = {"op": "ack", "worker": "w1", "job_id": first["job_id"]}
+    for tick, ok in ((99, True), (100, False), (101, False)):
+        fresh = _load(path)
+        if ok:
+            assert QueueEngine().apply(fresh, {**ack, "now": tick})["status"] == "done"
+        else:
+            with pytest.raises(QueueError) as info:
+                QueueEngine().apply(fresh, {**ack, "now": tick})
+            assert info.value.failure_class == "lease_conflict"
+            assert fresh == _load(path)  # a refusal leaves the loaded state untouched
+
+
+def test_reenqueue_with_a_different_priority_or_payload_conflicts_after_restart(tmp_path):
+    path = tmp_path / "queue.json"
+    state = {"jobs": [], "next_seq": 0}
+    base = {"op": "enqueue", "dedupe_key": "a", "priority": 2, "payload": {"x": 1}}
+    QueueEngine().apply(state, base)
+    _save(path, state)
+    for change in ({"priority": 1}, {"payload": {"x": 2}}, {"priority": 0, "payload": {"y": 1}}):
+        fresh = _load(path)
+        with pytest.raises(QueueError) as info:
+            QueueEngine().apply(fresh, {**base, **change})
+        assert info.value.failure_class == "dedupe_conflict"
+        assert fresh == _load(path)
+    # the identical request, and a key-order variant of the same payload, stay idempotent
+    assert QueueEngine().apply(_load(path), base)["job_id"] == job_id_for("a")
+
+
 def test_attempt_budget_is_kept_across_restarts_until_dead(tmp_path):
     path = tmp_path / "queue.json"
     state = {"jobs": [], "next_seq": 0}
@@ -203,12 +244,38 @@ def test_torn_state_file_is_refused_and_the_last_good_file_still_works(tmp_path)
         [],
         None,
     ]
+    job = good_state["jobs"][0]
+    malformed += [
+        {"jobs": [{**job, "status": "done", "attempts": 0}], "next_seq": 1},
+        {"jobs": [{**job, "status": "dead", "attempts": MAX_ATTEMPTS - 1}], "next_seq": 1},
+        {
+            "jobs": [
+                {
+                    **job,
+                    "status": "leased",
+                    "attempts": 1,
+                    "lease_owner": "w1",
+                    "lease_expires_at": 0,
+                }
+            ],
+            "next_seq": 1,
+        },
+    ]
     for bad in malformed:
         with pytest.raises(QueueError) as info:
             QueueEngine().apply(copy.deepcopy(bad), claim)
         assert info.value.failure_class == "corrupt_queue"
         refused += 1
     assert refused >= len(malformed)
+    # accepted twins of the boundary rows: done at attempts == 1, dead at MAX_ATTEMPTS
+    # and a lease that expires at tick 1
+    for ok_job in (
+        {**job, "status": "done", "attempts": 1},
+        {**job, "status": "dead", "attempts": MAX_ATTEMPTS},
+        {**job, "status": "leased", "attempts": 1, "lease_owner": "w1", "lease_expires_at": 1},
+    ):
+        kept = QueueEngine().apply({"jobs": [ok_job], "next_seq": 1}, claim)
+        assert "job_id" in kept
     assert QueueEngine().apply(copy.deepcopy(good_state), claim)["job_id"] == job_id_for("a")
     # an interrupted write goes to the temp file only; the live file stays intact
     path.with_suffix(".tmp").write_text(good[: len(good) // 2])
@@ -236,3 +303,28 @@ def test_streams_exercise_accepted_work_not_only_refusals(seed):
     assert sum(1 for kind, _ in results if kind == "ok") >= 10
     assert state["jobs"] and state["next_seq"] > 0
     assert any(r[0] == "ok" and isinstance(r[1], dict) for r in results)
+
+
+def test_queue_size_bound_is_inclusive_and_state_survives_the_file_round_trip(tmp_path):
+    def job(i):
+        return {
+            "job_id": job_id_for(f"k{i}"),
+            "seq": i,
+            "priority": 0,
+            "payload": {},
+            "status": "ready",
+            "attempts": 0,
+            "lease_owner": None,
+            "lease_expires_at": None,
+        }
+
+    claim = {"op": "claim", "worker": "w1", "now": 0, "lease_ms": 10}
+    full = {"jobs": [job(i) for i in range(MAX_JOBS)], "next_seq": MAX_JOBS}
+    path = tmp_path / "queue.json"
+    _save(path, full)
+    state = _load(path)
+    assert QueueEngine().apply(state, claim)["job_id"] == job_id_for("k0")
+    over = {"jobs": [job(i) for i in range(MAX_JOBS + 1)], "next_seq": MAX_JOBS + 1}
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(over, claim)
+    assert info.value.failure_class == "corrupt_queue"
