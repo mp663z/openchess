@@ -388,6 +388,9 @@ def _validation_rows():
         ("policy-extra-key", {"policy": dict(_good()["policy"], extra=1)}, "malformed_request"),
         ("state-dict-subclass", {"state": DictSub()}, "internal"),
         ("plain-admit", {}, "admit"),
+        # expired slot with a count above capacity resets; the same slot with it is internal
+        ("expired-slot-excess-count", {"state": {key: (0, 3)}}, "admit"),
+        ("same-slot-excess-count", {"state": {key: (1, 3)}}, "internal"),
         ("cached-replay", {"replay": "cached"}, "replay"),
         (
             "cached-replay-body-differs",
@@ -440,6 +443,11 @@ def test_validation_rows_hold_on_production():
 
 
 VALIDATION_MUTANTS = {
+    "excess-count-ignores-slot": (
+        "previous_slot == slot and previous_count > capacity",
+        "previous_count > capacity",
+        ("expired-slot-excess-count",),
+    ),
     "policy-version-minimum-zero": (
         'policy["version"] < 1',
         'policy["version"] < 0',
