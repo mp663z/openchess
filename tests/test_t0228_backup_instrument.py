@@ -330,38 +330,38 @@ def _mutant(label):
 
 
 def _is_red(module):
-    try:
-        tracer = module.BackupTracer(_engine())
-        receipt = tracer.backup(_log([("put", 0)]))
-        tracer.verify(receipt)
-        records = tracer.records
-        if [r["seq"] for r in records] != [0, 1]:
-            return True
-        if any(r["outcome"] != "accept" for r in records):
-            return True
-        if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
-            return True
-        try:
-            tracer.backup("nope")
-            return True
-        except backup.BackupError:
-            pass
-        last = tracer.records[-1]
-        if last.get("outcome") != "reject" or "code" not in last:
-            return True
-
-        class Crasher:
-            def verify(self, receipt):
-                raise KeyError("x")
-
-        crash = module.BackupTracer(Crasher())
-        try:
-            crash.verify({})
-            return True
-        except KeyError:
-            return False
-    except BaseException:  # noqa: BLE001
+    tracer = module.BackupTracer(_engine())
+    receipt = tracer.backup(_log([("put", 0)]))
+    tracer.verify(receipt)
+    records = tracer.records
+    if [r["seq"] for r in records] != [0, 1]:
         return True
+    if any(r["outcome"] != "accept" for r in records):
+        return True
+    if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
+        return True
+    try:
+        tracer.backup("nope")
+        return True
+    except backup.BackupError:
+        pass
+    last = tracer.records[-1]
+    if last.get("outcome") != "reject" or "code" not in last:
+        return True
+
+    class Crasher:
+        def verify(self, receipt):
+            raise KeyError("x")
+
+    crash = module.BackupTracer(Crasher())
+    try:
+        crash.verify({})
+    except KeyError:
+        return False
+    except Exception as error:
+        # a different exception type is a semantic deviation
+        return type(error) is not KeyError
+    return True
 
 
 def test_unmutated_instrument_is_green_on_the_mutant_check():
