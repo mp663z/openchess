@@ -439,3 +439,65 @@ def test_a_raw_escape_is_a_crash_never_a_catch():
     triples = t189._triples(seed=SEEDS[0], n=120) + t189._enumerated()[:120]
     with pytest.raises(CrashError):
         _strict_problems(_wrap(_raw_escape), triples)
+
+
+# -- validation rows: one malformed field at a time, literal typed refusal ----------------
+
+
+def _tamper_snapshot_clocks(rec):
+    # same identity (counters are not identity), digest well formed, not the canonical text
+    return dict(rec, snapshot_fen=rec["snapshot_fen"].rsplit(" ", 2)[0] + " 5 9")
+
+
+def _tamper_digest_trailing_newline(rec):
+    return dict(rec, digest=rec["digest"] + "\n")
+
+
+def _tamper_digest_trailing_text(rec):
+    return dict(rec, digest=rec["digest"] + "x")
+
+
+def _tamper_renamed_field(rec):
+    # same field count as a record, one field renamed
+    return {("note" if k == "digest" else k): v for k, v in rec.items()}
+
+
+VALIDATION_ROWS = {
+    "snapshot-not-canonical": _tamper_snapshot_clocks,
+    "digest-trailing-newline": _tamper_digest_trailing_newline,
+    "digest-trailing-text": _tamper_digest_trailing_text,
+    "renamed-field-same-count": _tamper_renamed_field,
+}
+
+
+def _tampered_triple(name):
+    states = [t189._state({3: 0}), t189._state({3: 1}), t189._state({3: 2})]
+    states[1] = {k: VALIDATION_ROWS[name](v) for k, v in states[1].items()}
+    return states
+
+
+@pytest.mark.parametrize("name", sorted(VALIDATION_ROWS))
+def test_validation_rows_are_typed_refusals_on_production(name):
+    states = _tampered_triple(name)
+    before = copy.deepcopy(states)
+    assert _report(vars(cf), *states) == {"err": t189.MCR}
+    assert states == before
+
+
+VALIDATION_MUTANTS = {
+    "snapshot-text-not-compared": (
+        ('if variant != derived["variant"] or snapshot != derived["snapshot_fen"]:', 'if variant != derived["variant"]:'),
+        "snapshot-not-canonical",
+    ),
+    "digest-prefix-match-only": (
+        ("_DIGEST_RE.fullmatch(digest)", "_DIGEST_RE.match(digest)"),
+        "digest-trailing-newline",
+    ),
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("name", sorted(VALIDATION_MUTANTS))
+def test_each_validation_mutant_accepts_what_production_refuses(name):
+    (old, new), row = VALIDATION_MUTANTS[name]
+    got = _report(_mutant_cf(old, new), *_tampered_triple(row))
+    assert got != {"err": t189.MCR}, (name, got)
