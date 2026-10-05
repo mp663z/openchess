@@ -348,40 +348,40 @@ def _mutant(label):
 
 
 def _is_red(module):
-    try:
-        tracer = module.ExportTracer(_engine())
-        tracer.export(*OK_ARGS())
-        tracer.export(*OK_ARGS())
-        records = tracer.records
-        if [r["seq"] for r in records] != [0, 1]:
-            return True
-        if any(r["outcome"] != "accept" for r in records):
-            return True
-        if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
-            return True
-        make_args, oracle, _ = next(iter(REJECTS.values()))
-        rejecting = module.ExportTracer(_engine(oracle))
-        try:
-            rejecting.export(*make_args())
-            return True
-        except ERR:
-            pass
-        last = rejecting.records[-1]
-        if last.get("outcome") != "reject" or "code" not in last:
-            return True
-
-        class Crasher:
-            def export(self, *args):
-                raise KeyError("x")
-
-        crash = module.ExportTracer(Crasher())
-        try:
-            crash.export([], {})
-            return True
-        except KeyError:
-            return False
-    except BaseException:  # noqa: BLE001
+    tracer = module.ExportTracer(_engine())
+    tracer.export(*OK_ARGS())
+    tracer.export(*OK_ARGS())
+    records = tracer.records
+    if [r["seq"] for r in records] != [0, 1]:
         return True
+    if any(r["outcome"] != "accept" for r in records):
+        return True
+    if "\n".join(json.dumps(r, sort_keys=True) for r in records) != tracer.to_jsonl():
+        return True
+    make_args, oracle, _ = next(iter(REJECTS.values()))
+    rejecting = module.ExportTracer(_engine(oracle))
+    try:
+        rejecting.export(*make_args())
+        return True
+    except ERR:
+        pass
+    last = rejecting.records[-1]
+    if last.get("outcome") != "reject" or "code" not in last:
+        return True
+
+    class Crasher:
+        def export(self, *args):
+            raise KeyError("x")
+
+    crash = module.ExportTracer(Crasher())
+    try:
+        crash.export([], {})
+    except KeyError:
+        return False
+    except Exception as error:
+        # a different exception type is a semantic deviation
+        return type(error) is not KeyError
+    return True
 
 
 def test_unmutated_instrument_is_green_on_the_mutant_check():
