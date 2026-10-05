@@ -53,14 +53,18 @@ def _with(text, **kw):
     return " ".join(values[k] for k in ("placement", "color", "castling", "ep", "half", "full"))
 
 
+class Crash(Exception):
+    """Foreign exception: not a semantic failure, never an AssertionError."""
+
+
 def properties(module, variants=("standard",)):
-    """Raises AssertionError when any property fails (crashes count as failures)."""
+    """Raises AssertionError when any property fails (a crash is a Crash, never a kill)."""
     try:
         _properties(module, variants)
     except AssertionError:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise AssertionError(f"crash {type(exc).__name__}: {exc}") from exc
+        raise Crash(f"crash {type(exc).__name__}: {exc}") from exc
 
 
 def _properties(module, variants):
@@ -185,7 +189,7 @@ MUTANTS = [
     ('"castling_rights": rights or fen_contract["castling"]["none_sentinel"],', '"castling_rights": fen_contract["castling"]["none_sentinel"],'),
     ("    return sentinel\n\n\ndef encode", "    return ep\n\n\ndef encode"),
     ("        if not _attack(fen_contract[\"board\"], king_sq, after, not white_to_move):\n            return ep", "        if True:\n            return ep"),
-    ('    if ep is None:\n        return sentinel', '    if ep is None:\n        return ep'),
+    ('    if ep is None:\n        return sentinel', '    if ep is None:\n        return "-" + sentinel'),
     ('if type(variant_id) is not str or variant_id not in ids:', 'if variant_id not in ids:'),
     ("    return d[\"format\"][\"prefix\"] + text" if False else 'return d["format"]["prefix"] + text', 'return d["format"]["prefix"] + text.upper()'),
     ("position = parse_fen(fc, fen_text)", "position = parse_fen(fc, fen_text.strip())"),
