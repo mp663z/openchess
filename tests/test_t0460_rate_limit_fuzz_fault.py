@@ -151,6 +151,19 @@ def _freeze(x):
     return (type(x).__name__, repr(x))
 
 
+def _model_snapshot(request):
+    """Independent expected snapshot for an admitted request: the prior state plus exactly one
+    (slot, count) entry per scope, nothing else."""
+    out = dict(request["state"])
+    for scope in ("account", "source"):
+        window = request["policy"][scope]["window_ms"]
+        key = (request["operation"], scope, request[scope])
+        slot = request["now"] // window
+        previous_slot, previous_count = out.get(key, (slot, 0))
+        out[key] = (slot, (previous_count if previous_slot == slot else 0) + 1)
+    return out
+
+
 def campaign(module_decide, seed, n=400):
     log = []
     rng = random.Random(seed)
@@ -170,6 +183,7 @@ def campaign(module_decide, seed, n=400):
         elif kind == "admit":
             assert _well_formed(request) and flags_ok
             assert snap is not request["state"]
+            assert snap == _model_snapshot(request), (seed, snap)
         elif _well_formed(request) and flags_ok:
             # empty state, well formed, unfaulted: a refusal would be a false refusal
             raise AssertionError(f"false refusal {kind}: {before}")
@@ -203,6 +217,8 @@ def stateful_campaign(module_decide, seed, steps=300):
         assert _freeze(request) == before
         assert kind == ("admit" if room else "rate_limited"), (seed, now, kind)
         if room:
+            assert snap == _model_snapshot(request), (seed, now, snap)
+            assert len(snap) == len({k for k in snap}) and set(snap) >= set(state)
             state = snap
             ledger.append((op, acc, src, now))
         log.append(kind)
@@ -358,6 +374,10 @@ MUTANTS = [
     ("result = deepcopy(state)", "result = state"),
     ("count = previous_count if previous_slot == slot else 0", "count = previous_count"),
     ('return "replay", deepcopy(state)', 'return "replay", state'),
+    (
+        "    result.update(updates)\n",
+        "    result.update(updates)\n    result[('x', 'account', 'opaque:phantom')] = (0, 1)\n",
+    ),
     ("or type(key) is not tuple\n", "\n")
     if False
     else (
