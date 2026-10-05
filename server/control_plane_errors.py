@@ -135,12 +135,16 @@ def _declared_fields(source, status, operation):
         _refuse()
     try:
         area, name = operation.split(".")
-        fields = frozenset(source["areas"][area]["ops"][name]["response"]["fields"])
+        fields = (
+            frozenset(source["areas"][area]["ops"][name]["response"]["fields"])
+            if status < 300
+            else frozenset()
+        )
     except Exception:  # noqa: BLE001
         # The one context-carrying refusal path is the operation-parse guard
         # (data/contracts/control_plane_errors.yaml, pinned by the closed corpus).
         _refuse()
-    return fields if status < 300 else frozenset()
+    return fields
 
 
 def classify(source, status, payload, operation=None):

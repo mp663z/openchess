@@ -67,7 +67,20 @@ def test_agrees_with_reference_on_seeded_hostile_corpus(seed):
     rng = random.Random(seed)
     for _ in range(600):
         status = rng.choice([200, 204, 299, 400, 404, 500, 599, 0, 100, 300, 600, True, "400"])
-        operation = rng.choice([None, None, "bogus", 3, "a.b.c"])
+        operation = rng.choice(
+            [
+                None,
+                None,
+                "bogus",
+                3,
+                "a.b.c",
+                "bogus.name",
+                "identity.nope",
+                "nope.register",
+                "identity.register",
+                "entitlements.get",
+            ]
+        )
         payload = _payload(rng)
         before = copy.deepcopy(payload)
         args = (SOURCE, status, payload, operation)
