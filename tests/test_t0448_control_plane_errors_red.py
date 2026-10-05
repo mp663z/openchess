@@ -32,10 +32,11 @@ from pathlib import Path
 
 import pytest
 
+from server import control_plane_errors as production
 from tests import test_t0446_control_plane_errors_contract as _reference
 from tests import test_t0447_control_plane_errors_fixture as _fixture
 
-PRODUCTION_BINDING = (_reference.classify, _reference.ErrorsError)
+PRODUCTION_BINDING = (production.classify, production.ErrorsError)
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = json.loads((ROOT / "tests/fixtures/control-plane-errors/cases.json").read_text())
