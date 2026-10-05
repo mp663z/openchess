@@ -184,6 +184,10 @@ def check_semantics(impl, err):
     one = _forge(done=0, total=1, percent_bp=0, reported_at=0)
     got = impl(_req(done=1, total=1, now=0, previous=one))
     assert got["previous_id"] == one["progress_id"] and got["reported_at"] == 0
+    zero_total = _forge(done=0, total=0, percent_bp=0)  # would divide by zero if it got that far
+    _rejects(
+        impl, err, _req(done=0, total=1, now=60, previous=zero_total), "corrupt_previous_record"
+    )
     zero_time = _forge(reported_at=0)
     got = impl(_req(done=2, total=10, now=0, previous=zero_time))
     assert got["previous_id"] == zero_time["progress_id"]
