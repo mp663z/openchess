@@ -43,6 +43,36 @@ class _StrSub(str):
     pass
 
 
+class Crash:
+    """A foreign (non-EnPassantError) exception. It is never an expected outcome and never a
+    kill: any test that observes one fails."""
+
+    def __init__(self, exc):
+        self.exc = exc
+
+    def __repr__(self):
+        return f"Crash({type(self.exc).__name__})"
+
+
+class CrashError(Exception):
+    """Raised for a foreign exception; not an AssertionError, so no assertion-based kill sees it."""
+
+    pass
+
+
+def _check(module, state, move):
+    """t72's property detector, except that a foreign exception from the runtime under test
+    raises CrashError instead of being read as a P-total violation (t72._check swallows
+    arbitrary exceptions into P-total, which would make a crash look like a semantic kill)."""
+    try:
+        module.apply(copy.deepcopy(state), copy.deepcopy(move))
+    except prod.EnPassantError:
+        pass
+    except Exception as exc:
+        raise CrashError(f"{type(exc).__name__}: {exc}") from exc
+    return t72._check(module, state, move)
+
+
 def _valid_state(state):
     """Independent closed-domain predicate for a state."""
     if type(state) is not dict or set(state) != {"ep_target", "occupied", "side_to_move"}:
@@ -134,7 +164,7 @@ def campaign(seed, n=900):
         state = t72._state(rng)
         for item in t72._moves(rng, state):
             case_state, move = item if isinstance(item, tuple) else (state, item)
-            violations |= t72._check(prod, case_state, move)
+            violations |= _check(prod, case_state, move)
             log.append(_classify(case_state, move)[:3])
     return log, violations
 
@@ -235,19 +265,12 @@ def _side_kept(state, move):
     return out
 
 
-def _raw_escape(state, move):
-    if move["type"] == "quiet":
-        raise KeyError(move["from"])
-    return prod.apply(state, move)
-
-
 FAULTS = {
     "target-kept-after-quiet-move": (_keeps_target, "P-lifetime"),
     "input-mutated": (_mutates_input, "P-atomic"),
     "victim-kept": (_victim_kept, "P-delta"),
     "pin-ignored": (_pin_ignored, "P-capture-sound"),
     "side-not-flipped": (_side_kept, "P-side"),
-    "raw-escape": (_raw_escape, "P-total"),
 }
 
 
@@ -261,7 +284,7 @@ def test_each_planted_fault_is_caught_by_its_own_property(name):
         state = t72._state(rng)
         for item in t72._moves(rng, state):
             case_state, move = item if isinstance(item, tuple) else (state, item)
-            found |= t72._check(module, case_state, move)
+            found |= _check(module, case_state, move)
         if expected in found:
             break
     assert expected in found, (name, found)
@@ -343,17 +366,6 @@ def test_move_corruptions_fail_closed_target_malformed(name):
 
 _SRC = Path(prod.__file__).read_text()
 MALFORMED = ("err", "target_malformed", prod.FAILURE_MAPPING["target_malformed"])
-
-
-class Crash:
-    """A foreign (non-EnPassantError) exception. It is never an expected outcome and never a
-    kill: any test that observes one fails."""
-
-    def __init__(self, exc):
-        self.exc = exc
-
-    def __repr__(self):
-        return f"Crash({type(self.exc).__name__})"
 
 
 def _exec_mutant(old, new):
@@ -607,3 +619,19 @@ def test_each_source_mutant_is_killed_by_a_semantic_row(name):
     for row in rows:
         fn, args, expected = ROWS[row]
         assert _outcome(clean, fn, *copy.deepcopy(args)) == expected
+
+
+def test_a_foreign_exception_is_a_crash_never_a_property_violation():
+    def raw_escape(state, move):
+        if move["type"] == "quiet":
+            raise KeyError(move["from"])
+        return prod.apply(state, move)
+
+    module = _wrap(raw_escape)
+    rng = random.Random(7373)
+    with pytest.raises(CrashError):
+        for _ in range(400):
+            state = t72._state(rng)
+            for item in t72._moves(rng, state):
+                case_state, move = item if isinstance(item, tuple) else (state, item)
+                _check(module, case_state, move)
