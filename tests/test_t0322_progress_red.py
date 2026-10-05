@@ -180,6 +180,13 @@ def check_semantics(impl, err):
     assert impl(_req(done=MAX - 1, total=MAX))["percent_bp"] == (MAX - 1) * 10000 // MAX
     a, b = impl(_req(now=7)), impl(_req(now=7))
     assert a == b and a is not b
+    # previous-record boundaries are inclusive: total == 1 and reported_at == 0
+    one = _forge(done=0, total=1, percent_bp=0, reported_at=0)
+    got = impl(_req(done=1, total=1, now=0, previous=one))
+    assert got["previous_id"] == one["progress_id"] and got["reported_at"] == 0
+    zero_time = _forge(reported_at=0)
+    got = impl(_req(done=2, total=10, now=0, previous=zero_time))
+    assert got["previous_id"] == zero_time["progress_id"]
 
 
 def check_order(impl, err):
