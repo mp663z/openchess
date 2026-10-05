@@ -107,7 +107,14 @@ def raising(tail):
     raise RuntimeError("boom")
 
 
+def mutating(tail):
+    log[0]["payload"]["record"]["digest"] = "changed"
+    log[0]["entry_id"] = "tampered"
+    return "qtn1:" + "0" * 64
+
+
 sink = {
+    "mutate-nested": mutating,
     "honest": mod.quarantine_tail,
     "wrong": lambda tail: "qtn1:" + "0" * 64,
     "raise": raising,
@@ -256,6 +263,15 @@ def test_malformed_requests_and_negative_checkpoint_are_refused_after_restart():
         assert child["log"] == log, name
 
 
+def test_a_sink_mutating_nested_log_state_is_undone_after_the_refusal():
+    log = jround([*REF_LOG[:3], {"junk": 1}])
+    child = child_run(log, 3, sink="mutate-nested")
+    assert child["ok"] is False and "crash" not in child, child
+    assert child["failure_class"] == "divergent_quarantine"
+    assert child["log"] == log, "the caller's nested log state must be restored exactly"
+    assert child["log"][0]["payload"]["record"]["digest"] != "changed"
+
+
 @pytest.mark.parametrize("sink", ["wrong", "raise", "nonstr"])
 def test_divergent_sink_refused_and_the_tail_is_not_removed(sink):
     log = jround([*REF_LOG[:3], {"junk": 1}])
@@ -379,6 +395,10 @@ EDITS = {
         "len(str(abs(obj))) <= MAX_INT_DIGITS", "len(str(abs(obj))) <= MAX_INT_DIGITS + 1"
     ),
     "int-sign-counted": _once("len(str(abs(obj)))", "len(str(obj))"),
+    "snapshot-skips-dicts": _once(
+        "    if type(obj) is dict:\n        seen.add(id(obj))",
+        "    if False:\n        seen.add(id(obj))",
+    ),
     "key-scalar-unchecked": _once(
         "if type(key) is not str or not _scalar_ok(key):", "if type(key) is not str:"
     ),
@@ -399,6 +419,7 @@ EXPECTED_KILL = {
     "none-bool-inadmissible": "admit",
     "surrogate-admitted": "admit",
     "key-scalar-unchecked": "admit",
+    "snapshot-skips-dicts": "nested-restore",
     "int-digit-bound-exclusive": "admit",
     "int-digit-bound-off-by-one-high": "admit",
     "int-sign-counted": "admit",
@@ -417,6 +438,7 @@ def _deviations(source):
         "clean": child_run(jround(REF_LOG), len(REF_LOG), source=source),
         "destroyed": child_run(jround([*REF_LOG[:3], {"junk": 1}]), 4, source=source),
         "unbound-sink": child_run(torn_log, k, source=source, sink="wrong"),
+        "nested-restore": child_run(torn_log, k, source=source, sink="mutate-nested"),
     }
     for name, run in runs.items():
         assert "crash" not in run, f"{name}: mutant crashed instead of deviating: {run}"
@@ -453,6 +475,13 @@ def _deviations(source):
     u = runs["unbound-sink"]
     if not (u["ok"] is False and u.get("failure_class") == "divergent_quarantine"):
         found.add("unbound-sink")
+    n = runs["nested-restore"]
+    if not (
+        n["ok"] is False
+        and n.get("failure_class") == "divergent_quarantine"
+        and n["log"] == torn_log
+    ):
+        found.add("nested-restore")
     if _admission_failure(source) is not None:
         found.add("admit")
     return found
