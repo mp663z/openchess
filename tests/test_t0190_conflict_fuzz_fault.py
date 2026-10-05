@@ -310,20 +310,37 @@ def _raw_escape(base, left, right):
     return _real(base, left, right)
 
 
+class CrashError(Exception):
+    """A foreign exception from the detector under test. Not an AssertionError, and never a
+    catch: t189._detect folds foreign exceptions into {"raw": name}, which t189._problems then
+    reads as a violation, so a crash would pass for a semantic kill."""
+
+
+def _strict_problems(module, triples):
+    for specs in triples:
+        states = [t189._state(s) for s in specs]
+        try:
+            module.ConflictDetector().detect(*states)
+        except cf.ConflictError:
+            pass
+        except Exception as exc:
+            raise CrashError(f"{type(exc).__name__}: {exc}") from exc
+    return t189._problems(module, triples)
+
+
 FAULTS = {
     "conflict-dropped": _drops_conflict,
     "sides-swapped": _swaps_sides,
     "input-mutated": _mutates_input,
     "witness-order-reversed": _reversed_order,
     "divergent-base-ignored": _ignores_divergent_base,
-    "raw-escape": _raw_escape,
 }
 
 
 @pytest.mark.parametrize("name", sorted(FAULTS))
 def test_each_planted_fault_is_caught_by_the_checker(name):
     triples = t189._triples(seed=SEEDS[0], n=120) + t189._enumerated()[:120]
-    assert t189._problems(_wrap(FAULTS[name]), triples) != [], name
+    assert _strict_problems(_wrap(FAULTS[name]), triples) != [], name
 
 
 # -- left == right and digest-only rows: literal expectations ------------------------------
@@ -359,7 +376,12 @@ ROWS = {
     "identical-sides-removed": ({3: 0, 4: 0}, {3: 0}, {3: 0}, {}),
     # same identity, same snapshot: only the digest differs
     "digest-only-both-changed": ({3: 0}, {3: 1}, {3: 2}, {3: ("both_changed_differently", 1, 2)}),
-    "digest-only-both-added": ({4: 0}, {3: 1, 4: 0}, {3: 2, 4: 0}, {3: ("added_differently", 1, 2)}),
+    "digest-only-both-added": (
+        {4: 0},
+        {3: 1, 4: 0},
+        {3: 2, 4: 0},
+        {3: ("added_differently", 1, 2)},
+    ),
     "digest-only-one-side-changed": ({3: 0}, {3: 1}, {3: 0, 4: 0}, {}),
 }
 
@@ -411,3 +433,9 @@ def test_each_row_mutant_is_killed_by_a_semantic_row(name):
         states = [t189._state(s) for s in (base, left, right)]
         got = _report(ns, *states)
         assert got.get("conflicts") != _expected(conflicts), (name, row, got)
+
+
+def test_a_raw_escape_is_a_crash_never_a_catch():
+    triples = t189._triples(seed=SEEDS[0], n=120) + t189._enumerated()[:120]
+    with pytest.raises(CrashError):
+        _strict_problems(_wrap(_raw_escape), triples)
