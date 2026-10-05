@@ -133,7 +133,7 @@ def _apply_ok(impl, st, request, expect_record, expect_state):
 
 def _rejects(impl, err, st, request, failure):
     st_snap, rq_snap = copy.deepcopy(st), copy.deepcopy(request)
-    with pytest.raises(err) as caught:
+    with _raises_ctx(err) as caught:
         impl(st, request)
     exc = caught.value
     assert type(exc) is err
@@ -189,7 +189,7 @@ def check_semantics(impl, err):
     kept = impl(full, _rq())
     assert kept["released"] == [] and len(full["jobs"]) == 10000
     over = {"jobs": [_job(f"k{i}", i) for i in range(10001)], "next_seq": 10001}
-    with pytest.raises(err) as caught:
+    with _raises_ctx(err) as caught:
         impl(over, _rq())
     assert caught.value.failure_class == "corrupt_queue"
     st = _state(
@@ -259,33 +259,33 @@ def check_order(impl, err):
 
 class Boom:
     def __getattribute__(self, name):
-        raise AssertionError("caller object touched: " + name)
+        raise Touched("caller object touched: " + name)
 
 
 class BoomStr(str):
     def __eq__(self, other):
-        raise AssertionError("eq hook")
+        raise Touched("eq hook")
 
     __hash__ = str.__hash__
 
 
 class BoomDict(dict):
     def __iter__(self):
-        raise AssertionError("iter hook")
+        raise Touched("iter hook")
 
     def keys(self):
-        raise AssertionError("keys hook")
+        raise Touched("keys hook")
 
     def items(self):
-        raise AssertionError("items hook")
+        raise Touched("items hook")
 
 
 class BoomList(list):
     def __iter__(self):
-        raise AssertionError("iter hook")
+        raise Touched("iter hook")
 
     def __len__(self):
-        raise AssertionError("len hook")
+        raise Touched("len hook")
 
 
 HOSTILE = (None, True, False, -1, 2**70, 1.0, float("nan"), "", "x", b"b", [], (1,), {}, Boom)
@@ -361,18 +361,18 @@ def check_totality(impl, err):
         except err:
             pass
         except AssertionError as exc:
-            raise AssertionError("caller code ran: " + str(exc)) from None
+            raise Touched("caller code ran: " + str(exc)) from None
         else:
-            raise AssertionError("hostile state accepted")
+            raise Touched("hostile state accepted")
     for forged_request in (BoomDict(_rq()), _rq(worker=BoomStr("w1"))):
         try:
             impl(_state(), forged_request)
         except err:
             pass
         except AssertionError as exc:
-            raise AssertionError("caller code ran: " + str(exc)) from None
+            raise Touched("caller code ran: " + str(exc)) from None
         else:
-            raise AssertionError("subclass accepted")
+            raise Touched("subclass accepted")
     cyc = []
     cyc.append(cyc)
     shared = {"x": 1}
@@ -383,7 +383,7 @@ def check_totality(impl, err):
     ):
         _rejects(impl, err, bad, _rq(), "corrupt_queue")
     cyclic = _state(_job("a", 0, payload=cyc))
-    with pytest.raises(err) as caught:
+    with _raises_ctx(err) as caught:
         impl(cyclic, _rq())
     assert caught.value.failure_class == "corrupt_queue"
     assert cyclic["jobs"][0]["payload"] is cyc and cyc[0] is cyc  # untouched, not unrolled
@@ -397,36 +397,88 @@ def check_totality(impl, err):
     _rejects(impl, err, _state(), missing, "malformed_restart_request")
 
 
+class Touched(AssertionError):
+    """A caller-owned hostile object was touched by the implementation."""
+
+
+class _raises_ctx:
+    """pytest.raises that reports a missing refusal as a plain AssertionError."""
+
+    def __init__(self, expected):
+        self.expected = expected
+        self.value = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, kind, value, tb):
+        if kind is None:
+            raise AssertionError(f"expected {self.expected.__name__}, nothing was raised")
+        if not issubclass(kind, self.expected):
+            return False
+        self.value = value
+        return True
+
+
 class RawEscape(AssertionError):
     """A non-contract exception escaped the implementation (a crash, not a decision)."""
 
 
 def _guard(impl, err, oracle=None):
-    """Any exception that is not the typed contract error (an AssertionError
-    raised inside the implementation included) is a crash and becomes RawEscape.
-    With an oracle (the reference), a typed refusal of an input the reference
-    accepts is an acceptance failure and surfaces as a plain AssertionError."""
+    """Any exception that is not the typed contract error is a crash and becomes
+    RawEscape (an AssertionError raised inside the implementation included),
+    except Touched, which is the semantic detection of a caller object being
+    touched. With an oracle (the reference), a typed refusal of an input the
+    reference accepts is an acceptance failure and surfaces as a plain
+    AssertionError. The classification runs outside the except scope so a
+    correct refusal keeps __context__ None."""
 
     def guarded(*args):
+        refusal = None
         try:
             return impl(*args)
-        except err as refusal:
-            if oracle is not None:
-                try:
-                    oracle(*copy.deepcopy(args))
-                except Exception:  # noqa: BLE001 - reference refuses too: legitimate refusal
-                    raise refusal from None
-                raise AssertionError(
-                    f"refused an input the reference accepts: {refusal.failure_class}"
-                ) from None
+        except err as caught:
+            refusal = caught
+        except Touched:
             raise
         except Exception as exc:  # noqa: BLE001
-            raise RawEscape(f"raw {type(exc).__name__} escaped") from None
+            crash = type(exc).__name__
+        else:  # pragma: no cover
+            crash = None
+        if refusal is None:
+            raise RawEscape(f"raw {crash} escaped") from None
+        if oracle is not None:
+            try:
+                oracle(*copy.deepcopy(args))
+            except Exception:  # noqa: BLE001 - the reference refuses too
+                accepted = False
+            else:
+                accepted = True
+            if accepted:
+                raise AssertionError(
+                    f"refused an input the reference accepts: {refusal.failure_class}"
+                )
+        raise refusal
 
     return guarded
 
 
-CHECKS = (check_fixture, check_semantics, check_order, check_totality)
+class _InertKey(str):
+    """A str subclass with no hooks: only its type differs from a plain str."""
+
+
+def _inert(mapping):
+    return {_InertKey(k): v for k, v in mapping.items()}
+
+
+def check_inert_keys(impl, err):
+    st = _state(_leased("a", 0))
+    _rejects(impl, err, st, _inert(_rq()), "malformed_restart_request")
+    _rejects(impl, err, _inert(st), _rq(), "corrupt_queue")
+    _rejects(impl, err, _state(_inert(_leased("a", 0))), _rq(), "corrupt_queue")
+
+
+CHECKS = (check_fixture, check_semantics, check_order, check_totality, check_inert_keys)
 
 
 @pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
@@ -600,10 +652,15 @@ def test_mutant_is_red_on_its_target(name):
         raise AssertionError(f"mutant {name} crashed, not refuted") from None
     except RestartError:
         raise AssertionError(f"mutant {name} died of a typed error, not an assertion") from None
-    except (AssertionError, pytest.fail.Exception):
+    except AssertionError:
         pass
     else:
         raise AssertionError(f"mutant {name} survived {target}")
+
+
+@pytest.mark.parametrize("check", CHECKS, ids=lambda c: c.__name__)
+def test_guard_with_oracle_is_identity_on_the_reference(check):
+    check(_guard(restart, RestartError, restart), RestartError)
 
 
 def test_raw_exception_is_a_totality_failure_not_a_mutant_kill():
