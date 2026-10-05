@@ -79,13 +79,19 @@ def _hostile_values(rng):
     )  # fmt: skip
 
 
+class Crash(Exception):
+    """A foreign exception from the decision: never a refusal, never a kill. It is not an
+    AssertionError, so a campaign that meets one fails the test instead of counting a catch."""
+
+
 def _run(module_decide, request):
-    """Return (kind, snapshot) or (code, None); anything else is a crash."""
+    """Return (kind, snapshot) or (code, None); a foreign exception raises Crash."""
     try:
         return module_decide(**request)
-    except Exception as error:  # noqa: BLE001 - classify, then fail on anything else
+    except Exception as error:  # noqa: BLE001
         # name check lets mutant modules (which define their own class) classify too
-        assert type(error).__name__ == "AdmissionRefusal", repr(error)
+        if type(error).__name__ != "AdmissionRefusal":
+            raise Crash(repr(error)) from error
         assert error.code in CODES
         return error.code, None
 
@@ -250,6 +256,7 @@ def test_hostile_state_entries_refuse_internal_without_mutation():
         {("identity.login", "account", "opaque:a"): (1,)},
         {("identity.login", "account"): (1, 1)},
         {"k": (1, 1)},
+        {"abc": (1, 1)},  # a non-tuple key with the right length
         {("identity.login", "account", "opaque:a"): (True, 1)},
         {("identity.login", "account", "opaque:a"): (1, -1)},
         {("identity.login", "account", "opaque:a"): [1, 1]},
@@ -282,6 +289,52 @@ def test_cached_replay_and_conflict_boundaries():
         assert _run(decide, request)[0] == "malformed_request"
 
 
+def test_boundary_rows_hold_on_production():
+    assert _boundary_rows_fail(decide) is False
+
+
+def test_previous_count_boundary_at_capacity_and_one_over():
+    key = ("identity.login", "account", "opaque:a")
+    for count, expected in ((2, "rate_limited"), (3, "internal")):
+        request = _good()  # account capacity 2, window 10: now 10 is slot 1
+        request["state"] = {key: (1, count)}
+        assert _run(decide, request)[0] == expected, count
+    request = _good()
+    request["state"] = {key: (1, 1)}
+    assert _run(decide, request)[0] == "admit"
+
+
+def test_cached_replay_snapshot_is_detached_from_the_state():
+    state = {("identity.login", "account", "opaque:a"): (1, 1)}
+    request = _good()
+    request.update(replay="cached", state=state)
+    kind, snap = _run(decide, request)
+    assert kind == "replay" and snap == state and snap is not state
+    snap[("identity.login", "account", "opaque:b")] = (1, 1)
+    assert list(state) == [("identity.login", "account", "opaque:a")]
+
+
+def _boundary_rows_fail(d):
+    """Acceptance rows with literal expectations, one violation each. True when any row's
+    outcome differs from its expectation. A foreign exception raises Crash (never a kill)."""
+    key = ("identity.login", "account", "opaque:a")
+    rows = [
+        ({key: (1, 2)}, {}, "rate_limited"),  # count == capacity
+        ({key: (1, 3)}, {}, "internal"),  # count == capacity + 1
+        ({key: (1, 1)}, {}, "admit"),
+        ({"abc": (1, 1)}, {}, "internal"),  # non-tuple key, 3 chars
+        ({key: (1, 1)}, {"replay": "cached"}, "replay"),
+    ]
+    for state, extra, expected in rows:
+        request = dict(_good(), state=state, **extra)
+        kind, snap = _run(d, request)
+        if kind != expected:
+            return True
+        if kind == "replay" and (snap is state or snap != state):
+            return True
+    return False
+
+
 def _mutant(old, new):
     source = inspect.getsource(prod)
     assert source.count(old) == 1, old
@@ -304,6 +357,15 @@ MUTANTS = [
     ("slot = now // duration", "slot = now // (duration + 1)"),
     ("result = deepcopy(state)", "result = state"),
     ("count = previous_count if previous_slot == slot else 0", "count = previous_count"),
+    ('return "replay", deepcopy(state)', 'return "replay", state'),
+    ("or type(key) is not tuple\n", "\n")
+    if False
+    else (
+        "type(key) is not tuple\n            or len(key) != 3",
+        "False\n            or len(key) != 3",
+    ),
+    ("previous_count > capacity)", "previous_count >= capacity)"),
+    ("previous_count > capacity)", "previous_count > capacity + 1)"),
 ]
 
 
@@ -319,7 +381,7 @@ def test_every_mutant_is_caught_by_a_detector(old, new):
             caught = True
             break
     if not caught:
-        caught = _targeted_detectors_fail(mutant)
+        caught = _targeted_detectors_fail(mutant) or _boundary_rows_fail(mutant.decide)
     assert caught, f"mutant survived: {old!r}"
 
 
