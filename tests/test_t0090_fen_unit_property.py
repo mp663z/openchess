@@ -53,6 +53,12 @@ KNOWN_VALID = (
     "4k3/8/8/8/8/8/p7/4K3 b - - 0 1",
     "4k3/8/8/8/8/8/4R3/4K3 b - - 0 1",
     "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3",
+    "4k3/8/8/8/8/8/PPPPPPP1/QQ2K3 w - - 0 1",
+    "4k3/8/4K3/8/8/8/8/8 w - - 0 1",
+    "4k3/8/8/8/8/8/8/R3K3 w Q - 0 1",
+    "4k2r/8/8/8/8/8/8/4K3 b k - 0 1",
+    "r3k3/8/8/8/8/8/8/4K3 b q - 0 1",
+    "4k3/p7/8/8/8/8/P7/4K3 w - - 0 1",
 )
 # Known-invalid positions with the exact refusal class they must raise.
 KNOWN_INVALID = (
@@ -69,6 +75,35 @@ KNOWN_INVALID = (
     ("4k3/8/8/8/8/8/8/4K4 w - - 0 1", "malformed_fen"),  # rank sums to 9 files
     ("4kK2/8/8/8/8/8/8/8 w - - 0 1", "impossible_position"),  # kings adjacent
     ("P3k3/8/8/8/8/8/8/4K3 w - - 0 1", "impossible_position"),  # pawn on back rank
+    ("4k3/8/8/8/8/8/4K3 w - - 0 1", "malformed_fen"),
+    ("4k3/8/8/8/8/8/8/8/4K3 w - - 0 1", "malformed_fen"),
+    ("r3k2r/8/8/8/8/8/8/R3K2R w KKkq - 0 1", "malformed_fen"),
+    ("r3k2r/8/8/8/8/8/8/R3K2R w QKkq - 0 1", "malformed_fen"),
+    ("r3k2r/8/8/8/8/8/8/R3K2R w KQkz - 0 1", "malformed_fen"),
+    ("4k3/8/8/8/4P3/8/8/4K3 b - e4 0 1", "malformed_fen"),
+    ("4k3/8/8/8/4P3/8/8/4K3 b - z3 0 1", "malformed_fen"),
+    ("4k3/8/8/8/8/8/8/8 w - - 0 1", "impossible_position"),
+    ("8/8/8/8/8/8/8/4K3 b - - 0 1", "impossible_position"),
+    ("4k3/8/8/8/8/8/8/3KK3 w - - 0 1", "impossible_position"),
+    ("3kk3/8/8/8/8/8/8/4K3 w - - 0 1", "impossible_position"),
+    ("4k3/4K3/8/8/8/8/8/8 w - - 0 1", "impossible_position"),
+    ("8/8/8/8/8/8/3k4/4K3 w - - 0 1", "impossible_position"),
+    ("4k3/8/8/8/8/8/8/P3K3 w - - 0 1", "impossible_position"),
+    ("p3k3/8/8/8/8/8/8/4K3 w - - 0 1", "impossible_position"),
+    ("4k3/8/8/8/8/8/8/p3K3 w - - 0 1", "impossible_position"),
+    ("4k3/8/8/8/8/8/PPPPPPP1/QQQ1K3 w - - 0 1", "impossible_position"),
+    ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNQ w kq - 0 1", "impossible_position"),
+    ("4k3/8/8/8/8/8/8/4K3 w K - 0 1", "impossible_position"),
+    ("4k3/8/8/8/8/8/8/R4K2 w Q - 0 1", "impossible_position"),
+    ("r2k4/8/8/8/8/8/8/4K3 b q - 0 1", "impossible_position"),
+    ("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e3 0 1", "impossible_position"),
+    ("rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR b KQkq c6 0 2", "impossible_position"),
+    ("rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", "impossible_position"),
+    ("rnbqkbnr/pppppppp/8/8/4N3/8/PPPP1PPP/RNBQKB1R b KQkq e3 0 1", "impossible_position"),
+    ("rnbqkbnr/pppppppp/8/8/4P3/4N3/PPPP1PPP/RNBQKB1R b KQkq e3 0 1", "impossible_position"),
+    ("rnbqkbnr/pppppppp/8/8/4P3/8/1PPPPPPP/RNBQKBNR b KQkq e3 0 1", "impossible_position"),
+    ("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 5 1", "impossible_position"),
+    ("rnbqkbnr/pp1ppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2", "impossible_position"),
 )
 
 
@@ -204,13 +239,104 @@ MUTANTS = [
     ('if pr["non_mover_king_attacked"] == "forbidden":', "if False:"),
 ]  # fmt: skip
 
+# one-gate mutants: each must be killed by the one-violation row paired with it
+GATE_MUTANTS = (
+    ("4k3/8/8/8/8/8/4K3 w - - 0 1", 'if len(rank_list) != g["rank_count"]:', "if False:"),
+    (
+        "r3k2r/8/8/8/8/8/8/R3K2R w KKkq - 0 1",
+        (
+            "if len(set(rights)) != len(rights):",
+            'if "".join(ch for ch in cs["order"] if ch in rights) != rights:',
+        ),
+        ("if False:", "if False:"),
+    ),
+    (
+        "r3k2r/8/8/8/8/8/8/R3K2R w QKkq - 0 1",
+        'if "".join(ch for ch in cs["order"] if ch in rights) != rights:',
+        "if False:",
+    ),
+    ("4k3/8/8/8/4P3/8/8/4K3 b - e4 0 1", 'or ep[1] not in es["ranks"]:', "or False:"),
+    (
+        "4k3/8/8/8/8/8/8/3KK3 w - - 0 1",
+        'len(wk) != 1 and pr["white_kings"] == "exactly-1"',
+        "False",
+    ),
+    (
+        "3kk3/8/8/8/8/8/8/4K3 w - - 0 1",
+        'len(bk) != 1 and pr["black_kings"] == "exactly-1"',
+        "False",
+    ),
+    (
+        "4k3/4K3/8/8/8/8/8/8 w - - 0 1",
+        (
+            "if max(abs(wf - bf), abs(wr - br)) <= 1:",
+            'if pr["non_mover_king_attacked"] == "forbidden":',
+        ),
+        ("if False:", "if False:"),
+    ),
+    ("4k3/8/8/8/8/8/8/P3K3 w - - 0 1", "back = (ranks[0], ranks[-1])", "back = (ranks[-1],)"),
+    ("p3k3/8/8/8/8/8/8/4K3 w - - 0 1", "back = (ranks[0], ranks[-1])", "back = (ranks[0],)"),
+    (
+        "4k3/8/8/8/8/8/8/p3K3 w - - 0 1",
+        'if pce in "Pp" and str(r) in back:',
+        'if pce in "P" and str(r) in back:',
+    ),
+    ("4k3/8/8/8/8/8/PPPPPPP1/QQQ1K3 w - - 0 1", "if excess > pmax - pawns:", "if False:"),
+    (
+        "4k3/8/8/8/8/8/8/4K3 w K - 0 1",
+        'board.get((rf, int(home["rook"][1]))) != rook_letter',
+        "False",
+    ),
+    (
+        "4k3/8/8/8/8/8/8/R4K2 w Q - 0 1",
+        'board.get((kf, int(home["king"][1]))) != king_letter',
+        "False",
+    ),
+    (
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e3 0 1",
+        '(requires == "black-to-move" and white_to_move)',
+        "(False and white_to_move)",
+    ),
+    (
+        "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR b KQkq c6 0 2",
+        'requires == "white-to-move" and not white_to_move',
+        "False",
+    ),
+    (
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        'if board.get((f, int(side["to_rank"]))) != pawn:',
+        "if False:",
+    ),
+    (
+        "rnbqkbnr/pppppppp/8/8/4P3/4N3/PPPP1PPP/RNBQKB1R b KQkq e3 0 1",
+        'if es["target_square"] == "empty" and (f, r) in board:',
+        "if False:",
+    ),
+    (
+        "rnbqkbnr/pppppppp/8/8/4P3/8/1PPPPPPP/RNBQKBNR b KQkq e3 0 1",
+        'if es["origin_square"] == "empty" and (f, int(side["from_rank"])) in board:',
+        "if False:",
+    ),
+    (
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 5 1",
+        'if es["halfmove_clock"] == "must-be-zero" and half_i != 0:',
+        "if False:",
+    ),
+)
+
 
 def _mutant_module(old, new):
+    """Apply one edit, or several when old/new are tuples (a gate that another gate
+    also covers can only be exposed by disabling both)."""
     source = inspect.getsource(fen)
-    assert source.count(old) == 1, old
+    for before, after in zip(
+        old if type(old) is tuple else (old,), new if type(new) is tuple else (new,), strict=True
+    ):
+        assert source.count(before) == 1, before
+        source = source.replace(before, after)
     module = types.ModuleType("mutant_fen")
     module.__file__ = fen.__file__
-    exec(compile(source.replace(old, new), "mutant_fen", "exec"), module.__dict__)  # noqa: S102
+    exec(compile(source, "mutant_fen", "exec"), module.__dict__)  # noqa: S102
     return module
 
 
@@ -289,3 +415,17 @@ def test_properties_hold_for_the_shipped_runtime():
 def test_every_mutant_is_killed_by_a_semantic_failure(old, new):
     failures = _failures(_mutant_module(old, new))
     assert any(kind == "semantic" for kind, _ in failures), failures
+
+
+@pytest.mark.parametrize(
+    "row,old,new", GATE_MUTANTS, ids=[f"gate{i}" for i in range(len(GATE_MUTANTS))]
+)
+def test_each_refusal_gate_mutant_is_killed_by_its_own_row(row, old, new):
+    failures = _failures(_mutant_module(old, new))
+    own = [d for kind, d in failures if kind == "semantic" and d.startswith(f"refuse {row}")]
+    assert own, failures
+
+
+def test_known_valid_boundary_rows_are_accepted():
+    for text in KNOWN_VALID[-6:]:
+        assert verdict(text) == ("ok", None), text
