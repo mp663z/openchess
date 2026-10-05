@@ -345,6 +345,8 @@ EDITS = {
         "copied[key] = _encode(item, depth + 1, seen, out)",
         "copied[key] = _encode(item, depth, seen, out)",
     ),
+    "bool-scalar-unsupported": _once("    if kind is bool:", "    if False:"),
+    "none-scalar-unsupported": _once("    if value is None:", "    if False:"),
     "scan-id-ignores-loss": _once(
         'f"{verdict}\\n{head}\\n{count}\\n{lost}\\n"', 'f"{verdict}\\n{head}\\n{count}\\n"'
     ),
@@ -356,9 +358,34 @@ EXPECTED_KILL = {
     "prefix-one-entry-short": "salvage",
     "quarantine-unbound-to-suffix": "unbound-sink",
     "scan-id-ignores-loss": "salvage",
+    "bool-scalar-unsupported": "domain-scalars",
+    "none-scalar-unsupported": "domain-scalars",
     "int-range-unchecked": "domain-int",
     "dict-depth-not-counted": "domain-dict",
 }
+
+
+SCALAR_ROWS = [
+    ("true", {"x": True}),
+    ("false", {"x": False}),
+    ("none", {"x": None}),
+    ("mixed-list", {"x": [None, True, False, 0, "s"]}),
+]
+
+
+def _scalar_failure(source):
+    """Bool and None values in a discarded tail entry are inside the scan domain."""
+    base = jround(REF_LOG[:2])
+    for name, entry in SCALAR_ROWS:
+        run = child_run([*base, entry], 9, source=source)
+        assert "crash" not in run, f"{name}: crashed instead of deviating: {run}"
+        if not (run["ok"] and run["after_scan"] == base and run["receipt"]["verified_count"] == 2):
+            return name
+    return None
+
+
+def test_bool_and_none_scalars_in_the_tail_are_salvaged_after_restart():
+    assert _scalar_failure(None) is None
 
 
 def _deviations(source):
@@ -401,6 +428,8 @@ def _deviations(source):
     u = runs["unbound-sink"]
     if not (u["ok"] is False and u.get("failure_class") == "divergent_quarantine"):
         found.add("unbound-sink")
+    if _scalar_failure(source) is not None:
+        found.add("domain-scalars")
     for name in ("domain-int", "domain-dict"):
         d = runs[name]
         if not (d["ok"] is False and d.get("failure_class") == "malformed_corruption_record"):
