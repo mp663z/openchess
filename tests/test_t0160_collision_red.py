@@ -350,6 +350,9 @@ MUTANTS = {
 }
 
 
+CRASH = object()
+
+
 def _row_fails(cls, section, name):
     row = _row(section, name)
     try:
@@ -377,16 +380,17 @@ def _row_fails(cls, section, name):
             return True
         _apply(table, row["op"])
         return _pinned(table) != row["expect"]
-    except Exception:  # noqa: BLE001 - a raw escape is also a caught mutant
-        return True
+    except Exception:  # noqa: BLE001 - a raw escape is a crash, never a semantic kill
+        return CRASH
 
 
 @pytest.mark.parametrize("label", sorted(MUTANTS))
 def test_mutant_is_killed_by_a_pinned_row(label):
     cls = MUTANTS[label]
-    killed = [(s, n) for s, n in ALL if _row_fails(cls, s, n)]
-    assert killed, f"mutant {label} survived every pinned row"
+    outcomes = [(s, n, _row_fails(cls, s, n)) for s, n in ALL]
+    semantic = [(s, n) for s, n, out in outcomes if out is True]
+    assert semantic, f"mutant {label} has no semantic kill: {outcomes}"
 
 
 def test_unmutated_engine_fails_no_row():
-    assert [(s, n) for s, n in ALL if _row_fails(Engine, s, n)] == []
+    assert [(s, n) for s, n in ALL if _row_fails(Engine, s, n) is not False] == []
