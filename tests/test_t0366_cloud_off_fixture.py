@@ -123,37 +123,78 @@ def exec_step(sw, step):
     return out
 
 
+def _run(sw, step):
+    """exec_step, but an escaped non-typed exception is a crash outcome."""
+    try:
+        return exec_step(sw, step)
+    except Exception as exc:  # noqa: BLE001 - recorded as a crash, never as a kill
+        return {"crash": type(exc).__name__}
+
+
+def _kind(*outs):
+    return "crash" if any("crash" in o for o in outs) else "mismatch"
+
+
 def replay(cases, factory):
-    """Every mismatch between the pinned results and the world under test."""
+    """Every mismatch between the pinned results and the world under test.
+
+    Entries are (section, row, where, kind). kind is "crash" when the world
+    raised a non-typed exception and "mismatch" otherwise. A scenario stops at
+    its first crash: nothing after it is observed, so downstream effects of a
+    crash are never reported as semantic evidence. Each scenario starts from a
+    fresh world, so later scenarios still count."""
     bad = []
+
+    def run_all(world, steps):
+        """Run setup steps; return a crash outcome or None."""
+        for step in steps:
+            out = _run(world, step)
+            if "crash" in out:
+                return out
+        return None
+
     for section in ("happy", "boundary"):
         for row in cases[section]:
             sw = factory()
             for i, step in enumerate(row["steps"]):
-                if exec_step(sw, step) != step["expect"]:
-                    bad.append((section, row["name"], i))
+                got = _run(sw, step)
+                if got != step["expect"]:
+                    bad.append((section, row["name"], i, _kind(got)))
+                    if "crash" in got:
+                        break
     for row in cases["malformed"]:
         sw = factory()
-        for step in row["setup"]:
-            exec_step(sw, step)
-        if exec_step(sw, row["request"]) != {"failure": row["expect_failure"]}:
-            bad.append(("malformed", row["name"], "rejects"))
+        crash = run_all(sw, row["setup"])
+        if crash is not None:
+            bad.append(("malformed", row["name"], "setup", "crash"))
+        else:
+            got = _run(sw, row["request"])
+            if got != {"failure": row["expect_failure"]}:
+                bad.append(("malformed", row["name"], "rejects", _kind(got)))
         sw = factory()
-        for step in row["minimal_repair"]["setup"]:
-            exec_step(sw, step)
-        if "failure" in exec_step(sw, row["minimal_repair"]["request"]):
-            bad.append(("malformed", row["name"], "repair"))
+        crash = run_all(sw, row["minimal_repair"]["setup"])
+        if crash is not None:
+            bad.append(("malformed", row["name"], "repair", "crash"))
+        else:
+            got = _run(sw, row["minimal_repair"]["request"])
+            if "failure" in got or "crash" in got:
+                bad.append(("malformed", row["name"], "repair", _kind(got)))
     for row in cases["rollback"]:
         sw = factory()
-        for step in row["setup"]:
-            exec_step(sw, step)
+        if run_all(sw, row["setup"]) is not None:
+            bad.append(("rollback", row["name"], "setup", "crash"))
+            continue
         before = _state_of(sw)
-        if exec_step(sw, row["rejected"]) != {"failure": row["expect_failure"]}:
-            bad.append(("rollback", row["name"], "rejects"))
+        got = _run(sw, row["rejected"])
+        if got != {"failure": row["expect_failure"]}:
+            bad.append(("rollback", row["name"], "rejects", _kind(got)))
+            if "crash" in got:
+                continue
         if _state_of(sw) != before:
-            bad.append(("rollback", row["name"], "state"))
-        if exec_step(sw, row["follow_up"]) != row["follow_up"]["expect"]:
-            bad.append(("rollback", row["name"], "follow_up"))
+            bad.append(("rollback", row["name"], "state", "mismatch"))
+        got = _run(sw, row["follow_up"])
+        if got != row["follow_up"]["expect"]:
+            bad.append(("rollback", row["name"], "follow_up", _kind(got)))
     return bad
 
 
@@ -908,6 +949,15 @@ def _variants(step):
 _ACCEPTED = _accepted_requests()
 
 
+def run_all_steps(world, steps):
+    """Run prior steps; return the first crash outcome, or None."""
+    for step in steps:
+        out = _run(world, step)
+        if "crash" in out:
+            return out
+    return None
+
+
 def _hostile_failures(factory, only=None):
     """Every hostile variant the world under test mishandles."""
     bad = []
@@ -917,8 +967,9 @@ def _hostile_failures(factory, only=None):
         section, row_name, index = label.split("/")
         for tag, request in _variants(step):
             sw = factory()
-            for prior in _row(section, row_name)["steps"][: int(index)]:
-                exec_step(sw, prior)
+            if run_all_steps(sw, _row(section, row_name)["steps"][: int(index)]) is not None:
+                bad.append((label, tag, {"raw": "setup"}, []))
+                continue
             state = _state_of(sw)
             CALLS.clear()
             snap = _snapshot(request)
@@ -977,10 +1028,6 @@ def test_variant_set_is_complete():
 
 
 # ---- reference mutants must turn the fixture red -------------------------------------
-
-
-def _red(factory):
-    return bool(replay(CASES, factory))
 
 
 def test_reference_is_green():
@@ -1307,12 +1354,40 @@ MUTANTS = {
 }
 
 
+def kill_evidence(factory):
+    """(semantic, crashes): semantic evidence is a pinned mismatch or a hostile
+    variant that was accepted, refused with the wrong typed class, ran user code
+    or changed an input or the state. A raw crash is recorded apart and is never
+    a kill by itself."""
+    semantic, crashes = [], []
+    for entry in replay(CASES, factory):
+        (crashes if entry[3] == "crash" else semantic).append(entry)
+    for entry in _hostile_failures(factory):
+        (crashes if "raw" in entry[2] else semantic).append(entry)
+    return semantic, crashes
+
+
 @pytest.mark.parametrize("name", sorted(MUTANTS))
 def test_reference_mutants_turn_the_fixture_red(name, monkeypatch):
     factory = MUTANTS[name](monkeypatch)
-    assert replay(CASES, factory) or _hostile_failures(factory), (
-        f"mutant {name} survived the fixture"
-    )
+    semantic, _crashes = kill_evidence(factory)
+    assert semantic, f"mutant {name} was not killed by a semantic assertion"
+
+
+def _crash_only(trigger):
+    class CrashOnly(CloudSwitch):
+        def transition(self, req):
+            if trigger(req):
+                raise KeyError("boom")
+            return CloudSwitch.transition(self, req)
+
+    return CrashOnly
+
+
+def test_crash_only_mutants_are_not_semantic_kills():
+    crash_cls = _crash_only(lambda req: True)
+    semantic, crashes = kill_evidence(lambda: crash_cls(FlagStore()))
+    assert crashes and semantic == []
 
 
 # ---- fixture edits must be detected by the closure -----------------------------------
