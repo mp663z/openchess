@@ -1,7 +1,7 @@
 {
   "schema_version": 5,
   "generated_by": "tools/component_inventory.py",
-  "inputs_sha256": "a75743dea4cba14ee2a8874eb9717a8b6f878e2e9b40de10242d2aace7f310ff",
+  "inputs_sha256": "644f5b43876fac06902a67993cb27d1c5b4c487774c4fcfeb1866f7de09cf835",
   "libraries": [
     {
       "name": "mypy",
@@ -197,16 +197,16 @@
       "direct": false,
       "targets": {
         "cp312-manylinux_x86_64": {
-          "version": "2.3.0",
-          "filename": "iniconfig-2.3.0-py3-none-any.whl",
-          "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
-          "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl"
+          "version": "2.3.1",
+          "filename": "iniconfig-2.3.1-py3-none-any.whl",
+          "sha256": "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7",
+          "url": "https://files.pythonhosted.org/packages/56/43/4ca9e49d27a1fcf6bece6f6aec0ea46bb9112489b93d4b688fb415457bdb/iniconfig-2.3.1-py3-none-any.whl"
         },
         "cp312-win_amd64": {
-          "version": "2.3.0",
-          "filename": "iniconfig-2.3.0-py3-none-any.whl",
-          "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
-          "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl"
+          "version": "2.3.1",
+          "filename": "iniconfig-2.3.1-py3-none-any.whl",
+          "sha256": "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7",
+          "url": "https://files.pythonhosted.org/packages/56/43/4ca9e49d27a1fcf6bece6f6aec0ea46bb9112489b93d4b688fb415457bdb/iniconfig-2.3.1-py3-none-any.whl"
         }
       },
       "linkage": "dynamic_link",
