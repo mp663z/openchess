@@ -100,38 +100,58 @@ def exec_step(store, step):
     return out
 
 
+def _run(store, step):
+    """exec_step, but an escaped non-typed exception is a crash outcome."""
+    try:
+        return exec_step(store, step)
+    except Exception as exc:  # noqa: BLE001 - recorded as a crash, never as a kill
+        return {"crash": type(exc).__name__}
+
+
+def _kind(*outs):
+    return "crash" if any("crash" in o for o in outs) else "mismatch"
+
+
 def replay(cases, factory):
-    """Every mismatch between the pinned results and the store under test."""
+    """Every mismatch between the pinned results and the store under test.
+
+    Entries are (section, row, where, kind); kind is "crash" when the store
+    raised a non-typed exception and "mismatch" when it returned or raised a
+    typed result different from the pinned one."""
     bad = []
     for section in ("happy", "boundary"):
         for row in cases[section]:
             store = factory()
             for i, step in enumerate(row["steps"]):
-                got = exec_step(store, step)
+                got = _run(store, step)
                 if got != step["expect"]:
-                    bad.append((section, row["name"], i))
+                    bad.append((section, row["name"], i, _kind(got)))
     for row in cases["malformed"]:
         store = factory()
         for step in row["setup"]:
-            exec_step(store, step)
-        if exec_step(store, row["request"]) != {"failure": row["expect_failure"]}:
-            bad.append(("malformed", row["name"], "rejects"))
+            _run(store, step)
+        got = _run(store, row["request"])
+        if got != {"failure": row["expect_failure"]}:
+            bad.append(("malformed", row["name"], "rejects", _kind(got)))
         store = factory()
         for step in row["minimal_repair"]["setup"]:
-            exec_step(store, step)
-        if "failure" in exec_step(store, row["minimal_repair"]["request"]):
-            bad.append(("malformed", row["name"], "repair"))
+            _run(store, step)
+        got = _run(store, row["minimal_repair"]["request"])
+        if "failure" in got or "crash" in got:
+            bad.append(("malformed", row["name"], "repair", _kind(got)))
     for row in cases["rollback"]:
         store = factory()
         for step in row["setup"]:
-            exec_step(store, step)
+            _run(store, step)
         before = copy.deepcopy(store._state)
-        if exec_step(store, row["rejected"]) != {"failure": row["expect_failure"]}:
-            bad.append(("rollback", row["name"], "rejects"))
+        got = _run(store, row["rejected"])
+        if got != {"failure": row["expect_failure"]}:
+            bad.append(("rollback", row["name"], "rejects", _kind(got)))
         if store._state != before:
-            bad.append(("rollback", row["name"], "state"))
-        if exec_step(store, row["follow_up"]) != row["follow_up"]["expect"]:
-            bad.append(("rollback", row["name"], "follow_up"))
+            bad.append(("rollback", row["name"], "state", "mismatch"))
+        got = _run(store, row["follow_up"])
+        if got != row["follow_up"]["expect"]:
+            bad.append(("rollback", row["name"], "follow_up", _kind(got)))
     return bad
 
 
@@ -767,7 +787,7 @@ def _hostile_failures(factory, only=None):
             store = factory()
             store.register(A)
             for prior in _row(section, row_name)["steps"][: int(index)]:
-                exec_step(store, prior)
+                _run(store, prior)
             state = copy.deepcopy(store._state)
             CALLS.clear()
             snap = _snapshot(request)
@@ -775,7 +795,7 @@ def _hostile_failures(factory, only=None):
                 got = getattr(store, step["op"])(request)
             except FlagError as exc:
                 got = {"failure": exc.failure_class}
-            except Exception as exc:  # noqa: BLE001 - a raw error is a failed variant
+            except Exception as exc:  # noqa: BLE001 - a crash, tagged as such
                 got = {"raw": type(exc).__name__}
             ok = (
                 got == {"failure": "malformed_flag_request"}
@@ -822,10 +842,6 @@ def test_variant_set_is_complete():
 
 
 # ---- reference mutants must turn the fixture red -------------------------------------
-
-
-def _red(factory):
-    return bool(replay(CASES, factory))
 
 
 def test_reference_is_green():
@@ -1062,21 +1078,52 @@ MUTANTS = {
 }
 
 
+def kill_evidence(factory):
+    """(semantic, crashes): semantic evidence is a pinned mismatch or a hostile
+    variant that was accepted, refused with the wrong typed class, ran user code
+    or changed an input or the state. A raw crash is recorded apart and is never
+    a kill by itself."""
+    semantic, crashes = [], []
+    for entry in replay(CASES, factory):
+        (crashes if entry[3] == "crash" else semantic).append(entry)
+    for entry in _hostile_failures(factory):
+        (crashes if "raw" in entry[2] else semantic).append(entry)
+    return semantic, crashes
+
+
 @pytest.mark.parametrize("name", sorted(MUTANTS))
 def test_reference_mutants_turn_the_fixture_red(name, monkeypatch):
     factory = MUTANTS[name](monkeypatch)
-    assert replay_safely(CASES, factory) or _hostile_failures(factory), (
-        f"mutant {name} survived the fixture"
-    )
+    semantic, _crashes = kill_evidence(factory)
+    assert semantic, f"mutant {name} was not killed by a semantic assertion"
 
 
-def replay_safely(cases, factory):
-    """A mutant that crashes with a raw error is also red, but the fixture
-    must catch it by a pinned mismatch first: record which kind it was."""
-    try:
-        return replay(cases, factory)
-    except FlagError:
-        return ["typed"]
+def _crash_only(trigger):
+    class CrashOnly(FlagStore):
+        def transition(self, req):
+            if trigger(req):
+                raise KeyError("boom")
+            return FlagStore.transition(self, req)
+
+    return CrashOnly
+
+
+def _has_non_exact_str_key(req):
+    return type(req) is dict and any(type(k) is not str for k in req)
+
+
+def _always(req):
+    return True
+
+
+@pytest.mark.parametrize("trigger", [_has_non_exact_str_key, _always], ids=["bad-keys", "always"])
+def test_crash_only_mutants_are_not_semantic_kills(trigger):
+    semantic, crashes = kill_evidence(_crash_only(trigger))
+    assert crashes
+    if trigger is _has_non_exact_str_key:
+        # refusing a hostile key with a raw error instead of the pinned typed
+        # refusal leaves no semantic evidence: only the crash record exists
+        assert semantic == []
 
 
 # ---- fixture edits must be detected by the closure -----------------------------------
