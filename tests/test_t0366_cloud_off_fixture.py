@@ -1104,7 +1104,7 @@ def _m_same_value_before_stale(monkeypatch):
         if (
             state is not None
             and req.get("cloud_mode") == state[0]
-            and type(req["cloud_mode"]) is str
+            and type(req.get("cloud_mode")) is str
         ):
             try:
                 return CloudSwitch.transition(self, {**req, "expected_revision": state[1]})
