@@ -12,16 +12,19 @@ Single process, no real clock, no concurrency.
 
 Scope: this is an integration and restart test. Unit-level validator edges
 (isinstance guards, bool/int bounds, payload depth and digit limits) belong to
-the unit battery (T0288/T0289) and are out of scope here; the rows below pin
+the unit battery (T0288/T0289); the boundary rows at the end repeat them so a production mutant cannot survive here, and the rows above pin
 only the boundaries a restarted process can reach through the state file.
 """
 
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import math
 import os
 import random
+import sys
 
 import pytest
 
@@ -453,3 +456,230 @@ def test_lease_state_rows_and_capacity_bounds():
     top = 2**53 - 1
     assert QueueEngine().apply({"jobs": [], "next_seq": top - 1}, ENQ)["status"] == "ready"
     _refused({"jobs": [], "next_seq": top}, ENQ, "capacity_exceeded")
+
+
+# ---------- boundary rows shared with the unit battery (T0288 gaps) ----------
+
+LEASE = 100
+
+
+def _empty():
+    return {"jobs": [], "next_seq": 0}
+
+
+def _enqueue(key, priority=5, payload=None):
+    return {
+        "op": "enqueue",
+        "dedupe_key": key,
+        "priority": priority,
+        "payload": {} if payload is None else payload,
+    }
+
+
+def _claim(worker="w1", now=0, lease_ms=LEASE):
+    return {"op": "claim", "worker": worker, "now": now, "lease_ms": lease_ms}
+
+
+# ---------- hostile keys, exact bounds, depth, seq, id form ----------
+
+
+class _InertStrRow(str):
+    """A str subclass with no overrides: equal and same hash as the str."""
+
+
+def _rekey(mapping, which):
+    return {(_InertStrRow(k) if k == which else k): v for k, v in mapping.items()}
+
+
+def _state_with_job():
+    state = _empty()
+    QueueEngine().apply(state, _enqueue("a"))
+    return state
+
+
+@pytest.mark.parametrize("field", ["jobs", "next_seq"])
+def test_inert_str_subclass_state_key_is_corrupt_queue(field):
+    state = _rekey(_state_with_job(), field)
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(state, _claim())
+    assert info.value.failure_class == "corrupt_queue"
+
+
+def test_inert_str_subclass_state_key_on_empty_state_is_corrupt_queue():
+    state = _rekey(_empty(), "jobs")
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(state, _claim())
+    assert info.value.failure_class == "corrupt_queue"
+
+
+@pytest.mark.parametrize("field", ["seq", "priority", "payload", "status", "job_id"])
+def test_inert_str_subclass_job_key_is_corrupt_queue(field):
+    state = _state_with_job()
+    state["jobs"][0] = _rekey(state["jobs"][0], field)
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(state, _claim())
+    assert info.value.failure_class == "corrupt_queue"
+
+
+@pytest.mark.parametrize("field", ["op", "worker", "now", "lease_ms"])
+def test_inert_str_subclass_request_key_is_malformed(field):
+    state = _state_with_job()
+    request = _rekey(_claim(), field)
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(state, request)
+    assert info.value.failure_class == "malformed_queue_request"
+    assert state == _state_with_job() or state["jobs"][0]["status"] == "ready"
+
+
+@pytest.mark.parametrize("field", ["dedupe_key", "priority", "payload"])
+def test_inert_str_subclass_enqueue_key_is_malformed(field):
+    state = _empty()
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(state, _rekey(_enqueue("a"), field))
+    assert info.value.failure_class == "malformed_queue_request"
+    assert state == _empty()
+
+
+def test_claim_with_inert_keys_does_not_return_a_null_receipt():
+    state = _state_with_job()
+    with pytest.raises(QueueError):
+        QueueEngine().apply(state, _rekey(_claim(), "worker"))
+    assert state["jobs"][0]["status"] == "ready"
+
+
+_BITS = math.ceil(4000 * math.log2(10))
+
+
+def _payload_status(value):
+    state = _empty()
+    try:
+        QueueEngine().apply(state, _enqueue("a", payload={"n": value}))
+    except QueueError as error:
+        return error.failure_class
+    return "ok"
+
+
+def test_int_digit_limit_is_exact_in_requests():
+    assert _payload_status(10**4000 - 1) == "ok"
+    assert _payload_status(-(10**4000 - 1)) == "ok"
+    assert _payload_status(10**4000) == "malformed_queue_request"
+    assert _payload_status(-(10**4000)) == "malformed_queue_request"
+
+
+def test_int_bit_limit_is_exact_in_requests():
+    edge = 2 ** (_BITS - 1)
+    assert edge.bit_length() == _BITS and len(str(edge)) <= 4000
+    assert _payload_status(edge) == "ok"
+    assert _payload_status(2**_BITS) == "malformed_queue_request"
+
+
+def test_int_digit_limit_is_exact_in_corrupt_state():
+    for value, expected in [(10**4000 - 1, None), (10**4000, "corrupt_queue")]:
+        state = _state_with_job()
+        state["jobs"][0]["payload"] = {"n": value}
+        try:
+            QueueEngine().apply(state, _claim())
+            got = None
+        except QueueError as error:
+            got = error.failure_class
+        assert got == expected
+
+
+def test_int_bit_limit_is_exact_in_corrupt_state():
+    state = _state_with_job()
+    state["jobs"][0]["payload"] = {"n": 2 ** (_BITS - 1)}
+    QueueEngine().apply(state, _claim())
+    state = _state_with_job()
+    state["jobs"][0]["payload"] = {"n": 2**_BITS}
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(state, _claim())
+    assert info.value.failure_class == "corrupt_queue"
+
+
+def test_int_beyond_interpreter_conversion_limit_is_refused_not_raised():
+    old = sys.get_int_max_str_digits()
+    sys.set_int_max_str_digits(640)
+    try:
+        assert _payload_status(10**1000) == "malformed_queue_request"
+        assert _payload_status(10**639) == "ok"
+        # inside the bit gate yet past the interpreter's str limit
+        from server import jobs_queue
+
+        assert jobs_queue._scalar(10**3999) is False
+    finally:
+        sys.set_int_max_str_digits(old)
+
+
+def _nested(depth):
+    node = []
+    for _ in range(depth - 1):
+        node = [node]
+    return node
+
+
+def _nested_dict(depth):
+    node = {}
+    for _ in range(depth - 1):
+        node = {"k": node}
+    return node
+
+
+@pytest.mark.parametrize("builder", [_nested, _nested_dict])
+def test_depth_limit_is_exact_in_requests_and_corrupt_state(builder):
+    ok, deep = builder(64), builder(65)
+    state = _empty()
+    QueueEngine().apply(state, _enqueue("a", payload=ok))
+    with pytest.raises(QueueError) as info:
+        QueueEngine().apply(_empty(), _enqueue("a", payload=deep))
+    assert info.value.failure_class == "malformed_queue_request"
+    for payload, expected in [(ok, None), (deep, "corrupt_queue")]:
+        state = _state_with_job()
+        state["jobs"][0]["payload"] = payload
+        try:
+            QueueEngine().apply(state, _claim())
+            got = None
+        except QueueError as error:
+            got = error.failure_class
+        assert got == expected
+
+
+def test_seq_bound_is_exact_on_corrupt_state():
+    state = _state_with_job()
+    state["next_seq"] = 1
+    QueueEngine().apply(state, _claim())
+    for bad_seq in (1, 2):
+        state = _state_with_job()
+        state["jobs"][0]["seq"] = bad_seq
+        with pytest.raises(QueueError) as info:
+            QueueEngine().apply(state, _claim())
+        assert info.value.failure_class == "corrupt_queue"
+
+
+def test_job_shape_check_refuses_non_dict_and_wrong_keys_directly():
+    from server import jobs_queue
+
+    good = _state_with_job()["jobs"][0]
+    assert jobs_queue._job_ok(good, 0, 1, set()) is True
+    assert jobs_queue._job_ok([], 0, 1, set()) is False
+    assert jobs_queue._job_ok({"job_id": good["job_id"]}, 0, 1, set()) is False
+    extra = dict(good, extra=1)
+    assert jobs_queue._job_ok(extra, 0, 1, set()) is False
+    bad = dict(good, status="bogus")
+    assert jobs_queue._job_ok(bad, 0, 1, set()) is False
+
+
+def test_malformed_job_rows_are_corrupt_queue():
+    for job in ([], "x", None, {"job_id": "x"}):
+        state = _state_with_job()
+        state["jobs"][0] = job
+        with pytest.raises(QueueError) as info:
+            QueueEngine().apply(state, _claim())
+        assert info.value.failure_class == "corrupt_queue"
+
+
+def test_state_id_is_over_utf8_canonical_json_not_ascii_escaped():
+    state = _empty()
+    receipt = QueueEngine().apply(state, _enqueue("a", payload={"k": "é☃"}))
+    canon = json.dumps(state, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    assert receipt["state_id"] == "qs1:" + hashlib.sha256(canon.encode()).hexdigest()
+    assert "é☃" in canon
