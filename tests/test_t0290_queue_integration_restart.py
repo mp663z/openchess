@@ -12,7 +12,8 @@ Single process, no real clock, no concurrency.
 
 Scope: this is an integration and restart test. Unit-level validator edges
 (isinstance guards, bool/int bounds, payload depth and digit limits) belong to
-the unit battery (T0288/T0289); the boundary rows at the end repeat them so a production mutant cannot survive here, and the rows above pin
+the unit battery (T0288/T0289); the boundary rows at the end repeat them so a
+production mutant cannot survive here, and the rows above pin
 only the boundaries a restarted process can reach through the state file.
 """
 
