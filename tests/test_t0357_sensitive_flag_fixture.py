@@ -113,12 +113,23 @@ def _kind(*outs):
 
 
 def replay(cases, factory):
-    """Every mismatch between the pinned results and the store under test.
+    """Every mismatch between the pinned results and the world under test.
 
-    Entries are (section, row, where, kind); kind is "crash" when the store
-    raised a non-typed exception and "mismatch" when it returned or raised a
-    typed result different from the pinned one."""
+    Entries are (section, row, where, kind). kind is "crash" when the world
+    raised a non-typed exception and "mismatch" otherwise. A scenario stops at
+    its first crash: nothing after it is observed, so downstream effects of a
+    crash are never reported as semantic evidence. Each scenario starts from a
+    fresh world, so later scenarios still count."""
     bad = []
+
+    def run_all(world, steps):
+        """Run setup steps; return a crash outcome or None."""
+        for step in steps:
+            out = _run(world, step)
+            if "crash" in out:
+                return out
+        return None
+
     for section in ("happy", "boundary"):
         for row in cases[section]:
             store = factory()
@@ -126,28 +137,37 @@ def replay(cases, factory):
                 got = _run(store, step)
                 if got != step["expect"]:
                     bad.append((section, row["name"], i, _kind(got)))
+                    if "crash" in got:
+                        break
     for row in cases["malformed"]:
         store = factory()
-        for step in row["setup"]:
-            _run(store, step)
-        got = _run(store, row["request"])
-        if got != {"failure": row["expect_failure"]}:
-            bad.append(("malformed", row["name"], "rejects", _kind(got)))
+        crash = run_all(store, row["setup"])
+        if crash is not None:
+            bad.append(("malformed", row["name"], "setup", "crash"))
+        else:
+            got = _run(store, row["request"])
+            if got != {"failure": row["expect_failure"]}:
+                bad.append(("malformed", row["name"], "rejects", _kind(got)))
         store = factory()
-        for step in row["minimal_repair"]["setup"]:
-            _run(store, step)
-        got = _run(store, row["minimal_repair"]["request"])
-        if "failure" in got or "crash" in got:
-            bad.append(("malformed", row["name"], "repair", _kind(got)))
+        crash = run_all(store, row["minimal_repair"]["setup"])
+        if crash is not None:
+            bad.append(("malformed", row["name"], "repair", "crash"))
+        else:
+            got = _run(store, row["minimal_repair"]["request"])
+            if "failure" in got or "crash" in got:
+                bad.append(("malformed", row["name"], "repair", _kind(got)))
     for row in cases["rollback"]:
         store = factory()
-        for step in row["setup"]:
-            _run(store, step)
+        if run_all(store, row["setup"]) is not None:
+            bad.append(("rollback", row["name"], "setup", "crash"))
+            continue
         before = copy.deepcopy(store._state)
         got = _run(store, row["rejected"])
         if got != {"failure": row["expect_failure"]}:
             bad.append(("rollback", row["name"], "rejects", _kind(got)))
-        if store._state != before:
+            if "crash" in got:
+                continue
+        if copy.deepcopy(store._state) != before:
             bad.append(("rollback", row["name"], "state", "mismatch"))
         got = _run(store, row["follow_up"])
         if got != row["follow_up"]["expect"]:
@@ -776,6 +796,15 @@ def _variants(step):
 _ACCEPTED = _accepted_requests()
 
 
+def run_all_steps(world, steps):
+    """Run prior steps; return the first crash outcome, or None."""
+    for step in steps:
+        out = _run(world, step)
+        if "crash" in out:
+            return out
+    return None
+
+
 def _hostile_failures(factory, only=None):
     """Every hostile variant the store under test mishandles."""
     bad = []
@@ -786,8 +815,9 @@ def _hostile_failures(factory, only=None):
         for tag, request in _variants(step):
             store = factory()
             store.register(A)
-            for prior in _row(section, row_name)["steps"][: int(index)]:
-                _run(store, prior)
+            if run_all_steps(store, _row(section, row_name)["steps"][: int(index)]) is not None:
+                bad.append((label, tag, {"raw": "setup"}, []))
+                continue
             state = copy.deepcopy(store._state)
             CALLS.clear()
             snap = _snapshot(request)
@@ -1119,11 +1149,10 @@ def _always(req):
 @pytest.mark.parametrize("trigger", [_has_non_exact_str_key, _always], ids=["bad-keys", "always"])
 def test_crash_only_mutants_are_not_semantic_kills(trigger):
     semantic, crashes = kill_evidence(_crash_only(trigger))
+    # a raw error leaves no semantic evidence, whatever it triggers on: replay
+    # stops a scenario at its first crash, so downstream effects never count
     assert crashes
-    if trigger is _has_non_exact_str_key:
-        # refusing a hostile key with a raw error instead of the pinned typed
-        # refusal leaves no semantic evidence: only the crash record exists
-        assert semantic == []
+    assert semantic == []
 
 
 # ---- fixture edits must be detected by the closure -----------------------------------
