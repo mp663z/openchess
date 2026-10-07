@@ -199,6 +199,17 @@ def check_semantics(impl, err):
     _rejects(impl, err, _req(job=_job(payload=10**4000)), "corrupt_job")  # 4001 digits
     assert impl(_req(job=_job(payload=10**3999)))["op"] == "bury"  # exactly 4000 digits
     assert impl(_req(job=_job(payload=-(10**3999))))["op"] == "bury"
+    # finite floats are valid payload scalars, anywhere in the tree
+    for good in (1.5, -0.0, 5e-324, 1.7976931348623157e308):
+        assert impl(_req(job=_job(payload=good)))["op"] == "bury", good
+    assert impl(_req(job=_job(payload={"a": [1.5, {"b": -2.25}]})))["op"] == "bury"
+    _rejects(impl, err, _req(job=_job(payload=float("inf"))), "corrupt_job")
+    _rejects(impl, err, _req(job=_job(payload=[float("-inf")])), "corrupt_job")
+    # a payload object key must be an exact str: plain int and bool keys are corrupt
+    _rejects(impl, err, _req(job=_job(payload={1: "v"})), "corrupt_job")
+    _rejects(impl, err, _req(job=_job(payload={True: "v"})), "corrupt_job")
+    _rejects(impl, err, _req(job=_job(payload={"a": {2: "v"}})), "corrupt_job")
+    assert impl(_req(job=_job(payload={"1": "v"})))["op"] == "bury"
     shared = [1]
     _rejects(impl, err, _req(job=_job(payload={"a": shared, "b": shared})), "corrupt_job")
 
