@@ -21,3 +21,7 @@ at completion, tamper-evident previous record).
 `server/jobs_dead_letter.py` implements `data/contracts/dead_letter.yaml`: a pure
 burial of a dead queue job into a content-addressed entry that binds the
 payload by digest only.
+
+`server/jobs_limit.py` implements `data/contracts/limit.yaml`: a pure keyed
+token-bucket admit/deny decision with an exact retry delay and a chained,
+tamper-evident bucket record.
