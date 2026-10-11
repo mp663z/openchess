@@ -1,0 +1,1160 @@
+{
+  "schema": 1,
+  "contract": "privacy-redaction",
+  "sections": [
+    "happy",
+    "boundary",
+    "malformed",
+    "rollback"
+  ],
+  "rows": [
+    {
+      "name": "empty",
+      "section": "happy",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "",
+            "secrets": []
+          },
+          "expect": {
+            "text": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "ordinary",
+      "section": "happy",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "engine ready",
+            "secrets": []
+          },
+          "expect": {
+            "text": "engine ready"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ascii-edges",
+      "section": "happy",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": " ~",
+            "secrets": []
+          },
+          "expect": {
+            "text": " ~"
+          }
+        }
+      ]
+    },
+    {
+      "name": "marker",
+      "section": "happy",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "redacted",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "token-31",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "secrets": []
+          },
+          "expect": {
+            "text": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          }
+        }
+      ]
+    },
+    {
+      "name": "token-32",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "token-33",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "length-1023",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a",
+            "secrets": []
+          },
+          "expect": {
+            "text": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a"
+          }
+        }
+      ]
+    },
+    {
+      "name": "length-1024",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a ",
+            "secrets": []
+          },
+          "expect": {
+            "text": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a "
+          }
+        }
+      ]
+    },
+    {
+      "name": "length-1025",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "secret-casefold",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "hello ToKeN done",
+            "secrets": [
+              "token"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "casefold-not-lower",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "SS",
+            "secrets": [
+              "\u00df"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "secret-last",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "end key",
+            "secrets": [
+              "miss",
+              "key"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "one-char-secret",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "a value",
+            "secrets": [
+              "a"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "marker-with-secret",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "redacted",
+            "secrets": [
+              "red"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "charset-10",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "start \n end",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "charset-9",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "start \t end",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "charset-0",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "start \u0000 end",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "charset-31",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "start \u001f end",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "charset-127",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "start \u007f end",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "charset-233",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "start \u00e9 end",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "charset-128578",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "start \ud83d\ude42 end",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run-char-43",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "++++++++++++++++++++++++++++++++",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run-char-47",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "////////////////////////////////",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run-char-61",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "================================",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run-char-95",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "________________________________",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run-char-37",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "run-char-45",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "--------------------------------",
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "break-run",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "secrets": []
+          },
+          "expect": {
+            "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ]
+    },
+    {
+      "name": "64-secrets",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": [
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss",
+              "miss"
+            ]
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4096-secret",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": [
+              "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            ]
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "none",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": null,
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": null,
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "list",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": [],
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": [],
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "safe"
+          },
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": {
+            "text": "safe"
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "extra",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "safe",
+            "secrets": [],
+            "extra": 1
+          },
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": {
+            "text": "safe",
+            "secrets": [],
+            "extra": 1
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "text-int",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": 3,
+            "secrets": []
+          },
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": {
+            "text": 3,
+            "secrets": []
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "secrets-str",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "safe",
+            "secrets": "safe"
+          },
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": {
+            "text": "safe",
+            "secrets": "safe"
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "secret-empty",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "safe",
+            "secrets": [
+              ""
+            ]
+          },
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": {
+            "text": "safe",
+            "secrets": [
+              ""
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "secret-long",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "safe",
+            "secrets": [
+              "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            ]
+          },
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": {
+            "text": "safe",
+            "secrets": [
+              "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "secret-count",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "safe",
+            "secrets": [
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x"
+            ]
+          },
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": {
+            "text": "safe",
+            "secrets": [
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x",
+              "x"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "secret-int",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "safe",
+            "secrets": [
+              1
+            ]
+          },
+          "expect": {
+            "failure": "malformed_redaction_request"
+          }
+        },
+        {
+          "op": "emit_text",
+          "request": {
+            "text": "safe",
+            "secrets": [
+              1
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "clean",
+            "secrets": []
+          },
+          "expect": {
+            "text": "clean"
+          }
+        }
+      ]
+    },
+    {
+      "name": "no-cached-secret",
+      "section": "rollback",
+      "config": {},
+      "steps": [
+        {
+          "op": "redact",
+          "request": {
+            "text": "key",
+            "secrets": [
+              "key"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "key",
+            "secrets": []
+          },
+          "expect": {
+            "text": "key"
+          }
+        },
+        {
+          "op": "redact",
+          "request": {
+            "text": "key",
+            "secrets": [
+              "key"
+            ]
+          },
+          "expect": {
+            "text": "redacted"
+          }
+        }
+      ]
+    }
+  ]
+}
