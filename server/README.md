@@ -25,3 +25,7 @@ payload by digest only.
 `server/jobs_limit.py` implements `data/contracts/limit.yaml`: a pure keyed
 token-bucket admit/deny decision with an exact retry delay and a chained,
 tamper-evident bucket record.
+
+`server/jobs_restart.py` implements `data/contracts/restart.yaml`: a restart
+releases a worker's live leases back to ready on a queue state, with a
+content-addressed receipt and an in-place commit last.
