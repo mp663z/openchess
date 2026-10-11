@@ -18,11 +18,14 @@ NAMES = ("content", "index", "analysis", "training", "ciphertext")
 
 
 class Backend:
-    def __init__(self, data, fail):
+    def __init__(self, data, fail, name, log):
         self.data = set(data)
         self.fail = fail
+        self.name = name
+        self.log = log
 
     def erase(self, cid):
+        self.log.append([self.name, cid])
         if self.fail:
             self.fail -= 1
             raise OSError("synthetic erase fault")
@@ -30,6 +33,7 @@ class Backend:
 
 
 def replay(policy, entries, initial=None):
+    erase_calls = []
     flags = sensitive_flag.FlagStore()
     cloud = cloud_off.CloudSwitch(flags)
     if policy == "byom":
@@ -45,7 +49,7 @@ def replay(policy, entries, initial=None):
             if initial
             else {n: {"data": ["col1:" + "a" * 64], "fail": int(n == "index")} for n in NAMES}
         )
-        backends = {n: Backend(v["data"], v["fail"]) for n, v in data.items()}
+        backends = {n: Backend(v["data"], v["fail"], n, erase_calls) for n, v in data.items()}
         store = delete.Deleter(backends)
         error = delete.DeleteError
         if initial:
@@ -94,7 +98,7 @@ def replay(policy, entries, initial=None):
         }
     else:
         state = {}
-    return {"outputs": outputs, "state": state}
+    return {"outputs": outputs, "state": state, "erase_calls": erase_calls}
 
 
 def fresh(policy, entries, initial=None):

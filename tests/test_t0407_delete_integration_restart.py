@@ -57,6 +57,12 @@ def test_fresh_interpreter_snapshot_suffix_agrees_with_uninterrupted(cut):
     resumed = harness.fresh("delete", journal[cut:], first["state"])
     assert resumed["state"] == entire["state"]
     assert resumed["outputs"] == entire["outputs"][cut:]
+    all_calls = [[name, CID] for name in ("content", "index", "analysis", "training", "ciphertext")]
+    all_calls.append(["index", CID])
+    assert entire["erase_calls"] == all_calls
+    # At cut >=2 the initial delete was committed before snapshot hydration.
+    expected_suffix = all_calls if cut < 2 else ([["index", CID]] if cut <= 3 else [])
+    assert resumed["erase_calls"] == expected_suffix
     assert journal == before
     assert entire["outputs"][-1] == ["failure", "collection_deleted", "collection_deleted"]
     assert entire["state"]["state"][CID] == ["deleted", 1, []]
