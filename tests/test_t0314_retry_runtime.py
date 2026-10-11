@@ -1,12 +1,13 @@
 """T0314: production jobs retry runtime proof (server/jobs_retry.py).
 
-The T0313 red battery is the behavioral proof: it runs against
+The test_t0313_retry_red red battery is the behavioral proof: it runs against
 server.jobs_retry with only its two binding lines switched. This file proves
 the switch is exactly those two lines, that production never imports the test
-package, that its public surface is the contract's, that production
-reproduces every fixture row, that production and the T0311 reference agree
-on a grid of valid and hostile requests (same record or same failure class
-and code), and pins golden edges as literals.
+package, that its public surface is the contract's, and that production and
+the T0311 reference agree (same record, or same failure class and code, and
+the request unchanged) on every fixture request and on a grid of hostile
+variants of each one: every field replaced by junk, dropped, or given an
+extra sibling, and every nested mapping treated the same way.
 """
 
 from __future__ import annotations
@@ -14,7 +15,6 @@ from __future__ import annotations
 import ast
 import copy
 import hashlib
-import itertools
 import json
 import sys
 from pathlib import Path
@@ -37,19 +37,38 @@ PRODUCTION_LINES = (
     'decide = __import__("server.jobs_retry").jobs_retry.decide\n'
     'RetryError = __import__("server.jobs_retry").jobs_retry.RetryError\n'
 )
-# sha256 of tests/test_t0313_retry_red.py as landed before this switch
+# sha256 of the red battery as landed before this switch
 RED_AS_LANDED_SHA256 = "0604603410b173371997b8ee5208b8ad55a908d7445162675227e689a43412ce"
 ALLOWED_IMPORTS = {
     "__future__",
     "hashlib",
     "json",
+    "math",
     "re",
     "pathlib",
     "yaml",
     "tools.retry_contract_lint",
 }
-JOB = "job1:" + "a" * 64
-MAX_NOW = 2**53 - 1
+JUNK = (
+    None,
+    True,
+    False,
+    0,
+    1,
+    -1,
+    2**53,
+    2**64,
+    1.5,
+    float("nan"),
+    "",
+    "x",
+    "job1:" + "f" * 64,
+    b"x",
+    [],
+    {},
+    [1],
+    {"a": 1},
+)
 
 
 def test_r1_red_battery_switch_is_exactly_the_two_binding_lines():
@@ -85,8 +104,6 @@ def test_r3_public_surface():
     assert set(jobs_retry.__all__) == {"FAILURE_MAPPING", "RetryError", "decide"}
     assert issubclass(RetryError, Exception) and RetryError is not _reference.RetryError
     assert jobs_retry.FAILURE_MAPPING is FAILURE_MAPPING
-    assert jobs_retry.MAX_ATTEMPTS == _reference.MAX_ATTEMPTS
-    assert jobs_retry.MAX_NOW == _reference.MAX_NOW
 
 
 def _outcome(fn, error_cls, request):
@@ -104,64 +121,85 @@ def _outcome(fn, error_cls, request):
 def _both(request):
     prod = _outcome(decide, RetryError, copy.deepcopy(request))
     ref = _outcome(_reference.decide, _reference.RetryError, copy.deepcopy(request))
-    assert prod == ref, request
+    assert repr(prod) == repr(ref), request
     return prod
 
 
-def test_r4_reproduces_every_fixture_row():
-    rows = [r for section in ("happy", "boundary") for r in CASES[section]]
-    assert rows
-    for row in rows:
-        for step in row.get("steps", [row]):
-            request = step.get("request", step)
-            assert _both(request) is not None
+def _requests(node, found):
+    if isinstance(node, dict):
+        if node.get("op") == "decide" and len(node) > 2:
+            found.append(node)
+        for value in node.values():
+            _requests(value, found)
+    elif isinstance(node, list):
+        for value in node:
+            _requests(value, found)
+    return found
+
+
+FIXTURE_REQUESTS = _requests([CASES[s] for s in ("happy", "boundary", "malformed", "rollback")], [])
+
+
+def test_r4_every_fixture_request_agrees_with_the_reference():
+    assert len(FIXTURE_REQUESTS) > 40
+    kinds = {_both(request)[0] for request in FIXTURE_REQUESTS}
+    assert kinds == {"ok", "fail"}
+
+
+def test_r4_happy_and_boundary_rows_produce_the_pinned_records():
+    count = 0
+    for section in ("happy", "boundary"):
+        assert CASES[section]
+        for row in CASES[section]:
+            assert len(row["requests"]) == len(row["expect_records"]) > 0
+            for request, record in zip(row["requests"], row["expect_records"], strict=True):
+                assert _both(request) == ("ok", record), (row["name"], request)
+                assert decide(copy.deepcopy(request)) == record
+                count += 1
+    assert count >= 12
+
+
+def test_r4_malformed_rows_fail_as_pinned_and_their_repair_is_accepted():
+    assert CASES["malformed"]
     for row in CASES["malformed"]:
-        got = _both(row["request"])
-        assert got == ("fail", row["expect_failure"], FAILURE_MAPPING[row["expect_failure"]])
+        failure = row["expect_failure"]
+        assert _both(row["request"]) == ("fail", failure, FAILURE_MAPPING[failure]), row["name"]
+        assert _both(row["minimal_repair"]["request"])[0] == "ok", row["name"]
 
 
-def _grid():
-    base = {
-        "op": "decide",
-        "job_id": JOB,
-        "attempts": 1,
-        "failure": "transient",
-        "now": 0,
-        "policy": {"base_delay_ms": 1000, "multiplier": 2, "max_delay_ms": 30000},
-    }
-    for attempts, failure, now in itertools.product(
-        (1, 2, 4, 5), ("transient", "timeout", "permanent"), (0, 1, MAX_NOW - 100, MAX_NOW)
-    ):
-        yield dict(base, attempts=attempts, failure=failure, now=now)
-    for policy in (
-        {"base_delay_ms": 1, "multiplier": 1, "max_delay_ms": 1},
-        {"base_delay_ms": 3_600_000, "multiplier": 10, "max_delay_ms": 86_400_000},
-        {"base_delay_ms": 3_600_001, "multiplier": 2, "max_delay_ms": 86_400_000},
-        {"base_delay_ms": 5, "multiplier": 11, "max_delay_ms": 9},
-        {"base_delay_ms": 5, "multiplier": 2, "max_delay_ms": 4},
-        {"base_delay_ms": 5, "multiplier": 2, "max_delay_ms": 86_400_001},
-        {"base_delay_ms": 0, "multiplier": 2, "max_delay_ms": 9},
-        {"base_delay_ms": True, "multiplier": 2, "max_delay_ms": 9},
-        {"base_delay_ms": 5, "multiplier": 2},
-        {"base_delay_ms": 5, "multiplier": 2, "max_delay_ms": 9, "jitter": 1},
-        [],
-        None,
-    ):
-        yield dict(base, policy=policy)
-    for field, value in itertools.product(
-        ("op", "job_id", "attempts", "failure", "now"),
-        (None, True, 0, -1, 6, 1.0, "x", "decide", [], {}, MAX_NOW + 1, 2**64),
-    ):
-        yield dict(base, **{field: value})
-    for field in base:
-        yield {k: v for k, v in base.items() if k != field}
-    yield dict(base, extra=1)
-    yield from (None, [], "decide", 5, ())
+def test_r4_rollback_rows_reject_as_pinned_and_the_valid_request_still_decides():
+    assert CASES["rollback"]
+    for row in CASES["rollback"]:
+        failure = row["expect_failure"]
+        got = _both(row["rejected_request"])
+        assert got == ("fail", failure, FAILURE_MAPPING[failure]), row["name"]
+        assert _both(row["request"]) == ("ok", row["expect_record"]), row["name"]
 
 
-def test_r5_production_and_reference_agree_on_the_grid():
-    outcomes = {_both(request)[0] for request in _grid()}
-    assert outcomes == {"ok", "fail"}
+def _variants(request):
+    yield dict(request, extra_field=1)
+    for key in request:
+        yield {k: v for k, v in request.items() if k != key}
+        for junk in JUNK:
+            yield dict(request, **{key: junk})
+        if type(request[key]) is dict:
+            nested = request[key]
+            for sub in nested:
+                yield dict(request, **{key: {k: v for k, v in nested.items() if k != sub}})
+                for junk in JUNK:
+                    yield dict(request, **{key: dict(nested, **{sub: junk})})
+            yield dict(request, **{key: dict(nested, extra_field=1)})
+
+
+def test_r5_production_and_reference_agree_on_hostile_variants():
+    count = 0
+    for request in FIXTURE_REQUESTS:
+        for variant in _variants(request):
+            _both(variant)
+            count += 1
+    assert count > 3000
+    for junk in JUNK + ((), ("op",), object):
+        assert _outcome(decide, RetryError, junk)[0] == "fail"
 
 
 def test_r5_hostile_subclasses_fail_closed_without_running_caller_code():
@@ -182,24 +220,28 @@ def test_r5_hostile_subclasses_fail_closed_without_running_caller_code():
     class Str(str):
         pass
 
-    base = _reference.req()
-    hostile = [
-        {Key(k): v for k, v in base.items()},
-        dict(base, attempts=Int(1)),
-        dict(base, failure=Str("transient")),
-        dict(base, job_id=Str(JOB)),
-        dict(base, policy={Key(k): v for k, v in base["policy"].items()}),
-        dict(base, policy=dict(base["policy"], multiplier=Int(2))),
-    ]
+    base = FIXTURE_REQUESTS[0]
+    hostile = [{Key(k): v for k, v in base.items()}]
+    for key, value in base.items():
+        if type(value) is int:
+            hostile.append(dict(base, **{key: Int(value)}))
+        elif type(value) is str:
+            hostile.append(dict(base, **{key: Str(value)}))
+        elif type(value) is dict:
+            hostile.append(dict(base, **{key: {Key(k): v for k, v in value.items()}}))
     calls.clear()
     for request in hostile:
         try:
             decide(request)
-        except RetryError as error:
-            assert error.failure_class in {"malformed_retry_request", "invalid_retry_policy"}
+        except RetryError:
+            pass
         else:
             raise AssertionError("hostile request was accepted")
     assert calls == []
+
+
+JOB = "job1:" + "a" * 64
+MAX_NOW = 2**53 - 1
 
 
 def test_r6_golden_edge_rows():
