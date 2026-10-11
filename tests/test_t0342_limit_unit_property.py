@@ -656,3 +656,20 @@ def test_forged_deny_retry_sum_boundary_is_inclusive():
     assert check(req(now=MAX - 1000, previous=ok_prev))[0] == "ok"
     bad_prev = forge_deny(updated_at=MAX - 999, retry_after_ms=1000)
     assert check(req(now=MAX - 999, previous=bad_prev))[0] == "fail"
+
+
+def test_forged_deny_retry_window_depends_on_tokens_held():
+    # (cost - tokens - 1) * refill < retry_after_ms <= (cost - tokens) * refill
+    for cost, tokens in [(2, 1), (3, 1), (3, 2), (3, 0), (1, 0)]:
+        lo = (cost - tokens - 1) * 1000
+        hi = (cost - tokens) * 1000
+        for retry, valid in [(lo, False), (lo + 1, True), (hi, True), (hi + 1, False)]:
+            if retry < 1:
+                continue
+            prev = forge_deny(cost=cost, tokens=tokens, retry_after_ms=retry, updated_at=100)
+            got = check(req(cost=1, now=100, previous=prev))
+            assert (got[0] == "ok") is valid, (cost, tokens, retry)
+            if not valid:
+                assert got == ("fail", "corrupt_previous_bucket")
+    prev = forge_deny(cost=2, tokens=1, retry_after_ms=1001, updated_at=100)
+    assert check(req(cost=1, now=100, previous=prev)) == ("fail", "corrupt_previous_bucket")
