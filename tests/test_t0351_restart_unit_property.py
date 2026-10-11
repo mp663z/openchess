@@ -383,17 +383,53 @@ def test_restart_id_binds_worker_clock_and_states():
     assert check(s, req(worker="w3", now=10))[1]["restart_id"] not in ids
 
 
-def test_state_id_keeps_non_ascii_and_receipt_shares_nothing():
-    s = state(leased(0, payload={"é": "\U0001f600"}))
+def _container_ids(obj):
+    """Identity of every list and dict reachable from obj (iterative)."""
+    ids, stack = set(), [obj]
+    while stack:
+        n = stack.pop()
+        if type(n) is dict:
+            ids.add(id(n))
+            stack.extend(dict.values(n))
+        elif type(n) is list:
+            ids.add(id(n))
+            stack.extend(list.__iter__(n))
+    return ids
+
+
+def test_state_id_keeps_non_ascii():
+    s = state(leased(0, payload={"\u00e9": "\U0001f600"}))
     rec = check(s, req())[1]
     assert rec["state_id"] == _qid(s)
+
+
+def test_receipt_and_new_state_share_no_container_with_each_other_or_the_old_state():
+    payloads = [{"n": 0, "l": [1, [2]]}, [1, {"a": [3]}], {"n": 2}]
+    s = state(
+        leased(0, payload=payloads[0]), leased(1, payload=payloads[1]), job(2, payload=payloads[2])
+    )
+    old_jobs = s["jobs"]  # keep the old containers alive so no id is reused
+    old_job_dicts = list(old_jobs)
+    old = _container_ids(s) - {id(s)}
+    old_payload_refs = [s["jobs"][i]["payload"] for i in range(3)]
+    rec = restart(s, req())
+    assert rec["released"] == [jid(0), jid(1)]
+    new = _container_ids(s) - {id(s)}
+    assert old_jobs is not s["jobs"] and all(
+        a is not b for a, b in zip(old_job_dicts, s["jobs"], strict=True)
+    )
+    receipt = _container_ids(rec)
+    assert receipt and not (receipt & new), "receipt aliases the new state"
+    assert not (receipt & old), "receipt aliases the old state"
+    assert not (new & old), "new state reuses a container of the old state"
+    # the caller's old payload objects are untouched and detached from the state
+    for i in range(3):
+        assert s["jobs"][i]["payload"] == old_payload_refs[i]
+        assert s["jobs"][i]["payload"] is not old_payload_refs[i]
     rec["released"].append("x")
-    assert s["jobs"][0]["status"] == "ready"
-    s2 = state(leased(0))
-    p = s2["jobs"][0]["payload"]
-    check(s2, req())
-    assert s2["jobs"][0]["payload"] == {"n": 0}
-    assert s2["jobs"][0]["payload"] is not p or True
+    assert s["jobs"][0]["status"] == "ready" and len(s["jobs"]) == 3
+    old_payload_refs[0]["n"] = 99
+    assert s["jobs"][0]["payload"]["n"] == 0
 
 
 def test_state_is_updated_in_place():
