@@ -1,0 +1,953 @@
+{
+  "schema": 1,
+  "contract": "privacy-delete",
+  "sections": [
+    "happy",
+    "boundary",
+    "malformed",
+    "rollback"
+  ],
+  "rows": [
+    {
+      "name": "delete-erases-in-order",
+      "section": "happy",
+      "config": {},
+      "steps": [
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "verdict": "allow"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        },
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "failure": "collection_deleted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "reregister-live-noop",
+      "section": "happy",
+      "config": {},
+      "steps": [
+        {
+          "op": "register",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "live",
+              "revision": 0,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "empty-retry-no-effects",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deleted-never-reregister",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        },
+        {
+          "op": "register",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "failure": "collection_deleted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-access",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          },
+          "expect": {
+            "failure": "unknown_collection"
+          }
+        },
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "verdict": "allow"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-delete",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "expected_revision": 0,
+            "decision": "del1:bb95d55cafd5be32bad7a974d5bed1a3521edfc5db092a26fb47f9708a924e49"
+          },
+          "expect": {
+            "failure": "unknown_collection"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "partial-content",
+      "section": "rollback",
+      "config": {
+        "fails": {
+          "content": 1
+        }
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": [
+                "content"
+              ]
+            }
+          }
+        },
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "failure": "collection_deleted"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "partial-index",
+      "section": "rollback",
+      "config": {
+        "fails": {
+          "index": 1
+        }
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": [
+                "index"
+              ]
+            }
+          }
+        },
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "failure": "collection_deleted"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "partial-analysis",
+      "section": "rollback",
+      "config": {
+        "fails": {
+          "analysis": 1
+        }
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": [
+                "analysis"
+              ]
+            }
+          }
+        },
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "failure": "collection_deleted"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "partial-training",
+      "section": "rollback",
+      "config": {
+        "fails": {
+          "training": 1
+        }
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": [
+                "training"
+              ]
+            }
+          }
+        },
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "failure": "collection_deleted"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "partial-ciphertext",
+      "section": "rollback",
+      "config": {
+        "fails": {
+          "ciphertext": 1
+        }
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": [
+                "ciphertext"
+              ]
+            }
+          }
+        },
+        {
+          "op": "access",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "expect": {
+            "failure": "collection_deleted"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "all-fail-in-declared-order",
+      "section": "rollback",
+      "config": {
+        "fails": {
+          "content": 1,
+          "index": 1,
+          "analysis": 1,
+          "training": 1,
+          "ciphertext": 1
+        }
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": [
+                "content",
+                "index",
+                "analysis",
+                "training",
+                "ciphertext"
+              ]
+            }
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "revision-9223372036854775806",
+      "section": "boundary",
+      "config": {
+        "revision": 9223372036854775806
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 9223372036854775806,
+            "decision": "del1:18638432979ae52856b5107300bd3246da8657550cb43f41dbf96061c83b803b"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 9223372036854775807,
+              "pending": []
+            }
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 9223372036854775807,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 9223372036854775807,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "revision-9223372036854775807",
+      "section": "boundary",
+      "config": {
+        "revision": 9223372036854775807
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 9223372036854775807,
+            "decision": "del1:6d298c41cd7074451c955a0a5c00d636d000417f83b47c7ada0b44d34f67ea1f"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 9223372036854775807,
+              "pending": []
+            }
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 9223372036854775807,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 9223372036854775807,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-decision",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": null
+          },
+          "expect": {
+            "failure": "decision_missing"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-collection",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:1597da406e50450f5005bdf38402615b501d7374e6aa0fdf210bebb3a13726b8"
+          },
+          "expect": {
+            "failure": "decision_missing"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-revision",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:2560dd01d880ad3de0401c730786ac42050631b733b815703a492e67a22bad79"
+          },
+          "expect": {
+            "failure": "decision_missing"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "stale",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": "del1:2560dd01d880ad3de0401c730786ac42050631b733b815703a492e67a22bad79"
+          },
+          "expect": {
+            "failure": "stale_revision"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "negative",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": -1,
+            "decision": null
+          },
+          "expect": {
+            "failure": "malformed_delete_request"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "bool-revision",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": true,
+            "decision": null
+          },
+          "expect": {
+            "failure": "malformed_delete_request"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "bad-token",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "bad"
+          },
+          "expect": {
+            "failure": "malformed_delete_request"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "rejected-retry-unchanged",
+      "section": "rollback",
+      "config": {
+        "fails": {
+          "index": 1
+        }
+      },
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": [
+                "index"
+              ]
+            }
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": null
+          },
+          "expect": {
+            "failure": "stale_revision"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "retry-malformed-decision",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 0,
+            "decision": "del1:c2886e73b0f7c175c082fd53a0a68b2ddb7f9f423f4921f8c0e30e38f1f4a3cb"
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": "bad"
+          },
+          "expect": {
+            "failure": "malformed_delete_request"
+          }
+        },
+        {
+          "op": "delete",
+          "request": {
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected_revision": 1,
+            "decision": null
+          },
+          "expect": {
+            "record": {
+              "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "state": "deleted",
+              "revision": 1,
+              "pending": []
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
