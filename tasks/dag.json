@@ -8462,10 +8462,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "a9378d9e696081e9c58ebc3d8d085a589b322899",
+   "evidence_manifest": "evidence/T0391.md"
   },
   {
    "id": "T0392",
@@ -8658,10 +8660,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "a9378d9e696081e9c58ebc3d8d085a589b322899",
+   "evidence_manifest": "evidence/T0400.md"
   },
   {
    "id": "T0401",
@@ -8854,10 +8858,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "a9378d9e696081e9c58ebc3d8d085a589b322899",
+   "evidence_manifest": "evidence/T0409.md"
   },
   {
    "id": "T0410",
