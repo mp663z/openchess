@@ -10,6 +10,7 @@ the binding, recursive receipt aliases and deep rollback are checked.
 from __future__ import annotations
 
 import copy
+import types
 
 import pytest
 
@@ -70,10 +71,27 @@ def containers(value):
     return found
 
 
+def raw_fields(instance):
+    """Inspect only ordinary instance dictionaries, never caller descriptors."""
+    cls = type(instance)
+    for base in type.__getattribute__(cls, "__mro__"):
+        namespace = type.__getattribute__(base, "__dict__")
+        if "__dict__" in namespace:
+            if type(namespace["__dict__"]) is not types.GetSetDescriptorType:
+                raise AssertionError("nonstandard instance dictionary is outside inspection scope")
+            break
+    else:
+        raise AssertionError("instance has no raw dictionary")
+    fields = object.__getattribute__(instance, "__dict__")
+    assert type(fields) is dict
+    return fields
+
+
 def owned_containers(context):
     store, stores, violations = context
-    return containers((store._state, ref.erase_log, violations)) | set().union(
-        *(containers(vars(backend)) for backend in stores.values())
+    owners = [store, *stores.values()]
+    return containers((ref.erase_log, violations)) | set().union(
+        *(containers(raw_fields(owner)) for owner in owners)
     )
 
 

@@ -10,6 +10,7 @@ the binding, recursive receipt aliases and deep rollback are checked.
 from __future__ import annotations
 
 import copy
+import types
 
 import pytest
 
@@ -58,7 +59,7 @@ def world(config, binding, error):
             receipt,
             {"install_id": ref.INS, "provider_id": ref.P, "accepted_terms": None, "revision": 0},
         )
-        assert not (containers(receipt) & containers(store._state))
+        assert not (containers(receipt) & owned_containers((store, cloud, flags)))
     store._state[(ref.INS, ref.P)] = (config.get("accepted_terms"), config.get("revision", 0))
     return store, cloud, flags
 
@@ -87,9 +88,25 @@ def containers(value):
     return found
 
 
+def raw_fields(instance):
+    """Inspect only ordinary instance dictionaries, never caller descriptors."""
+    cls = type(instance)
+    for base in type.__getattribute__(cls, "__mro__"):
+        namespace = type.__getattribute__(base, "__dict__")
+        if "__dict__" in namespace:
+            if type(namespace["__dict__"]) is not types.GetSetDescriptorType:
+                raise AssertionError("nonstandard instance dictionary is outside inspection scope")
+            break
+    else:
+        raise AssertionError("instance has no raw dictionary")
+    fields = object.__getattribute__(instance, "__dict__")
+    assert type(fields) is dict
+    return fields
+
+
 def owned_containers(context):
     store, cloud, flags = context
-    return containers((store._state, cloud._state, flags._state))
+    return set().union(*(containers(raw_fields(owner)) for owner in (store, cloud, flags)))
 
 
 class ForeignCrash(Exception):

@@ -73,3 +73,34 @@ def test_world_register_crash_is_foreign(exception):
 
     with pytest.raises(red.ForeignCrash):
         red.world({}, Broken, production.ByomError)
+
+
+def test_cached_reused_register_receipt_is_a_semantic_failure():
+    class Cached(production.ByomStore):
+        def register(self, iid, pid):
+            receipt = super().register(iid, pid)
+            fields = object.__getattribute__(self, "__dict__")
+            if "_arbitrary_receipt_cache" not in fields:
+                self._arbitrary_receipt_cache = receipt
+            else:
+                self._arbitrary_receipt_cache.clear()
+                self._arbitrary_receipt_cache.update(receipt)
+            return self._arbitrary_receipt_cache
+
+    semantic, _crashes = red.evidence(Cached, red.BINDING[1])
+    assert semantic
+
+
+def test_ownership_inspection_never_runs_dict_descriptor():
+    calls = []
+
+    class Hostile(production.ByomStore):
+        @property
+        def __dict__(self):
+            calls.append("descriptor")
+            raise AssertionError("caller hook")
+
+    instance = Hostile(None)
+    with pytest.raises(AssertionError, match="nonstandard instance dictionary"):
+        red.raw_fields(instance)
+    assert calls == []
