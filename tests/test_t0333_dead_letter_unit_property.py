@@ -809,3 +809,11 @@ def test_burial_is_deterministic_and_ids_are_unique_per_distinct_request(seed):
 
 def a_safe(r):
     return _payload(r["job"].get("payload")) if type(r.get("job")) is dict else False
+
+
+def test_lease_expiry_lower_bound_is_exact():
+    ok = {"status": "leased", "attempts": 1, "lease_owner": "w1"}
+    assert check(jreq(lease_expires_at=1, **ok)) == ("fail", "job_not_dead")
+    assert check(jreq(lease_expires_at=MAX_NOW, **ok)) == ("fail", "job_not_dead")
+    assert check(jreq(lease_expires_at=0, **ok)) == ("fail", "corrupt_job")
+    assert check(jreq(lease_expires_at=MAX_NOW + 1, **ok)) == ("fail", "corrupt_job")
