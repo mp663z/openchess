@@ -37,7 +37,7 @@ def verify_wrapper(module, cls_name, error, make_engine, script, expected_labels
     bare_outs = run(bare, bare, error, script)
     assert outs == bare_outs
     assert labels(outs) == expected_labels
-    assert wrapped._state == bare._state
+    assert getattr(wrapped, "_state", None) == getattr(bare, "_state", None)
     ops = [op for op, _ in script if op != "!"]
     assert [r["seq"] for r in tracer.records] == list(range(len(ops)))
     assert [r["operation"] for r in tracer.records] == ops
@@ -98,6 +98,51 @@ def generic_probe(cls_name, error, fc, key_exc=KeyError):
         tracer.transition("a")
         assert [(r["seq"], r["operation"], r["outcome"]) for r in tracer.records] == [
             (0, "transition", "accept")
+        ]
+
+    return probe
+
+
+def ops_probe(cls_name, error, fc, ops, key_exc=KeyError):
+    """Like generic_probe but for any public operation names (cycled)."""
+
+    class Stub:
+        mode = "ok"
+
+        def __getattr__(self, name):
+            def go(*_a):
+                if self.mode == "reject":
+                    raise error(fc)
+                if self.mode == "crash":
+                    raise key_exc("k")
+                return {"r": 1}
+
+            return go
+
+    def pick(i):
+        return ops[i % len(ops)]
+
+    def probe(module):
+        stub = Stub()
+        tracer = getattr(module, cls_name)(stub)
+        getattr(tracer, pick(0))("a")
+        stub.mode = "reject"
+        with contextlib.suppress(error):
+            getattr(tracer, pick(1))("a")
+        stub.mode = "crash"
+        with contextlib.suppress(key_exc):
+            getattr(tracer, pick(2))("a")
+        assert [(r["seq"], r["operation"], r["outcome"]) for r in tracer.records] == [
+            (0, pick(0), "accept"),
+            (1, pick(1), "reject"),
+            (2, pick(2), "crash"),
+        ]
+        tracer._trace = "junk"
+        assert tracer.records == ()
+        stub.mode = "ok"
+        getattr(tracer, pick(3))("a")
+        assert [(r["seq"], r["operation"], r["outcome"]) for r in tracer.records] == [
+            (0, pick(3), "accept")
         ]
 
     return probe
