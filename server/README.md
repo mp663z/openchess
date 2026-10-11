@@ -9,3 +9,7 @@ user's explicit export or sync action directs.
 priority-ordered, at-least-once job queue with idempotent enqueue by dedupe
 key, leased claims that dead-mark jobs at the attempt limit, and ack/nack by
 the lease holder only.
+
+`server/jobs_restart.py` implements `data/contracts/restart.yaml`: a restart
+releases a worker's live leases back to ready on a queue state, with a
+content-addressed receipt and an in-place commit last.
