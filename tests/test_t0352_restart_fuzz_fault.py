@@ -511,6 +511,39 @@ def test_armed_and_nasty_keys_in_every_dict_are_refused_without_running_hooks():
             assert _isnap(case) == before
 
 
+class PlainStr(str):
+    """A str subclass with no hooks: only its exact type is wrong."""
+
+
+def test_plain_str_subclass_keys_with_valid_names_and_values_are_refused_like_the_oracle():
+    refused = 0
+    for base in BASES:
+        for path in _paths(base):
+            if (
+                len(path) < 2
+                or type(path[-1]) is not str
+                or type(_get(base, path[:-1])) is not dict
+            ):
+                continue
+
+            def build(base=base, path=path):
+                case = copy.deepcopy(base)
+                parent = _get(case, path[:-1])
+                value = parent.pop(path[-1])
+                dict.__setitem__(parent, PlainStr(path[-1]), value)
+                return case
+
+            prod_case, ref_case = build(), build()
+            before = _isnap(prod_case)
+            prod = _outcome(PROD, prod_case, PROD_ERR)
+            ref = _outcome(REF, ref_case, REF_ERR)
+            assert prod[0] == ref[0] == "fail", (path, prod, ref)
+            assert prod[1] == ref[1] and prod[2] == ref[2]
+            assert _isnap(prod_case) == before
+            refused += 1
+    assert refused > 0
+
+
 def test_non_dict_and_hostile_top_level_requests_are_total():
     for factory in HOSTILE_FACTORIES:
         base = BASES[0]
@@ -800,3 +833,116 @@ def test_every_single_corruption_of_every_job_field_is_corrupt_queue_like_the_or
                 out = _agree(base, path=("state", "jobs", i, key), make=factory)
                 if out[0] == "fail":
                     assert out[1] == "corrupt_queue"
+
+
+def _one(state_jobs, worker="w1", now=7, next_seq=None):
+    return {
+        "state": {
+            "jobs": state_jobs,
+            "next_seq": len(state_jobs) if next_seq is None else next_seq,
+        },
+        "request": {"op": "restart", "worker": worker, "now": now},
+    }
+
+
+def test_every_status_attempt_and_lease_combination_matches_the_oracle():
+    leases = [
+        (None, None),
+        ("w1", 1),
+        ("w1", 7),
+        ("w1", 8),
+        ("w1", 0),
+        ("w1", MAX),
+        ("w1", MAX + 1),
+        ("w2", 8),
+        ("", 5),
+        (None, 5),
+        ("w1", None),
+    ]
+    for status in ("ready", "leased", "done", "dead", "other"):
+        for attempts in range(-1, 8):
+            for owner, expires in leases:
+                base = _one([_job(0, status, attempts, owner, expires)])
+                out = _agree(base, path=())
+                if out[0] == "ok":
+                    assert out[1]["restarted_at"] == 7
+
+
+def test_now_around_every_expiry_edge_releases_exactly_the_unexpired_leases():
+    for expiry in (1, 2, 50, MAX - 1, MAX):
+        for now in {0, 1, 2, expiry - 1, expiry, expiry + 1, MAX - 1, MAX}:
+            if not 0 <= now <= MAX:
+                continue
+            for worker in ("w1", "w2"):
+                base = _one([_job(0, "leased", 1, "w1", expiry)], worker, now)
+                out = _agree(base, path=())
+                if out[0] == "ok":
+                    released = out[1]["released"]
+                    assert (released != []) == (worker == "w1" and now < expiry)
+
+
+def test_seq_and_next_seq_edges_match_the_oracle():
+    for seq in (-1, 0, 1, 2, 9, MAX):
+        for next_seq in (-1, 0, 1, 2, 3, 10, MAX, MAX + 1):
+            job = _job(0)
+            job["seq"] = seq
+            _agree(_one([job], next_seq=next_seq), path=())
+    jobs = [_job(0), _job(1), _job(2)]
+    jobs[0]["seq"], jobs[1]["seq"] = jobs[1]["seq"], jobs[0]["seq"]
+    _agree(_one(jobs), path=())
+    jobs = [_job(0), _job(1), _job(2)]
+    jobs[2]["seq"] = 1
+    _agree(_one(jobs), path=())
+    jobs = [_job(0), _job(1), _job(2)]
+    jobs[2]["job_id"] = jobs[0]["job_id"]
+    _agree(_one(jobs), path=())
+
+
+def test_valid_field_corruptions_match_the_oracle():
+    for field, values in (
+        ("priority", (-1, 0, 9, 10, 11, MAX, True)),
+        ("attempts", (-1, 0, 5, 6, True)),
+        ("status", ("READY", "", "leased ", None)),
+        ("job_id", ("", "j", "J" * 64, None)),
+        ("payload", (None, [], {}, "s", 1, 1.5, True)),
+    ):
+        for value in values:
+            job = _job(0)
+            job[field] = value
+            _agree(_one([job]), path=())
+    for n in (0, 1, 10000, 10001):
+        jobs = [_job(i) for i in range(n)]
+        _agree(_one(jobs, next_seq=n), path=())
+
+
+def test_exact_bit_and_digit_edges_match_the_oracle():
+    edges = [
+        10**4000 - 1,
+        -(10**4000 - 1),
+        10**4000,
+        -(10**4000),
+        2**13287,
+        2**13288,
+        2**13289,
+        -(2**13287),
+        -(2**13288),
+        2**13287 - 1,
+        10**3999,
+        10**3999 + 1,
+    ]
+    for value in edges:
+        for wrap in (lambda v: v, lambda v: [v], lambda v: {"k": v}):
+            base = _one([_job(0, payload=wrap(value))])
+            out = _agree(base, path=())
+            digits = len(str(abs(value))) if abs(value) < 10**4010 else 9999
+            assert (out[0] == "ok") == (digits <= 4000)
+
+
+def test_exact_nesting_depth_edges_match_the_oracle():
+    for depth in range(58, 71):
+        for wrap in (lambda v: [v], lambda v: {"k": v}):
+            value = 1
+            for _ in range(depth):
+                value = wrap(value)
+            _agree(_one([_job(0, payload=value)]), path=())
+            _agree(_one([_job(0, payload=value)], worker="w2"), path=())
