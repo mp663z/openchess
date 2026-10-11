@@ -311,3 +311,88 @@ def test_a_truncated_durable_file_is_a_host_error_and_the_last_good_value_still_
     assert _outcome(PICKER(_fresh(), request), *copy.deepcopy(args)) == _outcome(
         PICKER(REF, request), *copy.deepcopy(args)
     )
+
+
+def _agree_with_oracle(request):
+    out = _outcome(_fresh(), request)
+    assert out == _outcome(REF, copy.deepcopy(request)), request
+    return out
+
+
+def test_every_policy_bound_edge_survives_a_restart_like_the_oracle():
+    edges = (
+        -1,
+        0,
+        1,
+        2,
+        9,
+        10,
+        11,
+        1000,
+        3_599_999,
+        3_600_000,
+        3_600_001,
+        86_399_999,
+        86_400_000,
+        86_400_001,
+        MAX,
+    )
+    ok = 0
+    for base in edges:
+        for multiplier in edges[:8]:
+            for max_delay in (0, 1, base - 1, base, base + 1, 86_400_000, 86_400_001):
+                request = {
+                    "op": "decide",
+                    "job_id": JOB,
+                    "attempts": 2,
+                    "failure": "transient",
+                    "now": 5,
+                    "policy": {
+                        "base_delay_ms": base,
+                        "multiplier": multiplier,
+                        "max_delay_ms": max_delay,
+                    },
+                }
+                ok += _agree_with_oracle(request)[0] == "ok"
+    assert ok > 0
+
+
+def test_non_mapping_wrong_key_and_subclass_requests_and_policies_match_the_oracle():
+    class D(dict):
+        pass
+
+    class S(str):
+        pass
+
+    base = {
+        "op": "decide",
+        "job_id": JOB,
+        "attempts": 2,
+        "failure": "transient",
+        "now": 5,
+        "policy": {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100},
+    }
+    for bad in (None, [], (), "x", 1, True, D(base), [base], {}):
+        _agree_with_oracle(bad)
+    for bad_policy in (
+        None,
+        [],
+        (),
+        "x",
+        1,
+        {},
+        D(base["policy"]),
+        {"base_delay_ms": 1, "multiplier": 2},
+        {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100, "x": 1},
+        {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100, 1: 1},
+        {"base_delay_ms": 1, "multiplier": 2, "other": 100},
+    ):
+        request = copy.deepcopy(base)
+        request["policy"] = bad_policy
+        assert _agree_with_oracle(request)[0] == "err"
+    keyed = copy.deepcopy(base)
+    keyed[S("op")] = keyed.pop("op")
+    assert _agree_with_oracle(keyed)[0] == "err"
+    keyed = copy.deepcopy(base)
+    keyed["policy"][S("multiplier")] = keyed["policy"].pop("multiplier")
+    assert _agree_with_oracle(keyed)[0] == "err"
