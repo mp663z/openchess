@@ -15,7 +15,10 @@ import pytest
 
 from tests import test_t0375_local_model_fixture as fx
 
-BINDING = (fx.world, fx.ModelError)
+BINDING = (
+    __import__("desktop.privacy.local_model", fromlist=["LocalModels"]).LocalModels,
+    __import__("desktop.privacy.local_model", fromlist=["ModelError"]).ModelError,
+)
 ROWS = [(section, row) for section in fx.SECTIONS for row in fx.CASES[section]]
 
 
