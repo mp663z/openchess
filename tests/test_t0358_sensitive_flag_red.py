@@ -15,7 +15,10 @@ import pytest
 
 from tests import test_t0357_sensitive_flag_fixture as fx
 
-BINDING = (fx.FlagStore, fx.FlagError)
+BINDING = (
+    __import__("desktop.privacy.sensitive_flag", fromlist=["FlagStore"]).FlagStore,
+    __import__("desktop.privacy.sensitive_flag", fromlist=["FlagError"]).FlagError,
+)
 ROWS = [(section, row) for section in fx.SECTIONS for row in fx.CASES[section]]
 
 
