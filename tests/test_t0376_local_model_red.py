@@ -23,6 +23,16 @@ class Crash(Exception):
     """A foreign exception, never a semantic kill."""
 
 
+def call(fn, error, *args):
+    """Only the closed refusal type may escape an implementation boundary."""
+    try:
+        return fn(*args)
+    except error:
+        raise
+    except Exception as exc:  # noqa: BLE001 - includes implementation AssertionError
+        raise Crash(type(exc).__name__) from exc
+
+
 def state_of(store):
     return copy.deepcopy(store._state)
 
@@ -63,16 +73,16 @@ def invoke(store, step, error, expected=None):
     try:
         # No composed flag setup.
         if op == "register":
-            value = store.register(request["install_id"])
+            value = call(store.register, error, request["install_id"])
             got = {"record": value}
         elif op == "record":
-            value = store.record(request["install_id"])
+            value = call(store.record, error, request["install_id"])
             got = {"record": value}
         elif op == "verdict":
-            value = store.verdict(request)
+            value = call(store.verdict, error, request)
             got = {"verdict": value}
         else:
-            value = getattr(store, op)(request)
+            value = call(getattr(store, op), error, request)
             got = {"record": value}
     except error as exc:
         assert type(exc) is error
@@ -99,14 +109,14 @@ def setup(store, steps, error):
 
 
 def check_row(factory, error, section, row):
-    store = factory()
+    store = call(factory, error)
     if section in ("happy", "boundary"):
         for step in row["steps"]:
             invoke(store, step, error, step["expect"])
     elif section == "malformed":
         setup(store, row["setup"], error)
         invoke(store, row["request"], error, {"failure": row["expect_failure"]})
-        store = factory()
+        store = call(factory, error)
         repair = row["minimal_repair"]
         setup(store, repair["setup"], error)
         assert "failure" not in invoke(store, repair["request"], error)
@@ -120,13 +130,13 @@ def check_hostile(factory, error, label, step):
     section, name, index = label.split("/")
     row = next(row for row in fx.CASES[section] if row["name"] == name)
     for _tag, request in fx._variants(step):
-        store = factory()
+        store = call(factory, error)
         setup(store, row["steps"][: int(index)], error)
         prior = state_of(store)
         snap = fx._snapshot(request)
         fx.CALLS.clear()
         try:
-            getattr(store, step["op"])(request)
+            call(getattr(store, step["op"]), error, request)
         except error as exc:
             assert type(exc) is error
             assert exc.failure_class == "malformed_model_request"
@@ -177,10 +187,11 @@ def test_semantic_mutants(name, monkeypatch):
     assert semantic, name
 
 
-def test_foreign_crash_is_not_a_kill():
+@pytest.mark.parametrize("exception", [KeyError, AssertionError])
+def test_foreign_crash_is_not_a_kill(exception):
     class Broken(fx.LocalModels):
         def transition(self, request):
-            raise KeyError("synthetic crash")
+            raise exception("synthetic crash")
 
     semantic, crashes = evidence(Broken, fx.ModelError)
     assert crashes and semantic == []

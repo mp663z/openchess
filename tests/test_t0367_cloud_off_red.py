@@ -23,6 +23,16 @@ class Crash(Exception):
     """A foreign exception, never a semantic kill."""
 
 
+def call(fn, error, *args):
+    """Only the closed refusal type may escape an implementation boundary."""
+    try:
+        return fn(*args)
+    except error:
+        raise
+    except Exception as exc:  # noqa: BLE001 - includes implementation AssertionError
+        raise Crash(type(exc).__name__) from exc
+
+
 def state_of(store):
     return copy.deepcopy((store._state, store._flags._state))
 
@@ -62,20 +72,22 @@ def invoke(store, step, error, expected=None):
         return {"seeded": True}
     try:
         if op == "flag_register":
-            return {"flag": store._flags.register(request["collection_id"])}
-        if op == "flag_transition":
-            return {"flag": store._flags.transition(request)}
-        if op == "register":
-            value = store.register(request["install_id"])
+            value = call(store._flags.register, fx.FlagError, request["collection_id"])
+            got = {"flag": value}
+        elif op == "flag_transition":
+            value = call(store._flags.transition, fx.FlagError, request)
+            got = {"flag": value}
+        elif op == "register":
+            value = call(store.register, error, request["install_id"])
             got = {"record": value}
         elif op == "record":
-            value = store.record(request["install_id"])
+            value = call(store.record, error, request["install_id"])
             got = {"record": value}
         elif op == "verdict":
-            value = store.verdict(request)
+            value = call(store.verdict, error, request)
             got = {"verdict": value}
         else:
-            value = getattr(store, op)(request)
+            value = call(getattr(store, op), error, request)
             got = {"record": value}
     except error as exc:
         assert type(exc) is error
@@ -85,7 +97,10 @@ def invoke(store, step, error, expected=None):
         exact(state_of(store), prior)
         got = {"failure": exc.failure_class}
     else:
-        assert not (containers(value) & (containers(request) | containers(store._state)))
+        assert not (
+            containers(value)
+            & (containers(request) | containers(store._state) | containers(store._flags._state))
+        )
         if op in ("record", "verdict"):
             exact(state_of(store), prior)
     exact(request, before)
@@ -102,14 +117,14 @@ def setup(store, steps, error):
 
 
 def check_row(factory, error, section, row):
-    store = factory()
+    store = call(factory, error)
     if section in ("happy", "boundary"):
         for step in row["steps"]:
             invoke(store, step, error, step["expect"])
     elif section == "malformed":
         setup(store, row["setup"], error)
         invoke(store, row["request"], error, {"failure": row["expect_failure"]})
-        store = factory()
+        store = call(factory, error)
         repair = row["minimal_repair"]
         setup(store, repair["setup"], error)
         assert "failure" not in invoke(store, repair["request"], error)
@@ -123,13 +138,13 @@ def check_hostile(factory, error, label, step):
     section, name, index = label.split("/")
     row = next(row for row in fx.CASES[section] if row["name"] == name)
     for _tag, request in fx._variants(step):
-        store = factory()
+        store = call(factory, error)
         setup(store, row["steps"][: int(index)], error)
         prior = state_of(store)
         snap = fx._snapshot(request)
         fx.CALLS.clear()
         try:
-            getattr(store, step["op"])(request)
+            call(getattr(store, step["op"]), error, request)
         except error as exc:
             assert type(exc) is error
             assert exc.failure_class == "malformed_cloud_request"
@@ -180,10 +195,11 @@ def test_semantic_mutants(name, monkeypatch):
     assert semantic, name
 
 
-def test_foreign_crash_is_not_a_kill():
+@pytest.mark.parametrize("exception", [KeyError, AssertionError])
+def test_foreign_crash_is_not_a_kill(exception):
     class Broken(fx.CloudSwitch):
         def transition(self, request):
-            raise KeyError("synthetic crash")
+            raise exception("synthetic crash")
 
     semantic, crashes = evidence(lambda: Broken(fx.FlagStore()), fx.CloudError)
     assert crashes and semantic == []
@@ -199,3 +215,27 @@ def test_binding_is_used_for_every_row():
     for section, row in ROWS:
         check_row(factory, BINDING[1], section, row)
     assert len(calls) == len(ROWS) + len(fx.CASES["malformed"])
+
+
+@pytest.mark.parametrize("exception", [KeyError, AssertionError])
+def test_composed_flag_crash_is_not_a_semantic_kill(exception):
+    class BrokenFlags(fx.FlagStore):
+        def register(self, cid):
+            raise exception("synthetic composed crash")
+
+    semantic, crashes = evidence(lambda: fx.CloudSwitch(BrokenFlags()), fx.CloudError)
+    assert crashes and semantic == []
+
+
+def test_composed_flag_wrong_receipts_are_detected():
+    class WrongFlags(fx.FlagStore):
+        def register(self, cid):
+            super().register(cid)
+            return {"wrong": "receipt"}
+
+        def transition(self, rq):
+            super().transition(rq)
+            return {"wrong": "receipt"}
+
+    semantic, _crashes = evidence(lambda: fx.CloudSwitch(WrongFlags()), fx.CloudError)
+    assert semantic
