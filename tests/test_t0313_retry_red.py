@@ -38,11 +38,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tests import test_t0311_retry_contract as _reference  # noqa: E402
+from tests import test_t0311_retry_contract as _reference  # noqa: E402, F401
 from tools.retry_contract_lint import FAILURE_MAPPING  # noqa: E402
 
-decide = _reference.decide
-RetryError = _reference.RetryError
+decide = __import__("server.jobs_retry").jobs_retry.decide
+RetryError = __import__("server.jobs_retry").jobs_retry.RetryError
 
 CASES = json.loads((ROOT / "tests" / "fixtures" / "retry" / "cases.json").read_text())
 JOB = "job1:" + "a" * 64

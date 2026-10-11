@@ -9,3 +9,7 @@ user's explicit export or sync action directs.
 priority-ordered, at-least-once job queue with idempotent enqueue by dedupe
 key, leased claims that dead-mark jobs at the attempt limit, and ack/nack by
 the lease holder only.
+
+`server/jobs_retry.py` implements `data/contracts/retry.yaml`: a pure retry
+decision (exponential backoff with a cap, dead on permanent failure or at the
+attempt limit, no jitter, clock overflow is an error).
