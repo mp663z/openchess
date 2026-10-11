@@ -17,3 +17,7 @@ attempt limit, no jitter, clock overflow is an error).
 `server/jobs_progress.py` implements `data/contracts/progress.yaml`: a pure,
 chained progress report (percent in basis points, never backwards, terminal
 at completion, tamper-evident previous record).
+
+`server/jobs_dead_letter.py` implements `data/contracts/dead_letter.yaml`: a pure
+burial of a dead queue job into a content-addressed entry that binds the
+payload by digest only.
