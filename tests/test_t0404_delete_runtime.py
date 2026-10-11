@@ -104,3 +104,26 @@ def test_ownership_inspection_never_runs_dict_descriptor():
     with pytest.raises(AssertionError, match="nonstandard instance dictionary"):
         red.raw_fields(instance)
     assert calls == []
+
+
+def test_ownership_inspection_bypasses_hostile_metaclass_descriptors():
+    calls = []
+
+    class Meta(type):
+        @property
+        def __mro__(self):
+            calls.append("metaclass mro")
+            raise AssertionError("caller hook")
+
+        @property
+        def __dict__(self):
+            calls.append("metaclass dictionary")
+            raise AssertionError("caller hook")
+
+    class Hostile(production.Deleter, metaclass=Meta):
+        pass
+
+    instance = Hostile({})
+    fields = red.raw_fields(instance)
+    assert type(fields) is dict and "_state" in fields
+    assert calls == []
