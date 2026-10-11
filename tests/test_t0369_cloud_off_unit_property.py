@@ -181,3 +181,118 @@ def test_malformed_targets_are_typed_and_atomic(bad):
     state = {cid: ("off", 0, [])}
     rq = request(cid, bad, 0)
     assert_call(store, state, rq)
+
+
+def grammar_probes(module):
+    def allowed(fn, rq):
+        try:
+            return fn(rq)
+        except module.CloudError as exc:
+            raise AssertionError("well-formed allowed verdict was refused") from exc
+
+    def refused(store, fn, *args):
+        before = copy.deepcopy((store._state, args))
+        try:
+            fn(*args)
+        except module.CloudError as exc:
+            assert type(exc) is module.CloudError
+            assert (
+                exc.failure_class == "malformed_cloud_request" and exc.code == "malformed_request"
+            )
+            assert exc.__cause__ is None and exc.__context__ is None
+        else:
+            raise AssertionError("grammar-invalid value accepted")
+        assert (store._state, args) == before
+
+    from desktop.privacy.sensitive_flag import FlagStore, approval_for
+
+    flags = FlagStore()
+    collection = "col1:" + "a" * 64
+    flags.register(collection)
+    flags.transition(
+        {
+            "collection_id": collection,
+            "sensitive": False,
+            "expected_revision": 0,
+            "approval": approval_for(collection, 0),
+        }
+    )
+    store = module.CloudSwitch(flags)
+    cid = IDS[0]
+    store.register(cid)
+    for bad in [
+        "",
+        "ins1:" + "g" * 64,
+        "ins1:" + "a" * 63,
+        "ins1:" + "a" * 65,
+        "ins1:" + "a" * 64 + "\n",
+        "wrong:" + "a" * 64,
+    ]:
+        refused(store, store.register, bad)
+        rq = request(cid, "on", 0)
+        rq["install_id"] = bad
+        refused(store, store.transition, rq)
+        rq = {"install_id": cid, "collection_id": collection, "destination": "local"}
+        rq["install_id"] = bad
+        refused(store, store.verdict, rq)
+    for bad in [
+        "",
+        "opt1:" + "g" * 64,
+        "opt1:" + "a" * 63,
+        "opt1:" + "a" * 65,
+        "opt1:" + "a" * 64 + "\n",
+    ]:
+        rq = request(cid, "on", 0)
+        rq["opt_in"] = bad
+        refused(store, store.transition, rq)
+    for bad in ["", "LOCAL", "local\n", "remote"]:
+        rq = {"install_id": cid, "collection_id": collection, "destination": "local"}
+        rq["destination"] = bad
+        refused(store, store.verdict, rq)
+    store.transition(request(cid, "on", 0))
+    assert (
+        store.verdict({"install_id": cid, "collection_id": collection, "destination": "cloud"})
+        == "allow"
+    )
+    rq = {"install_id": cid, "collection_id": "col1:" + "g" * 64, "destination": "cloud"}
+    refused(store, store.verdict, rq)
+
+
+def test_single_violation_grammar_rows_and_allowed_verdict():
+    grammar_probes(production)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        (
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) is None",
+            "not _exact_str(install_id) and _INS_RE.fullmatch(install_id) is None",
+        ),
+        (
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) is None",
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) == 0",
+        ),
+        (
+            "not _exact_str(iid) or _INS_RE.fullmatch(iid) is None",
+            "not _exact_str(iid) and _INS_RE.fullmatch(iid) is None",
+        ),
+        (
+            "not _exact_str(iid) or _INS_RE.fullmatch(iid) is None",
+            "not _exact_str(iid) or _INS_RE.fullmatch(iid) == 0",
+        ),
+        ("_OPT_RE.fullmatch(token) is None", "_OPT_RE.fullmatch(token) == 0"),
+        ("_COL_RE.fullmatch(cid) is None", "_COL_RE.fullmatch(cid) == 0"),
+    ],
+)
+def test_named_grammar_mutants_are_semantically_killed(old, new):
+    import types
+    from pathlib import Path
+
+    source = (Path(production.__file__)).read_text()
+    assert old in source
+    mutant = types.ModuleType("synthetic_grammar_mutant")
+    mutant.__file__ = production.__file__
+    exec(compile(source.replace(old, new), production.__file__, "exec"), vars(mutant))
+    with pytest.raises(AssertionError):
+        grammar_probes(mutant)

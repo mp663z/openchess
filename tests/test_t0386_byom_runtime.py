@@ -127,3 +127,158 @@ def test_ownership_inspection_bypasses_hostile_metaclass_descriptors():
     fields = red.raw_fields(instance)
     assert type(fields) is dict and "_state" in fields
     assert calls == []
+
+
+def edge_probes(module):
+    # Invocation errors outside the closed error type escape: never semantic kills.
+    error = module.ByomError
+    if hasattr(module, "ByomStore"):
+        cloud = red.world({}, *red.BINDING)[1]
+        store = module.ByomStore(cloud)
+        valid = (red.ref.INS, red.ref.P)
+        bad_args = [
+            (value, valid[1])
+            for value in [
+                "",
+                "ins1:" + "g" * 64,
+                "ins1:" + "a" * 63,
+                "ins1:" + "a" * 65,
+                valid[0] + "\n",
+            ]
+        ]
+        bad_args += [
+            (valid[0], value)
+            for value in ["", "prv1:UPPER", "prv1:a" + "a" * 32, "prv1:a\n", "prv1:a-b"]
+        ]
+    else:
+        store = module.Deleter({})
+        valid = (red.ref.A,)
+        bad_args = [
+            (value,)
+            for value in [
+                "",
+                "col1:" + "g" * 64,
+                "col1:" + "a" * 63,
+                "col1:" + "a" * 65,
+                valid[0] + "\n",
+            ]
+        ]
+    for args in bad_args:
+        before = copy.deepcopy(store._state)
+        try:
+            store.register(*args)
+        except error as exc:
+            assert type(exc) is error
+            assert exc.failure_class == "malformed_byom_request"
+            assert exc.code == "malformed_request"
+            assert exc.__cause__ is None and exc.__context__ is None
+        else:
+            raise AssertionError("invalid register grammar accepted")
+        assert store._state == before
+    store.register(*valid)
+    terms = copy.deepcopy(red.ref.T)
+    approval = module.byom_approval_for(*valid, module.terms_digest(terms), 0)
+    store.transition(
+        {
+            "install_id": valid[0],
+            "provider_id": valid[1],
+            "terms": terms,
+            "expected_revision": 0,
+            "approval": approval,
+        }
+    )
+    for payload in [
+        {"fen": "~", "task": "weekly-plan"},
+        {"fen": "F", "task": "weekly-plan", "moves": ["~"]},
+        {"fen": "F", "task": "weekly-plan", "moves": ["a"]},
+    ]:
+        rq = {
+            "install_id": valid[0],
+            "provider_id": valid[1],
+            "collection_id": red.ref.A,
+            "terms": terms,
+            "payload": payload,
+        }
+        before = copy.deepcopy((store._state, rq))
+        try:
+            result = store.send(rq)
+        except error as exc:
+            raise AssertionError("accepted printable/single-move boundary refused") from exc
+        assert result == {"verdict": "allow", "terms_digest": module.terms_digest(terms)}
+        assert (store._state, rq) == before
+
+    class PermissiveCloud:
+        def __init__(self):
+            self.calls = []
+
+        def verdict(self, rq):
+            self.calls.append(rq)
+            return "allow"
+
+    cloud_probe = PermissiveCloud()
+    store._cloud = cloud_probe
+    for bad in ["", "col1:" + "g" * 64, "col1:" + "a" * 63, red.ref.A + "\n"]:
+        rq = {
+            "install_id": valid[0],
+            "provider_id": valid[1],
+            "collection_id": bad,
+            "terms": terms,
+            "payload": {"fen": "F", "task": "weekly-plan"},
+        }
+        before = copy.deepcopy((store._state, rq))
+        try:
+            store.send(rq)
+        except error as exc:
+            assert type(exc) is error and exc.failure_class == "malformed_byom_request"
+            assert exc.code == "malformed_request"
+        else:
+            raise AssertionError("send invalid collection grammar accepted")
+        assert (store._state, rq) == before
+        assert cloud_probe.calls == []
+
+
+def test_register_grammar_and_payload_printable_edges():
+    edge_probes(production)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("lo <= ord(c) <= 0x7E", "lo <= ord(c) < 0x7E"),
+        ("1 <= len(m)", "2 <= len(m)"),
+        (
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) is None",
+            "not _exact_str(install_id) and _INS_RE.fullmatch(install_id) is None",
+        ),
+        (
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) is None",
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) == 0",
+        ),
+        (
+            "not _exact_str(provider_id) or _PRV_RE.fullmatch(provider_id) is None",
+            "not _exact_str(provider_id) and _PRV_RE.fullmatch(provider_id) is None",
+        ),
+        (
+            "not _exact_str(provider_id) or _PRV_RE.fullmatch(provider_id) is None",
+            "not _exact_str(provider_id) or _PRV_RE.fullmatch(provider_id) == 0",
+        ),
+        (
+            "not _exact_str(cid) or _COL_RE.fullmatch(cid) is None",
+            "not _exact_str(cid) and _COL_RE.fullmatch(cid) is None",
+        ),
+        (
+            "not _exact_str(cid) or _COL_RE.fullmatch(cid) is None",
+            "not _exact_str(cid) or _COL_RE.fullmatch(cid) == 0",
+        ),
+    ],
+)
+def test_named_edge_mutants_are_semantically_killed(old, new):
+    import types
+
+    source = Path(production.__file__).read_text()
+    assert old in source
+    mutant = types.ModuleType("synthetic_edge_mutant")
+    mutant.__file__ = production.__file__
+    exec(compile(source.replace(old, new), production.__file__, "exec"), vars(mutant))
+    with pytest.raises(AssertionError):
+        edge_probes(mutant)

@@ -127,3 +127,81 @@ def test_ownership_inspection_bypasses_hostile_metaclass_descriptors():
     fields = red.raw_fields(instance)
     assert type(fields) is dict and "_state" in fields
     assert calls == []
+
+
+def edge_probes(module):
+    # Invocation errors outside the closed error type escape: never semantic kills.
+    error = module.DeleteError
+    if hasattr(module, "ByomStore"):
+        cloud = red.world({}, *red.BINDING)[1]
+        store = module.ByomStore(cloud)
+        valid = (red.ref.INS, red.ref.P)
+        bad_args = [
+            (value, valid[1])
+            for value in [
+                "",
+                "ins1:" + "g" * 64,
+                "ins1:" + "a" * 63,
+                "ins1:" + "a" * 65,
+                valid[0] + "\n",
+            ]
+        ]
+        bad_args += [
+            (valid[0], value)
+            for value in ["", "prv1:UPPER", "prv1:a" + "a" * 32, "prv1:a\n", "prv1:a-b"]
+        ]
+    else:
+        store = module.Deleter({})
+        valid = (red.ref.A,)
+        bad_args = [
+            (value,)
+            for value in [
+                "",
+                "col1:" + "g" * 64,
+                "col1:" + "a" * 63,
+                "col1:" + "a" * 65,
+                valid[0] + "\n",
+            ]
+        ]
+    for args in bad_args:
+        before = copy.deepcopy(store._state)
+        try:
+            store.register(*args)
+        except error as exc:
+            assert type(exc) is error
+            assert exc.failure_class == "malformed_delete_request"
+            assert exc.code == "malformed_request"
+            assert exc.__cause__ is None and exc.__context__ is None
+        else:
+            raise AssertionError("invalid register grammar accepted")
+        assert store._state == before
+    # No hosted payload or dispatch in delete.
+
+
+def test_register_grammar_and_payload_printable_edges():
+    edge_probes(production)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        (
+            "not _exact_str(collection_id) or _COL_RE.fullmatch(collection_id) is None",
+            "not _exact_str(collection_id) and _COL_RE.fullmatch(collection_id) is None",
+        ),
+        (
+            "not _exact_str(collection_id) or _COL_RE.fullmatch(collection_id) is None",
+            "not _exact_str(collection_id) or _COL_RE.fullmatch(collection_id) == 0",
+        ),
+    ],
+)
+def test_named_edge_mutants_are_semantically_killed(old, new):
+    import types
+
+    source = Path(production.__file__).read_text()
+    assert old in source
+    mutant = types.ModuleType("synthetic_edge_mutant")
+    mutant.__file__ = production.__file__
+    exec(compile(source.replace(old, new), production.__file__, "exec"), vars(mutant))
+    with pytest.raises(AssertionError):
+        edge_probes(mutant)

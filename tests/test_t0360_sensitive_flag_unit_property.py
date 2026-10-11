@@ -171,3 +171,98 @@ def test_malformed_targets_are_typed_and_atomic(bad):
     state = {cid: (True, 0, [])}
     rq = request(cid, bad, 0)
     assert_call(store, state, rq)
+
+
+def grammar_probes(module):
+    def allowed(fn, rq):
+        try:
+            return fn(rq)
+        except module.FlagError as exc:
+            raise AssertionError("well-formed allowed verdict was refused") from exc
+
+    def refused(store, fn, *args):
+        before = copy.deepcopy((store._state, args))
+        try:
+            fn(*args)
+        except module.FlagError as exc:
+            assert type(exc) is module.FlagError
+            assert exc.failure_class == "malformed_flag_request" and exc.code == "malformed_request"
+            assert exc.__cause__ is None and exc.__context__ is None
+        else:
+            raise AssertionError("grammar-invalid value accepted")
+        assert (store._state, args) == before
+
+    store = module.FlagStore()
+    cid = IDS[0]
+    store.register(cid)
+    for bad in [
+        "",
+        "col1:" + "g" * 64,
+        "col1:" + "a" * 63,
+        "col1:" + "a" * 65,
+        "col1:" + "a" * 64 + "\n",
+        "wrong:" + "a" * 64,
+    ]:
+        refused(store, store.register, bad)
+        rq = request(cid, False, 0)
+        rq["collection_id"] = bad
+        refused(store, store.transition, rq)
+        rq = {"collection_id": cid, "destination": "local"}
+        rq["collection_id"] = bad
+        refused(store, store.verdict, rq)
+    for bad in [
+        "",
+        "apv1:" + "g" * 64,
+        "apv1:" + "a" * 63,
+        "apv1:" + "a" * 65,
+        "apv1:" + "a" * 64 + "\n",
+    ]:
+        rq = request(cid, False, 0)
+        rq["approval"] = bad
+        refused(store, store.transition, rq)
+    for bad in ["", "LOCAL", "local\n", "remote"]:
+        rq = {"collection_id": cid, "destination": "local"}
+        rq["destination"] = bad
+        refused(store, store.verdict, rq)
+    store.transition(request(cid, False, 0))
+    assert allowed(store.verdict, {"collection_id": cid, "destination": "cloud"}) == "allow"
+
+
+def test_single_violation_grammar_rows_and_allowed_verdict():
+    grammar_probes(production)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        (
+            "not _exact_str(collection_id) or _COL_RE.fullmatch(collection_id) is None",
+            "not _exact_str(collection_id) and _COL_RE.fullmatch(collection_id) is None",
+        ),
+        (
+            "not _exact_str(collection_id) or _COL_RE.fullmatch(collection_id) is None",
+            "not _exact_str(collection_id) or _COL_RE.fullmatch(collection_id) == 0",
+        ),
+        (
+            "not _exact_str(cid) or _COL_RE.fullmatch(cid) is None",
+            "not _exact_str(cid) and _COL_RE.fullmatch(cid) is None",
+        ),
+        (
+            "not _exact_str(cid) or _COL_RE.fullmatch(cid) is None",
+            "not _exact_str(cid) or _COL_RE.fullmatch(cid) == 0",
+        ),
+        ("_APV_RE.fullmatch(apv) is None", "_APV_RE.fullmatch(apv) == 0"),
+        ("state is None or state[0] is not False", "state is None or state[0] is False"),
+    ],
+)
+def test_named_grammar_mutants_are_semantically_killed(old, new):
+    import types
+    from pathlib import Path
+
+    source = (Path(production.__file__)).read_text()
+    assert old in source
+    mutant = types.ModuleType("synthetic_grammar_mutant")
+    mutant.__file__ = production.__file__
+    exec(compile(source.replace(old, new), production.__file__, "exec"), vars(mutant))
+    with pytest.raises(AssertionError):
+        grammar_probes(mutant)

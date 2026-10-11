@@ -180,3 +180,101 @@ def test_malformed_targets_are_typed_and_atomic(bad):
     state = {cid: ("off", 0, [])}
     rq = request(cid, bad, 0)
     assert_call(store, state, rq)
+
+
+def grammar_probes(module):
+    def allowed(fn, rq):
+        try:
+            return fn(rq)
+        except module.ModelError as exc:
+            raise AssertionError("well-formed allowed verdict was refused") from exc
+
+    def refused(store, fn, *args):
+        before = copy.deepcopy((store._state, args))
+        try:
+            fn(*args)
+        except module.ModelError as exc:
+            assert type(exc) is module.ModelError
+            assert (
+                exc.failure_class == "malformed_model_request" and exc.code == "malformed_request"
+            )
+            assert exc.__cause__ is None and exc.__context__ is None
+        else:
+            raise AssertionError("grammar-invalid value accepted")
+        assert (store._state, args) == before
+
+    store = module.LocalModels()
+    cid = IDS[0]
+    store.register(cid)
+    for bad in [
+        "",
+        "ins1:" + "g" * 64,
+        "ins1:" + "a" * 63,
+        "ins1:" + "a" * 65,
+        "ins1:" + "a" * 64 + "\n",
+        "wrong:" + "a" * 64,
+    ]:
+        refused(store, store.register, bad)
+        rq = request(cid, "on", 0)
+        rq["install_id"] = bad
+        refused(store, store.transition, rq)
+        rq = {"install_id": cid, "tier": "small", "host": "desktop", "destination": "local"}
+        rq["install_id"] = bad
+        refused(store, store.verdict, rq)
+    for bad in [
+        "",
+        "lmo1:" + "g" * 64,
+        "lmo1:" + "a" * 63,
+        "lmo1:" + "a" * 65,
+        "lmo1:" + "a" * 64 + "\n",
+    ]:
+        rq = request(cid, "on", 0)
+        rq["opt_in"] = bad
+        refused(store, store.transition, rq)
+    for bad in ["", "LOCAL", "local\n", "remote"]:
+        rq = {"install_id": cid, "tier": "small", "host": "desktop", "destination": "local"}
+        rq["destination"] = bad
+        refused(store, store.verdict, rq)
+    assert allowed(
+        store.verdict,
+        {"install_id": cid, "tier": "small", "host": "desktop", "destination": "local"},
+    ) == {"verdict": "allow", "reference_claims": "valid"}
+
+
+def test_single_violation_grammar_rows_and_allowed_verdict():
+    grammar_probes(production)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        (
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) is None",
+            "not _exact_str(install_id) and _INS_RE.fullmatch(install_id) is None",
+        ),
+        (
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) is None",
+            "not _exact_str(install_id) or _INS_RE.fullmatch(install_id) == 0",
+        ),
+        (
+            "not _exact_str(iid) or _INS_RE.fullmatch(iid) is None",
+            "not _exact_str(iid) and _INS_RE.fullmatch(iid) is None",
+        ),
+        (
+            "not _exact_str(iid) or _INS_RE.fullmatch(iid) is None",
+            "not _exact_str(iid) or _INS_RE.fullmatch(iid) == 0",
+        ),
+        ("_OPT_RE.fullmatch(token) is None", "_OPT_RE.fullmatch(token) == 0"),
+    ],
+)
+def test_named_grammar_mutants_are_semantically_killed(old, new):
+    import types
+    from pathlib import Path
+
+    source = (Path(production.__file__)).read_text()
+    assert old in source
+    mutant = types.ModuleType("synthetic_grammar_mutant")
+    mutant.__file__ = production.__file__
+    exec(compile(source.replace(old, new), production.__file__, "exec"), vars(mutant))
+    with pytest.raises(AssertionError):
+        grammar_probes(mutant)
