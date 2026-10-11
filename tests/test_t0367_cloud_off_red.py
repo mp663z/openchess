@@ -15,7 +15,12 @@ import pytest
 
 from tests import test_t0366_cloud_off_fixture as fx
 
-BINDING = (fx.world, fx.CloudError)
+BINDING = (
+    lambda: __import__("desktop.privacy.cloud_off", fromlist=["CloudSwitch"]).CloudSwitch(
+        __import__("desktop.privacy.sensitive_flag", fromlist=["FlagStore"]).FlagStore()
+    ),
+    __import__("desktop.privacy.cloud_off", fromlist=["CloudError"]).CloudError,
+)
 ROWS = [(section, row) for section in fx.SECTIONS for row in fx.CASES[section]]
 
 
