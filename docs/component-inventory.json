@@ -1,7 +1,7 @@
 {
   "schema_version": 5,
   "generated_by": "tools/component_inventory.py",
-  "inputs_sha256": "644f5b43876fac06902a67993cb27d1c5b4c487774c4fcfeb1866f7de09cf835",
+  "inputs_sha256": "6094162a16d3b05680fdb810829309f18d6cfbcd93a90e5cd8e11b98048a9dcb",
   "libraries": [
     {
       "name": "mypy",
@@ -107,16 +107,16 @@
       "direct": true,
       "targets": {
         "cp312-manylinux_x86_64": {
-          "version": "0.16.10",
-          "filename": "ruff-0.16.10-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
-          "sha256": "f33f43a864a8483eebd160e713336c8bab02c934feaff0a33cf5ccb41546d09a",
-          "url": "https://files.pythonhosted.org/packages/e4/03/17234145f302a645a123e8c3bb2411ecf4669fbc350de3b0d803230a1729/ruff-0.16.10-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+          "version": "0.17.0",
+          "filename": "ruff-0.17.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "sha256": "bc73e7c133e82d55b5f15897b2a442d72c0cb4a0c886c46801ce3c247150b60c",
+          "url": "https://files.pythonhosted.org/packages/2c/3c/4a01195d93420cad1175bedad13a515dc8a56f95a6e39789b92e582682f5/ruff-0.17.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
         },
         "cp312-win_amd64": {
-          "version": "0.16.10",
-          "filename": "ruff-0.16.10-py3-none-win_amd64.whl",
-          "sha256": "97f2015c92aa97105b0eab19eb5d224884399281cfc5da86a92db4ab5e7fb2ca",
-          "url": "https://files.pythonhosted.org/packages/99/29/cfb0df9448d4d4ad48c2de029ada9ebd71baa6da983a6c77ee6c6cd0fe82/ruff-0.16.10-py3-none-win_amd64.whl"
+          "version": "0.17.0",
+          "filename": "ruff-0.17.0-py3-none-win_amd64.whl",
+          "sha256": "8ab76bcda86dfd28e13776cb5de3c7bcdcf1ae3d37ed761113d1a5a415dc134c",
+          "url": "https://files.pythonhosted.org/packages/cc/77/1ee73df41dcc8d1cdb686ee4bc46ea29704ea175feb6b95c78420f631ab8/ruff-0.17.0-py3-none-win_amd64.whl"
         }
       },
       "linkage": "subprocess",
