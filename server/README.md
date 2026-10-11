@@ -9,3 +9,7 @@ user's explicit export or sync action directs.
 priority-ordered, at-least-once job queue with idempotent enqueue by dedupe
 key, leased claims that dead-mark jobs at the attempt limit, and ack/nack by
 the lease holder only.
+
+`server/jobs_dead_letter.py` implements `data/contracts/dead_letter.yaml`: a pure
+burial of a dead queue job into a content-addressed entry that binds the
+payload by digest only.
