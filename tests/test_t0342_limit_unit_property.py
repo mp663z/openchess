@@ -673,3 +673,13 @@ def test_forged_deny_retry_window_depends_on_tokens_held():
                 assert got == ("fail", "corrupt_previous_bucket")
     prev = forge_deny(cost=2, tokens=1, retry_after_ms=1001, updated_at=100)
     assert check(req(cost=1, now=100, previous=prev)) == ("fail", "corrupt_previous_bucket")
+
+
+def test_forged_previous_capacity_lower_bound_is_integrity_not_chain():
+    for cap in (0, -1):
+        for prev in (
+            forge(capacity=cap, tokens=0, cost=1),
+            forge_deny(capacity=cap, tokens=0, cost=1, retry_after_ms=1000),
+        ):
+            assert check(req(cost=1, now=100, previous=prev)) == ("fail", "corrupt_previous_bucket")
+    assert check(req(cost=1, now=100, previous=forge(capacity=3)))[0] == "ok"
