@@ -121,6 +121,20 @@ def execute(context, op, request):
     return {"text": fn(request)}
 
 
+def containers(value):
+    found = set()
+    if type(value) in (dict, list, tuple, set):
+        found.add(id(value))
+        children = value.values() if type(value) is dict else value
+        for child in children:
+            found.update(containers(child))
+    return found
+
+
+def owned_containers(context):
+    return set()
+
+
 class ForeignCrash(Exception):
     """An implementation exception, never a semantic kill."""
 
@@ -149,6 +163,7 @@ def replay(row, binding=None):
             assert exc.__cause__ is None and exc.__context__ is None
             got = {"failure": exc.failure_class}
             exact(state(context), prior)
+        assert not (containers(got) & (containers(rq) | owned_containers(context)))
         exact(rq, before)
         exact(got, step["expect"])
         # Stateless, no persistent data.

@@ -159,6 +159,21 @@ def execute(context, op, request):
     return {"record": store.transition(request)}
 
 
+def containers(value):
+    found = set()
+    if type(value) in (dict, list, tuple, set):
+        found.add(id(value))
+        children = value.values() if type(value) is dict else value
+        for child in children:
+            found.update(containers(child))
+    return found
+
+
+def owned_containers(context):
+    store, cloud, flags = context
+    return containers((store._state, cloud._state, flags._state))
+
+
 class ForeignCrash(Exception):
     """An implementation exception, never a semantic kill."""
 
@@ -187,6 +202,7 @@ def replay(row, binding=None):
             assert exc.__cause__ is None and exc.__context__ is None
             got = {"failure": exc.failure_class}
             exact(state(context), prior)
+        assert not (containers(got) & (containers(rq) | owned_containers(context)))
         exact(rq, before)
         exact(got, step["expect"])
         if step["op"] == "send":
@@ -623,6 +639,16 @@ def test_hostile_payload_fixture(name, payload):
 
 
 MUTANTS.update(terms_changed=ChangedTermsAllowed, rollback=RefusalWritesState)
+
+
+class CachedReceipt(ref.ByomStore):
+    def transition(self, request):
+        record = super().transition(request)
+        self._state["cached_receipt"] = record
+        return record
+
+
+MUTANTS["receipt_alias"] = CachedReceipt
 
 
 @pytest.mark.parametrize("name", sorted(MUTANTS))

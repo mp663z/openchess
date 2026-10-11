@@ -142,6 +142,23 @@ def execute(context, op, request):
     return {"record": store.delete(request)}
 
 
+def containers(value):
+    found = set()
+    if type(value) in (dict, list, tuple, set):
+        found.add(id(value))
+        children = value.values() if type(value) is dict else value
+        for child in children:
+            found.update(containers(child))
+    return found
+
+
+def owned_containers(context):
+    store, stores, violations = context
+    return containers((store._state, ref.erase_log, violations)) | set().union(
+        *(containers(vars(backend)) for backend in stores.values())
+    )
+
+
 class ForeignCrash(Exception):
     """An implementation exception, never a semantic kill."""
 
@@ -170,6 +187,7 @@ def replay(row, binding=None):
             assert exc.__cause__ is None and exc.__context__ is None
             got = {"failure": exc.failure_class}
             exact(state(context), prior)
+        assert not (containers(got) & (containers(rq) | owned_containers(context)))
         exact(rq, before)
         exact(got, step["expect"])
         if step["op"] == "delete" and "record" in got:
@@ -424,6 +442,18 @@ class RefusalErases(ref.Deleter):
 MUTANTS.update(
     tombstone_order=EraseBeforeTombstone, retry_scope=RetryEveryStore, rollback=RefusalErases
 )
+
+
+class AliasedReceipt(ref.Deleter):
+    def delete(self, request):
+        record = super().delete(request)
+        cid = request["collection_id"]
+        status, revision, _pending = self._state[cid]
+        self._state[cid] = (status, revision, record["pending"])
+        return record
+
+
+MUTANTS["receipt_alias"] = AliasedReceipt
 
 
 @pytest.mark.parametrize("name", sorted(MUTANTS))
