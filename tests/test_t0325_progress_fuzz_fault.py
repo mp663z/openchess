@@ -510,6 +510,39 @@ def test_armed_and_nasty_keys_in_every_dict_are_refused_without_running_hooks():
             assert _isnap(case) == before
 
 
+class PlainStr(str):
+    """A str subclass with no hooks: only its exact type is wrong."""
+
+
+def test_plain_str_subclass_keys_with_valid_names_and_values_are_refused_like_the_oracle():
+    refused = 0
+    for base in BASES:
+        for path in _paths(base):
+            if (
+                len(path) < 2
+                or type(path[-1]) is not str
+                or type(_get(base, path[:-1])) is not dict
+            ):
+                continue
+
+            def build(base=base, path=path):
+                case = copy.deepcopy(base)
+                parent = _get(case, path[:-1])
+                value = parent.pop(path[-1])
+                dict.__setitem__(parent, PlainStr(path[-1]), value)
+                return case
+
+            prod_case, ref_case = build(), build()
+            before = _isnap(prod_case)
+            prod = _outcome(PROD, prod_case, PROD_ERR)
+            ref = _outcome(REF, ref_case, REF_ERR)
+            assert prod[0] == ref[0] == "fail", (path, prod, ref)
+            assert prod[1] == ref[1] and prod[2] == ref[2]
+            assert _isnap(prod_case) == before
+            refused += 1
+    assert refused > 0
+
+
 def test_non_dict_and_hostile_top_level_requests_are_total():
     for factory in HOSTILE_FACTORIES:
         base = BASES[0]
