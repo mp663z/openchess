@@ -84,12 +84,21 @@ def test_stale_pre_restart_request_does_not_commit():
     refusal_probe(harness.replay)
 
 
-def test_independent_lost_state_reproduction_is_red():
-    def drops_last(policy, journal):
-        return harness.replay(policy, journal[:-1])
-
+def test_independent_lost_committed_transition_is_red():
+    journal = scenario()
+    # Remove the first policy transition, not a read-only verdict or refusal.
+    index = next(i for i, item in enumerate(journal) if item["op"] == "transition")
+    incomplete = journal[:index] + journal[index + 1 :]
+    expected = canonical(harness.replay("local_model", journal))
+    lost = canonical(harness.replay("local_model", incomplete))
+    # Pin the fault's effect independently of receipt count/content assertions.
+    assert lost["state"] != expected["state"]
     with pytest.raises(AssertionError):
-        refusal_probe(drops_last)
+        assert lost["state"] == expected["state"]
+    # A real fresh interpreter exhibits the same committed-state mismatch.
+    restarted = harness.fresh("local_model", incomplete)
+    assert restarted["state"] == lost["state"]
+    assert restarted["state"] != expected["state"]
 
 
 @pytest.mark.parametrize("exception", [KeyError, AssertionError])
