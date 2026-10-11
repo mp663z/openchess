@@ -13,3 +13,7 @@ the lease holder only.
 `server/jobs_retry.py` implements `data/contracts/retry.yaml`: a pure retry
 decision (exponential backoff with a cap, dead on permanent failure or at the
 attempt limit, no jitter, clock overflow is an error).
+
+`server/jobs_progress.py` implements `data/contracts/progress.yaml`: a pure,
+chained progress report (percent in basis points, never backwards, terminal
+at completion, tamper-evident previous record).
