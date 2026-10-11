@@ -13,10 +13,11 @@ import copy
 
 import pytest
 
+from desktop.privacy import delete as production
 from tests import test_t0402_delete_fixture as fx
 
 ref = fx.ref
-BINDING = (fx.ref.Deleter, ref.DeleteError)
+BINDING = (production.Deleter, production.DeleteError)
 exact = fx.exact
 ROWS = fx.CASES["rows"]
 
@@ -25,8 +26,10 @@ def world(config, binding, error):
     store, stores = ref._world(config.get("fails"))
     if binding is not None:
         store = call(binding, stores, error=error)
-        call(store.register, ref.A, error=error)
-        call(store.register, ref.B, error=error)
+        for cid in (ref.A, ref.B):
+            receipt = call(store.register, cid, error=error)
+            exact(receipt, {"collection_id": cid, "state": "live", "revision": 0, "pending": []})
+            assert not (containers(receipt) & owned_containers((store, stores, [])))
     store._state[ref.A] = ("live", config.get("revision", 0), ())
     ref.erase_log.clear()
     violations = []
