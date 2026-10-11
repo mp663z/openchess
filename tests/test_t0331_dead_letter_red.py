@@ -38,11 +38,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tests import test_t0329_dead_letter_contract as _reference  # noqa: E402
+from tests import test_t0329_dead_letter_contract as _reference  # noqa: E402, F401
 from tools.dead_letter_contract_lint import FAILURE_MAPPING  # noqa: E402
 
-bury = _reference.bury
-DeadLetterError = _reference.DeadLetterError
+bury = __import__("server.jobs_dead_letter").jobs_dead_letter.bury
+DeadLetterError = __import__("server.jobs_dead_letter").jobs_dead_letter.DeadLetterError
 
 CASES = json.loads((ROOT / "tests" / "fixtures" / "dead_letter" / "cases.json").read_text())
 JOB = "job1:" + "a" * 64
