@@ -146,3 +146,21 @@ def ops_probe(cls_name, error, fc, ops, key_exc=KeyError):
         ]
 
     return probe
+
+
+def identity_probe(cls_name, op):
+    """The wrapper returns the engine's exact result object (not a copy)."""
+
+    class Stub:
+        def __init__(self):
+            self.receipt = {"r": [1]}
+
+        def __getattr__(self, name):
+            return lambda *_a: self.receipt
+
+    def probe(module):
+        stub = Stub()
+        got = getattr(getattr(module, cls_name)(stub), op)("a")
+        assert got is stub.receipt
+
+    return probe

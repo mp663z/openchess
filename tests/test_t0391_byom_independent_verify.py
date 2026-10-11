@@ -11,7 +11,12 @@ import pytest
 from desktop.privacy import byom as policy
 from desktop.privacy import byom_instrument as production
 from desktop.privacy import cloud_off, sensitive_flag
-from tests.privacy_instrument_verify_support import classify, ops_probe, verify_wrapper
+from tests.privacy_instrument_verify_support import (
+    classify,
+    identity_probe,
+    ops_probe,
+    verify_wrapper,
+)
 
 I1 = "ins1:" + "a" * 64
 P1 = "prv1:fixture"
@@ -268,4 +273,10 @@ def test_independent_mutation_probes_with_honest_accounting(old, new, expected):
 def test_send_misrouting_mutant_is_killed_by_the_real_policy_differential():
     old = 'def send(self, *args):\n        return self._call("send", args)'
     new = 'def send(self, *args):\n        return self._call("transition", args)'
-    assert classify(production, old, new, real_probe) in ("oracle_kill", "crash_only")
+    assert classify(production, old, new, real_probe) == "oracle_kill"
+
+
+def test_returned_result_object_identity_is_pinned_and_a_copying_mutant_is_killed():
+    probe = identity_probe("ByomTracer", "send")
+    assert classify(production, "return result", "return dict(result)", probe) == "oracle_kill"
+    probe(production)

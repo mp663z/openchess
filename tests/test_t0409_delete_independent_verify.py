@@ -10,7 +10,12 @@ import pytest
 
 from desktop.privacy import delete as policy
 from desktop.privacy import delete_instrument as production
-from tests.privacy_instrument_verify_support import classify, ops_probe, verify_wrapper
+from tests.privacy_instrument_verify_support import (
+    classify,
+    identity_probe,
+    ops_probe,
+    verify_wrapper,
+)
 
 C1 = "col1:" + "a" * 64
 C2 = "col1:" + "b" * 64
@@ -214,4 +219,10 @@ def test_independent_mutation_probes_with_honest_accounting(old, new, expected):
 def test_delete_misrouting_mutant_is_killed_by_the_real_policy_differential():
     old = 'def delete(self, *args):\n        return self._call("delete", args)'
     new = 'def delete(self, *args):\n        return self._call("access", args)'
-    assert classify(production, old, new, real_probe) in ("oracle_kill", "crash_only")
+    assert classify(production, old, new, real_probe) == "oracle_kill"
+
+
+def test_returned_result_object_identity_is_pinned_and_a_copying_mutant_is_killed():
+    probe = identity_probe("DeleteTracer", "delete")
+    assert classify(production, "return result", "return dict(result)", probe) == "oracle_kill"
+    probe(production)
