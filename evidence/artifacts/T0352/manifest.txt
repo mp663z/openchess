@@ -1,0 +1,174 @@
+# T0352 first-revision mutation manifest (author-run; line = server/jobs_restart.py at base 360e1606)
+# status: killed | crash-only | survivor-gap (closed by new rows) | survivor-equivalent
+
+37	crash-only	BEFORE: _FIELDS = _REQ["operations"][0]["fields"]	AFTER: _FIELDS = _REQ["operations"][1]["fields"]
+37	crash-only	BEFORE: _FIELDS = _REQ["operations"][0]["fields"]	AFTER: _FIELDS = _REQ["operations"][2]["fields"]
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2**53 - 0
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2**53 + 1
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2*53 - 1
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 3**53 - 1
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 1**53 - 1
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2**54 - 1
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2**52 - 1
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2**53 - 2
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2**53 - 3
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2**53 - 0
+49	killed	BEFORE: MAX_NOW = 2**53 - 1	AFTER: MAX_NOW = 2**53 - 2
+50	survivor-gap	BEFORE: MAX_JOBS = 10000	AFTER: MAX_JOBS = 10001
+50	survivor-gap	BEFORE: MAX_JOBS = 10000	AFTER: MAX_JOBS = 9999
+51	killed	BEFORE: MAX_PRIORITY = 9	AFTER: MAX_PRIORITY = 10
+51	killed	BEFORE: MAX_PRIORITY = 9	AFTER: MAX_PRIORITY = 8
+52	survivor-gap	BEFORE: MAX_DEPTH = 64	AFTER: MAX_DEPTH = 65
+52	survivor-gap	BEFORE: MAX_DEPTH = 64	AFTER: MAX_DEPTH = 63
+53	survivor-gap	BEFORE: MAX_DIGITS = 4000	AFTER: MAX_DIGITS = 4001
+53	survivor-gap	BEFORE: MAX_DIGITS = 4000	AFTER: MAX_DIGITS = 3999
+54	survivor-equivalent	BEFORE: MAX_BITS = 13288	AFTER: MAX_BITS = 13289
+54	survivor-gap	BEFORE: MAX_BITS = 13288	AFTER: MAX_BITS = 13287
+74	survivor-equivalent	BEFORE: return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)	AFTER: return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+78	killed	BEFORE: return type(value) is int and lo <= value <= hi	AFTER: return type(value) is int and lo < value <= hi
+78	killed	BEFORE: return type(value) is int and lo <= value <= hi	AFTER: return type(value) is int and lo <= value < hi
+78	killed	BEFORE: return type(value) is int and lo <= value <= hi	AFTER: return type(value) is int or lo <= value <= hi
+82	killed	BEFORE: return type(value) is str and regex.fullmatch(value) is not None	AFTER: return type(value) is str or regex.fullmatch(value) is not None
+82	killed	BEFORE: return type(value) is str and regex.fullmatch(value) is not None	AFTER: return type(value) is str and regex.fullmatch(value) is None
+82	killed	BEFORE: return type(value) is str and regex.fullmatch(value) is not None	AFTER: return type(value) is str and regex.fullmatch(value) is None
+90	killed	BEFORE: and all(type(k) is str for k in mapping)	AFTER: or all(type(k) is str for k in mapping)
+91	killed	BEFORE: and set(mapping) == set(fields)	AFTER: and set(mapping) != set(fields)
+91	killed	BEFORE: and set(mapping) == set(fields)	AFTER: or set(mapping) == set(fields)
+97	killed	BEFORE: if node is None or kind is bool:	AFTER: if node is None and kind is bool:
+97	killed	BEFORE: if node is None or kind is bool:	AFTER: if node is not None or kind is bool:
+98	killed	BEFORE: return True	AFTER: return False
+100	survivor-gap	BEFORE: if node.bit_length() > MAX_BITS:	AFTER: if node.bit_length() >= MAX_BITS:
+101	killed	BEFORE: return False	AFTER: return True
+104	survivor-gap	BEFORE: ok = len(str(abs(node))) <= MAX_DIGITS	AFTER: ok = len(str(abs(node))) < MAX_DIGITS
+113	killed	BEFORE: node.encode("utf-8")	AFTER: node.encode("utf-9")
+113	killed	BEFORE: node.encode("utf-8")	AFTER: node.encode("utf-7")
+117	killed	BEFORE: return False	AFTER: return True
+125	survivor-gap	BEFORE: stack = [(root, 1)]	AFTER: stack = [(root, 2)]
+125	survivor-gap	BEFORE: stack = [(root, 1)]	AFTER: stack = [(root, 3)]
+125	survivor-gap	BEFORE: stack = [(root, 1)]	AFTER: stack = [(root, 0)]
+129	killed	BEFORE: if kind is list or kind is dict:	AFTER: if kind is list and kind is dict:
+130	survivor-gap	BEFORE: if depth > MAX_DEPTH or id(node) in seen:	AFTER: if depth >= MAX_DEPTH or id(node) in seen:
+130	killed	BEFORE: if depth > MAX_DEPTH or id(node) in seen:	AFTER: if depth > MAX_DEPTH and id(node) in seen:
+131	killed	BEFORE: return False	AFTER: return True
+135	killed	BEFORE: if type(key) is not str or not _scalar_ok(key):	AFTER: if type(key) is not str and not _scalar_ok(key):
+135	killed	BEFORE: if type(key) is not str or not _scalar_ok(key):	AFTER: if type(key) is str or not _scalar_ok(key):
+135	killed	BEFORE: if type(key) is not str or not _scalar_ok(key):	AFTER: if type(key) is not str or _scalar_ok(key):
+136	killed	BEFORE: return False	AFTER: return True
+137	killed	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth + 0))
+137	killed	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth - 1))
+137	survivor-gap	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth + 2))
+137	survivor-gap	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth + 3))
+137	killed	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth + 0))
+140	killed	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth + 0))
+140	killed	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth - 1))
+140	survivor-gap	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth + 2))
+140	survivor-gap	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth + 3))
+140	killed	BEFORE: stack.append((value, depth + 1))	AFTER: stack.append((value, depth + 0))
+141	killed	BEFORE: elif not _scalar_ok(node):	AFTER: elif _scalar_ok(node):
+142	killed	BEFORE: return False	AFTER: return True
+143	killed	BEFORE: return True	AFTER: return False
+147	killed	BEFORE: if not _exact_keys(request, _FIELDS):	AFTER: if _exact_keys(request, _FIELDS):
+148	killed	BEFORE: return False	AFTER: return True
+151	killed	BEFORE: and request["op"] == "restart"	AFTER: and request["op"] != "restart"
+151	killed	BEFORE: and request["op"] == "restart"	AFTER: or request["op"] == "restart"
+152	killed	BEFORE: and _grammar(request["worker"], _WORKER_RE)	AFTER: or _grammar(request["worker"], _WORKER_RE)
+153	killed	BEFORE: and _int_in(request["now"], 0, MAX_NOW)	AFTER: or _int_in(request["now"], 0, MAX_NOW)
+153	killed	BEFORE: and _int_in(request["now"], 0, MAX_NOW)	AFTER: and _int_in(request["now"], 1, MAX_NOW)
+153	killed	BEFORE: and _int_in(request["now"], 0, MAX_NOW)	AFTER: and _int_in(request["now"], 2, MAX_NOW)
+158	killed	BEFORE: if not _exact_keys(job, _JOB_FIELDS):	AFTER: if _exact_keys(job, _JOB_FIELDS):
+159	killed	BEFORE: return False	AFTER: return True
+162	killed	BEFORE: if not (	AFTER: if (
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: or _int_in(job["seq"], prior_seq + 1, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 0, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 1, next_seq - 0)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 1, next_seq + 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq - 1, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 2, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 1, next_seq - 2)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 3, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 1, next_seq - 3)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 0, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 1, next_seq - 0)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 2, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 1, next_seq - 2)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 3, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 1, next_seq - 3)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 0, next_seq - 1)
+164	killed	BEFORE: and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	AFTER: and _int_in(job["seq"], prior_seq + 1, next_seq - 0)
+165	killed	BEFORE: and _int_in(job["priority"], 0, MAX_PRIORITY)	AFTER: or _int_in(job["priority"], 0, MAX_PRIORITY)
+165	killed	BEFORE: and _int_in(job["priority"], 0, MAX_PRIORITY)	AFTER: and _int_in(job["priority"], 1, MAX_PRIORITY)
+165	killed	BEFORE: and _int_in(job["priority"], 0, MAX_PRIORITY)	AFTER: and _int_in(job["priority"], 2, MAX_PRIORITY)
+166	killed	BEFORE: and type(status) is str	AFTER: or type(status) is str
+167	killed	BEFORE: and status in _STATUSES	AFTER: or status in _STATUSES
+168	killed	BEFORE: and _int_in(attempts, 0, MAX_ATTEMPTS)	AFTER: or _int_in(attempts, 0, MAX_ATTEMPTS)
+168	killed	BEFORE: and _int_in(attempts, 0, MAX_ATTEMPTS)	AFTER: and _int_in(attempts, 1, MAX_ATTEMPTS)
+168	killed	BEFORE: and _int_in(attempts, 0, MAX_ATTEMPTS)	AFTER: and _int_in(attempts, 2, MAX_ATTEMPTS)
+170	killed	BEFORE: return False	AFTER: return True
+171	killed	BEFORE: if status == "leased":	AFTER: if status != "leased":
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts > 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) or _int_in(expires, 1, MAX_NOW) and attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) or attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 2, MAX_NOW) and attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 2):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 3, MAX_NOW) and attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 3):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 0, MAX_NOW) and attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 0):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 2, MAX_NOW) and attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 2):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 3, MAX_NOW) and attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 3):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 0, MAX_NOW) and attempts >= 1):
+172	killed	BEFORE: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	AFTER: if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 0):
+173	killed	BEFORE: return False	AFTER: return True
+174	killed	BEFORE: elif owner is not None or expires is not None:	AFTER: elif owner is not None and expires is not None:
+174	killed	BEFORE: elif owner is not None or expires is not None:	AFTER: elif owner is None or expires is not None:
+174	killed	BEFORE: elif owner is not None or expires is not None:	AFTER: elif owner is not None or expires is None:
+174	killed	BEFORE: elif owner is not None or expires is not None:	AFTER: elif owner is None or expires is not None:
+174	killed	BEFORE: elif owner is not None or expires is not None:	AFTER: elif owner is not None or expires is None:
+175	killed	BEFORE: return False	AFTER: return True
+176	killed	BEFORE: if status == "dead" and attempts != MAX_ATTEMPTS:	AFTER: if status != "dead" and attempts != MAX_ATTEMPTS:
+176	killed	BEFORE: if status == "dead" and attempts != MAX_ATTEMPTS:	AFTER: if status == "dead" and attempts == MAX_ATTEMPTS:
+176	killed	BEFORE: if status == "dead" and attempts != MAX_ATTEMPTS:	AFTER: if status == "dead" or attempts != MAX_ATTEMPTS:
+177	killed	BEFORE: return False	AFTER: return True
+178	killed	BEFORE: if status == "done" and attempts < 1:	AFTER: if status == "done" and attempts <= 1:
+178	killed	BEFORE: if status == "done" and attempts < 1:	AFTER: if status != "done" and attempts < 1:
+178	killed	BEFORE: if status == "done" and attempts < 1:	AFTER: if status == "done" or attempts < 1:
+178	killed	BEFORE: if status == "done" and attempts < 1:	AFTER: if status == "done" and attempts < 2:
+178	killed	BEFORE: if status == "done" and attempts < 1:	AFTER: if status == "done" and attempts < 3:
+178	killed	BEFORE: if status == "done" and attempts < 1:	AFTER: if status == "done" and attempts < 0:
+179	killed	BEFORE: return False	AFTER: return True
+184	killed	BEFORE: if not _exact_keys(state, _STATE_FIELDS):	AFTER: if _exact_keys(state, _STATE_FIELDS):
+185	killed	BEFORE: return False	AFTER: return True
+187	killed	BEFORE: if type(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	AFTER: if type(jobs) is not list and not _int_in(next_seq, 0, MAX_NOW):
+187	killed	BEFORE: if type(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	AFTER: if type(jobs) is list or not _int_in(next_seq, 0, MAX_NOW):
+187	killed	BEFORE: if type(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	AFTER: if type(jobs) is not list or _int_in(next_seq, 0, MAX_NOW):
+187	killed	BEFORE: if type(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	AFTER: if type(jobs) is not list or not _int_in(next_seq, 1, MAX_NOW):
+187	killed	BEFORE: if type(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	AFTER: if type(jobs) is not list or not _int_in(next_seq, 2, MAX_NOW):
+188	killed	BEFORE: return False	AFTER: return True
+189	survivor-gap	BEFORE: if len(jobs) > MAX_JOBS:	AFTER: if len(jobs) >= MAX_JOBS:
+190	killed	BEFORE: return False	AFTER: return True
+191	killed	BEFORE: seen_ids, prior_seq, containers = set(), -1, set()	AFTER: seen_ids, prior_seq, containers = set(), -2, set()
+191	killed	BEFORE: seen_ids, prior_seq, containers = set(), -1, set()	AFTER: seen_ids, prior_seq, containers = set(), -3, set()
+191	killed	BEFORE: seen_ids, prior_seq, containers = set(), -1, set()	AFTER: seen_ids, prior_seq, containers = set(), -0, set()
+193	killed	BEFORE: if not _job_ok(job, prior_seq, next_seq, containers):	AFTER: if _job_ok(job, prior_seq, next_seq, containers):
+194	killed	BEFORE: return False	AFTER: return True
+196	survivor-gap	BEFORE: return False	AFTER: return True
+199	killed	BEFORE: return True	AFTER: return False
+203	killed	BEFORE: return "qs1:" + hashlib.sha256(_canon_queue(state).encode("utf-8")).hexdigest()	AFTER: return "qs1:" - hashlib.sha256(_canon_queue(state).encode("utf-8")).hexdigest()
+203	killed	BEFORE: return "qs1:" + hashlib.sha256(_canon_queue(state).encode("utf-8")).hexdigest()	AFTER: return "qs1:" + hashlib.sha256(_canon_queue(state).encode("utf-9")).hexdigest()
+203	killed	BEFORE: return "qs1:" + hashlib.sha256(_canon_queue(state).encode("utf-8")).hexdigest()	AFTER: return "qs1:" + hashlib.sha256(_canon_queue(state).encode("utf-7")).hexdigest()
+207	killed	BEFORE: body = _canon_receipt(record_without_id).encode("utf-8")	AFTER: body = _canon_receipt(record_without_id).encode("utf-9")
+207	survivor-equivalent	BEFORE: body = _canon_receipt(record_without_id).encode("utf-8")	AFTER: body = _canon_receipt(record_without_id).encode("utf-7")
+208	killed	BEFORE: return "rst1:" + hashlib.sha256(b"rst1\x00" + body).hexdigest()	AFTER: return "rst1:" - hashlib.sha256(b"rst1\x00" + body).hexdigest()
+208	killed	BEFORE: return "rst1:" + hashlib.sha256(b"rst1\x00" + body).hexdigest()	AFTER: return "rst1:" + hashlib.sha256(b"rst1\x00" - body).hexdigest()
+215	killed	BEFORE: if not _request_ok(request):	AFTER: if _request_ok(request):
+217	killed	BEFORE: elif not _state_ok(state):	AFTER: elif _state_ok(state):
+219	killed	BEFORE: if failed is not None:	AFTER: if failed is None:
+219	killed	BEFORE: if failed is not None:	AFTER: if failed is None:
+227	killed	BEFORE: job["status"] == "leased"	AFTER: job["status"] != "leased"
+228	killed	BEFORE: and job["lease_owner"] == worker	AFTER: and job["lease_owner"] != worker
+228	killed	BEFORE: and job["lease_owner"] == worker	AFTER: or job["lease_owner"] == worker
+229	killed	BEFORE: and now < job["lease_expires_at"]	AFTER: and now <= job["lease_expires_at"]
+229	killed	BEFORE: and now < job["lease_expires_at"]	AFTER: or now < job["lease_expires_at"]
