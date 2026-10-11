@@ -9,7 +9,7 @@ content-addressed entry_id. A dead job carries attempts == max_attempts
 whatever the reason, and the reason is caller-attested (exhausted or
 permanent).
 
-Validation order: request shape (malformed_dead_letter_request), job
+Validation order: request shape (malformed_bury_request), job
 integrity (corrupt_job), dead status (job_not_dead). Every check is total on
 hostile input: exact types only, key types are checked before any set
 comparison, payloads are walked iteratively (no recursion, no caller code),
