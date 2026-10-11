@@ -9,3 +9,7 @@ user's explicit export or sync action directs.
 priority-ordered, at-least-once job queue with idempotent enqueue by dedupe
 key, leased claims that dead-mark jobs at the attempt limit, and ack/nack by
 the lease holder only.
+
+`server/jobs_progress.py` implements `data/contracts/progress.yaml`: a pure,
+chained progress report (percent in basis points, never backwards, terminal
+at completion, tamper-evident previous record).
