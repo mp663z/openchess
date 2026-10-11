@@ -13,19 +13,52 @@ import copy
 
 import pytest
 
+from desktop.privacy import byom as production
 from tests import test_t0384_byom_fixture as fx
 
 ref = fx.ref
-BINDING = (fx.ref.ByomStore, ref.ByomError)
+BINDING = (production.ByomStore, production.ByomError)
 exact = fx.exact
 ROWS = fx.CASES["rows"]
 
 
 def world(config, binding, error):
     store, cloud, flags = ref._world(config.get("cloud_on", True), config.get("open_a", True))
+    if error is production.ByomError:
+        from desktop.privacy.cloud_off import CloudSwitch, opt_in_for
+        from desktop.privacy.sensitive_flag import FlagStore, approval_for
+
+        flags = FlagStore()
+        for cid in (ref.A, ref.B):
+            flags.register(cid)
+        if config.get("open_a", True):
+            flags.transition(
+                {
+                    "collection_id": ref.A,
+                    "sensitive": False,
+                    "expected_revision": 0,
+                    "approval": approval_for(ref.A, 0),
+                }
+            )
+        cloud = CloudSwitch(flags)
+        cloud.register(ref.INS)
+        if config.get("cloud_on", True):
+            cloud.transition(
+                {
+                    "install_id": ref.INS,
+                    "cloud_mode": "on",
+                    "expected_revision": 0,
+                    "opt_in": opt_in_for(ref.INS, 0),
+                }
+            )
     if binding is not None:
         store = call(binding, cloud, error=error)
-        call(store.register, ref.INS, ref.P, error=error)
+        receipt = call(store.register, ref.INS, ref.P, error=error)
+        exact(
+            receipt,
+            {"install_id": ref.INS, "provider_id": ref.P, "accepted_terms": None, "revision": 0},
+        )
+        assert not (containers(receipt) & containers(store._state))
     store._state[(ref.INS, ref.P)] = (config.get("accepted_terms"), config.get("revision", 0))
     return store, cloud, flags
 
