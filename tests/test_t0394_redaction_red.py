@@ -18,10 +18,11 @@ import copy
 
 import pytest
 
+from desktop.privacy import redaction as production
 from tests import test_t0393_redaction_fixture as fx
 
 ref = fx.ref
-BINDING = ((fx.ref.redact, fx.ref.emit_text), ref.RedactionError)
+BINDING = ((production.redact, production.emit_text), production.RedactionError)
 exact = fx.exact
 ROWS = fx.CASES["rows"]
 
