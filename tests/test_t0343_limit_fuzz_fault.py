@@ -18,6 +18,7 @@ from __future__ import annotations
 import contextlib
 import copy
 import hashlib
+import json
 import random
 import sys
 import time
@@ -500,6 +501,39 @@ def test_armed_and_nasty_keys_in_every_dict_are_refused_without_running_hooks():
             assert _isnap(case) == before
 
 
+class PlainStr(str):
+    """A str subclass with no hooks: only its exact type is wrong."""
+
+
+def test_plain_str_subclass_keys_with_valid_names_and_values_are_refused_like_the_oracle():
+    refused = 0
+    for base in BASES:
+        for path in _paths(base):
+            if (
+                len(path) < 2
+                or type(path[-1]) is not str
+                or type(_get(base, path[:-1])) is not dict
+            ):
+                continue
+
+            def build(base=base, path=path):
+                case = copy.deepcopy(base)
+                parent = _get(case, path[:-1])
+                value = parent.pop(path[-1])
+                dict.__setitem__(parent, PlainStr(path[-1]), value)
+                return case
+
+            prod_case, ref_case = build(), build()
+            before = _isnap(prod_case)
+            prod = _outcome(PROD, prod_case, PROD_ERR)
+            ref = _outcome(REF, ref_case, REF_ERR)
+            assert prod[0] == ref[0] == "fail", (path, prod, ref)
+            assert prod[1] == ref[1] and prod[2] == ref[2]
+            assert _isnap(prod_case) == before
+            refused += 1
+    assert refused > 0
+
+
 def test_non_dict_and_hostile_top_level_requests_are_total():
     for factory in HOSTILE_FACTORIES:
         base = BASES[0]
@@ -745,6 +779,119 @@ def test_bucket_streams_match_the_oracle_and_never_overdraw(seed):
             assert record["tokens"] < cost
         assert admitted <= capacity + (now - start) // refill
         prev = record
+
+
+def _forge(record, **changes):
+    """A previous record with the named fields changed and its limit_id recomputed."""
+    rec = {k: v for k, v in record.items() if k != "limit_id"}
+    rec.update(changes)
+    body = json.dumps(rec, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
+    rec["limit_id"] = "lm1:" + hashlib.sha256(b"lm1\x00" + body).hexdigest()
+    return rec
+
+
+def _prev_base(prev, now=100, cost=1, policy=None):
+    policy = policy or {"capacity": 3, "refill_ms": 1000}
+    return {
+        "request": {
+            "op": "admit",
+            "key": "k-1",
+            "cost": cost,
+            "now": now,
+            "policy": policy,
+            "previous": prev,
+        }
+    }
+
+
+def test_forged_previous_records_with_a_valid_digest_match_the_oracle_field_by_field():
+    admit = REF(
+        {
+            "op": "admit",
+            "key": "k-1",
+            "cost": 1,
+            "now": 100,
+            "policy": {"capacity": 3, "refill_ms": 1000},
+            "previous": None,
+        }
+    )
+    deny = _forge(admit, decision="deny", tokens=0, cost=1, retry_after_ms=1000)
+    edges = [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        999,
+        1000,
+        1001,
+        2000,
+        2999,
+        3000,
+        3001,
+        MAX - 100,
+        MAX - 99,
+        MAX,
+        MAX + 1,
+        -1,
+    ]
+    for record in (admit, deny):
+        for key in record:
+            if key in ("limit_id", "op", "key", "decision", "previous_id"):
+                continue
+            for value in edges:
+                _agree(_prev_base(_forge(record, **{key: value})), path=())
+    for decision in ("admit", "deny", "other", None):
+        for record in (admit, deny):
+            _agree(_prev_base(_forge(record, decision=decision)), path=())
+
+
+def test_forged_deny_retry_window_and_clock_sum_match_the_oracle_on_a_full_grid():
+    admit = REF(
+        {
+            "op": "admit",
+            "key": "k-1",
+            "cost": 1,
+            "now": 100,
+            "policy": {"capacity": 3, "refill_ms": 1000},
+            "previous": None,
+        }
+    )
+    for cost in (1, 2, 3):
+        for tokens in range(0, 4):
+            lo, hi = (cost - tokens - 1) * 1000, (cost - tokens) * 1000
+            for retry in (lo - 1, lo, lo + 1, hi - 1, hi, hi + 1, 0, 1):
+                for updated in (100, MAX - hi, MAX - hi + 1, MAX - 1, MAX):
+                    prev = _forge(
+                        admit,
+                        decision="deny",
+                        tokens=tokens,
+                        cost=cost,
+                        retry_after_ms=retry,
+                        updated_at=updated,
+                    )
+                    _agree(_prev_base(prev, now=updated), path=())
+
+
+def test_deny_clock_overflow_edge_matches_the_oracle_at_every_offset():
+    policy = {"capacity": 3, "refill_ms": 1000}
+    for cost in (1, 2, 3):
+        for now in range(MAX - 3002, MAX + 1):
+            if (now - (MAX - 3002)) % 7 and now < MAX - 8:
+                continue
+            _agree(_prev_base(None, now=now, cost=cost, policy=policy), path=())
+            drained = REF(
+                {
+                    "op": "admit",
+                    "key": "k-1",
+                    "cost": 3,
+                    "now": now,
+                    "policy": policy,
+                    "previous": None,
+                }
+            )
+            _agree(_prev_base(drained, now=now, cost=cost, policy=policy), path=())
 
 
 def test_clock_and_cost_edges_match_the_oracle_for_every_state_of_a_small_bucket():
