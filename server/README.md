@@ -9,3 +9,7 @@ user's explicit export or sync action directs.
 priority-ordered, at-least-once job queue with idempotent enqueue by dedupe
 key, leased claims that dead-mark jobs at the attempt limit, and ack/nack by
 the lease holder only.
+
+`server/jobs_limit.py` implements `data/contracts/limit.yaml`: a pure keyed
+token-bucket admit/deny decision with an exact retry delay and a chained,
+tamper-evident bucket record.

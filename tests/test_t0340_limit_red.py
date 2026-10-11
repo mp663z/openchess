@@ -40,11 +40,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tests import test_t0338_limit_contract as _reference  # noqa: E402
+from tests import test_t0338_limit_contract as _reference  # noqa: E402, F401
 from tools.limit_contract_lint import FAILURE_MAPPING  # noqa: E402
 
-admit = _reference.admit
-LimitError = _reference.LimitError
+admit = __import__("server.jobs_limit").jobs_limit.admit
+LimitError = __import__("server.jobs_limit").jobs_limit.LimitError
 
 CASES = json.loads((ROOT / "tests" / "fixtures" / "limit" / "cases.json").read_text())
 POLICY = {"capacity": 3, "refill_ms": 1000}
