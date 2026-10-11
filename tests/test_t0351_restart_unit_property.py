@@ -867,3 +867,13 @@ def test_restart_is_idempotent_and_never_touches_other_workers(seed):
         ]
         again = restart(s, r)
         assert again["released"] == [] and again["prior_state_id"] == first["state_id"]
+
+
+def test_receipt_released_list_never_aliases_an_equal_payload():
+    s = state(leased(0, payload=[jid(0)]))
+    rec = restart(s, req())
+    assert rec["released"] == [jid(0)] == s["jobs"][0]["payload"]
+    assert rec["released"] is not s["jobs"][0]["payload"]
+    assert not (_container_ids(rec) & _container_ids(s))
+    rec["released"].append("x")
+    assert s["jobs"][0]["payload"] == [jid(0)]
