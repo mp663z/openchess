@@ -1,0 +1,22 @@
+50 MAX_JOBS = 10001 => 1 failed, 87 passed in 25.75s
+50 MAX_JOBS = 9999 => 1 failed, 87 passed in 24.50s
+52 MAX_DEPTH = 65 => 1 failed, 89 passed in 27.09s
+52 MAX_DEPTH = 63 => 1 failed, 89 passed in 26.66s
+53 MAX_DIGITS = 4001 => 1 failed, 88 passed in 26.56s
+53 MAX_DIGITS = 3999 => 1 failed, 88 passed in 25.26s
+54 MAX_BITS = 13289 => 90 passed in 26.29s
+54 MAX_BITS = 13287 => 1 failed, 88 passed in 26.15s
+74 return json.dumps(obj, sort_keys=True, separators=(",", ":") => 90 passed in 27.23s
+100 if node.bit_length() >= MAX_BITS: => 1 failed, 88 passed in 26.03s
+104 ok = len(str(abs(node))) < MAX_DIGITS => 1 failed, 88 passed in 26.18s
+125 stack = [(root, 2)] => 1 failed, 89 passed in 26.43s
+125 stack = [(root, 3)] => 1 failed, 89 passed in 25.62s
+125 stack = [(root, 0)] => 1 failed, 89 passed in 25.49s
+130 if depth >= MAX_DEPTH or id(node) in seen: => 1 failed, 89 passed in 26.47s
+137 stack.append((value, depth + 2)) => 1 failed, 89 passed in 25.45s
+137 stack.append((value, depth + 3)) => 1 failed, 89 passed in 26.09s
+140 stack.append((value, depth + 2)) => 1 failed, 89 passed in 26.26s
+140 stack.append((value, depth + 3)) => 1 failed, 89 passed in 26.31s
+189 if len(jobs) >= MAX_JOBS: => 1 failed, 87 passed in 25.78s
+196 return True => 1 failed, 86 passed in 24.53s
+207 body = _canon_receipt(record_without_id).encode("utf-7") => 90 passed in 25.51s

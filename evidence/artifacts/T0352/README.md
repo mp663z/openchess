@@ -1,0 +1,5 @@
+# T0352 author artifacts
+
+These are byte-identical author-provided first-revision manifest, selected later probes and initial sweep output, not independently certified population counts or post-fix full sweeps. Manifest "killed" classifications were inferred by omission from the survivor list, not retained per-mutant logs. Parent-reported lane D independent sweep was partial, with no re-derived full tally. Parent-reported lane E independently checked 19 named semantic gap controls and three documented equivalents, plus the PlainStr row; receipt canonicalization equivalence is receipt-specific, not queue-canonicalization equivalence.
+
+Known traversal limit: normative requirements prose says "every reachable path/every field", but _paths samples lists only through their first six elements (one base has seven jobs). The 100000-depth/wide check takes only the first twelve paths from the first two bases. Those phrases do not establish exhaustive traversal coverage. Source files are retained byte-identically to the reviewed task head.
