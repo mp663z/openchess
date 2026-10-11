@@ -512,6 +512,39 @@ def test_armed_and_nasty_keys_in_every_dict_are_refused_without_running_hooks():
             assert _isnap(case) == before
 
 
+class PlainStr(str):
+    """A str subclass with no hooks: only its exact type is wrong."""
+
+
+def test_plain_str_subclass_keys_with_valid_names_and_values_are_refused_like_the_oracle():
+    refused = 0
+    for base in BASES:
+        for path in _paths(base):
+            if (
+                len(path) < 2
+                or type(path[-1]) is not str
+                or type(_get(base, path[:-1])) is not dict
+            ):
+                continue
+
+            def build(base=base, path=path):
+                case = copy.deepcopy(base)
+                parent = _get(case, path[:-1])
+                value = parent.pop(path[-1])
+                dict.__setitem__(parent, PlainStr(path[-1]), value)
+                return case
+
+            prod_case, ref_case = build(), build()
+            before = _isnap(prod_case)
+            prod = _outcome(PROD, prod_case, PROD_ERR)
+            ref = _outcome(REF, ref_case, REF_ERR)
+            assert prod[0] == ref[0] == "fail", (path, prod, ref)
+            assert prod[1] == ref[1] and prod[2] == ref[2]
+            assert _isnap(prod_case) == before
+            refused += 1
+    assert refused > 0
+
+
 def test_non_dict_and_hostile_top_level_requests_are_total():
     for factory in HOSTILE_FACTORIES:
         base = BASES[0]
@@ -773,6 +806,57 @@ def test_random_jobs_match_the_oracle_and_buried_entries_bind_their_payload(seed
             assert "payload" not in record and record["attempts"] == 5
             assert record["entry_id"] not in ids or ids[record["entry_id"]] == _isnap(request)
             ids[record["entry_id"]] = _isnap(request)
+
+
+def test_every_status_attempt_and_lease_combination_matches_the_oracle():
+    leases = [
+        (None, None),
+        ("w1", 1),
+        ("w1", 0),
+        ("w1", MAX),
+        ("w1", MAX + 1),
+        ("", 5),
+        (None, 5),
+        ("w1", None),
+    ]
+    for status in ("ready", "leased", "done", "dead", "other"):
+        for attempts in range(-1, 8):
+            for owner, expires in leases:
+                job = _job(
+                    3, {"a": 1}, status, attempts, lease_owner=owner, lease_expires_at=expires
+                )
+                base = {"request": {"op": "bury", "job": job, "reason": "permanent", "now": 7}}
+                _agree(base, path=())
+
+
+def test_exact_bit_and_digit_edges_match_the_oracle():
+    edges = [
+        10**4000 - 1,
+        -(10**4000 - 1),
+        10**4000,
+        -(10**4000),
+        2**13287,
+        2**13288,
+        2**13289,
+        -(2**13287),
+        -(2**13288),
+        2**13287 - 1,
+        10**3999,
+        10**3999 + 1,
+    ]
+    for value in edges:
+        for wrap in (lambda v: v, lambda v: [v], lambda v: {"k": v}):
+            base = {
+                "request": {
+                    "op": "bury",
+                    "job": _job(1, wrap(value)),
+                    "reason": "exhausted",
+                    "now": 1,
+                }
+            }
+            out = _agree(base, path=())
+            digits = len(str(abs(value))) if abs(value) < 10**4010 else 9999
+            assert (out[0] == "ok") == (digits <= 4000)
 
 
 def test_payload_depth_and_digit_sweeps_match_the_oracle():
