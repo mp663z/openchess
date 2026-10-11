@@ -1,0 +1,3988 @@
+{
+  "schema": 1,
+  "contract": "privacy-byom",
+  "sections": [
+    "happy",
+    "boundary",
+    "malformed",
+    "rollback"
+  ],
+  "rows": [
+    {
+      "name": "accept-send-revoke",
+      "section": "happy",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": null,
+            "expected_revision": 1,
+            "approval": null
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": null,
+              "revision": 2
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "terms_not_accepted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "same-value-and-reregister",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 1,
+            "approval": null
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "register",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "changed-retention_days",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 31,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "terms_changed"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 31,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 1,
+            "approval": "byt1:deb90029bba10785386b78f34722d565537dc27f0511d625ecd113edbb787204"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:38a036b3083f4668d73043f2cfa75c717f77676283b14eb4a73feec789be994a",
+              "revision": 2
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 31,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:38a036b3083f4668d73043f2cfa75c717f77676283b14eb4a73feec789be994a"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "changed-region",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "us",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "terms_changed"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "us",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 1,
+            "approval": "byt1:fae2aaa445d3e0cb99fae1dfe5163e265b0c4fcb6d16121acd3886971c003d5a"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:1b6240dee9986d225b98f5262b75f7941096efdb098195d82318f7f27650abaa",
+              "revision": 2
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "us",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:1b6240dee9986d225b98f5262b75f7941096efdb098195d82318f7f27650abaa"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "changed-trains_on_inputs",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": true
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "terms_changed"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": true
+            },
+            "expected_revision": 1,
+            "approval": "byt1:86d2363ac74388694450eabe911a69bbb40ded285f603e83ffcbf1c27a117dd6"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:b552210aa614f669fab36249536eecc88c6373423e0d3069dddd025ee5edee2d",
+              "revision": 2
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": true
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:b552210aa614f669fab36249536eecc88c6373423e0d3069dddd025ee5edee2d"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "cloud-off",
+      "section": "boundary",
+      "config": {
+        "cloud_on": false
+      },
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "cloud_mode_off"
+          }
+        }
+      ]
+    },
+    {
+      "name": "sensitive",
+      "section": "boundary",
+      "config": {
+        "open_a": false
+      },
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "collection_sensitive"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-collection",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "collection_sensitive"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unaccepted",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "terms_not_accepted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-provider-send",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:other",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "terms_not_accepted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "retention-edge-0",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 0,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:7b0e02da5f4a165f93923f0f63c3e0e49b5ae9aaa50f0fba616d8533daf5d686"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:37396261c184662e939052839b16f48305f8b9494a4d50d050820da0033e04ae",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 0,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:37396261c184662e939052839b16f48305f8b9494a4d50d050820da0033e04ae"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "retention-edge-3650",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 3650,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:7f45bae2779b34d9d4073672be12efa22e73f2b82b7e83884ca93478f6dbb2b0"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:a7ea2d428d514728e28f9a8a928981efbd936268958587ea291cc9e735e48bf5",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 3650,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:a7ea2d428d514728e28f9a8a928981efbd936268958587ea291cc9e735e48bf5"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "max-payload",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+              "task": "weekly-plan",
+              "moves": [
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm",
+                "mmmmmmmmmmmmmmmm"
+              ],
+              "max-tokens": 4096
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "min-payload",
+      "section": "boundary",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": " ",
+              "task": "review-conversation",
+              "moves": [],
+              "max-tokens": 1
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "max-accept-refused",
+      "section": "boundary",
+      "config": {
+        "revision": 9223372036854775807
+      },
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 9223372036854775807,
+            "approval": "byt1:5ff3cb0141572f81e37bb179c422429fff8149f222cb5a5f7142fa0d06373ec0"
+          },
+          "expect": {
+            "failure": "revision_exhausted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "max-revoke-terminal",
+      "section": "boundary",
+      "config": {
+        "revision": 9223372036854775807,
+        "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+      },
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": null,
+            "expected_revision": 9223372036854775807,
+            "approval": null
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": null,
+              "revision": 9223372036854775807
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "max-same-value",
+      "section": "boundary",
+      "config": {
+        "revision": 9223372036854775807,
+        "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+      },
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 9223372036854775807,
+            "approval": null
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 9223372036854775807
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-approval",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "approval_missing"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-install-approval",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:a4f5efb79ad6af8049679e53ee34595d9658517e39fc337fb0a765018b93cedd"
+          },
+          "expect": {
+            "failure": "approval_missing"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-provider-approval",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:48a6c2d0c6e08abd3b3d6ab3465d43f2f4e6de3e51f9af81d884e3ec63ef45bf"
+          },
+          "expect": {
+            "failure": "approval_missing"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-revision-approval",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:7ab1a7eca1115cc4cad987718c2c290e3c13b6aad1f49b4e01567f117e9f24dd"
+          },
+          "expect": {
+            "failure": "approval_missing"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "stale",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 1,
+            "approval": "byt1:7ab1a7eca1115cc4cad987718c2c290e3c13b6aad1f49b4e01567f117e9f24dd"
+          },
+          "expect": {
+            "failure": "stale_revision"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-provider",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:other",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:48a6c2d0c6e08abd3b3d6ab3465d43f2f4e6de3e51f9af81d884e3ec63ef45bf"
+          },
+          "expect": {
+            "failure": "unknown_provider"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "malformed-before-stale",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 1,
+            "approval": "bad"
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "terms-retention_days-0",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": -1,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "terms-retention_days-1",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 3651,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "terms-retention_days-2",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": true,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "terms-region-0",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "USA",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "terms-region-1",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "u1",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "terms-region-2",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "terms-trains_on_inputs-0",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": 0
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "terms-trains_on_inputs-1",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": null
+            },
+            "expected_revision": 0,
+            "approval": null
+          },
+          "expect": {
+            "failure": "malformed_byom_request"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-fen-0",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-fen-1",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-fen-2",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "x\n",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-moves-0",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "moves": [
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x",
+                "x"
+              ]
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-moves-1",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "moves": [
+                "xxxxxxxxxxxxxxxxx"
+              ]
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-moves-2",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "moves": [
+                "x y"
+              ]
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-moves-3",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "moves": [
+                1
+              ]
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-task-0",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "unknown"
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-task-1",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": null
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-max-tokens-0",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "max-tokens": 0
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-max-tokens-1",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "max-tokens": 4097
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "payload-max-tokens-2",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "max-tokens": true
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "forbidden-account-keys",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "account-keys": "synthetic-fixture"
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "forbidden-full-corpus",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "full-corpus": "synthetic-fixture"
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "forbidden-sync-keys",
+      "section": "malformed",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan",
+              "sync-keys": "synthetic-fixture"
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "precedence-payload-before-cloud",
+      "section": "malformed",
+      "config": {
+        "cloud_on": false
+      },
+      "steps": [
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "payload_rejected"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "failure": "cloud_mode_off"
+          }
+        }
+      ]
+    },
+    {
+      "name": "failed-change-then-revoke",
+      "section": "rollback",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 0,
+              "region": "us",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 1,
+            "approval": null
+          },
+          "expect": {
+            "failure": "approval_missing"
+          }
+        },
+        {
+          "op": "send",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "collection_id": "col1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "payload": {
+              "fen": "F",
+              "task": "weekly-plan"
+            }
+          },
+          "expect": {
+            "verdict": {
+              "verdict": "allow",
+              "terms_digest": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002"
+            }
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": null,
+            "expected_revision": 1,
+            "approval": null
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": null,
+              "revision": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "revoke-then-fresh-approval",
+      "section": "rollback",
+      "config": {},
+      "steps": [
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 0,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 1
+            }
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": null,
+            "expected_revision": 1,
+            "approval": null
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": null,
+              "revision": 2
+            }
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 2,
+            "approval": "byt1:98c2639bd1b2a61258e6f14e3af36b3ae964424c9290262033a0217bc9824e26"
+          },
+          "expect": {
+            "failure": "approval_missing"
+          }
+        },
+        {
+          "op": "transition",
+          "request": {
+            "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+            "provider_id": "prv1:acme",
+            "terms": {
+              "retention_days": 30,
+              "region": "eu",
+              "trains_on_inputs": false
+            },
+            "expected_revision": 2,
+            "approval": "byt1:b1956102bb6f2f2efb1e90bb01d54b0476a8e6d586d59b7338649e2bf82857c2"
+          },
+          "expect": {
+            "record": {
+              "install_id": "ins1:1111111111111111111111111111111111111111111111111111111111111111",
+              "provider_id": "prv1:acme",
+              "accepted_terms": "trm1:5721c15e8db6ce817329de7dd15e59e67dfab94d3d07731e5506a20f190f2002",
+              "revision": 3
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
