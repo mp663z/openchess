@@ -5,20 +5,28 @@ the last good record; a restart continues the bucket from the file.
 
 A restart is modelled the way a host would do it: the durable value is written
 as canonical JSON under tmp_path (atomic replace), the production module is
-imported anew (`importlib.reload`), the file is read back and the stream
-continues. A few cut points run in a real child interpreter. Every cut point
-of a seeded stream must give the same outcomes and the same durable value as an
+executed anew in its own namespace (the canonical
+module is never reloaded), the file is read back and the stream
+continues. A few cut points run in a real child interpreter. Sampled cut points
+(12 every-step streams, 10 single random cuts, child-interpreter steps)
+must give the same outcomes and the same durable value as an
 uninterrupted run and as the contract's reference implementation
 (`tests.test_t0338_limit_contract`),
-which is the differential oracle. A torn or forged durable
-value is refused with the oracle's class and code and never half-applied.
+which is the differential oracle.
+Altered fields of the persisted previous bucket record (digest not
+recomputed) and altered request fields are refused with the oracle class and
+code and leave the input unchanged; digest-recomputed forgeries are not
+generated here.
 Single process tree, no real clock, no concurrency, no production changes.
 """
 
 from __future__ import annotations
 
+import contextlib
 import copy
+import hashlib
 import importlib
+import importlib.util
 import json
 import os
 import random
@@ -108,9 +116,41 @@ def torn_variants(durable):
     yield "clock before the previous record", [bad]
 
 
+_FRESH_COUNT = [0]
+
+
+def _fresh_module():
+    """A restarted process: the production file is executed anew in its own namespace.
+
+    The canonical module in sys.modules is never reloaded or mutated, so other tests that
+    hold its functions and error classes are unaffected.
+    """
+    _FRESH_COUNT[0] += 1
+    name = f"_restart_copy_{_FRESH_COUNT[0]}_{PMOD.__name__.rsplit('.', 1)[-1]}"
+    spec = importlib.util.spec_from_file_location(name, PMOD.__file__)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _fresh():
-    """A restarted process: the production module is imported anew."""
-    return getattr(importlib.reload(PMOD), FN)
+    return getattr(_fresh_module(), FN)
+
+
+def test_a_restart_never_touches_the_canonical_production_module():
+    canonical = sys.modules[PMOD.__name__]
+    before = {k: id(v) for k, v in vars(PMOD).items()}
+    count = len(sys.modules)
+    fn = _fresh()
+    again = _fresh_module()
+    assert sys.modules[PMOD.__name__] is canonical is PMOD
+    assert {k: id(v) for k, v in vars(PMOD).items()} == before
+    assert len(sys.modules) == count
+    assert getattr(again, FN) is not getattr(PMOD, FN) and fn is not getattr(PMOD, FN)
+    for name, value in vars(PMOD).items():
+        if isinstance(value, type) and issubclass(value, Exception) and name.endswith("Error"):
+            assert getattr(again, name) is not value
+            assert vars(PMOD)[name] is value
 
 
 def _outcome(fn, *args):
@@ -118,7 +158,7 @@ def _outcome(fn, *args):
         return ("ok", fn(*args))
     except Exception as error:  # noqa: BLE001
         failure = getattr(error, "failure_class", None)
-        assert failure is not None, repr(error)
+        assert failure is not None, f"FOREIGN-EXCEPTION {error!r}"
         assert getattr(error, "retryable", False) is False
         assert error.__cause__ is None
         return ("err", failure, error.code)
@@ -281,3 +321,330 @@ def test_a_truncated_durable_file_is_a_host_error_and_the_last_good_value_still_
     assert _outcome(PICKER(_fresh(), request), *copy.deepcopy(args)) == _outcome(
         PICKER(REF, request), *copy.deepcopy(args)
     )
+
+
+class _SStr(str):
+    """A hook-free str subclass: only its exact type is wrong."""
+
+
+class _SInt(int):
+    pass
+
+
+class _SFloat(float):
+    pass
+
+
+class _SDict(dict):
+    pass
+
+
+class _SList(list):
+    pass
+
+
+def _walk(node, prefix=()):
+    """Iterative path walk over dict values, dict keys and list items."""
+    out, stack = [], [(node, prefix)]
+    while stack:
+        cur, path = stack.pop()
+        out.append(path)
+        if type(cur) is dict:
+            for k, v in cur.items():
+                out.append((*path, ("key", k)))
+                stack.append((v, (*path, k)))
+        elif type(cur) is list:
+            for i, v in enumerate(cur):
+                stack.append((v, (*path, i)))
+    return out
+
+
+def _subclassed(args, path):
+    new = copy.deepcopy(args)
+    if path and type(path[-1]) is tuple:
+        parent = new
+        for step in path[:-1]:
+            parent = parent[step]
+        key = path[-1][1]
+        value = parent.pop(key)
+        parent[_SStr(key)] = value
+        return new
+    if not path:
+        return None
+    parent = new
+    for step in path[:-1]:
+        parent = parent[step]
+    value = parent[path[-1]]
+    cls = {str: _SStr, int: _SInt, float: _SFloat, dict: _SDict, list: _SList}.get(type(value))
+    if cls is None:
+        return None
+    parent[path[-1]] = cls(value)
+    return new
+
+
+def _sample_args(count=8):
+    rng, durable, out = random.Random(5), new_durable(), []
+    for _ in range(80):
+        request = make_request(rng, durable)
+        args = call_args(durable, request)
+        if CHILD_OK(request):
+            out.append((request, copy.deepcopy(args)))
+        res = _outcome(PICKER(_fresh(), request), *args)
+        absorb(durable, request, args, res)
+    return out[:: max(1, len(out) // count)][:count]
+
+
+def test_hook_free_subclasses_at_every_path_are_refused_like_the_oracle():
+    checked = refused = 0
+    for request, args in _sample_args():
+        for path in _walk(args):
+            bad = _subclassed(args, path)
+            if bad is None:
+                continue
+            got = _outcome(PICKER(_fresh(), request), *copy.deepcopy(bad))
+            want = _outcome(PICKER(REF, request), *copy.deepcopy(bad))
+            assert got == want, (path, got, want)
+            checked += 1
+            refused += got[0] == "err"
+    assert checked > 50 and refused > 0
+
+
+def _check(request):
+    out = _outcome(_fresh(), request)
+    assert out == _outcome(REF, copy.deepcopy(request)), request
+    return out
+
+
+def _agree(base, path=()):
+    return _check(base["request"])
+
+
+_VALUES = {
+    "op": ("admit", "other", "", None, 1, True),
+    "key": ("", "a" * 64, "a" * 65, "k k", "k/", "é", "k-1\n", None, 1, True),
+    "cost": (-1, 0, 1, 2, 3, 4, 10**6, 10**6 + 1, MAX, True, 1.5, "1", None),
+    "now": (-1, 0, 1, MAX - 1, MAX, MAX + 1, 2**54, True, 1.5, "1", None),
+    "policy": (None, [], (), "x", 0, True, {}),
+    "previous": ([], (), "x", 0, True, {}),
+}
+_POLICIES = (
+    {"capacity": 3, "refill_ms": 1000},
+    {"capacity": 1, "refill_ms": 1},
+    {"capacity": 10**6, "refill_ms": 86_400_000},
+    {"capacity": 10**6 + 1, "refill_ms": 1000},
+    {"capacity": 0, "refill_ms": 1000},
+    {"capacity": 3, "refill_ms": 0},
+    {"capacity": 3, "refill_ms": 86_400_001},
+    {"capacity": -1, "refill_ms": 1},
+    {"capacity": True, "refill_ms": 1},
+    {"capacity": 3, "refill_ms": 1000, "x": 1},
+    {"capacity": 3},
+    {"refill_ms": 1000},
+    {"capacity": 3, "refill_ms": 1000, 1: 1},
+)
+
+
+def _req(**changes):
+    request = {
+        "op": "admit",
+        "key": "k-1",
+        "cost": 1,
+        "now": 100,
+        "policy": {"capacity": 3, "refill_ms": 1000},
+        "previous": None,
+    }
+    request.update(changes)
+    return request
+
+
+def test_every_request_and_policy_field_edge_survives_a_restart_like_the_oracle():
+    accepted = refused = 0
+    for field, values in _VALUES.items():
+        for value in values:
+            out = _check(_req(**{field: value}))
+            accepted += out[0] == "ok"
+            refused += out[0] == "err"
+    for policy in _POLICIES:
+        for cost in (1, 3, 10**6):
+            out = _check(_req(policy=copy.deepcopy(policy), cost=cost))
+            accepted += out[0] == "ok"
+            refused += out[0] == "err"
+    for field in ("op", "key", "cost", "now", "policy", "previous"):
+        request = _req()
+        del request[field]
+        assert _check(request)[0] == "err"
+    request = _req()
+    request["extra"] = 1
+    assert _check(request)[0] == "err"
+    assert accepted and refused
+
+
+def test_trailing_newlines_and_non_ascii_identifiers_are_refused_like_the_oracle():
+    first = REF(_req())
+    assert _check(_req(key="k-1\n"))[0] == "err"
+    for field in ("key", "previous_id", "limit_id"):
+        bad = (
+            _forge(first, **({field: "k-1\n"} if field == "key" else {}))
+            if field != "limit_id"
+            else dict(first)
+        )
+        if field == "limit_id":
+            bad["limit_id"] = first["limit_id"] + "\n"
+        if field == "previous_id":
+            bad = _forge(first, previous_id=first["limit_id"] + "\n")
+        assert _check(_req(previous=bad))[0] == "err"
+
+
+def test_a_dict_subclass_request_policy_or_previous_is_refused_like_the_oracle():
+    class D(dict):
+        pass
+
+    assert _check(D(_req()))[0] == "err"
+    assert _check(_req(policy=D({"capacity": 3, "refill_ms": 1000})))[0] == "err"
+    assert _check(_req(previous=D(REF(_req()))))[0] == "err"
+
+
+def _forge(record, **changes):
+    """A previous record with the named fields changed and its limit_id recomputed."""
+    rec = {k: v for k, v in record.items() if k != "limit_id"}
+    rec.update(changes)
+    body = json.dumps(rec, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
+    rec["limit_id"] = "lm1:" + hashlib.sha256(b"lm1\x00" + body).hexdigest()
+    return rec
+
+
+def _prev_base(prev, now=100, cost=1, policy=None):
+    policy = policy or {"capacity": 3, "refill_ms": 1000}
+    return {
+        "request": {
+            "op": "admit",
+            "key": "k-1",
+            "cost": cost,
+            "now": now,
+            "policy": policy,
+            "previous": prev,
+        }
+    }
+
+
+def test_forged_previous_records_with_a_valid_digest_match_the_oracle_field_by_field():
+    admit = REF(
+        {
+            "op": "admit",
+            "key": "k-1",
+            "cost": 1,
+            "now": 100,
+            "policy": {"capacity": 3, "refill_ms": 1000},
+            "previous": None,
+        }
+    )
+    deny = _forge(admit, decision="deny", tokens=0, cost=1, retry_after_ms=1000)
+    edges = [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        999,
+        1000,
+        1001,
+        2000,
+        2999,
+        3000,
+        3001,
+        MAX - 100,
+        MAX - 99,
+        MAX,
+        MAX + 1,
+        -1,
+    ]
+    for record in (admit, deny):
+        for key in record:
+            if key in ("limit_id", "op", "key", "decision", "previous_id"):
+                continue
+            for value in edges:
+                _agree(_prev_base(_forge(record, **{key: value})), path=())
+    for decision in ("admit", "deny", "other", None):
+        for record in (admit, deny):
+            _agree(_prev_base(_forge(record, decision=decision)), path=())
+
+
+def test_forged_deny_retry_window_and_clock_sum_match_the_oracle_on_a_full_grid():
+    admit = REF(
+        {
+            "op": "admit",
+            "key": "k-1",
+            "cost": 1,
+            "now": 100,
+            "policy": {"capacity": 3, "refill_ms": 1000},
+            "previous": None,
+        }
+    )
+    for cost in (1, 2, 3):
+        for tokens in range(0, 4):
+            lo, hi = (cost - tokens - 1) * 1000, (cost - tokens) * 1000
+            for retry in (lo - 1, lo, lo + 1, hi - 1, hi, hi + 1, 0, 1):
+                for updated in (100, MAX - hi, MAX - hi + 1, MAX - 1, MAX):
+                    prev = _forge(
+                        admit,
+                        decision="deny",
+                        tokens=tokens,
+                        cost=cost,
+                        retry_after_ms=retry,
+                        updated_at=updated,
+                    )
+                    _agree(_prev_base(prev, now=updated), path=())
+
+
+def test_deny_clock_overflow_edge_matches_the_oracle_at_every_offset():
+    policy = {"capacity": 3, "refill_ms": 1000}
+    for cost in (1, 2, 3):
+        for now in range(MAX - 3002, MAX + 1):
+            if (now - (MAX - 3002)) % 7 and now < MAX - 8:
+                continue
+            _agree(_prev_base(None, now=now, cost=cost, policy=policy), path=())
+            drained = REF(
+                {
+                    "op": "admit",
+                    "key": "k-1",
+                    "cost": 3,
+                    "now": now,
+                    "policy": policy,
+                    "previous": None,
+                }
+            )
+            _agree(_prev_base(drained, now=now, cost=cost, policy=policy), path=())
+
+
+def test_clock_and_cost_edges_match_the_oracle_for_every_state_of_a_small_bucket():
+    policy = {"capacity": 3, "refill_ms": 1000}
+    prev = None
+    for step_now in (
+        0,
+        0,
+        400,
+        1000,
+        1999,
+        2000,
+        2001,
+        10**6,
+        MAX - 3000,
+        MAX - 1000,
+        MAX - 1,
+        MAX,
+    ):
+        for cost in (1, 2, 3, 4):
+            base = {
+                "request": {
+                    "op": "admit",
+                    "key": "k-1",
+                    "cost": cost,
+                    "now": step_now,
+                    "policy": copy.deepcopy(policy),
+                    "previous": copy.deepcopy(prev),
+                }
+            }
+            _agree(base, path=())
+        with contextlib.suppress(Exception):
+            prev = REF(copy.deepcopy(base["request"]))
