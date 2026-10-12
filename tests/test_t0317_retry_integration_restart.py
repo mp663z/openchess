@@ -316,6 +316,92 @@ def test_a_truncated_durable_file_is_a_host_error_and_the_last_good_value_still_
     )
 
 
+class _SStr(str):
+    """A hook-free str subclass: only its exact type is wrong."""
+
+
+class _SInt(int):
+    pass
+
+
+class _SFloat(float):
+    pass
+
+
+class _SDict(dict):
+    pass
+
+
+class _SList(list):
+    pass
+
+
+def _walk(node, prefix=()):
+    """Iterative path walk over dict values, dict keys and list items."""
+    out, stack = [], [(node, prefix)]
+    while stack:
+        cur, path = stack.pop()
+        out.append(path)
+        if type(cur) is dict:
+            for k, v in cur.items():
+                out.append((*path, ("key", k)))
+                stack.append((v, (*path, k)))
+        elif type(cur) is list:
+            for i, v in enumerate(cur):
+                stack.append((v, (*path, i)))
+    return out
+
+
+def _subclassed(args, path):
+    new = copy.deepcopy(args)
+    if path and type(path[-1]) is tuple:
+        parent = new
+        for step in path[:-1]:
+            parent = parent[step]
+        key = path[-1][1]
+        value = parent.pop(key)
+        parent[_SStr(key)] = value
+        return new
+    if not path:
+        return None
+    parent = new
+    for step in path[:-1]:
+        parent = parent[step]
+    value = parent[path[-1]]
+    cls = {str: _SStr, int: _SInt, float: _SFloat, dict: _SDict, list: _SList}.get(type(value))
+    if cls is None:
+        return None
+    parent[path[-1]] = cls(value)
+    return new
+
+
+def _sample_args(count=8):
+    rng, durable, out = random.Random(5), new_durable(), []
+    for _ in range(80):
+        request = make_request(rng, durable)
+        args = call_args(durable, request)
+        if CHILD_OK(request):
+            out.append((request, copy.deepcopy(args)))
+        res = _outcome(PICKER(_fresh(), request), *args)
+        absorb(durable, request, args, res)
+    return out[:: max(1, len(out) // count)][:count]
+
+
+def test_hook_free_subclasses_at_every_path_are_refused_like_the_oracle():
+    checked = refused = 0
+    for request, args in _sample_args():
+        for path in _walk(args):
+            bad = _subclassed(args, path)
+            if bad is None:
+                continue
+            got = _outcome(PICKER(_fresh(), request), *copy.deepcopy(bad))
+            want = _outcome(PICKER(REF, request), *copy.deepcopy(bad))
+            assert got == want, (path, got, want)
+            checked += 1
+            refused += got[0] == "err"
+    assert checked > 50 and refused > 0
+
+
 def _agree_with_oracle(request):
     out = _outcome(_fresh(), request)
     assert out == _outcome(REF, copy.deepcopy(request)), request
