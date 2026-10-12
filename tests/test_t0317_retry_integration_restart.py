@@ -6,7 +6,8 @@ decision log between runs.
 
 A restart is modelled the way a host would do it: the durable value is written
 as canonical JSON under tmp_path (atomic replace), the production module is
-imported anew (`importlib.reload`), the file is read back and the stream
+executed anew in its own namespace (the canonical
+module is never reloaded), the file is read back and the stream
 continues. A few cut points run in a real child interpreter. Sampled cut points
 (12 every-step streams, 10 single random cuts, child-interpreter steps)
 must give the same outcomes and the same durable value as an
@@ -23,6 +24,7 @@ from __future__ import annotations
 
 import copy
 import importlib
+import importlib.util
 import json
 import os
 import random
@@ -141,9 +143,41 @@ def test_every_attempt_count_and_clock_edge_survives_a_restart_like_the_oracle()
                 assert _outcome(_fresh(), request) == _outcome(REF, copy.deepcopy(request))
 
 
+_FRESH_COUNT = [0]
+
+
+def _fresh_module():
+    """A restarted process: the production file is executed anew in its own namespace.
+
+    The canonical module in sys.modules is never reloaded or mutated, so other tests that
+    hold its functions and error classes are unaffected.
+    """
+    _FRESH_COUNT[0] += 1
+    name = f"_restart_copy_{_FRESH_COUNT[0]}_{PMOD.__name__.rsplit('.', 1)[-1]}"
+    spec = importlib.util.spec_from_file_location(name, PMOD.__file__)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _fresh():
-    """A restarted process: the production module is imported anew."""
-    return getattr(importlib.reload(PMOD), FN)
+    return getattr(_fresh_module(), FN)
+
+
+def test_a_restart_never_touches_the_canonical_production_module():
+    canonical = sys.modules[PMOD.__name__]
+    before = {k: id(v) for k, v in vars(PMOD).items()}
+    count = len(sys.modules)
+    fn = _fresh()
+    again = _fresh_module()
+    assert sys.modules[PMOD.__name__] is canonical is PMOD
+    assert {k: id(v) for k, v in vars(PMOD).items()} == before
+    assert len(sys.modules) == count
+    assert getattr(again, FN) is not getattr(PMOD, FN) and fn is not getattr(PMOD, FN)
+    for name, value in vars(PMOD).items():
+        if isinstance(value, type) and issubclass(value, Exception) and name.endswith("Error"):
+            assert getattr(again, name) is not value
+            assert vars(PMOD)[name] is value
 
 
 def _outcome(fn, *args):
