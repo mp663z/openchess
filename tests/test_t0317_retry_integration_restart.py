@@ -7,12 +7,15 @@ decision log between runs.
 A restart is modelled the way a host would do it: the durable value is written
 as canonical JSON under tmp_path (atomic replace), the production module is
 imported anew (`importlib.reload`), the file is read back and the stream
-continues. A few cut points run in a real child interpreter. Every cut point
-of a seeded stream must give the same outcomes and the same durable value as an
+continues. A few cut points run in a real child interpreter. Sampled cut points
+(12 every-step streams, 10 single random cuts, child-interpreter steps)
+must give the same outcomes and the same durable value as an
 uninterrupted run and as the contract's reference implementation
 (`tests.test_t0311_retry_contract`),
-which is the differential oracle. A torn or forged durable
-value is refused with the oracle's class and code and never half-applied.
+which is the differential oracle.
+A retry request carries no previous record, so the forged and malformed
+inputs here are altered request fields (not persisted fields); the engine
+refuses them with the oracle class and code and leaves its input unchanged.
 Single process tree, no real clock, no concurrency, no production changes.
 """
 
@@ -148,7 +151,7 @@ def _outcome(fn, *args):
         return ("ok", fn(*args))
     except Exception as error:  # noqa: BLE001
         failure = getattr(error, "failure_class", None)
-        assert failure is not None, repr(error)
+        assert failure is not None, f"FOREIGN-EXCEPTION {error!r}"
         assert getattr(error, "retryable", False) is False
         assert error.__cause__ is None
         return ("err", failure, error.code)
@@ -357,10 +360,47 @@ def test_every_policy_bound_edge_survives_a_restart_like_the_oracle():
     assert ok > 0
 
 
-def test_non_mapping_wrong_key_and_subclass_requests_and_policies_match_the_oracle():
+def test_dict_subclass_request_and_policy_are_refused_like_the_oracle():
     class D(dict):
         pass
 
+    base = {
+        "op": "decide",
+        "job_id": JOB,
+        "attempts": 2,
+        "failure": "transient",
+        "now": 5,
+        "policy": {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100},
+    }
+    assert _agree_with_oracle(D(base))[0] == "err"
+    request = copy.deepcopy(base)
+    request["policy"] = D(base["policy"])
+    assert _agree_with_oracle(request)[0] == "err"
+
+
+def test_policy_with_all_fields_and_a_wrong_key_is_refused_like_the_oracle():
+    base = {
+        "op": "decide",
+        "job_id": JOB,
+        "attempts": 2,
+        "failure": "transient",
+        "now": 5,
+        "policy": {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100},
+    }
+    for extra in ({"x": 1}, {1: 1}, {"": 0}, {None: 1}):
+        request = copy.deepcopy(base)
+        request["policy"].update(extra)
+        assert _agree_with_oracle(request)[0] == "err", extra
+    request = copy.deepcopy(base)
+    request["extra"] = 1
+    assert _agree_with_oracle(request)[0] == "err"
+    request = copy.deepcopy(base)
+    request["policy"]["other"] = request["policy"].pop("max_delay_ms")
+    request["policy"]["max_delay_ms"] = 100
+    assert _agree_with_oracle(request)[0] == "err"
+
+
+def test_non_mapping_wrong_key_and_subclass_key_requests_and_policies_match_the_oracle():
     class S(str):
         pass
 
@@ -372,7 +412,7 @@ def test_non_mapping_wrong_key_and_subclass_requests_and_policies_match_the_orac
         "now": 5,
         "policy": {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100},
     }
-    for bad in (None, [], (), "x", 1, True, D(base), [base], {}):
+    for bad in (None, [], (), "x", 1, True, [base], {}):
         _agree_with_oracle(bad)
     for bad_policy in (
         None,
@@ -381,7 +421,6 @@ def test_non_mapping_wrong_key_and_subclass_requests_and_policies_match_the_orac
         "x",
         1,
         {},
-        D(base["policy"]),
         {"base_delay_ms": 1, "multiplier": 2},
         {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100, "x": 1},
         {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100, 1: 1},
@@ -396,3 +435,52 @@ def test_non_mapping_wrong_key_and_subclass_requests_and_policies_match_the_orac
     keyed = copy.deepcopy(base)
     keyed["policy"][S("multiplier")] = keyed["policy"].pop("multiplier")
     assert _agree_with_oracle(keyed)[0] == "err"
+
+
+def test_malformed_job_ids_are_refused_like_the_oracle():
+    valid = JOB
+    bad_ids = (
+        "job1:" + "g" * 64,
+        "job1:" + "a" * 63,
+        "job1:" + "a" * 65,
+        "job1:" + "A" * 64,
+        valid + "\n",
+        "\n" + valid,
+        " " + valid,
+        valid + " ",
+        "job2:" + "ab" * 32,
+        "JOB1:" + "ab" * 32,
+        "job1" + "ab" * 32,
+        "job1:",
+        "",
+        "x",
+        None,
+        1,
+        True,
+        1.5,
+        [valid],
+        b"job1:" + b"ab" * 32,
+        "job1:" + "ab" * 31 + "é" + "a",
+        valid[:-1] + "\u0661",
+    )
+    for job_id in bad_ids:
+        request = {
+            "op": "decide",
+            "job_id": job_id,
+            "attempts": 2,
+            "failure": "transient",
+            "now": 5,
+            "policy": {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100},
+        }
+        assert _agree_with_oracle(request)[0] == "err", job_id
+    good = {
+        "op": "decide",
+        "job_id": valid,
+        "attempts": 2,
+        "failure": "transient",
+        "now": 5,
+        "policy": {"base_delay_ms": 1, "multiplier": 2, "max_delay_ms": 100},
+    }
+    assert _agree_with_oracle(good)[0] == "ok"
+    good["job_id"] = "job1:" + "0123456789abcdef" * 4
+    assert _agree_with_oracle(good)[0] == "ok"
