@@ -6,12 +6,16 @@ last good record; a restart continues the chain from the file.
 A restart is modelled the way a host would do it: the durable value is written
 as canonical JSON under tmp_path (atomic replace), the production module is
 imported anew (`importlib.reload`), the file is read back and the stream
-continues. A few cut points run in a real child interpreter. Every cut point
-of a seeded stream must give the same outcomes and the same durable value as an
+continues. A few cut points run in a real child interpreter. Sampled cut points
+(12 every-step streams, 10 single random cuts, child-interpreter steps)
+must give the same outcomes and the same durable value as an
 uninterrupted run and as the contract's reference implementation
 (`tests.test_t0320_progress_contract`),
-which is the differential oracle. A torn or forged durable
-value is refused with the oracle's class and code and never half-applied.
+which is the differential oracle.
+Altered fields of the persisted previous record (digest not recomputed) and
+altered request fields are refused with the oracle class and code and leave
+the input unchanged. A separate row forges each previous field with the
+digest recomputed by the reference.
 Single process tree, no real clock, no concurrency, no production changes.
 """
 
@@ -120,7 +124,7 @@ def _outcome(fn, *args):
         return ("ok", fn(*args))
     except Exception as error:  # noqa: BLE001
         failure = getattr(error, "failure_class", None)
-        assert failure is not None, repr(error)
+        assert failure is not None, f"FOREIGN-EXCEPTION {error!r}"
         assert getattr(error, "retryable", False) is False
         assert error.__cause__ is None
         return ("err", failure, error.code)
@@ -283,3 +287,152 @@ def test_a_truncated_durable_file_is_a_host_error_and_the_last_good_value_still_
     assert _outcome(PICKER(_fresh(), request), *copy.deepcopy(args)) == _outcome(
         PICKER(REF, request), *copy.deepcopy(args)
     )
+
+
+from tests.test_t0320_progress_contract import _progress_id as _ref_progress_id  # noqa: E402
+
+_JOB = "job1:" + "ab" * 32
+_VALUES = {
+    "op": ("report", "other", "", None, 1, True),
+    "job_id": (
+        "",
+        "job1:" + "ab" * 32 + "\n",
+        "job1:",
+        "job1:" + "AB" * 32,
+        "job1:" + "ab" * 31,
+        "x",
+        None,
+        1,
+        True,
+    ),
+    "worker": ("", "w-1\n", "a" * 64, "a" * 65, "w w", "w/", "é", None, 1, True),
+    "total": (0, 1, 2, 10, MAX - 1, MAX, MAX + 1, MAX + 2, 2**54, -1, True, 1.5, "1", None),
+    "done": (-1, 0, 1, 9, 10, 11, MAX, MAX + 1, True, 1.5, "1", None),
+    "now": (-1, 0, 1, MAX - 1, MAX, MAX + 1, 2**54, True, 1.5, "1", None),
+    "previous": (None, [], (), "x", 0, True, {}),
+}
+
+
+def _base_request(previous=None):
+    return {
+        "op": "report",
+        "job_id": _JOB,
+        "worker": "w-1",
+        "done": 2,
+        "total": 10,
+        "now": 5,
+        "previous": previous,
+    }
+
+
+def _first_record():
+    return REF(_base_request())
+
+
+def _check(request):
+    out = _outcome(_fresh(), request)
+    assert out == _outcome(REF, copy.deepcopy(request)), request
+    return out
+
+
+def test_every_request_field_edge_survives_a_restart_like_the_oracle():
+    accepted = refused = 0
+    for field, values in _VALUES.items():
+        for value in values:
+            request = _base_request()
+            request[field] = value
+            if field == "done" and value in (MAX, MAX + 1):
+                request["total"] = MAX
+            out = _check(request)
+            accepted += out[0] == "ok"
+            refused += out[0] == "err"
+    assert accepted and refused
+    for total in (1, MAX - 1, MAX):
+        for done in (0, total, total - 1):
+            for now in (0, MAX):
+                request = _base_request()
+                request.update(total=total, done=done, now=now)
+                assert _check(request)[0] == "ok"
+    for field in ("op", "job_id", "worker", "total", "done", "now", "previous"):
+        request = _base_request()
+        del request[field]
+        assert _check(request)[0] == "err"
+    for field in ("op", "job_id", "worker", "total", "done", "now"):
+        request = _base_request(_first_record())
+        request[field] = _VALUES[field][1] if field != "op" else "other"
+        assert _check(request)[0] == "err"
+
+
+def _forged(previous, **changes):
+    bad = copy.deepcopy(previous)
+    bad.update(changes)
+    body = {k: bad[k] for k in bad if k != "progress_id"}
+    bad["progress_id"] = _ref_progress_id(body)  # the digest is recomputed: only the field is wrong
+    return bad
+
+
+def test_forged_previous_records_with_a_recomputed_digest_survive_a_restart_like_the_oracle():
+    previous = _first_record()
+    refused = 0
+    for field in (
+        "op",
+        "job_id",
+        "worker",
+        "done",
+        "total",
+        "percent_bp",
+        "reported_at",
+        "previous_id",
+    ):
+        for value in _VALUES.get(field, ()) + _VALUES.get("now", ()) + (4999, 5001, 2000, 2001):
+            bad = _forged(previous, **{field: value})
+            request = _base_request(bad)
+            request["done"] = 5
+            refused += _check(request)[0] == "err"
+        bad = copy.deepcopy(previous)
+        del bad[field]
+        assert _check(_base_request(bad))[0] == "err"
+    bad = copy.deepcopy(previous)
+    bad["extra"] = 1
+    assert _check(_base_request(bad))[0] == "err"
+    for bad_id in ("pg1:" + "0" * 64, "pg1:" + "A" * 64, "pg1:" + "0" * 63, "x", None, 1):
+        assert _check(_base_request({**previous, "progress_id": bad_id}))[0] == "err"
+    assert refused > 0
+    for field in ("previous_id",):
+        for value in (None, "pg1:" + "0" * 64, "pg1:" + "A" * 64, "pg1:" + "0" * 65, "", 1, True):
+            bad = _forged(previous, **{field: value})
+            _check(_base_request(bad))
+    chained = _base_request(previous)
+    chained.update(done=3)
+    second = _check(chained)[1]
+    deeper = _base_request(second)
+    deeper.update(done=4, now=6)
+    assert _check(deeper)[0] == "ok"
+
+
+def test_a_zero_total_is_refused_like_the_oracle():
+    request = _base_request()
+    request.update(total=0, done=0)
+    assert _check(request)[0] == "err"
+    previous = _first_record()
+    request = _base_request(_forged(previous, total=0, done=0, percent_bp=0))
+    assert _check(request)[0] == "err"
+
+
+def test_trailing_newlines_in_identifiers_are_refused_like_the_oracle():
+    previous = _first_record()
+    request = _base_request()
+    request["job_id"] = _JOB + "\n"
+    assert _check(request)[0] == "err"
+    request = _base_request()
+    request["worker"] = "w-1\n"
+    assert _check(request)[0] == "err"
+    for field in ("job_id", "worker"):
+        bad = _forged(previous, **{field: previous[field] + "\n"})
+        assert _check(_base_request(bad))[0] == "err"
+    bad = copy.deepcopy(previous)
+    bad["progress_id"] += "\n"
+    assert _check(_base_request(bad))[0] == "err"
+    second = _check({**_base_request(previous), "done": 3})[1]
+    bad = _forged(second, previous_id=previous["progress_id"] + "\n")
+    assert _check(_base_request(bad))[0] == "err"
