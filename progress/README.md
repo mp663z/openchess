@@ -1,0 +1,2 @@
+# Incremental sweep progress snapshots (ires-restart)
+Periodic TSV snapshots of the incremental mutation sweep (one row per executed mutant: lineno, status, before, after, first-error). Each snapshot is hash-verified on receipt and immutable once pushed; later snapshots supersede earlier ones. The TSV lives in the builder sandbox between snapshots - these external snapshots are the actual wipe-loss bound.
