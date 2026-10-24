@@ -1,0 +1,4 @@
+# Incremental-mutator recipe v2 (defect-fixed) - 2026-10-25 02:36 IST
+- Bundle: lane-b-t0353-recipe-v2.tar.gz, sha256 59ab3a15f403e2c532744e9709158d29f8a86f971acfd371a0fede76c04cfb84 (verified); 11-file manifest all OK.
+- Owner independent verification: candidate census 171 occurrences / 149 unique keys / 20 dup keys / 22 extra executions reproduced to the digit; chains pre-incr+diff==current byte-exact for both scripts; fixes reviewed in diff (canonical restore before fingerprint, provenance header + legacy/stale/sidecar refusal, strict 5-field + torn-line handling, in-run dedupe with counters); fresh snap9 TSV provenance components all verified against independent values (prod 5d1559f8 = base b91b689, test 775000be = CP2, script 77945999 = bundled mut_all.py, git_head d5487a9 = verified tests-only head); 9 rows, 0 duplicate keys, all 5-field.
+- v1 (12-row snapshot, recipe bundle) retained as history under chk0/progress and recipe/.
