@@ -1,0 +1,20 @@
+"""Production jobs restart for data/contracts/restart.yaml (contract id
+`jobs-restart`).
+
+`restart(state, request)` is a transition of one queue state (the linked
+queue contract's state) for one request {op, worker, now}: every job leased
+by that worker whose lease is still live (now strictly before its expiry)
+returns to ready with no lease owner or expiry. Attempts are kept, a lease
+at or past its expiry is left alone (the queue claim reclaims it), and a
+released job at max_attempts returns to ready. The receipt names the
+released job ids in seq order, binds the state before and after through the
+queue's own state_id, and carries its own content-addressed restart_id. The
+new state is committed last, in place.
+
+Validation order: request shape (malformed_restart_request), then the state
+against every queue state and job invariant (corrupt_queue). Every check is
+total on hostile input: exact types only, key types are checked before any
+set comparison, payloads are walked iteratively (no recursion, no caller
+code), and every error is a fresh typed RestartError. A rejected call
+leaves state and request unchanged. Production never imports tests.*.
+"""

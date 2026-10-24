@@ -1,0 +1,134 @@
+
+
+def _check(request):
+    out = _outcome(_fresh(), request)
+    assert out == _outcome(REF, copy.deepcopy(request)), request
+    return out
+
+
+def _djob(i=1, payload=None, status="dead", attempts=5, owner=None, expires=None):
+    job = _job(i, status=status, attempts=attempts, payload={"a": 1} if payload is None else payload)
+    job["lease_owner"], job["lease_expires_at"] = owner, expires
+    return job
+
+
+def _breq(job, reason="exhausted", now=7):
+    return {"op": "bury", "job": job, "reason": reason, "now": now}
+
+
+def test_every_status_attempt_and_lease_combination_survives_a_restart_like_the_oracle():
+    leases = [(None, None), ("w1", 1), ("w1", 0), ("w1", MAX), ("w1", MAX + 1), ("", 5),
+              (None, 5), ("w1", None)]
+    for status in ("ready", "leased", "done", "dead", "other"):
+        for attempts in range(-1, 8):
+            for owner, expires in leases:
+                _check(_breq(_djob(3, None, status, attempts, owner, expires)))
+
+
+def test_every_request_field_edge_survives_a_restart_like_the_oracle():
+    accepted = refused = 0
+    values = {
+        "op": ("bury", "other", "", None, 1, True),
+        "reason": ("exhausted", "permanent", "other", "", "exhausted\n", None, 1, True),
+        "now": (-1, 0, 1, MAX - 1, MAX, MAX + 1, 2**54, True, 1.5, "1", None),
+        "job": (None, [], (), "x", 0, True, {}),
+    }
+    for field, vals in values.items():
+        for value in vals:
+            request = _breq(_djob())
+            request[field] = value
+            out = _check(request)
+            accepted += out[0] == "ok"
+            refused += out[0] == "err"
+    for field in ("op", "job", "reason", "now"):
+        request = _breq(_djob())
+        del request[field]
+        assert _check(request)[0] == "err"
+    request = _breq(_djob())
+    request["extra"] = 1
+    assert _check(request)[0] == "err"
+    assert accepted and refused
+
+
+def test_every_job_field_edge_survives_a_restart_like_the_oracle():
+    values = {
+        "job_id": ("", "job1:", "job1:" + "A" * 64, "job1:" + "a" * 63, "job1:" + "0" * 64 + "\n", None, 1),
+        "seq": (-1, 0, 1, 2, MAX - 1, MAX, MAX + 1, True, 1.5, "1", None),
+        "priority": (-1, 0, 1, 8, 9, 10, 11, True, 1.5, "1", None),
+        "status": ("dead", "ready", "leased", "done", "", "DEAD", "dead\n", None, 1),
+        "attempts": (-1, 0, 1, 4, 5, 6, True, 1.5, "5", None),
+        "lease_owner": ("w1", "", "w\n", "a" * 64, "a" * 65, 1, True),
+        "lease_expires_at": (-1, 0, 1, MAX, MAX + 1, True, 1.5, "1"),
+    }
+    refused = 0
+    for field, vals in values.items():
+        for value in vals:
+            job = _djob(1)
+            job[field] = value
+            refused += _check(_breq(job))[0] == "err"
+        job = _djob(1)
+        del job[field]
+        assert _check(_breq(job))[0] == "err"
+    job = _djob(1)
+    job["extra"] = 1
+    assert _check(_breq(job))[0] == "err"
+    assert refused > 0
+
+
+def test_exact_bit_and_digit_edges_survive_a_restart_like_the_oracle():
+    edges = [10**4000 - 1, -(10**4000 - 1), 10**4000, -(10**4000), 2**13287, 2**13288, 2**13289,
+             -(2**13287), -(2**13288), 2**13287 - 1, 10**3999, 10**3999 + 1]
+    for value in edges:
+        for wrap in (lambda v: v, lambda v: [v], lambda v: {"k": v}):
+            out = _check(_breq(_djob(1, wrap(value), "dead", 5)))
+            digits = len(str(abs(value))) if abs(value) < 10**4010 else 9999
+            assert (out[0] == "ok") == (digits <= 4000)
+
+
+def test_exact_nesting_depth_edges_survive_a_restart_like_the_oracle():
+    for depth in range(58, 71):
+        for wrap in (lambda v: [v], lambda v: {"k": v}):
+            value = 1
+            for _ in range(depth):
+                value = wrap(value)
+            _check(_breq(_djob(1, value)))
+
+
+def test_payload_value_kinds_survive_a_restart_like_the_oracle():
+    class D(dict):
+        pass
+
+    class L(list):
+        pass
+
+    for payload in (None, True, 0, 1.5, float("inf"), float("nan"), "é", "", b"x", (1,), {1, 2}, [],
+                    {}, [None, [1, {"a": [2.5]}]], {"a": {"b": None}}, {1: 2}, {None: 1}, D(a=1),
+                    L([1]), object(), 1 + 2j, "\ud800", {"k": float("inf")}):
+        _check(_breq(_djob(1, payload)))
+    shared = [1]
+    _check(_breq(_djob(1, [shared, shared])))
+    cyc = []
+    cyc.append(cyc)
+    _check(_breq(_djob(1, cyc)))
+
+
+def test_a_dict_subclass_request_or_job_is_refused_like_the_oracle():
+    class D(dict):
+        pass
+
+    assert _check(D(_breq(_djob())))[0] == "err"
+    assert _check(_breq(D(_djob())))[0] == "err"
+
+
+def test_payload_dict_keys_that_are_str_subclasses_are_refused_like_the_oracle():
+    plain = {"a": 1}
+    for payload in (
+        {_SStr("a"): 1},
+        {"a": {_SStr("b"): 1}},
+        {"a": [{"b": {_SStr("c"): None}}]},
+        [{_SStr("a"): 1}],
+        {"a": {"b": 1}, _SStr("c"): 2},
+    ):
+        out = _check(_breq(_djob(2, payload)))
+        assert out[0] == "err"
+    assert _check(_breq(_djob(2, plain)))[0] == "ok"

@@ -1,0 +1,18 @@
+"""Production jobs dead-letter burial for data/contracts/dead_letter.yaml
+(contract id `jobs-dead-letter`).
+
+`bury(request)` is a pure function of one request {op, job, reason, now}:
+job is exactly one job of the linked queue contract. Only a job that
+satisfies every queue job invariant and has status dead is buried; the entry
+binds the payload through a digest (never a copy of it) and carries its own
+content-addressed entry_id. A dead job carries attempts == max_attempts
+whatever the reason, and the reason is caller-attested (exhausted or
+permanent).
+
+Validation order: request shape (malformed_dead_letter_request), job
+integrity (corrupt_job), dead status (job_not_dead). Every check is total on
+hostile input: exact types only, key types are checked before any set
+comparison, payloads are walked iteratively (no recursion, no caller code),
+and every error is a fresh typed DeadLetterError. Production never imports
+tests.*.
+"""

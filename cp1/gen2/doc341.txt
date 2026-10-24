@@ -1,0 +1,19 @@
+"""Production jobs limit decision for data/contracts/limit.yaml (contract
+id `jobs-limit`).
+
+`admit(request)` is a pure function of one request
+{op, key, cost, now, policy, previous}: a keyed token bucket of `capacity`
+tokens gains one token every `refill_ms` milliseconds. previous is null for
+a fresh full bucket and otherwise exactly the previous bucket record. The
+request is admitted when the refilled tokens cover the cost; otherwise it is
+denied with the exact retry_after_ms. At capacity no partial refill is
+banked, a cost above capacity is malformed (never a deny), a deny whose
+now + retry_after_ms would pass 2**53 - 1 is clock_overflow (never clamped),
+and a previous record whose shape, bounds, decision invariants or limit_id
+do not recompute is corrupt and never trusted.
+
+Validation order: request, policy, cost within capacity, previous integrity,
+chain, clock. Every check is total on hostile input: exact types only, key
+types are checked before any set comparison, no caller code runs, and every
+error is a fresh typed LimitError. Production never imports tests.*.
+"""

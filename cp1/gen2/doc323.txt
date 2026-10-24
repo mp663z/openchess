@@ -1,0 +1,19 @@
+"""Production jobs progress report for data/contracts/progress.yaml
+(contract id `jobs-progress`).
+
+`report(request)` is a pure function of one request
+{op, job_id, worker, done, total, now, previous}: previous is null on the
+first report and otherwise exactly the previous progress record. The record
+carries percent_bp = floor(done * 10000 / total), the report time and a
+chain link previous_id to the previous record's progress_id. total is fixed
+by the first report, done never decreases (equal is a heartbeat), completion
+(done == total) is terminal, now never precedes the previous reported_at,
+and a previous record whose shape, bounds, percent or progress_id do not
+recompute is corrupt and never trusted.
+
+Validation order: request shape (malformed_progress_request), previous
+integrity (corrupt_previous_record), chain (progress_conflict). Every check
+is total on hostile input: exact types only, key types are checked before
+any set comparison, no caller code runs, and every error is a fresh typed
+ProgressError. Production never imports tests.*.
+"""
