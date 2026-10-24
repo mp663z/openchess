@@ -1,0 +1,22 @@
+# provenance fp=5d1559f8492522c5a3a36550fdb224601b8e6bd61d561c0551c1692a92815959;775000be43314cbf746e21c104f6a763e0e110575642ee356c0b4c54bd345e9e;779459998bc7cf0336d46b08939ad77df08abcc40102701fb13b5eee6b979b76 git_head=d5487a9a043831bd8ac662e877343d59879fae2f
+37	crash	_FIELDS = _REQ["operations"][0]["fields"]	_FIELDS = _REQ["operations"][1]["fields"]	IndexError: list index out of range
+37	crash	_FIELDS = _REQ["operations"][0]["fields"]	_FIELDS = _REQ["operations"][2]["fields"]	IndexError: list index out of range
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**53 - 0	AssertionError: ('job 0 lease_expires_at=9007199254740992', ('ok', {'op': 'resta
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**53 + 1	AssertionError: ('job 0 lease_expires_at=9007199254740992', ('ok', {'op': 'resta
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2*53 - 1	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 3**53 - 1	AssertionError: ('job 0 lease_expires_at=9007199254740992', ('ok', {'op': 'resta
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 1**53 - 1	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**54 - 1	AssertionError: ('job 0 lease_expires_at=9007199254740992', ('ok', {'op': 'resta
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**52 - 1	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**53 - 2	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**53 - 3	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+50	killed	MAX_JOBS = 10000	MAX_JOBS = 10001	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+50	killed	MAX_JOBS = 10000	MAX_JOBS = 9999	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+51	killed	MAX_PRIORITY = 9	MAX_PRIORITY = 10	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+51	killed	MAX_PRIORITY = 9	MAX_PRIORITY = 8	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+52	killed	MAX_DEPTH = 64	MAX_DEPTH = 65	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+52	killed	MAX_DEPTH = 64	MAX_DEPTH = 63	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+53	killed	MAX_DIGITS = 4000	MAX_DIGITS = 4001	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+53	killed	MAX_DIGITS = 4000	MAX_DIGITS = 3999	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+54	survivor	MAX_BITS = 13288	MAX_BITS = 13289	
+54	killed	MAX_BITS = 13288	MAX_BITS = 13287	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
