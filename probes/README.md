@@ -8,7 +8,20 @@ compared on candidate distinguishing inputs. Author-run tallies (126 killed /
 17 crash / 6 survivor) independently re-checked for row continuity and hash;
 functional verdicts below are from my own probes, not the author's.
 
-Final census: 5 non-equivalent coverage gaps (killable) + 1 equivalent.
+Final census: 3 in-domain killable coverage gaps (L113, L135, L203 - reachable
+via enqueue payloads) + 2 helper-level-only gaps (L74, L207 - distinguishing
+inputs cannot occur through the public restart path) + 1 equivalent (L54).
+
+Reachability (verified 2026-10-25): restart() builds the receipt record only
+from op (const), worker (grammar ^[A-Za-z0-9._:-]{1,64}$, restart.yaml:30,
+enforced line 152), restarted_at (int), released (job_id grammar ASCII),
+prior_state_id/state_id (qs1 hex). Python's utf-7 codec base64-shifts backslash
+and escapes '+', so a distinguishing receipt needs '+' or a backslash in its
+canonical JSON (e.g. \uXXXX escapes from non-ASCII content); the public path
+provably produces neither. The L74/L207 kill tests are helper-level
+(synthetic-record) proofs, as in the probes. Docs must keep this public-path
+vs helper distinction; it does not change the killability of L113/L135/L203,
+which are reachable through enqueue payload text.
 
 | Line | Mutation | Verdict | Distinguishing input | Kill test |
 |---|---|---|---|---|
