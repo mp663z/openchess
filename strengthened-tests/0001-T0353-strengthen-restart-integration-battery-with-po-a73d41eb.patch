@@ -1,0 +1,75 @@
+From 5960a36a02c9ce8549f1d9d745e7400fef9a787f Mon Sep 17 00:00:00 2001
+From: Instinct Agent <agent@instinct.com>
+Date: Sun, 25 Oct 2026 23:52:15 +0530
+Subject: [PATCH] T0353: strengthen restart integration battery with post-sweep
+ regression pins
+
+---
+ .../test_t0353_restart_integration_restart.py | 54 +++++++++++++++++++
+ 1 file changed, 54 insertions(+)
+
+diff --git a/tests/test_t0353_restart_integration_restart.py b/tests/test_t0353_restart_integration_restart.py
+index 80521fd..f6395e5 100644
+--- a/tests/test_t0353_restart_integration_restart.py
++++ b/tests/test_t0353_restart_integration_restart.py
+@@ -596,3 +596,57 @@ def test_identifier_grammar_and_dict_subclasses_are_refused_like_the_oracle():
+     bad = copy.deepcopy(job)
+     bad["job_id"] += "\n"
+     _agree(_one([bad]), path=())
++
++
++def _job_with_payload(payload):
++    return {"job_id": job_id_for("k-reg"), "seq": 1, "priority": 1,
++            "payload": payload, "status": "ready", "attempts": 0,
++            "lease_owner": None, "lease_expires_at": None}
++
++
++# --- L135: non-str scalar dict keys are refused (dict-key guard) ---
++def test_payloads_with_non_str_scalar_keys_are_refused():
++    for payload in ({5: "x"}, {1.5: "x"}, {True: "x"}, {None: "x"}, {"a": {1: 2}}):
++        args = ({"jobs": [_job_with_payload(payload)], "next_seq": 2},
++                {"op": "restart", "worker": "w1", "now": 5})
++        out = _outcome(_fresh(), *args)
++        ref = _outcome(REF, *copy.deepcopy(args))
++        assert out == ref and out[0] == "err", (payload, out, ref)
++
++
++# --- L113: lone-surrogate payload strings are refused (utf-8 validation) ---
++def test_payloads_with_lone_surrogate_strings_are_refused():
++    for bad in ("\ud800x", "x\udc00", "\ud800"):
++        args = ({"jobs": [_job_with_payload({"s": bad})], "next_seq": 2},
++                {"op": "restart", "worker": "w1", "now": 5})
++        out = _outcome(_fresh(), *args)
++        ref = _outcome(REF, *copy.deepcopy(args))
++        assert out == ref and out[0] == "err", (repr(bad), out, ref)
++
++
++# --- L203: queue-state id pins utf-8 canonicalization of payload content ---
++def test_state_id_pinned_for_non_ascii_and_plus_payload_state():
++    pins = (
++        ("héllo", "qs1:0e66e276ab30ad8e39d0575135ec66231fe36e6e268d45ee04b9aeed4a08ced2"),
++        ("a+b", "qs1:ece512e546a976b7b422a383d7031399b2e7320232195010fe7990eeca582b28"),
++        ("abc", "qs1:860ab725bfe9c12d15e7ff2c2ab5d1fab465562a03fb8c5b9c94367214bad067"),
++    )
++    for text, want in pins:
++        state = {"jobs": [{"job_id": "j1", "status": "queued", "attempts": 0,
++                           "seq": 0, "payload": {"text": text}}]}
++        assert PMOD._state_id(state) == want
++
++
++# --- L74/L207: receipt canonical bytes and restart id pin ensure_ascii/utf-8 ---
++def test_restart_id_pinned_for_non_ascii_and_plus_receipt_fields():
++    pins = (
++        ("héllo", "rst1:e5e50423dcd182dfb86dfcb62a539ffe606ccfa26e4c051ebc05d48b58489673"),
++        ("a+b", "rst1:b0d997c3f6c06c86d8c642d371d17698005d967b863093cf7da99d51719f50a0"),
++        ("abc", "rst1:414e59c4e5db1824b6ce80226089af5b21bfaf3baa7b28643c6015256cada6da"),
++        ("\ud800", "rst1:2b119e9fcc60f013d9aafb3f1d9d6b10da8210c233a311850badd791fc19baa7"),
++    )
++    for note, want in pins:
++        record = {"op": "restart", "worker": "w1", "note": note, "ts": 1}
++        assert PMOD._restart_id(record) == want
++    canon = PMOD._canon_receipt({"op": "restart", "worker": "w1", "note": "héllo", "ts": 1})
++    assert canon == '{"note":"h\\u00e9llo","op":"restart","ts":1,"worker":"w1"}'
+-- 
+2.34.1
+
