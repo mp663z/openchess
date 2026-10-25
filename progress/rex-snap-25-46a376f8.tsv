@@ -1,0 +1,26 @@
+# provenance fp=5d1559f8492522c5a3a36550fdb224601b8e6bd61d561c0551c1692a92815959;deeac9029138106f9ebff48bcf6cc5435a0c32757482f621cb29f1902df80d85;6b3a9625f5a718d1ebc46c1aac5cb7f55f5a30baafa6cab2eb8b6b8e49bde7f9 git_head=5960a36a02c9ce8549f1d9d745e7400fef9a787f
+65	killed	self.retryable = False	self.retryable = True	_restart_copy_1540_jobs_restart.RestartError: corrupt_queue
+70	killed	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)	return json.dumps(obj, sort_keys=False, separators=(",", ":"), ensure_ascii=False)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('ok', {'op':
+70	killed	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)	AssertionError: assert 'qs1:707714ba...598e4c61875c1' == 'qs1:0e66e276...9aeed4a
+74	killed	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)	return json.dumps(obj, sort_keys=False, separators=(",", ":"), ensure_ascii=True)	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('ok', {'op':
+74	killed	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)	AssertionError: assert 'rst1:7a20b55...c97149bc3c7d3' == 'rst1:e5e5042...5d48b58
+78	killed	return type(value) is int and lo <= value <= hi	return type(value) is not int and lo <= value <= hi	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+78	crash	return type(value) is int and lo <= value <= hi	return isinstance(value) is int and lo <= value <= hi	TypeError: isinstance expected 2 arguments, got 1
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.fullmatch(value) is not 0	AssertionError: ("job 0 job_id='x'", ('ok', {'op': 'restart', 'worker': 'w1', 'r
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.fullmatch(value) is None	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is not str and regex.fullmatch(value) is not None	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.fullmatch(value) is not not None	File "/tmp/wi-restart/server/jobs_restart.py", line 82
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.match(value) is not None	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+82	crash	return type(value) is str and regex.fullmatch(value) is not None	return isinstance(value) is str and regex.fullmatch(value) is not None	TypeError: isinstance expected 2 arguments, got 1
+89	killed	type(mapping) is dict	type(mapping) is not dict	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+89	crash	type(mapping) is dict	isinstance(mapping) is dict	TypeError: isinstance expected 2 arguments, got 1
+90	killed	and all(type(k) is str for k in mapping)	and all(type(k) is not str for k in mapping)	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+90	killed	and all(type(k) is str for k in mapping)	and all(type(k) is str for k not in mapping)	File "/tmp/wi-restart/server/jobs_restart.py", line 90
+90	crash	and all(type(k) is str for k in mapping)	and all(isinstance(k) is str for k in mapping)	TypeError: isinstance expected 2 arguments, got 1
+96	crash	kind = type(node)	kind = isinstance(node)	TypeError: isinstance expected 2 arguments, got 1
+97	killed	if node is None or kind is bool:	if node is 0 or kind is bool:	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+97	killed	if node is None or kind is bool:	if node is not None or kind is bool:	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+97	killed	if node is None or kind is bool:	if node is None or kind is not bool:	AssertionError: ('job 0 payload=True', ('err', 'corrupt_queue', 'corrupt_queue')
+98	killed	return True	return False	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+99	crash	if kind is int:	if kind is not int:	AttributeError: 'str' object has no attribute 'bit_length'
+101	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
