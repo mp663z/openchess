@@ -1,0 +1,10 @@
+=== row 43 in immutable incident TSV /tmp/rex-incident-61.tsv (data row 43) ===
+136	survivor	return False	return True	
+
+=== row 43 in reverify output /tmp/reverify.tsv ===
+43	136	survivor	killed	MISMATCH	return False	return True	AssertionError: ((0, 'jobs', 0, 'payload', ('key', 'n')), ('ok', {'op': 'restart', 'worker': 'w1', 'restarted_at': 61, 'released': [], ...}), ('err', 'corrupt_queue', 'corrupt_queue'))
+
+=== reverify.log lines around row 43 ===
+18:43 136 survivor killed MISMATCH
+
+=== MATCH semantics: column3=class recorded in IMMUTABLE incident TSV; column4=class from clean isolated rerun in /tmp/rv-repo@5960a36 with mut_extra's identical pytest command + crash regex; MATCH iff equal. Row43: incident=survivor, rerun=killed -> MISMATCH (expected: incident row was corrupt; owner's own clean rerun also KILLED, 2 failed 45 passed, backup c2c04317). ===
