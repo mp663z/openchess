@@ -1,0 +1,93 @@
+# provenance fp=5d1559f8492522c5a3a36550fdb224601b8e6bd61d561c0551c1692a92815959;775000be43314cbf746e21c104f6a763e0e110575642ee356c0b4c54bd345e9e;779459998bc7cf0336d46b08939ad77df08abcc40102701fb13b5eee6b979b76 git_head=d5487a9a043831bd8ac662e877343d59879fae2f
+37	crash	_FIELDS = _REQ["operations"][0]["fields"]	_FIELDS = _REQ["operations"][1]["fields"]	IndexError: list index out of range
+37	crash	_FIELDS = _REQ["operations"][0]["fields"]	_FIELDS = _REQ["operations"][2]["fields"]	IndexError: list index out of range
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**53 - 0	AssertionError: ('job 0 lease_expires_at=9007199254740992', ('ok', {'op': 'resta
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**53 + 1	AssertionError: ('job 0 lease_expires_at=9007199254740992', ('ok', {'op': 'resta
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2*53 - 1	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 3**53 - 1	AssertionError: ('job 0 lease_expires_at=9007199254740992', ('ok', {'op': 'resta
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 1**53 - 1	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**54 - 1	AssertionError: ('job 0 lease_expires_at=9007199254740992', ('ok', {'op': 'resta
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**52 - 1	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**53 - 2	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+49	killed	MAX_NOW = 2**53 - 1	MAX_NOW = 2**53 - 3	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+50	killed	MAX_JOBS = 10000	MAX_JOBS = 10001	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+50	killed	MAX_JOBS = 10000	MAX_JOBS = 9999	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+51	killed	MAX_PRIORITY = 9	MAX_PRIORITY = 10	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+51	killed	MAX_PRIORITY = 9	MAX_PRIORITY = 8	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+52	killed	MAX_DEPTH = 64	MAX_DEPTH = 65	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+52	killed	MAX_DEPTH = 64	MAX_DEPTH = 63	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+53	killed	MAX_DIGITS = 4000	MAX_DIGITS = 4001	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+53	killed	MAX_DIGITS = 4000	MAX_DIGITS = 3999	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+54	survivor	MAX_BITS = 13288	MAX_BITS = 13289	
+54	killed	MAX_BITS = 13288	MAX_BITS = 13287	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+74	survivor	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)	
+78	killed	return type(value) is int and lo <= value <= hi	return type(value) is int and lo < value <= hi	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'corr
+78	killed	return type(value) is int and lo <= value <= hi	return type(value) is int and lo <= value < hi	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+78	crash	return type(value) is int and lo <= value <= hi	return type(value) is int or lo <= value <= hi	TypeError: '<=' not supported between instances of 'int' and 'NoneType'
+82	crash	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str or regex.fullmatch(value) is not None	TypeError: expected string or bytes-like object
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.fullmatch(value) is None	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+90	crash	and all(type(k) is str for k in mapping)	or all(type(k) is str for k in mapping)	KeyError: 'jobs'
+91	killed	and set(mapping) == set(fields)	and set(mapping) != set(fields)	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+91	crash	and set(mapping) == set(fields)	or set(mapping) == set(fields)	KeyError: 'jobs'
+97	killed	if node is None or kind is bool:	if node is None and kind is bool:	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+97	killed	if node is None or kind is bool:	if node is not None or kind is bool:	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+98	killed	return True	return False	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+100	killed	if node.bit_length() > MAX_BITS:	if node.bit_length() >= MAX_BITS:	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+101	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+104	killed	ok = len(str(abs(node))) <= MAX_DIGITS	ok = len(str(abs(node))) < MAX_DIGITS	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+113	killed	node.encode("utf-8")	node.encode("utf-9")	LookupError: unknown encoding: utf-9
+113	survivor	node.encode("utf-8")	node.encode("utf-7")	
+117	killed	return False	return True	AssertionError: ((0, 'jobs', 0, 'payload'), ('ok', {'op': 'restart', 'worker': '
+125	killed	stack = [(root, 1)]	stack = [(root, 2)]	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+125	killed	stack = [(root, 1)]	stack = [(root, 3)]	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+125	killed	stack = [(root, 1)]	stack = [(root, 0)]	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+129	killed	if kind is list or kind is dict:	if kind is list and kind is dict:	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+130	killed	if depth > MAX_DEPTH or id(node) in seen:	if depth >= MAX_DEPTH or id(node) in seen:	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+130	killed	if depth > MAX_DEPTH or id(node) in seen:	if depth > MAX_DEPTH and id(node) in seen:	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+131	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+135	survivor	if type(key) is not str or not _scalar_ok(key):	if type(key) is not str and not _scalar_ok(key):	
+135	killed	if type(key) is not str or not _scalar_ok(key):	if type(key) is str or not _scalar_ok(key):	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+135	killed	if type(key) is not str or not _scalar_ok(key):	if type(key) is not str or _scalar_ok(key):	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+136	killed	return False	return True	AssertionError: ((0, 'jobs', 0, 'payload', ('key', 'n')), ('ok', {'op': 'restart
+137	killed	stack.append((value, depth + 1))	stack.append((value, depth + 0))	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+137	killed	stack.append((value, depth + 1))	stack.append((value, depth - 1))	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+137	killed	stack.append((value, depth + 1))	stack.append((value, depth + 2))	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+137	killed	stack.append((value, depth + 1))	stack.append((value, depth + 3))	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+140	killed	stack.append((value, depth + 1))	stack.append((value, depth + 0))	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+140	killed	stack.append((value, depth + 1))	stack.append((value, depth - 1))	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+140	killed	stack.append((value, depth + 1))	stack.append((value, depth + 2))	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+140	killed	stack.append((value, depth + 1))	stack.append((value, depth + 3))	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+141	killed	elif not _scalar_ok(node):	elif _scalar_ok(node):	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+142	killed	return False	return True	AssertionError: ((0, 'jobs', 0, 'payload'), ('ok', {'op': 'restart', 'worker': '
+143	killed	return True	return False	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+147	killed	if not _exact_keys(request, _FIELDS):	if _exact_keys(request, _FIELDS):	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+148	killed	return False	return True	AssertionError: ('request drop op', ('ok', {'op': 'restart', 'worker': 'w1', 're
+151	killed	and request["op"] == "restart"	and request["op"] != "restart"	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+151	killed	and request["op"] == "restart"	or request["op"] == "restart"	AssertionError: ('now=-1', ('ok', {'op': 'restart', 'worker': 'w1', 'restarted_a
+152	killed	and _grammar(request["worker"], _WORKER_RE)	or _grammar(request["worker"], _WORKER_RE)	AssertionError: ('now=-1', ('ok', {'op': 'restart', 'worker': 'w1', 'restarted_a
+153	killed	and _int_in(request["now"], 0, MAX_NOW)	or _int_in(request["now"], 0, MAX_NOW)	AssertionError: ('now=-1', ('ok', {'op': 'restart', 'worker': 'w1', 'restarted_a
+153	killed	and _int_in(request["now"], 0, MAX_NOW)	and _int_in(request["now"], 1, MAX_NOW)	AssertionError: (0, {'op': 'restart', 'worker': 'w3', 'now': 0}, ('err', 'malfor
+153	killed	and _int_in(request["now"], 0, MAX_NOW)	and _int_in(request["now"], 2, MAX_NOW)	AssertionError: (0, {'op': 'restart', 'worker': 'w3', 'now': 1}, ('err', 'malfor
+158	killed	if not _exact_keys(job, _JOB_FIELDS):	if _exact_keys(job, _JOB_FIELDS):	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+159	killed	return False	return True	AssertionError: ('job 0 drop attempts', ('ok', {'op': 'restart', 'worker': 'w1',
+162	killed	if not (	if (	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+164	crash	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	or _int_in(job["seq"], prior_seq + 1, next_seq - 1)	TypeError: '>=' not supported between instances of 'NoneType' and 'int'
+164	killed	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	and _int_in(job["seq"], prior_seq + 0, next_seq - 1)	AssertionError: ('job 0 seq=-1', ('ok', {'op': 'restart', 'worker': 'w1', 'resta
+164	killed	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	and _int_in(job["seq"], prior_seq + 1, next_seq - 0)	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+164	killed	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	and _int_in(job["seq"], prior_seq + 1, next_seq + 1)	AssertionError: ('job 4 seq=6', ('ok', {'op': 'restart', 'worker': 'w1', 'restar
+164	killed	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	and _int_in(job["seq"], prior_seq - 1, next_seq - 1)	AssertionError: ('job 0 seq=-1', ('ok', {'op': 'restart', 'worker': 'w1', 'resta
+164	killed	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	and _int_in(job["seq"], prior_seq + 2, next_seq - 1)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+164	killed	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	and _int_in(job["seq"], prior_seq + 1, next_seq - 2)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+164	killed	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	and _int_in(job["seq"], prior_seq + 3, next_seq - 1)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+164	killed	and _int_in(job["seq"], prior_seq + 1, next_seq - 1)	and _int_in(job["seq"], prior_seq + 1, next_seq - 3)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+165	crash	and _int_in(job["priority"], 0, MAX_PRIORITY)	or _int_in(job["priority"], 0, MAX_PRIORITY)	TypeError: '>=' not supported between instances of 'NoneType' and 'int'
+165	killed	and _int_in(job["priority"], 0, MAX_PRIORITY)	and _int_in(job["priority"], 1, MAX_PRIORITY)	AssertionError: (22, {'op': 'restart', 'worker': 'w1', 'now': 706}, ('err', 'cor
+165	killed	and _int_in(job["priority"], 0, MAX_PRIORITY)	and _int_in(job["priority"], 2, MAX_PRIORITY)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+166	crash	and type(status) is str	or type(status) is str	TypeError: '>=' not supported between instances of 'NoneType' and 'int'
+167	crash	and status in _STATUSES	or status in _STATUSES	TypeError: '>=' not supported between instances of 'NoneType' and 'int'
+168	crash	and _int_in(attempts, 0, MAX_ATTEMPTS)	or _int_in(attempts, 0, MAX_ATTEMPTS)	TypeError: '>=' not supported between instances of 'NoneType' and 'int'
+168	killed	and _int_in(attempts, 0, MAX_ATTEMPTS)	and _int_in(attempts, 1, MAX_ATTEMPTS)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+168	killed	and _int_in(attempts, 0, MAX_ATTEMPTS)	and _int_in(attempts, 2, MAX_ATTEMPTS)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+170	killed	return False	return True	AssertionError: ('job 0 attempts=None', ('ok', {'op': 'restart', 'worker': 'w1',
+171	killed	if status == "leased":	if status != "leased":	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+172	killed	if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts >= 1):	if not (_grammar(owner, _WORKER_RE) and _int_in(expires, 1, MAX_NOW) and attempts > 1):	AssertionError: (5, {'op': 'restart', 'worker': 'w3', 'now': 171}, ('err', 'corr
