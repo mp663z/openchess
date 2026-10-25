@@ -1,0 +1,4 @@
+non-ascii worker field   DISTINGUISHES  orig=rst1:e5e50423dcd182dfb86df mut=rst1:79617b4cd757e646bc7e0
+plus field               DISTINGUISHES  orig=rst1:b0d997c3f6c06c86d8c64 mut=rst1:dc6de8431a1bcbfe455bf
+ascii only               same  orig=rst1:414e59c4e5db1824b6ce8 mut=rst1:414e59c4e5db1824b6ce8
+lone-surrogate field     DISTINGUISHES  orig=rst1:2b119e9fcc60f013d9aaf mut=rst1:cda8298ec204d13efc3f6 (json ensure_ascii escapes it, so no raise)
