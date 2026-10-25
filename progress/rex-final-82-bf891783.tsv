@@ -1,0 +1,83 @@
+# provenance fp=5d1559f8492522c5a3a36550fdb224601b8e6bd61d561c0551c1692a92815959;deeac9029138106f9ebff48bcf6cc5435a0c32757482f621cb29f1902df80d85;6b3a9625f5a718d1ebc46c1aac5cb7f55f5a30baafa6cab2eb8b6b8e49bde7f9 git_head=5960a36a02c9ce8549f1d9d745e7400fef9a787f
+65	killed	self.retryable = False	self.retryable = True	_restart_copy_1540_jobs_restart.RestartError: corrupt_queue
+70	killed	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)	return json.dumps(obj, sort_keys=False, separators=(",", ":"), ensure_ascii=False)	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('ok', {'op':
+70	killed	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)	AssertionError: assert 'qs1:707714ba...598e4c61875c1' == 'qs1:0e66e276...9aeed4a
+74	killed	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)	return json.dumps(obj, sort_keys=False, separators=(",", ":"), ensure_ascii=True)	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('ok', {'op':
+74	killed	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)	return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)	AssertionError: assert 'rst1:7a20b55...c97149bc3c7d3' == 'rst1:e5e5042...5d48b58
+78	killed	return type(value) is int and lo <= value <= hi	return type(value) is not int and lo <= value <= hi	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+78	crash	return type(value) is int and lo <= value <= hi	return isinstance(value) is int and lo <= value <= hi	TypeError: isinstance expected 2 arguments, got 1
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.fullmatch(value) is not 0	AssertionError: ("job 0 job_id='x'", ('ok', {'op': 'restart', 'worker': 'w1', 'r
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.fullmatch(value) is None	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is not str and regex.fullmatch(value) is not None	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.fullmatch(value) is not not None	File "/tmp/wi-restart/server/jobs_restart.py", line 82
+82	killed	return type(value) is str and regex.fullmatch(value) is not None	return type(value) is str and regex.match(value) is not None	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+82	crash	return type(value) is str and regex.fullmatch(value) is not None	return isinstance(value) is str and regex.fullmatch(value) is not None	TypeError: isinstance expected 2 arguments, got 1
+89	killed	type(mapping) is dict	type(mapping) is not dict	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+89	crash	type(mapping) is dict	isinstance(mapping) is dict	TypeError: isinstance expected 2 arguments, got 1
+90	killed	and all(type(k) is str for k in mapping)	and all(type(k) is not str for k in mapping)	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+90	killed	and all(type(k) is str for k in mapping)	and all(type(k) is str for k not in mapping)	File "/tmp/wi-restart/server/jobs_restart.py", line 90
+90	crash	and all(type(k) is str for k in mapping)	and all(isinstance(k) is str for k in mapping)	TypeError: isinstance expected 2 arguments, got 1
+96	crash	kind = type(node)	kind = isinstance(node)	TypeError: isinstance expected 2 arguments, got 1
+97	killed	if node is None or kind is bool:	if node is 0 or kind is bool:	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+97	killed	if node is None or kind is bool:	if node is not None or kind is bool:	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+97	killed	if node is None or kind is bool:	if node is None or kind is not bool:	AssertionError: ('job 0 payload=True', ('err', 'corrupt_queue', 'corrupt_queue')
+98	killed	return True	return False	AssertionError: ('job 0 payload=None', ('err', 'corrupt_queue', 'corrupt_queue')
+99	crash	if kind is int:	if kind is not int:	AttributeError: 'str' object has no attribute 'bit_length'
+101	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+102	survivor	ok = False	ok = True	
+106	survivor	ok = False	ok = True	
+108	crash	if kind is float:	if kind is not float:	TypeError: must be real number, not str
+110	killed	if kind is str:	if kind is not str:	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+111	killed	ok = True	ok = False	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+115	crash	ok = False	ok = True	UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 16
+117	killed	return False	return True	AssertionError: ((0, 'jobs', 0, 'payload'), ('ok', {'op': 'restart', 'worker': '
+128	crash	kind = type(node)	kind = isinstance(node)	TypeError: isinstance expected 2 arguments, got 1
+129	crash	if kind is list or kind is dict:	if kind is not list or kind is dict:	TypeError: descriptor '__iter__' requires a 'list' object but received a 'int'
+129	killed	if kind is list or kind is dict:	if kind is list or kind is not dict:	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+130	killed	if depth > MAX_DEPTH or id(node) in seen:	if depth > MAX_DEPTH or id(node) not in seen:	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+131	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+133	crash	if kind is dict:	if kind is not dict:	TypeError: descriptor '__iter__' requires a 'list' object but received a 'dict'
+134	killed	for key, value in dict.items(node):	for key, value not in dict.items(node):	File "/tmp/wi-restart/server/jobs_restart.py", line 134
+135	killed	if type(key) is not str or not _scalar_ok(key):	if type(key) is str or not _scalar_ok(key):	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+135	killed	if type(key) is not str or not _scalar_ok(key):	if type(key) is not not str or not _scalar_ok(key):	File "/tmp/wi-restart/server/jobs_restart.py", line 135
+135	crash	if type(key) is not str or not _scalar_ok(key):	if isinstance(key) is not str or not _scalar_ok(key):	TypeError: isinstance expected 2 arguments, got 1
+136	survivor	return False	return True	
+139	killed	for value in list.__iter__(node):	for value not in list.__iter__(node):	File "/tmp/wi-restart/server/jobs_restart.py", line 139
+142	killed	return False	return True	AssertionError: ((0, 'jobs', 0, 'payload'), ('ok', {'op': 'restart', 'worker': '
+143	killed	return True	return False	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+148	killed	return False	return True	AssertionError: ('request drop op', ('ok', {'op': 'restart', 'worker': 'w1', 're
+150	killed	type(request["op"]) is str	type(request["op"]) is not str	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'malf
+150	crash	type(request["op"]) is str	isinstance(request["op"]) is str	TypeError: isinstance expected 2 arguments, got 1
+159	killed	return False	return True	AssertionError: ('job 0 drop attempts', ('ok', {'op': 'restart', 'worker': 'w1',
+166	killed	and type(status) is str	and type(status) is not str	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+166	crash	and type(status) is str	and isinstance(status) is str	TypeError: isinstance expected 2 arguments, got 1
+167	killed	and status in _STATUSES	and status not in _STATUSES	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+170	killed	return False	return True	AssertionError: ('job 0 attempts=None', ('ok', {'op': 'restart', 'worker': 'w1',
+173	killed	return False	return True	AssertionError: ('job 0 attempts=0', ('ok', {'op': 'restart', 'worker': 'w1', 'r
+174	killed	elif owner is not None or expires is not None:	elif owner is not 0 or expires is not None:	AssertionError: assert ('err' == 'ok'
+174	killed	elif owner is not None or expires is not None:	elif owner is not None or expires is not 0:	AssertionError: assert ('err' == 'ok'
+174	killed	elif owner is not None or expires is not None:	elif owner is None or expires is not None:	AssertionError: assert ('err' == 'ok'
+174	killed	elif owner is not None or expires is not None:	elif owner is not None or expires is None:	AssertionError: assert ('err' == 'ok'
+174	killed	elif owner is not None or expires is not None:	elif owner is not not None or expires is not None:	File "/tmp/wi-restart/server/jobs_restart.py", line 174
+174	killed	elif owner is not None or expires is not None:	elif owner is not None or expires is not not None:	File "/tmp/wi-restart/server/jobs_restart.py", line 174
+175	killed	return False	return True	AssertionError: ('job 1 lease_expires_at=-1', ('ok', {'op': 'restart', 'worker':
+177	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+179	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+185	crash	return False	return True	KeyError: 'jobs'
+187	killed	if type(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	if type(jobs) is list or not _int_in(next_seq, 0, MAX_NOW):	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'corr
+187	killed	if type(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	if type(jobs) is not not list or not _int_in(next_seq, 0, MAX_NOW):	File "/tmp/wi-restart/server/jobs_restart.py", line 187
+187	crash	if type(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	if isinstance(jobs) is not list or not _int_in(next_seq, 0, MAX_NOW):	TypeError: isinstance expected 2 arguments, got 1
+188	killed	return False	return True	AssertionError: ('next_seq=-1', ('ok', {'op': 'restart', 'worker': 'w1', 'restar
+190	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+192	killed	for job in list.__iter__(jobs):	for job not in list.__iter__(jobs):	File "/tmp/wi-restart/server/jobs_restart.py", line 192
+194	killed	return False	return True	AssertionError: ('job 0 drop attempts', ('ok', {'op': 'restart', 'worker': 'w1',
+195	killed	if job["job_id"] in seen_ids:	if job["job_id"] not in seen_ids:	AssertionError: (2, {'op': 'restart', 'worker': 'w2', 'now': 170}, ('err', 'corr
+196	killed	return False	return True	AssertionError: ({'jobs': [{'job_id': 'job1:39aa8ad91fce19849fff4a4731c272f6f799
+199	killed	return True	return False	AssertionError: (0, {'op': 'restart', 'worker': 'w2', 'now': 150}, ('err', 'corr
+214	crash	failed = None	failed = 0	KeyError: 0
+219	crash	if failed is not None:	if failed is not 0:	KeyError: None
+219	crash	if failed is not None:	if failed is None:	KeyError: None
+219	killed	if failed is not None:	if failed is not not None:	File "/tmp/wi-restart/server/jobs_restart.py", line 219
+225	killed	for job in work["jobs"]:	for job not in work["jobs"]:	File "/tmp/wi-restart/server/jobs_restart.py", line 225
+231	killed	job.update(status="ready", lease_owner=None, lease_expires_at=None)	job.update(status="ready", lease_owner=0, lease_expires_at=None)	AssertionError: assert ('err' == 'ok'
+231	killed	job.update(status="ready", lease_owner=None, lease_expires_at=None)	job.update(status="ready", lease_owner=None, lease_expires_at=0)	AssertionError: assert ('err' == 'ok'
