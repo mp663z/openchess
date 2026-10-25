@@ -67,12 +67,30 @@ line-scoped mutation application verified against source text):
 - row 61 (L174): SyntaxError ("is not not") = killed, MATCH
 Samples span early/mid/late range and all three verdict classes.
 
-ADJUDICATION: the 01:15:24 interference caused exactly one invalid artifact row:
-row 43, recorded survivor, true verdict KILLED (two independent clean re-runs).
-All other rows in the at-risk range reproduce. Incident scope CLOSED.
+ADJUDICATION (bounded): the observed artifact-level effect of the 01:15:24
+interference is exactly one classification difference: row 43, recorded survivor,
+true verdict KILLED (two independent clean re-runs). All 36 at-risk rows
+reproduced their recorded class except row 43 (35/36 in Lane B's isolated
+reverify, 7/7 in owner samples). This supports the observed single-row
+classification difference; it is not a proof that no subtler execution
+interference occurred anywhere, and no such other effect was observed.
+Incident scope CLOSED on that bounded basis.
 
-Final mut_extra census (incident-corrected): 82 unique mutants =
-61 killed + 19 crash + 2 survivors. Both survivors proven EQUIVALENT:
-L102 (dead store, unconditional) and L106 (except branch unreachable under the
-MAX_BITS guard, conditional on default sys.get_int_max_str_digits()=4300 - the
-equivalence is environment-qualified and docs must carry that qualifier).
+Corrected census figures (owner-recomputed, supersedes earlier aggregates):
+- Sweep RECORDS: main 149 + extra 82 = 231 records. UNIQUE mutants across both
+  batteries on (line, orig, mut): 203 (28 records appear in both batteries;
+  the extra battery's marginal contribution is 54 new mutants). The two
+  batteries also ran different test suites (main 775000be, extra deeac902
+  strengthened), so cross-battery records are not interchangeable evidence.
+- Extra battery, incident-corrected: 50 semantic kills + 11 syntax kills +
+  19 crash + 2 equivalent survivors = 82. Syntax kills (SyntaxError on import,
+  e.g. 'is not not', 'for value not in') are reported distinctly from semantic
+  behavioral kills (AssertionError) even though the sweep harness labels both
+  'killed'.
+- Main battery: 126 semantic kills + 17 crash + 6 survivors = 149 (0 syntax
+  kills by the col5 signature heuristic).
+- Survivors, all adjudicated: main L74/L113/L135/L203/L207 killed by the
+  strengthened battery (3 in-domain + 2 helper-level-only), main L54
+  EQUIVALENT (digit-check subsumption), extra L102 EQUIVALENT (dead store,
+  unconditional), extra L106 EQUIVALENT environment-qualified (default
+  sys.get_int_max_str_digits()=4300 only).
