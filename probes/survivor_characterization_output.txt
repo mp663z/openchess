@@ -1,0 +1,49 @@
+=== L54 MAX_BITS+1 (pre-screen) ===
+digits(2^13288) = 4001 vs MAX_DIGITS = 4000; ceil(4000*log2(10)) = 13288
+  2^13288 (bl 13289)           orig=False mut=False same
+  2^13289-1 (bl 13289)         orig=False mut=False same
+  -(2^13288)                   orig=False mut=False same
+  10^4000 (4001 digits)        orig=False mut=False same
+  10^4000-1 (4000 digits)      orig=True mut=True same
+  2^13288-1 (bl 13288)         orig=False mut=False same
+  5                            orig=True mut=True same
+  VERDICT: no distinguishing input exists - every int with bit_length 13289 has >=4001 digits,
+  so the digit check rejects exactly what the relaxed pre-screen admits. EQUIVALENT (domain: all ints).
+=== L74 _canon_receipt ensure_ascii True->False ===
+  non-ascii field    DISTINGUISHES  orig='{"note":"h\\u00e9llo","op":"restart","worker":"w1"}' mut='{"note":"héllo","op":"restart","worker":"w1"}'
+  plus field         same  orig='{"note":"a+b","op":"restart","worker":"w1"}' mut='{"note":"a+b","op":"restart","worker":"w1"}'
+  ascii only         same  orig='{"note":"abc","op":"restart","worker":"w1"}' mut='{"note":"abc","op":"restart","worker":"w1"}'
+  VERDICT: NON-EQUIVALENT - non-ASCII receipt fields change canonical bytes and restart-id hash.
+=== L113 _scalar_ok encode utf-8 -> utf-7 ===
+  lone surrogate \ud800      orig=False mut=True DISTINGUISHES
+  lone surrogate \udc00      orig=False mut=True DISTINGUISHES
+  non-ascii 'héllo'          orig=True mut=True same
+  plus 'a+b'                 orig=True mut=True same
+  plain 'abc'                orig=True mut=True same
+  VERDICT: NON-EQUIVALENT - utf-7 encodes lone surrogates (no error) where utf-8 raises;
+  mutant accepts malformed surrogate strings the original rejects. Validation bypass.
+=== L135 dict-key guard or -> and ===
+  {5:'x'} int key                orig=False mut=True DISTINGUISHES
+  {1.5:'x'} float key            orig=False mut=True DISTINGUISHES
+  {True:'x'} bool key            orig=False mut=True DISTINGUISHES
+  {None:'x'}                     orig=False mut=True DISTINGUISHES
+  {'a':{1:2}} nested int key     orig=False mut=True DISTINGUISHES
+  {(1,2):'x'} tuple key          orig=False mut=False same
+  {10**5000:'x'} huge-int key    orig=False mut=False same
+  {'a':'x'} str key              orig=True mut=True same
+  VERDICT: NON-EQUIVALENT - non-str scalar keys (int/float/bool/None, incl. nested) pass the mutant.
+=== L203 _state_id encode utf-8 -> utf-7 ===
+  payload non-ascii    DISTINGUISHES  orig=qs1:0e66e276ab30ad8e39d0 mut=qs1:d6949c14475da5d6b198
+  payload plus         DISTINGUISHES  orig=qs1:ece512e546a976b7b422 mut=qs1:7c25016723e10e30aa8d
+  payload ascii        same  orig=qs1:860ab725bfe9c12d15e7 mut=qs1:860ab725bfe9c12d15e7
+  empty                same  orig=qs1:0a5796e93f9b57ddf7c4 mut=qs1:0a5796e93f9b57ddf7c4
+  VERDICT: NON-EQUIVALENT - non-ASCII or '+' payload content changes the qs1 queue-state id;
+  same logical queue hashes differently (dedup/idempotency break). utf-7 also differs on '+'.
+
+utf-7 vs utf-8 codec edge behavior (Python 3.10.12):
+  lone high surrogate    utf-8=RAISES | utf-7=b'+2AA-'
+  lone low surrogate     utf-8=RAISES | utf-7=b'+3AA-'
+  paired U+1D11E         utf-8=b'\xf0\x9d\x84\x9e' | utf-7=b'+2DTdHg-'
+  non-ascii 'héllo'      utf-8=b'h\xc3\xa9llo' | utf-7=b'h+AOk-llo'
+  plus 'a+b'             utf-8=b'a+b' | utf-7=b'a+-b'
+  ascii                  utf-8=b'abc' | utf-7=b'abc'
