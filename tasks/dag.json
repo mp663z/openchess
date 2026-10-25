@@ -7642,8 +7642,10 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
+   "done_sha": "466001068f3d8a1c699622461fabad4b31c292e1",
+   "evidence_manifest": "evidence/T0353.md",
    "spine_outcome": "non-spine enabler",
    "roadmap_layer": "Layer 1 - 2027 core/enabler"
   },
