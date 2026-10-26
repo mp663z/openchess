@@ -1406,6 +1406,7 @@ def _m(name, bad, fix):  # noqa: C901 - one closed branch per tag
     elif name == "renamed_field":
         _renamed(bad, fix, "now", "at")
     elif name == "job_extra_field":
+        assert _same_type_eq(bad["job"]["note"], "x")
         _only(bad, fix, ("job", "note"))
     elif name == "job_renamed_field":
         _renamed(bad["job"], fix["job"], "payload", "data")
@@ -1789,6 +1790,7 @@ _CLOSURE_MUTANTS = {
     "job_not_a_dict_repair_attempts_retyped_bool": lambda c: _bn(c, "malformed", "job_not_a_dict")[
         "minimal_repair"
     ]["request"]["job"].update(attempts=False),
+    "job_extra_field_note_retyped_bool": _bad_job("job_extra_field", note=False),
     "payload_4001_joint_retyped_str": lambda c: (
         _bn(c, "malformed", "payload_int_4001_digits")["request"]["job"]["payload"].update(
             n="9" * 4001
