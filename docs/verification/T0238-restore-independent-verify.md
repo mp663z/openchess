@@ -95,10 +95,11 @@ production, and the production binding switch is exactly its two lines
   pinned restore record exactly (the restored state compared order-
   sensitively), deterministic by value over fresh copies (never the same
   object, no shared container), exactly ONE parser call with the
-  receipt's own bundle, and the receipt untouched by value AND object
-  identity (exact snapshot: type, id, length and key order of every
-  container, key identity, scalar type+value) with no container shared
-  between the result and the input. malformed: the original receipt
+  receipt's own bundle, and the receipt untouched by value AND container
+  identity (exact snapshot: container type, id, length and key order;
+  exact-str keys compared by TEXT, non-str keys by type and id; scalar
+  type+value) with no container shared between the result and the
+  input. malformed: the original receipt
   rejects with the pinned failure class and its mapped code, the receipt
   untouched, and the declared minimal repair is accepted WITH THE RECORD
   THE REFERENCE DERIVES for the repaired input. rollback: a rejection
