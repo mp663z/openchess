@@ -1825,8 +1825,8 @@ def _section_of(cases, row):
 @pytest.mark.parametrize("mutant", list(_CLOSURE_MUTANTS))
 @pytest.mark.parametrize("digests", [True, False], ids=["with-digests", "closure-only"])
 def test_closure_kills_substitution_mutants(mutant, digests, monkeypatch):
-    """Every substitution is caught - and caught by the semantic closure
-    ALONE, not only by the row digest table."""
+    """Every named substitution mutant is caught - and caught by the
+    semantic closure ALONE, not only by the row digest table."""
     cases = copy.deepcopy(CASES)
     _CLOSURE_MUTANTS[mutant](cases)
     if not digests:
