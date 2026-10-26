@@ -74,6 +74,32 @@ def probe(module):
     visible = json.dumps(view(tracer))
     assert "synthetic-private" not in visible and "fixture" not in visible
 
+    class HostileTracer(module.LimitTracer):
+        getter_calls = []
+
+        @property
+        def _trace(self):
+            type(self).getter_calls.append("get")
+            raise KeyboardInterrupt("diagnostics hook")
+
+        @_trace.setter
+        def _trace(self, value):
+            object.__setattr__(self, "_real_trace", value)
+
+    hostile_engine = Engine(result)
+    hostile = HostileTracer(hostile_engine)
+    got = boundary(hostile.admit, request)
+    assert got[0] == "ok" and got[1] is result
+    reject = policy.LimitError("malformed_limit_request")
+    hostile_engine.error = reject
+    got = boundary(hostile.admit, request)
+    assert got[0] == "reject" and got[1] is reject
+    crash = AssertionError("synthetic-private-crash")
+    hostile_engine.error = crash
+    got = boundary(hostile.admit, request)
+    assert got[0] == "crash" and got[1] is crash
+    assert HostileTracer.getter_calls == ["get", "get", "get"]
+
 
 def test_identity_exact_outcomes_and_content_free_detached_trace():
     probe(production)
@@ -178,6 +204,13 @@ EDITS = [
     ),
     ("sequence", '"seq": list.__len__(trace)', '"seq": 0'),
     ("disclosure", '"outcome": outcome', '"outcome": outcome, "private": "fixture"'),
+    (
+        "swallow-scope",
+        "except BaseException:\n"
+        "            pass  # diagnostics must never replace a policy result or exception",
+        "except Exception:\n"
+        "            pass  # diagnostics must never replace a policy result or exception",
+    ),
 ]
 
 
