@@ -29,3 +29,13 @@ tamper-evident bucket record.
 `server/jobs_restart.py` implements `data/contracts/restart.yaml`: a restart
 releases a worker's live leases back to ready on a queue state, with a
 content-addressed receipt and an in-place commit last.
+
+`server/jobs_idempotency.py` implements
+`data/contracts/jobs_idempotency.yaml`: exactly-once application of
+jobs-queue transitions under caller-supplied idempotency keys, composing
+`server/jobs_queue`. Requests, queue state and the receipt ledger are
+validated in that order; an untrusted caller fingerprinter is called
+exactly once on a detached copy and fails closed; deduplication is
+key-then-fingerprint; the queue transition and its receipt commit
+together last, and queue rejections propagate unwrapped with the queue
+contract's own codes.
