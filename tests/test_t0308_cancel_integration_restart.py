@@ -12,14 +12,25 @@ uninterrupted streams must agree with each other and with the contract's
 reference implementation (`tests.test_t0302_cancel_contract`), the
 differential oracle. Replaying a seeded stream after restarts gives
 identical outcomes, and decision ids are unique per distinct request.
-Every call through the harness is checked to leave its input structurally
-identical (a serialized-value snapshot before and after, not a
-hostile-identity proof), accepted and refused alike. Forged requests
-(built from request fields only: cancel carries no previous record) are
-refused with the oracle's class and code, and the stream then continues. A truncated
-durable file is a host-level JSON error and never reaches the engine;
-the last good file stays usable. Seeded and single-threaded, so a
-failure replays.
+Every call through the harness passes the actual request object and is
+checked to leave that same object structurally identical (a
+serialized-value snapshot before and after, not a hostile-identity
+proof), accepted and refused alike;
+`test_the_purity_snapshot_catches_an_outcome_preserving_scribble_on_both_paths`
+pins that this snapshot is load-bearing, not incidental: a wrapper that
+mutates its actual argument on the accepted path or the typed-refusal
+path fails the harness. One disclosed exception: the Unicode preimage
+row makes one direct production call outside `_outcome` on a
+test-literal input. Forged requests (built from request fields only:
+cancel carries no previous record) are refused with the oracle's class
+and code, and the stream then continues: after the refusal window a
+valid follow-up on the reloaded file succeeds, matches the oracle, and
+advances the persisted log. A truncated durable file is a host-level
+JSON error and never reaches the engine; the test restores the captured
+last-good bytes by hand (no automatic recovery is claimed) and the
+restored file stays usable. Decision-id uniqueness is checked over the
+finite generated request domain of the replay seeds, not universally.
+Seeded and single-threaded, so a failure replays.
 """
 
 from __future__ import annotations
@@ -71,7 +82,7 @@ def make_request(rng, durable):
 
 def absorb(durable, request, out):
     if out[0] == "ok":
-        durable["log"].append(out[1]["decision_id"])
+        durable["log"].append(copy.deepcopy(out[1]))  # the decision record itself
         durable["n"] += 1
 
 
@@ -109,7 +120,7 @@ def test_a_restart_never_touches_the_canonical_production_module():
 def _outcome(fn, request, err_cls):
     before = _isnap(request)
     try:
-        out = ("ok", fn(copy.deepcopy(request)))
+        out = ("ok", fn(request))
     except err_cls as error:
         assert type(error) is err_cls
         assert error.__cause__ is None and error.__context__ is None
@@ -197,16 +208,22 @@ def test_single_restart_at_a_random_cut_point(seed, tmp_path):
 
 
 CHILD = r"""
-import copy, importlib.util, json, sys
+import importlib.util, json, sys
 spec = importlib.util.spec_from_file_location("jobs_cancel_child", sys.argv[1])
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 durable = json.loads(sys.argv[2])
 request = json.loads(sys.argv[3])
+before = json.dumps(request, sort_keys=True)
 try:
-    print(json.dumps(("ok", m.cancel(copy.deepcopy(request)))))
+    record = m.cancel(request)
+    out = ("ok", record)
+    durable["log"].append(record)
+    durable["n"] += 1
 except m.CancelError as e:
-    print(json.dumps(("fail", e.failure_class, e.code)))
+    out = ("fail", e.failure_class, e.code)
+assert json.dumps(request, sort_keys=True) == before, "child input changed"
+print(json.dumps((out, durable)))
 """
 
 
@@ -223,10 +240,11 @@ def test_steps_in_a_real_child_interpreter_match_the_in_process_run(seed, tmp_pa
             timeout=60,
         )
         assert out.returncode == 0, out.stderr
-        child = json.loads(out.stdout)
+        child_out, child_durable = json.loads(out.stdout)
         prod = _outcome(PROD, request, PROD_ERR)
-        assert _typed(tuple(child)) == _typed(prod)
+        assert _typed(tuple(child_out)) == _typed(prod)
         absorb(durable, request, prod)
+        assert _typed(child_durable) == _typed(durable), "child durable diverged"
 
 
 @pytest.mark.parametrize("seed", range(6))
@@ -285,6 +303,15 @@ def test_a_refused_step_changes_nothing_durable_and_the_stream_continues(tmp_pat
         if name != "valid":
             assert out[0] == "fail", (name, out)
         assert _load(path) == baseline, f"{name} changed the durable file"
+    # a valid follow-up on the reloaded file must succeed and advance the stream
+    loaded = _load(path)
+    follow = make_request(rng, loaded)
+    out = _outcome(PROD, follow, PROD_ERR)
+    ref = _outcome(REF, copy.deepcopy(follow), REF_ERR)
+    assert _typed(out) == _typed(ref) and out[0] == "ok", (out, ref)
+    absorb(loaded, follow, out)
+    _save(path, loaded)
+    assert len(_load(path)["log"]) == len(baseline["log"]) + 1
 
 
 def test_a_truncated_durable_file_is_a_host_error_and_the_last_good_value_still_works(tmp_path):
@@ -303,11 +330,12 @@ def test_a_truncated_durable_file_is_a_host_error_and_the_last_good_value_still_
     loaded = _load(path)
     assert _typed(loaded) == _typed(durable)
     request = make_request(rng, loaded)
-    out = _outcome(_fresh_module().cancel, request, _fresh_module().CancelError)
+    fresh = _fresh_module()
+    out = _outcome(fresh.cancel, request, fresh.CancelError)
     assert out[0] == "ok"
 
 
-def test_persisted_unicode_payload_record_round_trips_with_ascii_escaped_preimage():
+def test_persisted_unicode_payload_record_round_trips_with_ascii_escaped_preimage(tmp_path):
     request = {
         "op": "cancel",
         "job": {
@@ -327,10 +355,12 @@ def test_persisted_unicode_payload_record_round_trips_with_ascii_escaped_preimag
     assert record["payload_digest"] == (
         "pd1:ef5f00c1a46ab7d8fc2128206a3e23072a6632912de4a76ca7f553d7fd9c6031"
     )
-    durable = {"n": 1, "log": [record["decision_id"]]}
-    assert "\\u" in _canon(record) or all(ord(c) < 128 for c in _canon(record))
-    assert _typed(json.loads(_canon(record))) == _typed(record)
-    assert _typed(json.loads(_canon(durable))) == _typed(durable)
+    durable = {"n": 1, "log": [record]}
+    path = tmp_path / "unicode.json"
+    _save(path, durable)
+    raw = path.read_text(encoding="utf-8")
+    assert all(ord(c) < 128 for c in raw)  # persisted bytes are ascii-escaped
+    assert _typed(_load(path)) == _typed(durable)
 
 
 class _SStr(str):
@@ -359,6 +389,44 @@ def _walk(node, prefix=()):
             yield from _walk(v, prefix + (i,))
 
 
+def test_the_purity_snapshot_catches_an_outcome_preserving_scribble_on_both_paths():
+    valid = {
+        "op": "cancel",
+        "job": {
+            "job_id": "job1:" + "ab" * 32,
+            "seq": 3,
+            "priority": 4,
+            "payload": [],
+            "status": "ready",
+            "attempts": 0,
+            "lease_owner": None,
+            "lease_expires_at": None,
+        },
+        "requester": "owner-1",
+        "now": 100,
+    }
+
+    def accepted_scribble(req):
+        record = PROD(req)
+        req["now"] += 1  # outcome-preserving mutation of the actual argument
+        return record
+
+    with pytest.raises(AssertionError, match="call changed its input"):
+        _outcome(accepted_scribble, valid, PROD_ERR)
+
+    malformed = {"op": "cancel", "requester": "owner-1", "now": 7}
+
+    def refused_scribble(req):
+        try:
+            PROD(req)
+        except PROD_ERR:
+            req["now"] = 111  # mutation on the typed-refusal path
+            raise
+
+    with pytest.raises(AssertionError, match="call changed its input"):
+        _outcome(refused_scribble, malformed, PROD_ERR)
+
+
 def test_hook_free_subclasses_at_every_path_are_refused_like_the_oracle():
     rng = random.Random(23)
     durable = new_durable()
@@ -383,26 +451,27 @@ def test_hook_free_subclasses_at_every_path_are_refused_like_the_oracle():
 
 def test_every_bound_edge_survives_a_restart_like_the_oracle(tmp_path):
     fresh = _fresh_module()
-    for status in ("ready", "leased"):
-        for attempts in (0, 1, MAX_ATTEMPTS):
-            for now in (0, 1, MAX - 1, MAX):
-                for seq in (0, MAX - 1):
-                    for priority in (0, 9):
-                        request = {
-                            "op": "cancel",
-                            "job": {
-                                "job_id": "job1:" + "ab" * 32,
-                                "seq": seq,
-                                "priority": priority,
-                                "payload": [],
-                                "status": status,
-                                "attempts": attempts,
-                                "lease_owner": "w-1" if status == "leased" else None,
-                                "lease_expires_at": 100 if status == "leased" else None,
-                            },
-                            "requester": "owner-1",
-                            "now": now,
-                        }
-                        prod = _outcome(fresh.cancel, request, fresh.CancelError)
-                        ref = _outcome(REF, copy.deepcopy(request), REF_ERR)
-                        assert _typed(prod) == _typed(ref), (request, prod, ref)
+    for status in ("ready", "leased", "done", "dead"):
+        for attempts in (-1, 0, 1, MAX_ATTEMPTS, MAX_ATTEMPTS + 1):
+            for now in (-1, 0, 1, MAX - 1, MAX):
+                for seq in (-1, 0, MAX - 1, MAX):
+                    for priority in (-1, 0, 9, 10):
+                        for lease in (50, 100, 150) if status == "leased" else (None,):
+                            request = {
+                                "op": "cancel",
+                                "job": {
+                                    "job_id": "job1:" + "ab" * 32,
+                                    "seq": seq,
+                                    "priority": priority,
+                                    "payload": [],
+                                    "status": status,
+                                    "attempts": attempts,
+                                    "lease_owner": "w-1" if status == "leased" else None,
+                                    "lease_expires_at": lease,
+                                },
+                                "requester": "owner-1",
+                                "now": now,
+                            }
+                            prod = _outcome(fresh.cancel, request, fresh.CancelError)
+                            ref = _outcome(REF, copy.deepcopy(request), REF_ERR)
+                            assert _typed(prod) == _typed(ref), (request, prod, ref)
