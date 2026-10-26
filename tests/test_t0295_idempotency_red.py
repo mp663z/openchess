@@ -62,8 +62,17 @@ Standalone-red convention: the battery is permanently GREEN against the
 contract-derived reference engine from
 tests.test_t0293_jobs_idempotency_contract and every mutant below is RED
 on its pinned target label. The production task switches the binding by
-replacing ONLY the two binding lines below with the production engine
-and error names; no assertion changes.
+replacing ONLY the three binding lines below with the production
+queue error, engine and engine error names; no assertion changes.
+The queue_rejection rows pin the exact bound QueueError type, so the
+switch must bind the production queue's QueueError; the contract
+pins the propagated CODES, not the class identity. The source
+mutants below are edits of the REFERENCE source text and stay bound
+to the reference substrate (they compose the reference queue, whose
+validator interfaces differ from the production queue's), so under
+the production binding they are SKIPPED and their production-source
+counterparts live in the T0296 runtime battery; the class-based
+mutants subclass the BOUND engine and run under both bindings.
 
 Unlike the queue engine (T0286), the idempotency engine takes an
 untrusted caller callback, so the hostile-oracle boundary IS in scope
@@ -91,16 +100,23 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tests import test_t0293_jobs_idempotency_contract as _reference  # noqa: E402
-from tests.test_t0284_queue_contract import QueueError  # noqa: E402
 from tools.jobs_idempotency_contract_lint import CONTRACT  # noqa: E402
 from tools.queue_contract_lint import (  # noqa: E402
     MAX_DEPTH,
     MAX_INT_DIGITS,
 )
 
-# -- binding (the production task replaces ONLY these two lines) ---------------
-JobsIdempotencyEngine = _reference.JobsIdempotencyEngine
-IdempotencyError = _reference.IdempotencyError
+# -- binding (the production task replaces ONLY these three lines) -------------
+QueueError = __import__("server.jobs_idempotency").jobs_idempotency.QueueError
+JobsIdempotencyEngine = __import__("server.jobs_idempotency").jobs_idempotency.JobsIdempotencyEngine
+IdempotencyError = __import__("server.jobs_idempotency").jobs_idempotency.IdempotencyError
+
+IS_REFERENCE = JobsIdempotencyEngine is _reference.JobsIdempotencyEngine
+_REQUIRES_REFERENCE = pytest.mark.skipif(
+    not IS_REFERENCE,
+    reason="reference-source mutants are bound to the reference substrate; "
+    "production mutants live in the T0296 runtime battery",
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "jobs_idempotency" / "cases.json"
 CASES = json.loads(FIXTURE.read_text())
@@ -2062,11 +2078,13 @@ def test_hostile_rows_cover_every_boundary():
     assert {"request", "payload", "state", "ledger", "oracle", "conflict", "key", "op"} <= prefixes
 
 
+@_REQUIRES_REFERENCE
 def test_identity_source_mutant_is_green():
     assert _probe(_source_mutant("identity", [])) == []
 
 
 @pytest.mark.parametrize("name", sorted(EQUIVALENT_EDITS))
+@_REQUIRES_REFERENCE
 def test_equivalent_edit_stays_green(name):
     assert _probe(_source_mutant(name, EQUIVALENT_EDITS[name])) == []
 
@@ -2104,11 +2122,25 @@ MUTANT_TARGET_LABELS = {
 }
 
 
-@pytest.mark.parametrize("name", sorted(MUTANTS))
-def test_mutant_is_red(name):
+CLASS_MUTANTS = set(MUTANTS) - set(_SM)
+assert set(_SM) < set(MUTANTS)
+
+
+def _assert_red_at_pinned_locus(name):
     failures = _probe(MUTANTS[name])
     assert failures != [], name
     targets = MUTANT_TARGET_LABELS[name]
     assert any(t in f for f in failures for t in targets), (
         f"{name}: red but never at the pinned locus {targets}"
     )
+
+
+@pytest.mark.parametrize("name", sorted(CLASS_MUTANTS))
+def test_mutant_is_red(name):
+    _assert_red_at_pinned_locus(name)
+
+
+@_REQUIRES_REFERENCE
+@pytest.mark.parametrize("name", sorted(_SM))
+def test_source_mutant_is_red(name):
+    _assert_red_at_pinned_locus(name)
