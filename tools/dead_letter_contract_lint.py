@@ -130,6 +130,10 @@ FAILURE_MAPPING = {
     "job_not_dead": "job_not_dead",
 }
 ERROR_ENUM = ["malformed_request", "corrupt_job", "job_not_dead", "internal"]
+QUEUE_BOUND_LITERALS = {
+    "priority": "int-0-through-9-lower-is-more-urgent",
+    "payload": "exact-canonical-json-acyclic-alias-free-depth-at-most-64-int-digits-at-most-4000",
+}
 JOB_FIELDS = [
     "job_id",
     "seq",
@@ -199,9 +203,9 @@ def lint(path=None):
         raise ContractError("max_attempts must equal the queue contract's")
     if cc["identifiers"]["job_id"]["grammar"] != queue["identifiers"]["job_id"]["grammar"]:
         raise ContractError("job_id grammar must equal the queue contract's")
-    for name in ("priority", "payload"):
-        if not queue["request"]["bounds"][name].startswith(cc["request"]["bounds"][name]):
-            raise ContractError(f"{name} bound must equal the queue contract's")
+    for name, literal in QUEUE_BOUND_LITERALS.items():
+        if queue["request"]["bounds"][name] != literal:
+            raise ContractError(f"{name} bound must equal the queue contract's exact literal")
     if queue["state"]["job_fields"] != JOB_FIELDS:
         raise ContractError("queue job_fields drifted from the pinned dead-letter job shape")
     if "dead" not in queue["state"]["statuses"]:

@@ -392,8 +392,17 @@ def _queue_drifts():
     def priority(q):
         q["request"]["bounds"]["priority"] = "int-0-through-19-lower-is-more-urgent"
 
+    def priority_prefix_preserving(q):
+        q["request"]["bounds"]["priority"] = "int-0-through-9-higher-is-more-urgent"
+
     def payload(q):
         q["request"]["bounds"]["payload"] = "exact-canonical-json-depth-at-most-128"
+
+    def payload_prefix_preserving(q):
+        q["request"]["bounds"]["payload"] = (
+            "exact-canonical-json-acyclic-alias-free-depth-at-most-64-int-digits-at-most-4000"
+            "-or-cyclic-payloads-allowed"
+        )
 
     def job_fields(q):
         q["state"]["job_fields"].append("tags")
@@ -401,7 +410,16 @@ def _queue_drifts():
     def no_dead(q):
         q["state"]["statuses"].remove("dead")
 
-    return [max_attempts, job_grammar, priority, payload, job_fields, no_dead]
+    return [
+        max_attempts,
+        job_grammar,
+        priority,
+        priority_prefix_preserving,
+        payload,
+        payload_prefix_preserving,
+        job_fields,
+        no_dead,
+    ]
 
 
 @pytest.mark.parametrize("drift", _queue_drifts(), ids=lambda f: f.__name__)
