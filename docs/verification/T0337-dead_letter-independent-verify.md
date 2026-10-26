@@ -77,22 +77,29 @@ payload copy) and carries its own content-addressed entry_id.
   Pinned records were computed from the reference at authoring time,
   so any contract or derivation drift breaks the battery. Every
   malformed case is discriminating via its declared single-locus
-  repair. Every malformed case is discriminating via its
-declared single-locus repair, except that a corrupt non-dead job
+  repair, except that a corrupt non-dead job
 (ready or leased, flagged by minimal_repair.expect_failure) repairs
 to a still-not-dead job that fails job_not_dead, pinning job
 integrity ahead of the dead check. Rollback cases prove a rejected call
-  leaves the exact supplied request bit- and value-identical before
-  a valid follow-up succeeds as pinned. Hostile-type rows are
+  leaves the supplied request type-exact structurally unchanged
+  (snapshot equality over container types, keys and scalars - not
+  byte or original-container identity) before a valid follow-up
+  succeeds as pinned. Hostile-type rows are
   derived from every request the fixture accepts.
 - red test: permanent battery driving every fixture row plus hostile
   totality probes and pinned semantic probes through the
   `bury(request)` callable and its typed error: exact records with ids
   re-derived independently from the contract preimage, pinned failure
   class and code, fresh errors (no __cause__ or __context__), request
-  untouched and sharing no container with the record, and each
-  declared repair accepted; rollback rows run on the same engine and
-  state.
+  untouched and sharing no container with the record; each declared repair either is accepted or still
+  rejects with a typed error whose failure class differs from the
+  row's pinned one (the corrupt-non-dead-job repairs described in the
+  fixture bullet intentionally still reject job_not_dead at the next
+  validation stage); the battery pins only the different-class
+  property, not acceptance; rollback rows refuse the rejected request
+  as pinned, leaving it value-equal to its pre-call snapshot
+  (deepcopy equality at this layer), then accept the valid follow-up
+  as pinned on the same callable.
 - implement: production server/jobs_dead_letter.py; the red battery's
   production binding switch proven to be exactly two lines;
   production never imports the test package; its public surface is
