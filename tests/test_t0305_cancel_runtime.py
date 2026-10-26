@@ -284,6 +284,31 @@ def _preimage(prefix, value):
     )
 
 
+def test_r7_lowered_int_str_limit_fails_closed():
+    # E witness: with the interpreter int->str limit lowered, str() of a
+    # legal-but-large payload int raises ValueError; production must fail
+    # closed with corrupt_job exactly like the reference, never leak it.
+    limit = sys.get_int_max_str_digits()
+    sys.set_int_max_str_digits(640)
+    try:
+        request = _request(job=_job(payload={"n": 10**999}))
+        try:
+            cancel(request)
+        except CancelError as error:
+            assert error.failure_class == "corrupt_job"
+            assert error.__cause__ is None and error.__context__ is None
+        else:
+            raise AssertionError("lowered-limit payload int was accepted")
+        try:
+            _reference.cancel(copy.deepcopy(request))
+        except _reference.CancelError as error:
+            assert error.failure_class == "corrupt_job"
+        else:
+            raise AssertionError("reference accepted the lowered-limit payload int")
+    finally:
+        sys.set_int_max_str_digits(limit)
+
+
 def test_r6_golden_edge_rows():
     record = cancel(_request())
     assert record == {
