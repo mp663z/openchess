@@ -95,7 +95,9 @@ production, and the production binding switch is exactly its two lines
   receipt exactly (exact field types), the log truncated IN PLACE to
   exactly the surviving prefix (same list object, same prefix entry
   objects, each _snap-identical), the request untouched by value AND
-  identity, deterministic by value over fresh copies (never the same
+  container identity (container type, id, length and key order;
+  exact-str keys compared by text, non-str keys by type and id),
+  deterministic by value over fresh copies (never the same
   object), and exactly ONE archiver call with a DETACHED copy of the
   exact tail, in order. malformed: the original input rejects with the
   pinned failure class and its mapped code, log and request untouched,
@@ -126,8 +128,10 @@ production, and the production binding switch is exactly its two lines
   helpers): source logs built with the shipped store.wal from records
   made by the shipped graph.node runtime; receipts checked against the
   WAL chain, an independent archive-token derivation and an independent
-  rollback-id derivation, and committed logs against the original prefix
-  by value and object identity. Seeded, so a failure replays.
+  rollback-id derivation, and committed logs against the original
+  prefix by value and container identity (container type, id, length
+  and key order; exact-str keys compared by text, non-str keys by type
+  and id). Seeded, so a failure replays.
 - fuzz/fault: seeded generators build WAL logs and rollback requests from an
   independent model of wal.yaml and rollback.yaml (the entry-id,
   archive-token and rollback-id derivations restated, never taken from
@@ -136,8 +140,9 @@ production, and the production binding switch is exactly its two lines
   RollbackError from the closed class set with its mapped code, never
   the forged object); the same outcome as the contract reference engine,
   and where independently known, that outcome; a rejected call leaves
-  log and request identical by value, exact type, key order and object
-  identity at every level; a successful rollback truncates exactly the
+  log and request identical by value and container identity (container
+  type, id, length and key order; exact-str keys compared by text,
+  non-str keys by type and id); a successful rollback truncates exactly the
   tail, keeps every surviving entry by identity, leaves the request
   untouched and equals the model receipt; one archiver call on a
   detached copy; no poisoning; determinism. The mutation probe pins
