@@ -700,6 +700,7 @@ def _validate_structure(cases):
                     assert case["expect"]["receipt"][
                         "prior_state_id"] == state_id_for(
                             case["state"]), name
+                _assert_scoped_edges(section, case)
             elif section == "malformed":
                 failure, oracle, repair, defect, tag = want
                 assert set(case) == MALFORMED_KEYS, name
@@ -717,6 +718,7 @@ def _validate_structure(cases):
                 assert _failure_of(case["oracle"], case["state"],
                                    case["ledger"], case["request"],
                                    alias=alias) == failure, name
+                _assert_malformed_scenario(case)
             elif section == "queue_rejection":
                 assert set(case) == QREJ_KEYS, name
                 assert case["expect_queue_error"] == want, name
@@ -886,3 +888,479 @@ def test_reference_engine_preserves_aliases_on_rejection():
     assert id(state) == state_id and id(ledger) == ledger_id
     assert [id(r) for r in ledger] == receipt_ids
     assert ledger == case["ledger"] and state == case["state"]
+
+
+# -- scoped semantic edges ---------------------------------------------------
+#
+# These are fixture-scoped pins, NOT universal contract guarantees:
+# this fixture's applied rows (outside the one pinned state-neutral
+# case) change the state digest, the distinct-key row shares a
+# fingerprint with a different-key receipt, and the state-neutral
+# replay's receipt has prior == state. The erasure mutants below
+# prove each edge is load-bearing.
+
+
+def _assert_scoped_edges(section, case):
+    name = case["name"]
+    receipt = case["expect"]["receipt"]
+    fp = request_fingerprint(case["request"]["op"],
+                             case["request"]["payload"])
+    if case["expect"]["outcome"] == "applied" and \
+            name != "same-request-distinct-key-applies-again":
+        assert receipt["prior_state_id"] != receipt["state_id"], \
+            name
+    if name == "same-request-distinct-key-applies-again":
+        assert receipt["prior_state_id"] == receipt["state_id"], \
+            name
+        others = [r for r in case["ledger"]
+                  if r["idempotency_key"] !=
+                  case["request"]["idempotency_key"]]
+        assert any(r["request_fingerprint"] == fp
+                   for r in others), name
+    if name == "replay-state-neutral-receipt":
+        assert receipt["prior_state_id"] == receipt["state_id"], \
+            name
+
+
+# -- section mutations --------------------------------------------------------
+
+
+def _pop_first(m, section):
+    m[section].pop(0)
+
+
+def _rename_first(m, section):
+    m[section][0]["name"] += "-renamed"
+
+
+def _add_extra(m, section):
+    row = copy.deepcopy(m[section][-1])
+    row["name"] = row["name"] + "-extra"
+    m[section].append(row)
+
+
+def _substitute_first(m, section):
+    m[section][0] = copy.deepcopy(m[section][-1])
+
+
+def _move_row(m, section):
+    m[section].insert(0, m[section].pop())
+
+
+def _swap_failure(m, section):
+    a = next(c for c in m["malformed"]
+             if c["expect_failure"] == CL)
+    b = next(c for c in m["malformed"]
+             if c["expect_failure"] == DF)
+    a["expect_failure"], b["expect_failure"] = \
+        b["expect_failure"], a["expect_failure"]
+
+
+def _swap_oracle(m, section):
+    a = next(c for c in m["malformed"]
+             if c["name"] == "oracle-bad-grammar")
+    b = next(c for c in m["malformed"]
+             if c["name"] == "oracle-unbound-token")
+    a["oracle"], b["oracle"] = b["oracle"], a["oracle"]
+
+
+def _swap_repair(m, section):
+    a = next(c for c in m["malformed"]
+             if "replace_ledger" in c["minimal_repair"])
+    b = next(c for c in m["malformed"]
+             if "set_request_field" in c["minimal_repair"])
+    a["minimal_repair"], b["minimal_repair"] = (
+        b["minimal_repair"], a["minimal_repair"])
+
+
+def _swap_scenario(m, section):
+    a, b = m["malformed"][1], m["malformed"][2]
+    a["scenario"], b["scenario"] = b["scenario"], a["scenario"]
+
+
+def _swap_outcome_rows(m, section):
+    a = m["happy"][0]
+    b = next(c for c in m["happy"]
+             if c["expect"]["outcome"] == "replayed")
+    a["expect"], b["expect"] = b["expect"], a["expect"]
+
+
+def _stale_then_ledger(m, section):
+    row = m["rollback"][-1]
+    row["then_ledger"] = copy.deepcopy(row["ledger"])
+
+
+def _section_mutation_cases():
+    cases = []
+    for section in MANIFESTS:
+        cases.append((f"{section}-pop", section, _pop_first))
+        cases.append((f"{section}-rename", section, _rename_first))
+        cases.append((f"{section}-add-extra", section, _add_extra))
+        cases.append((f"{section}-substitute", section,
+                      _substitute_first))
+        cases.append((f"{section}-move", section, _move_row))
+    cases += [("malformed-swap-failure", "malformed",
+               _swap_failure),
+              ("malformed-swap-oracle", "malformed", _swap_oracle),
+              ("malformed-swap-repair", "malformed", _swap_repair),
+              ("malformed-swap-scenario", "malformed",
+               _swap_scenario),
+              ("happy-swap-outcome", "happy", _swap_outcome_rows),
+              ("rollback-stale-then-ledger", "rollback",
+               _stale_then_ledger)]
+    return cases
+
+
+@pytest.mark.parametrize(
+    "label,section,mutate", _section_mutation_cases(),
+    ids=[c[0] for c in _section_mutation_cases()])
+def test_section_mutations_fail_structure(label, section, mutate):
+    m = copy.deepcopy(CASES)
+    mutate(m, section)
+    with pytest.raises(AssertionError):
+        _validate_structure(m)
+
+
+# -- repair-form mutations ---------------------------------------------------
+
+
+def _repair_mutations():
+    def bad_form_name(c):
+        c["minimal_repair"] = {"set_field": {
+            "field": "idempotency_key", "value": "b"}}
+
+    def two_forms(c):
+        c["minimal_repair"] = {
+            "set_request_field": {"field": "idempotency_key",
+                                  "value": "b"},
+            "set_oracle": {"oracle": "honest"}}
+
+    def missing_value(c):
+        c["minimal_repair"] = {"set_request_field": {
+            "field": "idempotency_key"}}
+
+    def bad_field(c):
+        c["minimal_repair"] = {"set_request_field": {
+            "field": "bogus", "value": "b"}}
+
+    def wrong_locus_value(c):
+        c["minimal_repair"] = {"set_request_field": {
+            "field": "idempotency_key", "value": "order-1"}}
+
+    def bad_oracle(c):
+        c["minimal_repair"] = {"set_oracle": {"oracle": "bogus"}}
+
+    def replace_state_extra_key(c):
+        c["minimal_repair"] = {"replace_state": {
+            "state": {"jobs": [], "next_seq": 0}, "extra": True}}
+
+    def replace_ledger_bad_shape(c):
+        c["minimal_repair"] = {"replace_ledger": {
+            "ledger": [{"receipt_id": "x"}]}}
+
+    def replace_request_bad_shape(c):
+        c["minimal_repair"] = {"replace_request": {
+            "request": {"idempotency_key": "b"}}}
+
+    def wrong_form_for_tag(c):
+        c["minimal_repair"] = {"replace_request": {
+            "request": copy.deepcopy(c["request"])}}
+
+    return [bad_form_name, two_forms, missing_value, bad_field,
+            wrong_locus_value, bad_oracle, replace_state_extra_key,
+            replace_ledger_bad_shape, replace_request_bad_shape,
+            wrong_form_for_tag]
+
+
+def test_repair_form_mutations_fail_structure():
+    for mutate in _repair_mutations():
+        m = copy.deepcopy(CASES)
+        case = m["malformed"][0]
+        mutate(case)
+        with pytest.raises(AssertionError):
+            _validate_structure(m)
+
+
+# -- substitution kills --------------------------------------------------------
+
+
+def _swap_names(m, section, a, b):
+    rows = {r["name"]: r for r in m[section]}
+    rows[a]["name"], rows[b]["name"] = b, a
+    # keep the manifest ORDER so only content moved
+    m[section].sort(key=lambda r: list(MANIFESTS[section]).index(
+        r["name"]))
+
+
+def _all_pin_pairs():
+    """Every ordered pair of DISTINCT happy/boundary rows - with
+    (op, sequence, outcome) pins unique in this fixture, the
+    ordered closure and scoped edges must kill every swap and
+    substitution even with digests neutralized."""
+    rows = [(s, n) for s in ("happy", "boundary")
+            for n in MANIFESTS[s]]
+    return [(a, b) for a in rows for b in rows if a != b]
+
+
+def test_same_pin_pairs_are_the_known_ones():
+    pins = [(s, n, MANIFESTS[s][n]) for s in ("happy", "boundary")
+            for n in MANIFESTS[s]]
+    dupes = {(a[1], b[1]) for i, a in enumerate(pins)
+             for b in pins[i + 1:] if a[2] == b[2]}
+    assert dupes == set()
+
+
+@pytest.mark.parametrize("with_digests", [True, False],
+                         ids=["with-digests", "edge-only"])
+def test_fixture_only_substitutions_are_killed(with_digests,
+                                               monkeypatch):
+    """Name swaps between every happy/boundary pair, and
+    whole-payload substitutions in both directions, mutating ONLY
+    cases.json content in memory - killed WITH the digest table
+    and with it neutralized (ordered names, pins, prior binding
+    and the scoped edges close the rows on their own)."""
+    if not with_digests:
+        monkeypatch.setattr(sys.modules[__name__], "_row_digest",
+                            lambda row: ROW_DIGESTS[
+                                f"{_section_of(row)}:{row['name']}"])
+    checked = 0
+    for (s1, a), (s2, b) in _all_pin_pairs():
+        if s1 == s2:
+            m = copy.deepcopy(CASES)
+            _swap_names(m, s1, a, b)
+            with pytest.raises(AssertionError):
+                _validate_structure(m)
+            checked += 1
+        m = copy.deepcopy(CASES)
+        rows = {r["name"]: r for r in m[s1] + m[s2]}
+        for key in rows[a]:
+            if key != "name":
+                rows[a][key] = copy.deepcopy(rows[b][key])
+        with pytest.raises(AssertionError):
+            _validate_structure(m)
+        checked += 1
+    assert checked > 0
+
+
+def _section_of(row):
+    for section in MANIFESTS:
+        if row["name"] in MANIFESTS[section]:
+            return section
+    return "?"
+
+
+def test_row_digest_detects_malformed_and_rollback_payload_swap():
+    """A payload swap between two malformed rows of the SAME
+    failure class and repair form, and a follow-up swap between
+    two rollback rows, are caught by the digest table."""
+    m = copy.deepcopy(CASES)
+    rows = {r["name"]: r for r in m["malformed"]}
+    a, b = rows["request-missing-field"], \
+        rows["request-extra-field"]
+    assert a["expect_failure"] == b["expect_failure"]
+    assert a["minimal_repair"] == b["minimal_repair"]
+    for key in a:
+        if key != "name":
+            a[key], b[key] = b[key], a[key]
+    with pytest.raises(AssertionError):
+        _validate_structure(m)
+    m = copy.deepcopy(CASES)
+    rows = m["rollback"]
+    # both failures are ledger-driven, so swapping the first-apply
+    # request leaves every semantic re-derivation intact; only the
+    # digest table catches it
+    rows[0]["request"], rows[1]["request"] = \
+        rows[1]["request"], rows[0]["request"]
+    with pytest.raises(AssertionError):
+        _validate_structure(m)
+
+
+# -- closure kills the verifier mutants --------------------------------------
+
+
+def _named(m, section, name):
+    return next(r for r in m[section] if r["name"] == name)
+
+
+def _verifier_mutants():
+    """Fixture-only mutants applied to an in-memory copy of
+    cases.json with the pinned result REGENERATED from the
+    reference where the row stays executable - so only the
+    closure (order, digests, pins, scoped edges) can kill it."""
+    out = []
+
+    def regen(row):
+        row["expect"] = _apply(row["oracle"], row["state"],
+                               row["ledger"], row["request"])
+
+    # A: swap names of two boundary rows
+    m = copy.deepcopy(CASES)
+    _swap_names(m, "boundary", "key-max-length-128",
+                "same-request-distinct-key-applies-again")
+    out.append(("A-name-swap", m))
+    # B: key-single-char carries apply-first-key-empty-queue data
+    m = copy.deepcopy(CASES)
+    tgt = _named(m, "boundary", "key-single-char")
+    src = _named(m, "happy", "apply-first-key-empty-queue")
+    for key in tgt:
+        if key != "name":
+            tgt[key] = copy.deepcopy(src[key])
+    out.append(("B-payload-substitution", m))
+    # D: new-key row given the first row's payload - the queue's
+    # own dedupe turns the apply into a STATE-NEUTRAL no-op, which
+    # only the scoped applied-changes-state edge rejects without
+    # digests
+    m = copy.deepcopy(CASES)
+    row = _named(m, "happy", "apply-new-key-extends-queue")
+    row["request"]["payload"] = copy.deepcopy(
+        _named(m, "happy", "apply-first-key-empty-queue")[
+            "request"]["payload"])
+    regen(row)
+    out.append(("D-new-key-first-payload", m))
+    # E: reversed happy and boundary rows
+    m = copy.deepcopy(CASES)
+    m["happy"].reverse()
+    m["boundary"].reverse()
+    out.append(("E-reversed-rows", m))
+    # edge erasures
+    for name, mutate in (
+            ("key-max-length-128",
+             lambda r: r["request"].__setitem__(
+                 "idempotency_key", "Kxxxx")),
+            ("key-single-char",
+             lambda r: r["request"].__setitem__(
+                 "idempotency_key", "cc")),
+            ("same-request-distinct-key-applies-again",
+             lambda r: r["request"]["payload"].__setitem__(
+                 "lease_ms", 51)),
+            ("replay-state-neutral-receipt",
+             lambda r: r.__setitem__(
+                 "request", copy.deepcopy(_named(
+                     CASES, "boundary", "key-single-char")
+                     ["request"])))):
+        m = copy.deepcopy(CASES)
+        row = _named(m, "boundary", name)
+        mutate(row)
+        regen(row)
+        out.append((f"edge-erased:{name}", m))
+    return out
+
+
+@pytest.mark.parametrize("with_digests", [True, False],
+                         ids=["with-digests", "digests-neutralized"])
+def test_closure_kills_verifier_mutants(with_digests, monkeypatch):
+    """Every verifier mutant and each single-field edge erasure
+    is killed by _validate_structure both with the digest table
+    live AND with _row_digest monkeypatched to return the table
+    value (digests neutralized): ordered names, pins, prior
+    binding and the scoped edges close happy/boundary on their
+    own."""
+    if not with_digests:
+        monkeypatch.setattr(sys.modules[__name__], "_row_digest",
+                            lambda row: ROW_DIGESTS[
+                                f"{_section_of(row)}:{row['name']}"])
+    for label, m in _verifier_mutants():
+        with pytest.raises(AssertionError):
+            _validate_structure(m)
+        assert label
+
+
+# -- per-scenario semantic checkers -------------------------------------------
+#
+# Each malformed row's declared scenario pins the defect's locus:
+# outside the defect the row's other inputs must be individually
+# valid, and each ledger-defect row must violate exactly its named
+# mechanism. These are fixture-scoped locus pins, NOT universal
+# contract guarantees.
+
+_REQUEST_TAGS = {"non-dict-request", "missing-request-field",
+                 "extra-request-field", "empty-key", "key-too-long",
+                 "key-bad-leading-char", "non-str-key",
+                 "unregistered-request-op"}
+# payload-level request defects: the top-level request shape is
+# valid; the engine's payload semantics reject it (pinned by the
+# failure re-derivation), and the row-level fact is pinned below
+_PAYLOAD_REQUEST_TAGS = {"payload-op-smuggle",
+                         "enqueue-payload-field-missing",
+                         "claim-lease-out-of-bounds"}
+_ALIAS_TAGS = {"request-aliases-state", "request-aliases-ledger"}
+_LEDGER_MECHANISM_TAGS = {
+    "non-list-ledger", "ledger-receipt-missing-field",
+    "ledger-receipt-extra-field", "duplicate-ledger-key",
+    "sequence-gap", "ledger-chain-break", "tampered-receipt-id"}
+_CONFLICT_TAGS = {"receipt-fingerprint-mismatch",
+                  "conflict-different-payload",
+                  "conflict-different-op"}
+_ORACLE_TAGS = {"oracle-raising", "oracle-non_str_output",
+                "oracle-bad_grammar", "oracle-unbound_token",
+                "oracle-lone_surrogate"}
+_STATE_TAGS = {"corrupt-queue-job-status"}
+_TERMINAL_TAG = "ledger-terminal-mismatch"
+_ALL_TAGS = (_REQUEST_TAGS | _PAYLOAD_REQUEST_TAGS | _ALIAS_TAGS
+             | _LEDGER_MECHANISM_TAGS | _CONFLICT_TAGS
+             | _ORACLE_TAGS | _STATE_TAGS | {_TERMINAL_TAG})
+
+
+def _shape_ok(fn, value):
+    # hostile fixture rows make the shape validators raise
+    # TypeError as well as AssertionError; both mean "invalid"
+    try:
+        fn(value, "scenario-check")
+    except (AssertionError, TypeError, QueueError):
+        return False
+    return True
+
+
+def _assert_malformed_scenario(case):
+    tag = case["scenario"]
+    name = case["name"]
+    state, ledger, request = (case["state"], case["ledger"],
+                              case["request"])
+    state_ok = _shape_ok(_validate_state_shape, state)
+    ledger_ok = _shape_ok(_validate_ledger_shape, ledger)
+    request_ok = _shape_ok(_validate_request_shape, request)
+    if tag in _REQUEST_TAGS:
+        assert state_ok and ledger_ok and not request_ok, name
+    elif tag in _PAYLOAD_REQUEST_TAGS:
+        assert state_ok and ledger_ok and request_ok, name
+        payload = request["payload"]
+        if tag == "payload-op-smuggle":
+            assert "op" in payload, name
+        elif tag == "enqueue-payload-field-missing":
+            assert "priority" not in payload, name
+        else:
+            assert payload["lease_ms"] <= 0, name
+    elif tag in _ALIAS_TAGS:
+        # JSON cannot carry object identity: the alias is built at
+        # runtime by the alias tests; here the raw request must
+        # still parse on its own
+        assert state_ok and ledger_ok and request_ok, name
+    elif tag in _STATE_TAGS:
+        assert not state_ok and ledger_ok and request_ok, name
+    elif tag in _LEDGER_MECHANISM_TAGS:
+        assert state_ok and not ledger_ok and request_ok, name
+    elif tag == _TERMINAL_TAG:
+        assert state_ok and ledger_ok and request_ok, name
+        assert ledger and ledger[-1]["state_id"] != \
+            state_id_for(state), name
+    elif tag in _CONFLICT_TAGS:
+        assert state_ok and ledger_ok and request_ok, name
+        stored = next(
+            (r for r in ledger
+             if r["idempotency_key"] ==
+             request["idempotency_key"]), None)
+        assert stored is not None, name
+        assert stored["request_fingerprint"] != \
+            request_fingerprint(request["op"],
+                                request["payload"]), name
+    elif tag in _ORACLE_TAGS:
+        # the defect lives purely in the oracle; its behavior is
+        # pinned by the failure re-derivation in
+        # _validate_structure
+        assert state_ok and ledger_ok and request_ok, name
+    else:
+        raise AssertionError(f"unmapped scenario tag: {tag}")
+
+
+def test_scenario_tags_partition_the_malformed_rows():
+    assert {c["scenario"] for c in CASES["malformed"]} == _ALL_TAGS
