@@ -74,6 +74,31 @@ def _canon(obj, _depth=0):
     return ("other", kind.__name__)
 
 
+def _safe_canon(obj, _depth=0):
+    """Hook-free fingerprint for inputs that may contain hostile objects:
+    exact builtin containers are walked structurally, scalars are tagged
+    by exact type, and anything else (including dict/list/str subclasses)
+    is a type tag only - no hook can run and no internals are read."""
+    kind = type(obj)
+    if _depth > 200:
+        return "deep"
+    if kind is dict:
+        items = sorted(
+            ((_safe_canon(k, _depth + 1), _safe_canon(v, _depth + 1)) for k, v in dict.items(obj)),
+            key=repr,
+        )
+        return ("dict", tuple(items))
+    if kind is list:
+        return ("list", tuple(_safe_canon(v, _depth + 1) for v in list.__iter__(obj)))
+    if kind is tuple:
+        return ("tuple", tuple(_safe_canon(v, _depth + 1) for v in tuple.__iter__(obj)))
+    if kind is int:
+        return ("int", hex(obj))
+    if kind in (str, float, bool, bytes, type(None)):
+        return (kind.__name__, repr(obj))
+    return ("hostile", kind.__name__)
+
+
 def _run(engine_cls, state, ledger, request):
     """One apply on deep copies; returns the comparable outcome tuple plus
     the post-call canonical request (the engine must not touch it)."""
@@ -340,19 +365,26 @@ def test_hostile_states_match_oracle_and_never_mutate_on_reject(seed):
 # ---------- fault injection: caller code never runs on hostile objects ----------
 
 
+HOOK_CALLS = []  # external tripwire: raising alone cannot prove no invocation
+
+
 class Boom:
     def __getattribute__(self, name):
+        HOOK_CALLS.append(("Boom", name))
         raise AssertionError("production touched caller object: " + name)
 
 
 class BoomDict(dict):
     def __iter__(self):
+        HOOK_CALLS.append(("BoomDict", "iter"))
         raise AssertionError("iter hook ran")
 
     def items(self):
+        HOOK_CALLS.append(("BoomDict", "items"))
         raise AssertionError("items hook ran")
 
     def __eq__(self, other):
+        HOOK_CALLS.append(("BoomDict", "eq"))
         raise AssertionError("eq hook ran")
 
     __hash__ = None
@@ -360,17 +392,21 @@ class BoomDict(dict):
 
 class BoomList(list):
     def __iter__(self):
+        HOOK_CALLS.append(("BoomList", "iter"))
         raise AssertionError("iter hook ran")
 
     def __len__(self):
+        HOOK_CALLS.append(("BoomList", "len"))
         raise AssertionError("len hook ran")
 
 
 class BoomStr(str):
     def encode(self, *a, **k):
+        HOOK_CALLS.append(("BoomStr", "encode"))
         raise AssertionError("encode hook ran")
 
     def __eq__(self, other):
+        HOOK_CALLS.append(("BoomStr", "eq"))
         raise AssertionError("eq hook ran")
 
     __hash__ = str.__hash__
@@ -400,29 +436,41 @@ PAYLOAD_FACTORIES = (
 @pytest.mark.parametrize("make", PAYLOAD_FACTORIES, ids=range(len(PAYLOAD_FACTORIES)))
 def test_faulting_or_hostile_payloads_rejected_without_running_caller_code(make):
     state, ledger = _composition()
-    snap = (_canon(state), _canon(ledger))
     request = _req("fresh-p", "enqueue", dedupe_key="kx", priority=1, payload=make())
+    snap = (_safe_canon(state), _safe_canon(ledger), _safe_canon(request))
+    HOOK_CALLS.clear()
     with pytest.raises(IdempotencyError) as info:
         JobsIdempotencyEngine(HONEST).apply(state, ledger, request)
     assert info.value.failure_class == "malformed_idempotency_request"
-    assert (_canon(state), _canon(ledger)) == snap
+    assert HOOK_CALLS == []  # no hook ran, even one whose raise was caught
+    assert (_safe_canon(state), _safe_canon(ledger), _safe_canon(request)) == snap
 
 
 @pytest.mark.parametrize("make", PAYLOAD_FACTORIES, ids=range(len(PAYLOAD_FACTORIES)))
 def test_faulting_state_payloads_rejected_without_running_caller_code(make):
     state, ledger = _composition()
     state["jobs"][0]["payload"] = make()
+    request = copy.deepcopy(VALID["claim"])
+    snap = (_safe_canon(state), _safe_canon(ledger), _safe_canon(request))
+    HOOK_CALLS.clear()
     with pytest.raises(IdempotencyError) as info:
-        JobsIdempotencyEngine(HONEST).apply(state, ledger, VALID["claim"])
-    assert info.value.failure_class in ("corrupt_queue", "corrupt_ledger")
+        JobsIdempotencyEngine(HONEST).apply(state, ledger, request)
+    assert info.value.failure_class == "corrupt_queue"  # state validates before the ledger
+    assert HOOK_CALLS == []
+    assert (_safe_canon(state), _safe_canon(ledger), _safe_canon(request)) == snap
 
 
 def test_faulting_ledger_receipt_rejected_without_running_caller_code():
     state, ledger = _composition()
     ledger[0] = BoomDict(ledger[0])
+    request = copy.deepcopy(VALID["claim"])
+    snap = (_safe_canon(state), _safe_canon(ledger), _safe_canon(request))
+    HOOK_CALLS.clear()
     with pytest.raises(IdempotencyError) as info:
-        JobsIdempotencyEngine(HONEST).apply(state, ledger, VALID["claim"])
+        JobsIdempotencyEngine(HONEST).apply(state, ledger, request)
     assert info.value.failure_class == "corrupt_ledger"
+    assert HOOK_CALLS == []
+    assert (_safe_canon(state), _safe_canon(ledger), _safe_canon(request)) == snap
 
 
 # ---------- fault injection: hostile fingerprint oracles fail closed ----------
@@ -463,17 +511,30 @@ def test_hostile_oracles_fail_closed_on_both_engines(oracle):
 
 
 def test_argument_mutating_oracle_is_inert_on_both_engines():
-    outcomes = []
+    """The oracle receives a DETACHED argument copy: a mutator that clears
+    the payload it is handed cannot reach the caller's request, so its
+    token - computed over the cleared copy - is request-divergent and both
+    engines reject divergent_fingerprint with every input untouched. The
+    mutator must actually run (call count pinned to exactly one), the
+    typed failure is pinned, not merely agreed on both sides."""
     for engine_cls in (PROD, REF):
         state, ledger = _composition()
         request = copy.deepcopy(VALID["enqueue"])
+        snap = (_canon(state), _canon(ledger), _canon(request))
+        calls = []
 
-        def mutator(op, payload):
+        def mutator(op, payload, _calls=calls):
+            _calls.append((op, payload))
             payload.clear()
             return HONEST(op, payload)
 
-        outcomes.append(_run(engine_cls, state, ledger, request)[0])
-    assert outcomes[0] == outcomes[1]
+        with pytest.raises(Exception) as info:  # noqa: BLE001 - class pinned next line
+            engine_cls(mutator).apply(state, ledger, request)
+        assert type(info.value).__name__ == "IdempotencyError"
+        assert info.value.failure_class == "divergent_fingerprint"
+        assert info.value.__cause__ is None
+        assert len(calls) == 1  # the mutator actually ran, on one detached call
+        assert (_canon(state), _canon(ledger), _canon(request)) == snap
 
 
 def test_closure_mutating_oracle_cannot_corrupt_inputs_on_either_engine():
@@ -587,9 +648,11 @@ def test_valid_idempotent_streams_match_oracle(seed):
 
 @pytest.mark.parametrize("seed", range(20))
 def test_streams_with_random_rollback_windows_match_oracle(seed):
-    """Interleave honest applies with stale-ledger windows: after any raw
-    truncation the next apply must reject corrupt_ledger identically, then
-    the re-synced composition continues."""
+    """Interleave honest applies with stale-ledger windows. Truncation
+    across a state-changing receipt must reject corrupt_ledger on both
+    engines; truncation of a state-neutral (replay) suffix or of the whole
+    ledger is undetectable by the content-addressed design and is pinned
+    as accepted, not rejected."""
     rng = random.Random(9000 + seed)
     state, ledger = {"jobs": [], "next_seq": 0}, []
     engine = JobsIdempotencyEngine(HONEST)
