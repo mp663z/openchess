@@ -141,10 +141,10 @@ def _validate_structure(cases):
                     _validate_record(record, label)
                     job = request["job"]
                     for field in ("job_id", "seq", "priority", "attempts"):
-                        assert record[field] == job[field], label
-                    assert record["status_before"] == job["status"], label
-                    assert record["requester"] == request["requester"], label
-                    assert record["cancelled_at"] == request["now"], label
+                        assert _same_type_eq(record[field], job[field]), label
+                    assert _same_type_eq(record["status_before"], job["status"]), label
+                    assert _same_type_eq(record["requester"], request["requester"]), label
+                    assert _same_type_eq(record["cancelled_at"], request["now"]), label
                     assert record["payload_digest"] == _preimage("pd1", job["payload"]), label
             elif section == "malformed":
                 assert set(row) == BAD_KEYS, label
@@ -358,14 +358,16 @@ def _one(r):
 
 def _h_ready(r):
     q, job = _one(r)
-    assert (job["status"], job["attempts"]) == ("ready", 0)
-    assert (job["lease_owner"], job["lease_expires_at"]) == (None, None)
+    assert _same_type_eq(job["status"], "ready") and _same_type_eq(job["attempts"], 0)
+    assert _same_type_eq(job["lease_owner"], None)
+    assert _same_type_eq(job["lease_expires_at"], None)
 
 
 def _h_leased(r):
     q, job = _one(r)
-    assert (job["status"], job["attempts"]) == ("leased", 2)
-    assert (job["lease_owner"], job["lease_expires_at"]) == ("w-1", 200)
+    assert _same_type_eq(job["status"], "leased") and _same_type_eq(job["attempts"], 2)
+    assert _same_type_eq(job["lease_owner"], "w-1")
+    assert _same_type_eq(job["lease_expires_at"], 200)
 
 
 def _h_same(r):
@@ -594,7 +596,11 @@ def _validate_closure(cases):
             assert ROW_DIGESTS.get(label) == _row_digest(row), label
             meta = manifest[row["name"]]
             if section in ("happy", "boundary"):
-                assert _summary(row) == meta, label
+                got = _summary(row)
+                assert len(got) == len(meta), label
+                for g, m in zip(got, meta, strict=True):
+                    assert len(g) == len(m), label
+                    assert all(_same_type_eq(x, y) for x, y in zip(g, m, strict=True)), label
                 OK_EDGES[row["name"]](row)
             elif section == "malformed":
                 assert (row["expect_failure"], row["defect"]) == meta, label
@@ -836,6 +842,21 @@ _CLOSURE_MUTANTS = {
         "request"
     ].update(now=101),
     "defect_text_edited": lambda c: _bn(c, "malformed", "now_bool").update(defect="now is odd"),
+    # bool-for-int substitutions that == would wave through (False == 0):
+    # the type-exact closure must catch them on BOTH the request and the
+    # expected-record side, without the digest table
+    "happy_request_attempts_retyped_bool": lambda c: _bn(
+        c, "happy", "ready_withdrawn_before_claim"
+    )["requests"][0]["job"].update(attempts=False),
+    "happy_record_attempts_retyped_bool": lambda c: _bn(c, "happy", "ready_withdrawn_before_claim")[
+        "expect_records"
+    ][0].update(attempts=False),
+    "boundary_request_now_retyped_bool": lambda c: _bn(c, "boundary", "now_zero")["requests"][
+        0
+    ].update(now=False),
+    "boundary_record_cancelled_at_retyped_bool": lambda c: _bn(c, "boundary", "now_zero")[
+        "expect_records"
+    ][0].update(cancelled_at=False),
 }
 
 
