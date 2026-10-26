@@ -91,7 +91,12 @@ def _scalar_ok(node):
     if kind is int:
         if node.bit_length() > MAX_INT_BITS:
             return False
-        return len(str(abs(node))) <= MAX_INT_DIGITS
+        try:
+            return len(str(abs(node))) <= MAX_INT_DIGITS
+        except ValueError:
+            # a lowered sys.set_int_max_str_digits limit makes str() refuse:
+            # fail closed, never leak the raw ValueError
+            return False
     if kind is float:
         return math.isfinite(node)
     if kind is str:
