@@ -10,6 +10,11 @@ priority-ordered, at-least-once job queue with idempotent enqueue by dedupe
 key, leased claims that dead-mark jobs at the attempt limit, and ack/nack by
 the lease holder only.
 
+`server/jobs_cancel.py` implements `data/contracts/cancel.yaml`: a pure
+cancellation decision for one ready or leased queue job, binding the payload
+by digest only, content-addressed by its own decision id, terminal once
+recorded.
+
 `server/jobs_retry.py` implements `data/contracts/retry.yaml`: a pure retry
 decision (exponential backoff with a cap, dead on permanent failure or at the
 attempt limit, no jitter, clock overflow is an error).
