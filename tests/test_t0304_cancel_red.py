@@ -7,11 +7,13 @@ hostile-input totality probes and pinned semantic probes through a
 - happy/boundary: each request returns the pinned record exactly (exact
   types), the payload_digest and decision_id are re-derived here from the
   contract preimages, the record stores only the digest (never a payload
-  copy) and never the lease fields, the request is untouched and shares no
-  container with the record;
+  copy) and never the lease fields, the request is provably untouched
+  (T0240 atomicity machinery: identity walk, alias topology, encoded
+  bytes) and shares no container with the record;
 - malformed: each row rejects with the pinned class and mapped code, fresh
-  (no __cause__ or __context__), request untouched, and its single-locus
-  repair is accepted or fails with the declared class as pinned;
+  (no __cause__ or __context__), the request provably untouched (same
+  atomicity proof), and its single-locus repair is accepted or fails with
+  the declared class as pinned;
 - rollback: a rejected request leaves everything untouched and the valid
   follow-up cancels as pinned;
 - totality: hostile types at every request and job field, and hostile payload
@@ -99,10 +101,128 @@ def _walk_ids(obj, out):
     return out
 
 
-def _ok(impl, request, expect):
-    before = copy.deepcopy(request)
-    record = impl(request)
-    assert request == before
+# -- input atomicity (the T0240 machinery, adapted) -------------------------
+# A value-level == snapshot cannot see an equal-valued container swap or a
+# bool-for-int retype. The snapshot below pins, fail-closed and in this
+# order: (a) the joint identity walk over exact builtin containers via base
+# operations only - a dict/list subclass is rejected before any hook can
+# run; (b) the alias-topology signature - equal values with different
+# sharing diverge; (c) deterministic encoded bytes - order-sensitive, NaN
+# rejected. Requests that legitimately carry non-encodable leaves (the
+# NaN/inf payload probes) degrade to the walk+signature layers only;
+# requests that ARE hostile containers degrade to a root identity pin while
+# the Touched hooks prove no caller code ran.
+
+
+class _NonExactContainer(Exception):
+    """A dict/list SUBCLASS reached a path the atomicity walk was about to
+    traverse; raised before any user-defined hook on it can run."""
+
+
+def _walk_identity(roots):
+    """Identity map of the joint object graph: only exact builtin dict/list
+    containers are traversed, only through base operations; every reached
+    path pins the exact type and the ORIGINAL object (kept alive); an
+    already-reached container records an alias edge."""
+    seen = {}
+    entries = {}
+    keepalive = []
+
+    def walk(obj, path):
+        obj_type = type(obj)
+        if obj_type is dict or obj_type is list:
+            oid = id(obj)
+            if oid in seen:
+                entries[path] = ("alias", seen[oid])
+                return
+            seen[oid] = path
+            keepalive.append(obj)
+            entries[path] = ("obj", obj_type, obj)
+            if obj_type is dict:
+                for key, value in dict.items(obj):
+                    walk(value, path + (("k", key),))
+            else:
+                for index, value in enumerate(list.__iter__(obj)):
+                    walk(value, path + (("i", index),))
+        elif isinstance(obj, (dict, list)):
+            raise _NonExactContainer(f"non-exact container {obj_type.__name__!r} at {path!r}")
+        else:
+            entries[path] = ("leaf", obj_type, repr(obj))
+
+    for rindex, root in enumerate(roots):
+        walk(root, (("r", rindex),))
+    return entries, keepalive
+
+
+def _graph_signature(roots):
+    """Canonical alias-topology signature: first-encounter container indices,
+    dict entries in insertion order, leaves pinned by exact type and repr."""
+    memo = {}
+
+    def sig(obj):
+        obj_type = type(obj)
+        if obj_type is dict or obj_type is list:
+            oid = id(obj)
+            if oid in memo:
+                return ("ref", memo[oid])
+            idx = len(memo)
+            memo[oid] = idx
+            if obj_type is dict:
+                return ("dict", idx, tuple((key, sig(value)) for key, value in dict.items(obj)))
+            return ("list", idx, tuple(sig(value) for value in list.__iter__(obj)))
+        return ("leaf", obj_type.__name__, repr(obj))
+
+    return tuple(sig(root) for root in roots)
+
+
+def _encoded_bytes(obj):
+    """Insertion-order-preserving compact JSON bytes; called only after the
+    graph is proven closed over exact builtin containers."""
+    return json.dumps(obj, separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+
+def _snap(request):
+    """Pre-call atomicity snapshot of the input, in degrade tiers."""
+    try:
+        walked = _walk_identity((request,))
+    except _NonExactContainer:
+        return ("root", (id(request), type(request)))
+    signature = _graph_signature((request,))
+    try:
+        encoded = _encoded_bytes(request)
+    except (ValueError, TypeError):
+        # NaN/inf/bytes leaves cannot be encoded: the walk layers stand
+        encoded = None
+    return ("walk", (walked, signature, encoded))
+
+
+def _verify_snap(snap, request):
+    """Post-call verification: same original object and exact type at every
+    path, same alias topology, same encoded bytes when the tier has them."""
+    kind, payload = snap
+    if kind == "root":
+        want_id, want_type = payload
+        assert id(request) == want_id and type(request) is want_type
+        return
+    (want_entries, _keep), want_signature, want_encoded = payload
+    got_entries, _ = _walk_identity((request,))
+    assert set(got_entries) == set(want_entries)
+    for path, wanted in want_entries.items():
+        got = got_entries[path]
+        if wanted[0] == "alias":
+            assert got == wanted
+        elif wanted[0] == "obj":
+            assert got[0] == "obj"
+            assert got[1] is wanted[1]
+            assert got[2] is wanted[2]  # the ORIGINAL object survives here
+        else:
+            assert got == wanted
+    assert _graph_signature((request,)) == want_signature
+    if want_encoded is not None:
+        assert _encoded_bytes(request) == want_encoded
+
+
+def _assert_record(request, record, expect):
     assert type(record) is dict and record == expect
     assert set(record) == set(RECORD_FIELDS)
     for key, value in expect.items():
@@ -114,11 +234,37 @@ def _ok(impl, request, expect):
     assert "payload" not in record
     assert "lease_owner" not in record and "lease_expires_at" not in record
     assert not (_walk_ids(record, set()) & _walk_ids(request, set()))
+
+
+def _expected_record(request):
+    """The record a valid request must produce, re-derived from the contract
+    preimages here (not read from any implementation)."""
+    job = request["job"]
+    record = {
+        "op": "cancel",
+        "job_id": job["job_id"],
+        "seq": job["seq"],
+        "priority": job["priority"],
+        "payload_digest": _digest("pd1", job["payload"]),
+        "status_before": job["status"],
+        "attempts": job["attempts"],
+        "requester": request["requester"],
+        "cancelled_at": request["now"],
+    }
+    record["decision_id"] = _digest("cd1", record)
+    return record
+
+
+def _ok(impl, request, expect):
+    snap = _snap(request)
+    record = impl(request)
+    _verify_snap(snap, request)
+    _assert_record(request, record, expect)
     return record
 
 
 def _rejects(impl, err, request, failure):
-    snap = copy.deepcopy(request)
+    snap = _snap(request)
     with _raises_ctx(err) as caught:
         impl(request)
     exc = caught.value
@@ -127,7 +273,7 @@ def _rejects(impl, err, request, failure):
     assert exc.code == FAILURE_MAPPING[failure]
     assert exc.__cause__ is None and exc.__context__ is None
     assert exc.retryable is False
-    assert request == snap
+    _verify_snap(snap, request)
 
 
 def _nested(depth):
@@ -158,13 +304,21 @@ def check_fixture(impl, err):
         repaired = row["minimal_repair"]["request"]
         declared = row["minimal_repair"].get("expect_failure")
         if declared is not None:
-            # a corrupt done/dead job's repair is still not cancellable
+            # a corrupt done/dead job's repair is still not cancellable;
+            # only these five rows may fail, with the pinned class
             _rejects(impl, err, repaired, declared)
         else:
+            # every other repair is a VALID request: it must be accepted
+            # with a valid record, and the repair input stays atomic
+            snap = _snap(repaired)
             try:
-                impl(repaired)
+                record = impl(repaired)
             except err as exc:
-                assert exc.failure_class != row["expect_failure"], row["name"]
+                raise AssertionError(
+                    f"{row['name']}: a valid repair was refused ({exc.failure_class})"
+                ) from None
+            _verify_snap(snap, repaired)
+            _assert_record(repaired, record, _expected_record(repaired))
     for row in CASES["rollback"]:
         _rejects(impl, err, row["rejected_request"], row["expect_failure"])
         _ok(impl, row["request"], row["expect_record"])
@@ -227,6 +381,11 @@ def check_semantics(impl, err):
     assert impl(_req(job=_job(payload={"1": "v"})))["op"] == "cancel"
     shared = [1]
     _rejects(impl, err, _req(job=_job(payload={"a": shared, "b": shared})), "corrupt_job")
+    # the payload ROOT is any JSON scalar; bytes and tuples are not JSON
+    for good in (True, False, None, 7, "x"):
+        assert impl(_req(job=_job(payload=good)))["op"] == "cancel", good
+    _rejects(impl, err, _req(job=_job(payload=b"b")), "corrupt_job")
+    _rejects(impl, err, _req(job=_job(payload=(1,))), "corrupt_job")
 
 
 def check_order(impl, err):
@@ -298,7 +457,8 @@ def check_totality(impl, err):
                 raise AssertionError((field, bad))
     for field in JOB_FIELDS:
         if field == "payload":
-            continue
+            continue  # the payload root is covered by scoped checks above:
+            # scalars are valid JSON, only non-JSON roots reject
         for bad in HOSTILE:
             candidate = _job()
             candidate[field] = bad
@@ -599,6 +759,50 @@ def _m_payload_unbounded(request, real):
         raise
 
 
+def _m_replaces_payload_container(request, real):
+    out = real(request)
+    request["job"]["payload"] = copy.deepcopy(request["job"]["payload"])
+    return out
+
+
+def _m_dirties_on_refusal(request, real):
+    try:
+        return real(request)
+    except CancelError:
+        job = request.get("job") if isinstance(request, dict) else None
+        if isinstance(job, dict) and job.get("attempts") == 0:
+            job["attempts"] = False
+        raise
+
+
+def _m_refuses_valid_repair(request, real):
+    """Refuses the now_bool row's valid repair (now 1, otherwise reference
+    values) with corrupt_job; the battery's own acceptance assertion kills
+    it in check_fixture, no oracle needed."""
+    if (
+        isinstance(request, dict)
+        and request.get("op") == "cancel"
+        and type(request.get("now")) is int
+        and request["now"] == 1
+    ):
+        raise CancelError("corrupt_job")
+    return real(request)
+
+
+def _m_payload_root_untyped(request, real):
+    try:
+        return real(request)
+    except CancelError as exc:
+        job = request["job"] if isinstance(request, dict) else None
+        if (
+            exc.failure_class == "corrupt_job"
+            and isinstance(job, dict)
+            and isinstance(job.get("payload"), (bytes, tuple))
+        ):
+            return real({**request, "job": {**job, "payload": []}})
+        raise
+
+
 def _m_refuses_valid(request, real):
     if isinstance(request, dict) and request.get("requester") == "owner-2":
         raise CancelError("job_not_cancellable")
@@ -621,6 +825,10 @@ MUTANTS = {
     "lease_ignored": (_m_lease_ignored, "check_semantics"),
     "not_cancellable_before_corrupt": (_m_not_cancellable_before_corrupt, "check_order"),
     "payload_unbounded": (_m_payload_unbounded, "check_semantics"),
+    "replaces_payload_container": (_m_replaces_payload_container, "check_fixture"),
+    "dirties_on_refusal": (_m_dirties_on_refusal, "check_fixture"),
+    "refuses_valid_repair": (_m_refuses_valid_repair, "check_fixture"),
+    "payload_root_untyped": (_m_payload_root_untyped, "check_semantics"),
 }
 
 
