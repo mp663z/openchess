@@ -6442,10 +6442,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "ee1bf781512ff7dd517f6601ac0e934c01968a98",
+   "evidence_manifest": "evidence/T0296.md"
   },
   {
    "id": "T0297",
@@ -6462,10 +6464,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "83d81b60396e0e8876a362e9e62d46a2ff07e26d",
+   "evidence_manifest": "evidence/T0297.md"
   },
   {
    "id": "T0298",
@@ -6628,10 +6632,12 @@
    "verification": "auto",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "c0dde1171d4b2884cb309274812fc04e0f5ed756",
+   "evidence_manifest": "evidence/T0305.md"
   },
   {
    "id": "T0306",
@@ -6924,10 +6930,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "a097decfd3a8e55c7389fe8818593dd176029ead",
+   "evidence_manifest": "evidence/T0319.md"
   },
   {
    "id": "T0320",
@@ -7120,10 +7128,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "7db9575e0399c4bd0a968f563343a7f65cc34c6a",
+   "evidence_manifest": "evidence/T0328.md"
   },
   {
    "id": "T0329",
@@ -7316,10 +7326,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "d14311338b3d669685943d2a81e63fe04f5fafb9",
+   "evidence_manifest": "evidence/T0337.md"
   },
   {
    "id": "T0338",
@@ -7512,10 +7524,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "2401be712ab7f18b2e454b54fccda300e22d741a",
+   "evidence_manifest": "evidence/T0346.md"
   },
   {
    "id": "T0347",
@@ -7708,10 +7722,12 @@
    "verification": "independent verifier",
    "resource": "none",
    "checkpoint": "",
-   "status": "todo",
+   "status": "done",
    "evidence": "exact SHA + commands + environment + logs + state/pixel diff + verifier",
    "spine_outcome": "non-spine enabler",
-   "roadmap_layer": "Layer 1 - 2027 core/enabler"
+   "roadmap_layer": "Layer 1 - 2027 core/enabler",
+   "done_sha": "4f1cc6461c69efaa757bbbad486c4b1922ece8b0",
+   "evidence_manifest": "evidence/T0355.md"
   },
   {
    "id": "T0356",
