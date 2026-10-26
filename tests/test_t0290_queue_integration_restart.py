@@ -4,14 +4,18 @@ The engine holds no memory between calls: its whole state is the JSON
 object `{jobs, next_seq}`. A restart is therefore modelled the way a host
 would do it: write the canonical state to a file under tmp_path (atomic
 replace), drop the engine, read the file back, and continue with a fresh
-engine. Every cut point of a seeded stream must give the same receipts and
-the same final state as an uninterrupted run. Leases that were live at the
-crash lapse by the injected clock and the job is re-claimed. A torn state
+engine. Twelve seeded 100-request streams, each restarted through the state
+file at every step, and ten further seeded streams each restarted once at a
+sampled cut point, must give the same receipts and the same final state as an
+uninterrupted run. Leases that were live at the crash lapse by the injected
+clock and the job is re-claimed. A torn state
 file that still parses but is malformed (or was leniently repaired by the
 host) is refused by the engine as corrupt_queue. A torn file that no longer
 parses raises the host's JSONDecodeError before the engine is ever called;
-this module skips those byte-level cuts the way a host must. Refusals on the
-checked paths leave the caller's state untouched.
+this module skips those byte-level cuts the way a host must. Separately,
+the _refused boundary probes assert a refusal leaves the caller's state
+untouched; the torn-file loop itself checks only the refusal class and that
+the last good file still works, not candidate purity.
 Single process, no real clock, no concurrency.
 
 Scope: this is an integration and restart test. Unit-level validator edges
