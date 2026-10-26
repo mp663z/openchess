@@ -1,0 +1,92 @@
+schema_version: 1
+
+contract:
+  id: jobs-cancel
+  role:
+    kind: pure-job-cancellation-decision-function
+    serves: background-job-execution
+    scope: one-cancellation-decision-for-one-queue-job-over-an-explicit-logical-clock
+    owns: cancellation-eligibility-and-cancellation-decision-records
+    not_scope: queue-state-transitions-leases-retry-dead-letter-redrive-idempotency-keys-or-worker-abort
+  record:
+    fields: [op, job_id, seq, priority, payload_digest, status_before, attempts, requester, cancelled_at, decision_id]
+    exact: true
+    statuses_before: [ready, leased]
+  request:
+    operations:
+      - op: cancel
+        fields: [op, job, requester, now]
+    exact: true
+    closure: no-other-operations-registered
+    job: exactly-one-job-of-the-linked-queue-contract-with-its-job-fields
+    bounds:
+      now: int-0-through-2-pow-53-minus-1-milliseconds
+      seq: int-0-through-2-pow-53-minus-2
+      priority: int-0-through-9
+      payload: exact-canonical-json-acyclic-alias-free-depth-at-most-64-int-digits-at-most-4000
+    max_attempts: 5
+    max_attempts_source: linked-queue-contract-state-max-attempts-never-caller-supplied
+  identifiers:
+    job_id:
+      kind: content-addressed-job-id
+      grammar: ^job1:[0-9a-f]{64}$
+      source: the-linked-queue-contract-job-id-grammar
+    requester:
+      kind: caller-supplied-cancellation-requester-id
+      grammar: ^[A-Za-z0-9._:-]{1,64}$
+      source: caller-supplied-never-derived
+    payload_digest:
+      kind: canonical-payload-digest
+      grammar: ^pd1:[0-9a-f]{64}$
+      derivation: sha256-of-ascii-pd1-then-nul-byte-then-utf8-canonical-json-sort-keys-compact-separators-ensure-ascii-of-the-payload
+      source: derived-never-caller-supplied
+    decision_id:
+      kind: canonical-cancellation-decision-digest
+      grammar: ^cd1:[0-9a-f]{64}$
+      derivation: sha256-of-ascii-cd1-then-nul-byte-then-utf8-canonical-json-sort-keys-compact-separators-ensure-ascii-of-the-record-without-decision-id
+      source: derived-never-caller-supplied
+  semantics:
+    validation: request-shape-then-job-integrity-then-cancellable-status-first-failure-wins
+    integrity: the-job-must-satisfy-every-linked-queue-job-invariant-or-it-is-corrupt-never-repaired
+    cancellable: only-a-ready-or-leased-job-is-cancelled-a-done-or-dead-job-is-job-not-cancellable
+    ready: a-ready-job-has-not-started-cancellation-withdraws-it-before-any-claim
+    leased: a-leased-job-is-claimed-the-decision-is-recorded-against-the-live-lease-applying-it-to-the-queue-or-aborting-the-worker-is-outside-this-contract
+    lease_clock: the-presented-status-governs-lease-expiry-and-reclaim-are-the-queue-contracts-concern-never-recomputed-here
+    terminal: a-recorded-cancellation-is-terminal-this-contract-never-reverses-it
+    payload: fail-closed-reading-the-record-stores-only-the-payload-digest-never-a-copy-of-the-payload
+    clock: cancelled-at-is-now
+    purity: inputs-are-never-mutated-and-the-record-shares-no-container-with-them
+  failures:
+    classes:
+      - malformed_cancel_request
+      - corrupt_job
+      - job_not_cancellable
+    triggers:
+      malformed_cancel_request: request-shape-type-grammar-or-bound-violation-outside-the-job-contents
+      corrupt_job: job-with-wrong-keys-types-grammar-bounds-inadmissible-payload-or-a-broken-queue-job-invariant
+      job_not_cancellable: a-valid-queue-job-whose-status-is-done-or-dead
+    mapping:
+      malformed_cancel_request: malformed_request
+      corrupt_job: corrupt_job
+      job_not_cancellable: job_not_cancellable
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - corrupt_job
+      - job_not_cancellable
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-fail-closed-typed-never-raw
+    deterministic: same-request-same-record
+    pure: rejected-and-accepted-requests-leave-the-request-bit-identical
+    bound: a-record-binds-the-exact-payload-through-its-digest
+    terminal: a-cancellation-record-is-never-reversed
+  versioning:
+    base_path: /jobs/cancel/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    queue_contract: data/contracts/queue.yaml
+    retry_contract: data/contracts/retry.yaml
