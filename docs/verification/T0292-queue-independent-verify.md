@@ -112,11 +112,19 @@ binding switch is exactly its two lines.
   (T0289).
 - integration/restart: restart modelled as a host would - canonical
   state file under tmp_path, atomic replace, fresh engine; every
-  cut point of a seeded stream equals the uninterrupted run;
-  leases lapse by the injected clock and are re-claimed; a torn
-  state file is refused as corrupt_queue and never half-applied;
-  boundary rows repeat the validator edges so a production mutant
-  cannot survive at this level (T0290).
+  cut point of the seeded streams equals the uninterrupted run;
+  leases lapse by the injected clock and are re-claimed. Torn
+  state bytes that no longer parse are a host-layer JSONDecodeError
+  and never reach the engine (the battery asserts the host must
+  not hand them over); parseable-but-malformed states - torn
+  writes that still parse, or lenient host repairs - reach the
+  engine and are refused as corrupt_queue, never half-applied, and
+  the last good file still works. Boundary rows re-cover a sample
+  of validator edges at the restart level (queue-size bound
+  through the file round trip, non-str payload keys, request-shape
+  rows, hook-free subclass values) with the pinned failure
+  classes: sampled coverage, with no exhaustive mutant-survival
+  claim (T0290).
 - instrument: QueueTracer is an opt-in, content-free wrapper over
   apply, not wired into any shipping path; exact argument, result
   and thrown-object identity preserved; detached trace views;
