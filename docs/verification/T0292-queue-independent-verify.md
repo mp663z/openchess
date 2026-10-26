@@ -118,8 +118,14 @@ binding switch is exactly its two lines.
   and never reach the engine (the battery asserts the host must
   not hand them over); parseable-but-malformed states - torn
   writes that still parse, or lenient host repairs - reach the
-  engine and are refused as corrupt_queue, never half-applied, and
-  the last good file still works. Boundary rows re-cover a sample
+  engine and are refused as corrupt_queue, and the last good
+  file still works. These rows assert the refusal class only:
+  the torn loop discards the parsed candidate and the repaired
+  rows apply a deepcopy without a retained comparison, so
+  refusal purity is not pinned here. Sampled refusal purity
+  ("a refusal never touches the caller's state") is pinned by
+  the _refused rows via snapshot-compare, and rollback semantics
+  by the T0286 red battery. Boundary rows re-cover a sample
   of validator edges at the restart level (queue-size bound
   through the file round trip, non-str payload keys, request-shape
   rows, hook-free subclass values) with the pinned failure
@@ -145,9 +151,9 @@ the install checks exec bare `ruff`/`mypy` from PATH; without the
 toolchain on PATH (and with a non-searchable PATH entry producing
 EACCES rather than ENOENT) the subprocesses raise PermissionError.
 The same 7-failure pattern is documented in the landed T0058
-package for this sandbox class. With the toolchain installed and on
-PATH the underlying runner passes all 20 checks at this repo state.
-Environmental, unrelated to the chain.
+package for this sandbox class. Environmental, unrelated to the
+chain. A full-toolchain pass of the install checks is not
+certified in this package.
 
 ## Verifier statement
 
