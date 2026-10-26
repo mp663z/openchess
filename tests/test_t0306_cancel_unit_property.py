@@ -9,6 +9,9 @@ record that shares no container with it. Seeded, so a failure replays.
 Unit rows pin every bound at both sides, the precedence between failure
 classes, and hostile values (bool, float, str and int subclasses, inert
 str-subclass keys, hostile payload roots) at every request and job field.
+The request-unchanged check is a serialized-value comparison (a JSON or
+repr snapshot), not a hostile-identity proof; rollback is proven for a
+pure callable with fresh requests, with no persistent engine state.
 """
 
 from __future__ import annotations
@@ -245,12 +248,40 @@ def run(request):
         assert error.retryable is False
         out = ("fail", error.failure_class)
     assert _snap(request) == before, "request was changed"
+    if out[0] == "ok":
+        record = out[1]
+        assert type(record) is dict and all(type(k) is str for k in record)
+        assert set(record) == set(RECORD_ORDER), sorted(set(RECORD_ORDER) - set(record))
+        for field in (
+            "op",
+            "job_id",
+            "payload_digest",
+            "status_before",
+            "requester",
+            "decision_id",
+        ):
+            assert type(record[field]) is str, field
+        for field in ("seq", "priority", "attempts", "cancelled_at"):
+            assert type(record[field]) is int, field
     return out
+
+
+def _typed(obj):
+    """Type-exact canonical form: False is not 0 and a bool is not an int,
+    which a plain == comparison hides (E's bool-priority retype witness)."""
+    kind = type(obj)
+    if kind is dict:
+        return ("dict", tuple(sorted((k, _typed(v)) for k, v in obj.items())))
+    if kind is list:
+        return ("list", tuple(_typed(v) for v in obj))
+    if kind is tuple:
+        return ("tuple", tuple(_typed(v) for v in obj))
+    return (kind.__name__, obj)
 
 
 def check(request):
     got, want = run(request), model(request)
-    assert got == want, (request, got, want)
+    assert _typed(got) == _typed(want), (request, got, want)
     return got
 
 
@@ -321,6 +352,32 @@ def test_result_shares_no_container_with_the_request_or_other_results():
     one["job_id"] = "x"
     assert cancel(request) == two
     assert request["job"]["job_id"] == JOB
+
+
+def test_unicode_payload_digest_pins_the_ascii_escaped_preimage():
+    # a non-ASCII payload string is canonical JSON-escaped (\\u00e9); an
+    # ensure_ascii flip in production's encoder changes both digests, so
+    # the literal preimages below pin the escape behavior exactly
+    record = check(req(job=job(payload={"greeting": chr(0xE9)})))[1]
+    assert record["payload_digest"] == (
+        "pd1:ef5f00c1a46ab7d8fc2128206a3e23072a6632912de4a76ca7f553d7fd9c6031"
+    )
+    assert record["decision_id"] == (
+        "cd1:24ad6c80b0bd77532f71948c916c806bc662f3618c9e52d4f07694f5fbfc6847"
+    )
+    assert record["payload_digest"] == _preimage("pd1", {"greeting": chr(0xE9)})
+
+
+def test_typed_comparison_catches_a_bool_retype():
+    # E's witness shape: a wrapper that retypes priority 0/1 to bool while
+    # leaving the digest untouched passed all 116 tests when the model
+    # comparison was plain ==. The battery's comparator must see it.
+    request = req(job=job(priority=1))
+    record = cancel(copy.deepcopy(request))
+    lying = dict(record, priority=bool(record["priority"]))
+    want = model(request)
+    assert ("ok", lying) == want  # why == alone is not enough
+    assert _typed(("ok", lying)) != _typed(want)
 
 
 # ---------- unit: boundaries ----------
@@ -412,7 +469,10 @@ def test_lowered_int_str_limit_fails_closed():
     # the same witness as the T0305 runtime proof, kept here so this file
     # alone kills a conversion-guard mutant: under a lowered interpreter
     # limit a legal-but-large payload int must be corrupt_job, never a raw
-    # ValueError (the model's agreement under the limit is pinned there)
+    # ValueError. Production-only: the independent model is not run under a
+    # lowered limit (its own digest encoding would hit the same raw
+    # conversion fault); model agreement is pinned in the normal
+    # environment only.
     import sys
 
     limit = sys.get_int_max_str_digits()
@@ -654,7 +714,8 @@ def test_record_fields_are_exact_functions_of_the_request(seed):
             assert list(record) == RECORD_ORDER
             assert record["cancelled_at"] == request["now"]
             assert record["payload_digest"] == _preimage("pd1", request["job"]["payload"])
-            assert type(record["seq"]) is int and type(record["attempts"]) is int
+            for field in ("seq", "priority", "attempts", "cancelled_at"):
+                assert type(record[field]) is int, field
 
 
 @pytest.mark.parametrize("seed", range(10))
