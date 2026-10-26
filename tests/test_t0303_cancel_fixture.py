@@ -163,8 +163,18 @@ def _validate_structure(cases):
                 assert set(row) == RB_KEYS, label
                 assert type(row["why"]) is str and row["why"], label
                 assert row["expect_failure"] in FAILURE_CLASSES, label
-                _validate_request_shape(row["request"], label)
-                _validate_record(row["expect_record"], label)
+                request, record = row["request"], row["expect_record"]
+                _validate_request_shape(request, label)
+                _validate_record(record, label)
+                job = request["job"]
+                for field in ("job_id", "seq", "priority", "attempts"):
+                    assert _same_type_eq(record[field], job[field]), label
+                assert _same_type_eq(record["status_before"], job["status"]), label
+                assert _same_type_eq(record["requester"], request["requester"]), label
+                assert _same_type_eq(record["cancelled_at"], request["now"]), label
+                assert _same_type_eq(record["payload_digest"], _preimage("pd1", job["payload"])), (
+                    label
+                )
                 assert row["rejected_request"] != row["request"], label
     assert len(names) == len(set(names)), "fixture names must be unique"
 
@@ -340,6 +350,830 @@ MANIFESTS = {
 }
 
 
+OK_ANCHORS = {
+    # name -> one absolute type-exact request anchor per request in the
+    # row (same tuple shape as REPAIR_ANCHORS). Any edit to a row must
+    # update this table in the same change.
+    "ready_withdrawn_before_claim": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "leased_recorded_against_live_lease": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "leased",
+            2,
+            "w-1",
+            200,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "deterministic_same_request": [
+        (
+            "owner-1",
+            7,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        ),
+        (
+            "owner-1",
+            7,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        ),
+    ],
+    "payload_bound_by_digest": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        ),
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:f4237d8f2e7645e6c74cbb6d836fe1a7d962566b8651afdaa65050a5072a2621",
+        ),
+    ],
+    "now_zero": [
+        (
+            "owner-1",
+            0,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "now_at_clock_limit": [
+        (
+            "owner-1",
+            9007199254740991,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "seq_zero": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            0,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "seq_at_bound": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            9007199254740990,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "priority_zero": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            0,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "priority_nine": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            9,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "payload_depth_at_bound": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:493afeb6bd045f765317204e0e38d12444abdfe71d318bc824234aad330b0cce",
+        )
+    ],
+    "payload_int_4000_digits": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:863a12bcf253aa8cb38a1487fc0e25a642487cdf363e6f272b16313c69fd8f8e",
+        )
+    ],
+    "payload_null": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:566b124f704ca6a152fee38fabb9fb8f15b1545051a19d4aec4da156aea6c076",
+        )
+    ],
+    "payload_non_ascii": [
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:238a50a8f5aff5f3d40667dee217a5f3df66067b3a14ee2d5238c92fc2cc3951",
+        )
+    ],
+    "requester_one_char": [
+        (
+            "a",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+    "requester_at_grammar_limit": [
+        (
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        )
+    ],
+}
+
+
+REPAIR_ANCHORS = {
+    # name -> (requester, now, job_id, seq, priority, status, attempts,
+    # lease_owner, lease_expires_at, payload pd1) of the minimal repair;
+    # absolute type-exact semantic anchors. Any edit to a row's repair
+    # must update this table in the same change.
+    "request_not_a_dict": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "unknown_op": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "extra_field": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "missing_field": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "renamed_field": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "requester_none": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "requester_empty": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "requester_too_long": (
+        "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "requester_bad_char": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "job_not_a_dict": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "now_negative": (
+        "owner-1",
+        0,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "now_past_clock": (
+        "owner-1",
+        9007199254740991,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "now_bool": (
+        "owner-1",
+        1,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "job_extra_field": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "job_renamed_field": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "job_id_trailing_newline": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "seq_past_bound": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        9007199254740990,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "priority_ten": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        9,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "seq_negative": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        0,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "priority_negative": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        0,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "status_unknown": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "ready_with_lease_owner": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "ready_attempts_below_floor": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "leased_missing_owner": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "leased",
+        2,
+        "w-1",
+        200,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "leased_owner_bad_grammar": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "leased",
+        2,
+        "w-1",
+        200,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "leased_expiry_zero": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "leased",
+        2,
+        "w-1",
+        1,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "leased_expiry_past_bound": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "leased",
+        2,
+        "w-1",
+        9007199254740991,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "leased_attempts_zero": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "leased",
+        1,
+        "w-1",
+        200,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "payload_depth_past_bound": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:493afeb6bd045f765317204e0e38d12444abdfe71d318bc824234aad330b0cce",
+    ),
+    "payload_int_4001_digits": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:863a12bcf253aa8cb38a1487fc0e25a642487cdf363e6f272b16313c69fd8f8e",
+    ),
+    "payload_lone_surrogate": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:7e3ef0564ed0fc7db936a16a42eb32771c2ad10762e5ba10368b45731e2e3e3e",
+    ),
+    "payload_key_lone_surrogate": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        0,
+        None,
+        None,
+        "pd1:529dddff22ccbeceb84db43c170050ee98a234d2745e612b3e1be90f1deb5d34",
+    ),
+    "done_attempts_zero": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "done",
+        1,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "done_attempts_past_max": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "done",
+        5,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "dead_attempts_below_max": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "dead",
+        5,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "done_with_lease_owner": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "done",
+        1,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "dead_with_lease_expiry": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "dead",
+        5,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "status_done": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        1,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "status_done_at_max": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        5,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+    "status_dead": (
+        "owner-1",
+        100,
+        "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        3,
+        4,
+        "ready",
+        5,
+        None,
+        None,
+        "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+    ),
+}
+
+ROLLBACK_ANCHORS = {
+    # name -> (follow-up request anchor, expect_record anchor); absolute
+    # type-exact semantic anchors. Any edit to a row must update this
+    # table in the same change.
+    "corrupt_then_owner_repaired": (
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "leased",
+            2,
+            "w-1",
+            200,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        ),
+        (
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "leased",
+            2,
+            "owner-1",
+            100,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+            "cd1:0d91dc5c25939dcd6f7964fd34ee76560568c16ce6a6c465e0fd623009cc038e",
+        ),
+    ),
+    "not_cancellable_then_ready": (
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            1,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        ),
+        (
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            1,
+            "owner-1",
+            100,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+            "cd1:bcb1baf90224addbf645aace79b4f208ddf54ad3ad7fef2edc3e067be80b066a",
+        ),
+    ),
+    "malformed_then_repaired": (
+        (
+            "owner-1",
+            100,
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            None,
+            None,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+        ),
+        (
+            "job1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            3,
+            4,
+            "ready",
+            0,
+            "owner-1",
+            100,
+            "pd1:8351b93a5cf45580b1bcec0aff40ab2d6b4c115b7c9768eae95c7e077f12e1a4",
+            "cd1:500b5606181fe6bbe42554bc27eac494dc5c358f3c5542cce9a38ebce91d850e",
+        ),
+    ),
+}
+
+
 # -- per-row semantic edges over the ORIGINAL data ---------------------------
 
 
@@ -497,6 +1331,50 @@ def _same_type_eq(a, b):
     return type(a) is type(b) and a == b
 
 
+def _same_json(a, b):
+    """Type-exact deep equality over JSON values."""
+    return not _diff_paths(a, b)
+
+
+def _anchor_request(q, anchor, label):
+    """The request's scalars equal the absolute battery-side anchor,
+    type-exactly; the payload is anchored by its pd1 preimage."""
+    (requester, now, job_id, seq, priority, status, attempts, owner, expiry, pd1) = anchor
+    assert _same_type_eq(q["requester"], requester), label
+    assert _same_type_eq(q["now"], now), label
+    job = q["job"]
+    for field, value in (
+        ("job_id", job_id),
+        ("seq", seq),
+        ("priority", priority),
+        ("status", status),
+        ("attempts", attempts),
+        ("lease_owner", owner),
+        ("lease_expires_at", expiry),
+    ):
+        assert _same_type_eq(job[field], value), label
+    assert _same_type_eq(_preimage("pd1", job["payload"]), pd1), label
+
+
+def _anchor_record(rec, anchor, label):
+    for field, value in zip(
+        (
+            "job_id",
+            "seq",
+            "priority",
+            "status_before",
+            "attempts",
+            "requester",
+            "cancelled_at",
+            "payload_digest",
+            "decision_id",
+        ),
+        anchor,
+        strict=True,
+    ):
+        assert _same_type_eq(rec[field], value), label
+
+
 def _renamed(bad, fix, old, new):
     assert type(bad) is dict and len(bad) == len(fix)
     assert set(bad) - set(fix) == {new} and set(fix) - set(bad) == {old}
@@ -509,7 +1387,7 @@ def _m(name, bad, fix):  # noqa: C901 - one closed branch per tag
     """Each closed tag: the data realizes EXACTLY that defect and the
     repair changes ONLY that locus."""
     if name == "request_not_a_dict":
-        assert type(bad) is list and bad == [fix]
+        assert type(bad) is list and _same_json(bad, [fix])
     elif name in _REQUEST_EDGES:
         field, b, f = _REQUEST_EDGES[name]
         assert _same_type_eq(bad[field], b), name
@@ -533,7 +1411,7 @@ def _m(name, bad, fix):  # noqa: C901 - one closed branch per tag
         _renamed(bad["job"], fix["job"], "payload", "data")
         assert {p[0] for p in _diff_paths(bad, fix)} == {"job"}
     elif name == "job_id_trailing_newline":
-        assert bad["job"]["job_id"] == fix["job"]["job_id"] + "\n"
+        assert _same_type_eq(bad["job"]["job_id"], fix["job"]["job_id"] + "\n")
         _only(bad, fix, ("job", "job_id"))
     elif name in _JOB_EDGES:
         field, b, f = _JOB_EDGES[name]
@@ -545,23 +1423,28 @@ def _m(name, bad, fix):  # noqa: C901 - one closed branch per tag
             assert _int_in_range(fix["job"]["lease_expires_at"], 1, MAX), name
     elif name in _NON_CANCELLABLE_EDGES:
         status, field, b, f = _NON_CANCELLABLE_EDGES[name]
-        assert bad["job"]["status"] == fix["job"]["status"] == status, name
+        assert _same_type_eq(bad["job"]["status"], status), name
+        assert _same_type_eq(fix["job"]["status"], status), name
         assert _same_type_eq(bad["job"][field], b) and _same_type_eq(fix["job"][field], f), name
         _only(bad, fix, ("job", field))
     elif name in _NC_STATUS_EDGES:
         status, attempts = _NC_STATUS_EDGES[name]
-        assert (bad["job"]["status"], fix["job"]["status"]) == (status, "ready"), name
-        assert bad["job"]["attempts"] == fix["job"]["attempts"] == attempts, name
+        assert _same_type_eq(bad["job"]["status"], status), name
+        assert _same_type_eq(fix["job"]["status"], "ready"), name
+        assert _same_type_eq(bad["job"]["attempts"], attempts), name
+        assert _same_type_eq(fix["job"]["attempts"], attempts), name
         _only(bad, fix, ("job", "status"))
     elif name == "payload_depth_past_bound":
         assert (_depth(bad["job"]["payload"]), _depth(fix["job"]["payload"])) == (DEPTH + 1, DEPTH)
         assert {p[:2] for p in _diff_paths(bad, fix)} == {("job", "payload")}
     elif name == "payload_int_4001_digits":
         b, f = bad["job"]["payload"]["n"], fix["job"]["payload"]["n"]
+        assert type(b) is int and type(f) is int, name
         assert (len(str(b)), len(str(f))) == (DIGITS + 1, DIGITS)
         _only(bad, fix, ("job", "payload", "n"))
     elif name == "payload_lone_surrogate":
-        assert bad["job"]["payload"]["s"] == "\ud800"
+        assert _same_type_eq(bad["job"]["payload"]["s"], "\ud800")
+        assert type(fix["job"]["payload"]["s"]) is str
         fix["job"]["payload"]["s"].encode("utf-8")
         _only(bad, fix, ("job", "payload", "s"))
     elif name == "payload_key_lone_surrogate":
@@ -602,6 +1485,8 @@ def _validate_closure(cases):
                     assert len(g) == len(m), label
                     assert all(_same_type_eq(x, y) for x, y in zip(g, m, strict=True)), label
                 OK_EDGES[row["name"]](row)
+                for request, anchor in zip(row["requests"], OK_ANCHORS[row["name"]], strict=True):
+                    _anchor_request(request, anchor, label)
             elif section == "malformed":
                 assert (row["expect_failure"], row["defect"]) == meta, label
                 repair = row["minimal_repair"]
@@ -610,9 +1495,13 @@ def _validate_closure(cases):
                 )
                 assert {k: v for k, v in repair.items() if k != "request"} == want, label
                 _m(row["name"], row["request"], repair["request"])
+                _anchor_request(repair["request"], REPAIR_ANCHORS[row["name"]], label)
             else:
                 assert (row["expect_failure"], row["expect_record"]["status_before"]) == meta, label
                 _check_rollback_scenario(row)
+                req_anchor, rec_anchor = ROLLBACK_ANCHORS[row["name"]]
+                _anchor_request(row["request"], req_anchor, label)
+                _anchor_record(row["expect_record"], rec_anchor, label)
     assert set(ROW_DIGESTS) == {f"{s}:{n}" for s, m in MANIFESTS.items() for n in m}
     assert set(OK_EDGES) == set(HAPPY_MANIFEST) | set(BOUNDARY_MANIFEST)
 
@@ -733,6 +1622,24 @@ def test_structure_mutations_fail(mutate):
     mutate(cases)
     with pytest.raises((AssertionError, KeyError, IndexError, TypeError)):
         _validate_structure(cases)
+
+
+def _recompute_decision(record):
+    record["decision_id"] = _preimage("cd1", {k: record[k] for k in RECORD_FIELDS[:-1]})
+
+
+def _joint_retype(row, *pairs):
+    """Retype bad and repair (or rejected and follow-up) at the same paths:
+    the joint change that relative diff anchors cannot see."""
+
+    def set_path(node, path, value):
+        for key in path[:-1]:
+            node = node[key]
+        node[path[-1]] = value
+
+    for path, value in pairs:
+        set_path(row["request"], path, value)
+        set_path(row["minimal_repair"]["request"], path, value)
 
 
 def _bn(c, section, name):
@@ -857,6 +1764,54 @@ _CLOSURE_MUTANTS = {
     "boundary_record_cancelled_at_retyped_bool": lambda c: _bn(c, "boundary", "now_zero")[
         "expect_records"
     ][0].update(cancelled_at=False),
+    # joint retypes on BOTH the bad request and its repair: relative diff
+    # anchors cannot see them, so the absolute type-exact anchors must
+    "nc_done_combined_attempts_retyped_bool": lambda c: _joint_retype(
+        _bn(c, "malformed", "status_done"), (("job", "attempts"), True)
+    ),
+    "nc_done_joint_attempts_float": lambda c: _joint_retype(
+        _bn(c, "malformed", "status_done"), (("job", "attempts"), 1.0)
+    ),
+    "nc_done_at_max_joint_attempts_float": lambda c: _joint_retype(
+        _bn(c, "malformed", "status_done_at_max"), (("job", "attempts"), 5.0)
+    ),
+    "nc_dead_joint_attempts_float": lambda c: _joint_retype(
+        _bn(c, "malformed", "status_dead"), (("job", "attempts"), 5.0)
+    ),
+    "now_negative_joint_seq_float_payload_bool": lambda c: _joint_retype(
+        _bn(c, "malformed", "now_negative"),
+        (("job", "seq"), 3.0),
+        (("job", "payload", "k", 0), True),
+    ),
+    "leased_expiry_zero_joint_priority_float": lambda c: _joint_retype(
+        _bn(c, "malformed", "leased_expiry_zero"), (("job", "priority"), 4.0)
+    ),
+    "job_not_a_dict_repair_attempts_retyped_bool": lambda c: _bn(c, "malformed", "job_not_a_dict")[
+        "minimal_repair"
+    ]["request"]["job"].update(attempts=False),
+    "payload_4001_joint_retyped_str": lambda c: (
+        _bn(c, "malformed", "payload_int_4001_digits")["request"]["job"]["payload"].update(
+            n="9" * 4001
+        ),
+        _bn(c, "malformed", "payload_int_4001_digits")["minimal_repair"]["request"]["job"][
+            "payload"
+        ].update(n="9" * 4000),
+    ),
+    "boundary_joint_payload_bool_digests_recomputed": lambda c: (
+        _bn(c, "boundary", "now_zero")["requests"][0]["job"]["payload"]["k"].__setitem__(0, True),
+        _bn(c, "boundary", "now_zero")["expect_records"][0].update(
+            payload_digest=_preimage(
+                "pd1", _bn(c, "boundary", "now_zero")["requests"][0]["job"]["payload"]
+            )
+        ),
+        _recompute_decision(_bn(c, "boundary", "now_zero")["expect_records"][0]),
+    ),
+    "rollback_repaired_joint_now_float": lambda c: (
+        _bn(c, "rollback", "malformed_then_repaired")["rejected_request"].update(now=100.0),
+        _bn(c, "rollback", "malformed_then_repaired")["request"].update(now=100.0),
+        _bn(c, "rollback", "malformed_then_repaired")["expect_record"].update(cancelled_at=100.0),
+        _recompute_decision(_bn(c, "rollback", "malformed_then_repaired")["expect_record"]),
+    ),
 }
 
 
