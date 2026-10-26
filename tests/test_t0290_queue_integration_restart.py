@@ -7,14 +7,20 @@ replace), drop the engine, read the file back, and continue with a fresh
 engine. Every cut point of a seeded stream must give the same receipts and
 the same final state as an uninterrupted run. Leases that were live at the
 crash lapse by the injected clock and the job is re-claimed. A torn state
-file is refused by the engine as corrupt_queue and never half-applied.
+file that still parses but is malformed (or was leniently repaired by the
+host) is refused by the engine as corrupt_queue. A torn file that no longer
+parses raises the host's JSONDecodeError before the engine is ever called;
+this module skips those byte-level cuts the way a host must. Refusals on the
+checked paths leave the caller's state untouched.
 Single process, no real clock, no concurrency.
 
 Scope: this is an integration and restart test. Unit-level validator edges
 (isinstance guards, bool/int bounds, payload depth and digit limits) belong to
-the unit battery (T0288/T0289); the boundary rows at the end repeat them so a
-production mutant cannot survive here, and the rows above pin
-only the boundaries a restarted process can reach through the state file.
+the unit battery (T0288/T0289). The boundary rows at the end re-pin the
+validator edges a restarted process can reach through the state file, and the
+rows above pin the restart behavior itself. A finite row set cannot prove
+that no production mutant survives here; mutant hunting belongs to the fuzz
+battery (T0289).
 """
 
 from __future__ import annotations
