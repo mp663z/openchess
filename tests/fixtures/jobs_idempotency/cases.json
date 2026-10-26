@@ -1,0 +1,3744 @@
+{
+ "boundary": [
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "a",
+     "prior_state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93",
+     "receipt_id": "jir1:4657d9c5b05be3d392b02f8cbf7dbcef85b3fc131d69b36e1c24b87c830048a1",
+     "request_fingerprint": "jif1:89460fe45ca57db25948ac6ff873c220a8e99b057b6fc5a8f214839e102d0b2a",
+     "sequence": 2,
+     "state_id": "qs1:188ce2c521e56303c927ae7f37e15cb13457c7a2ac8cb84bfb078715fc91c732"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "name": "key-single-char",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "a",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-c",
+     "payload": {
+      "task": "task-c"
+     },
+     "priority": 5
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+     "prior_state_id": "qs1:188ce2c521e56303c927ae7f37e15cb13457c7a2ac8cb84bfb078715fc91c732",
+     "receipt_id": "jir1:561cda304dca7e1f8b872554b2250d013c9d992f6ebd938200c6dbc096116f52",
+     "request_fingerprint": "jif1:401042206c30ce49968dc6e54aa82a257362993c9aa25970ce68e14d861f1a67",
+     "sequence": 3,
+     "state_id": "qs1:d28eb05347bac846ee2aabda3b726455d4b9616c3f08f2a038e9c1edf7dc4d81"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    },
+    {
+     "idempotency_key": "a",
+     "prior_state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93",
+     "receipt_id": "jir1:4657d9c5b05be3d392b02f8cbf7dbcef85b3fc131d69b36e1c24b87c830048a1",
+     "request_fingerprint": "jif1:89460fe45ca57db25948ac6ff873c220a8e99b057b6fc5a8f214839e102d0b2a",
+     "sequence": 2,
+     "state_id": "qs1:188ce2c521e56303c927ae7f37e15cb13457c7a2ac8cb84bfb078715fc91c732"
+    }
+   ],
+   "name": "key-max-length-128",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-d",
+     "payload": {
+      "task": "task-d"
+     },
+     "priority": 5
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:e527b4671879d7a9dfc5b965f694b80d1cfe5d999812fedc7d8476a5ad590169",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": "task-c"
+      },
+      "priority": 5,
+      "seq": 2,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 3
+   }
+  },
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "claim-2",
+     "prior_state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f",
+     "receipt_id": "jir1:403ab7fc51d78f91f2badabcbabc2135b165cfce07aa85d6e807a798a4b86aa7",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 2,
+     "state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "claim-1",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:cd8be5a1a340f8cd66251dfbcf4f3bb80ba76d680d5ac1cd0cd03f65f45cfc74",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 1,
+     "state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f"
+    }
+   ],
+   "name": "same-request-distinct-key-applies-again",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "claim-2",
+    "op": "claim",
+    "payload": {
+     "lease_ms": 50,
+     "now": 100,
+     "worker": "worker-1"
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 1,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": 150,
+      "lease_owner": "worker-1",
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "leased"
+     }
+    ],
+    "next_seq": 1
+   }
+  },
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "ack-1",
+     "prior_state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f",
+     "receipt_id": "jir1:f061570954e899e78f5c4d38a0dccfcb6cb41219ff8eea2df7fe6668ae81b4ba",
+     "request_fingerprint": "jif1:052f8e64b42cafbbec61e7d7293bcc7cab54e344700d39c6e5a992d4bab51e0b",
+     "sequence": 2,
+     "state_id": "qs1:c09be7907de41dff20812f3be29eee8eacd29e8a2fa40a37caddb49c7e1675b5"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "claim-1",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:cd8be5a1a340f8cd66251dfbcf4f3bb80ba76d680d5ac1cd0cd03f65f45cfc74",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 1,
+     "state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f"
+    }
+   ],
+   "name": "apply-ack-at-tip",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "ack-1",
+    "op": "ack",
+    "payload": {
+     "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+     "now": 110,
+     "worker": "worker-1"
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 1,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": 150,
+      "lease_owner": "worker-1",
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "leased"
+     }
+    ],
+    "next_seq": 1
+   }
+  },
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "nack-1",
+     "prior_state_id": "qs1:08e610f05e554a45db46618149bf08c9a8392a86eb2d16c7ff9198282870747c",
+     "receipt_id": "jir1:41eb179db0047a418045a4fd24dc7e57a9d88bd889a4bc8f4c21cee136fb1838",
+     "request_fingerprint": "jif1:06659571ef5b5f3afed714da7be8e2e1f0e297ab5c369018da0f5a223206c1cd",
+     "sequence": 4,
+     "state_id": "qs1:8f5f943f9a93f5715f2d893adee2891ea380708a1b19d1f4f9d45cc83dc23f57"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-b",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:e595e77c606309796f97fe948698531a948429cc07d0899b5c33f4e3aa82d077",
+     "request_fingerprint": "jif1:78fc0ef02564bd9efd1d57fb951141ba5f78e553c1707e30e7f1f754422ee06b",
+     "sequence": 1,
+     "state_id": "qs1:d9b44e80722cf6ada832a1413e1614449f301ee21f572bdc692ae9b1773f4797"
+    },
+    {
+     "idempotency_key": "claim-1",
+     "prior_state_id": "qs1:d9b44e80722cf6ada832a1413e1614449f301ee21f572bdc692ae9b1773f4797",
+     "receipt_id": "jir1:d2810ecd3551b970a4f3b861409b96da338aa97d3f16d66407ea1162aed7447f",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 2,
+     "state_id": "qs1:df2534d11868d068ce97ee5c8cbffa834d1b4170db4c8c82e9f1339c3387a3b2"
+    },
+    {
+     "idempotency_key": "claim-3",
+     "prior_state_id": "qs1:df2534d11868d068ce97ee5c8cbffa834d1b4170db4c8c82e9f1339c3387a3b2",
+     "receipt_id": "jir1:474c5d5d87b668d2280b50bf3b668b75c4bf8483a04907c7dc1c89dea1b8ed28",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 3,
+     "state_id": "qs1:08e610f05e554a45db46618149bf08c9a8392a86eb2d16c7ff9198282870747c"
+    }
+   ],
+   "name": "apply-nack-at-tip",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "nack-1",
+    "op": "nack",
+    "payload": {
+     "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+     "now": 110,
+     "worker": "worker-1"
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 1,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": 150,
+      "lease_owner": "worker-1",
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "leased"
+     },
+     {
+      "attempts": 1,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": 150,
+      "lease_owner": "worker-1",
+      "payload": {
+       "task": "task-b"
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "leased"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "expect": {
+    "outcome": "replayed",
+    "receipt": {
+     "idempotency_key": "claim-2",
+     "prior_state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f",
+     "receipt_id": "jir1:403ab7fc51d78f91f2badabcbabc2135b165cfce07aa85d6e807a798a4b86aa7",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 2,
+     "state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "claim-1",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:cd8be5a1a340f8cd66251dfbcf4f3bb80ba76d680d5ac1cd0cd03f65f45cfc74",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 1,
+     "state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f"
+    },
+    {
+     "idempotency_key": "claim-2",
+     "prior_state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f",
+     "receipt_id": "jir1:403ab7fc51d78f91f2badabcbabc2135b165cfce07aa85d6e807a798a4b86aa7",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 2,
+     "state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f"
+    }
+   ],
+   "name": "replay-state-neutral-receipt",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "claim-2",
+    "op": "claim",
+    "payload": {
+     "lease_ms": 50,
+     "now": 100,
+     "worker": "worker-1"
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 1,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": 150,
+      "lease_owner": "worker-1",
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "leased"
+     }
+    ],
+    "next_seq": 1
+   }
+  }
+ ],
+ "contract": "jobs-idempotency",
+ "contract_base_path": "/jobs/idempotency/v1",
+ "happy": [
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [],
+   "name": "apply-first-key-empty-queue",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-1",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-a",
+     "payload": {
+      "task": {
+       "job": "a"
+      }
+     },
+     "priority": 5
+    }
+   },
+   "state": {
+    "jobs": [],
+    "next_seq": 0
+   }
+  },
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    }
+   ],
+   "name": "apply-new-key-extends-queue",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-2",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-b",
+     "payload": {
+      "task": {
+       "job": "b"
+      }
+     },
+     "priority": 5
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 1
+   }
+  },
+  {
+   "expect": {
+    "outcome": "replayed",
+    "receipt": {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    }
+   },
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "name": "replay-seen-key-identical-request",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-1",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-a",
+     "payload": {
+      "task": {
+       "job": "a"
+      }
+     },
+     "priority": 5
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  }
+ ],
+ "malformed": [
+  {
+   "defect": "the request is a list, not a dict",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "fresh",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-fresh",
+       "payload": {
+        "task": "task-fresh"
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "request-not-a-dict",
+   "oracle": "honest",
+   "request": [
+    "not-a-dict"
+   ],
+   "scenario": "non-dict-request",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the request has no op field",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "fresh",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-fresh",
+       "payload": {
+        "task": "task-fresh"
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "request-missing-field",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "missing-request-field",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the request carries an undeclared fourth field",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "fresh",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-fresh",
+       "payload": {
+        "task": "task-fresh"
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "request-extra-field",
+   "oracle": "honest",
+   "request": {
+    "extra": 1,
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "extra-request-field",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the idempotency key is empty",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "idempotency_key",
+     "value": "repaired-key"
+    }
+   },
+   "name": "key-empty",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "empty-key",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the idempotency key is 129 characters",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "idempotency_key",
+     "value": "repaired-key"
+    }
+   },
+   "name": "key-too-long",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "key-too-long",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the key starts with a dot, not alphanumeric",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "idempotency_key",
+     "value": "repaired-key"
+    }
+   },
+   "name": "key-bad-leading-char",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": ".lead",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "key-bad-leading-char",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the key is an int, not a string",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "idempotency_key",
+     "value": "repaired-key"
+    }
+   },
+   "name": "key-non-str",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": 0,
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "non-str-key",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the op is not one of the queue contract's four",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_request_field": {
+     "field": "op",
+     "value": "enqueue"
+    }
+   },
+   "name": "unregistered-op",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "peek",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "unregistered-request-op",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the payload smuggles its own op field",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "fresh",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-fresh",
+       "payload": {
+        "task": "task-fresh"
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "payload-op-smuggle",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "op": "ack",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "payload-op-smuggle",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the enqueue payload has no priority",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "fresh",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-fresh",
+       "payload": {
+        "task": "task-fresh"
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "enqueue-missing-field",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     }
+    }
+   },
+   "scenario": "enqueue-payload-field-missing",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the claim lease_ms is zero",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "fresh",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-fresh",
+       "payload": {
+        "task": "task-fresh"
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "claim-bad-lease",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "claim-x",
+    "op": "claim",
+    "payload": {
+     "lease_ms": 0,
+     "now": 100,
+     "worker": "worker-1"
+    }
+   },
+   "scenario": "claim-lease-out-of-bounds",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the request payload value IS the live state object",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "fresh",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-fresh",
+       "payload": {
+        "task": "task-fresh"
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "request-aliases-state",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "alias-s",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-alias",
+     "payload": {
+      "task": "task-alias"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "request-aliases-state",
+   "state": {
+    "jobs": [],
+    "next_seq": 0
+   }
+  },
+  {
+   "defect": "the request payload value IS the ledger list",
+   "expect_failure": "malformed_idempotency_request",
+   "kind": "idempotent_apply",
+   "ledger": [],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "fresh",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-fresh",
+       "payload": {
+        "task": "task-fresh"
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "request-aliases-ledger",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "alias-l",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-alias",
+     "payload": {
+      "task": "task-alias"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "request-aliases-ledger",
+   "state": {
+    "jobs": [],
+    "next_seq": 0
+   }
+  },
+  {
+   "defect": "a job's status is not one of the four declared",
+   "expect_failure": "corrupt_queue",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_state": {
+     "state": {
+      "jobs": [
+       {
+        "attempts": 0,
+        "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+        "lease_expires_at": null,
+        "lease_owner": null,
+        "payload": {
+         "task": {
+          "job": "a"
+         }
+        },
+        "priority": 5,
+        "seq": 0,
+        "status": "ready"
+       },
+       {
+        "attempts": 0,
+        "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+        "lease_expires_at": null,
+        "lease_owner": null,
+        "payload": {
+         "task": {
+          "job": "b"
+         }
+        },
+        "priority": 5,
+        "seq": 1,
+        "status": "ready"
+       }
+      ],
+      "next_seq": 2
+     }
+    }
+   },
+   "name": "state-job-bad-status",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "corrupt-queue-job-status",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "gone"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the ledger is a dict, not a list",
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": {
+    "0": {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    }
+   },
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "ledger-not-a-list",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "non-list-ledger",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the first receipt has no sequence",
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "receipt-missing-field",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "ledger-receipt-missing-field",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the first receipt carries an undeclared field",
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "entry_id": "wle1:0000000000000000000000000000000000000000000000000000000000000000",
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "receipt-extra-field",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "ledger-receipt-extra-field",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "two receipts carry the same idempotency key",
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:755d1e9f4fbf3a9b87703c8c741d549e9d864d02632f8d47c9811164f6921174",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "duplicate-ledger-key",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "duplicate-ledger-key",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the second receipt's sequence jumps to 7 with a re-derived receipt id",
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:6ff2750bdaa5218761f4da335aa7f59d59e57706e13ca6d3b8df723975cb3387",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 7,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "sequence-gap",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "sequence-gap",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the second receipt's prior state id skips the first",
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:f63fa0d97cef7a005974cb6280023bfc030c66295858444ca9d8b85cf29183a9",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "chain-break",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "ledger-chain-break",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the last receipt names a state the live state is not",
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:08b91bd5cfa0b5bd247222e91e35cd5447c3a3f82c3a1240b03c4e6e83785964",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:1eb1688a53f80c040b4af97c7d084a28fcd1f2b5d4119f989d48d7276eab790a"
+    }
+   ],
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "terminal-mismatch",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "ledger-terminal-mismatch",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the first receipt id no longer re-derives",
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:0000000000000000000000000000000000000000000000000000000000000000",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "tampered-receipt-id",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-fresh",
+     "payload": {
+      "task": "task-fresh"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "tampered-receipt-id",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the stored fingerprint no longer matches the original request; validation cannot re-derive it, the replay must conflict",
+   "expect_failure": "key_conflict",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:b419b082156a767b6aa1b44e560e959b62aae0ae2ec70e461c34274a07e0f9b8",
+     "request_fingerprint": "jif1:0000000000000000000000000000000000000000000000000000000000000000",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_ledger": {
+     "ledger": [
+      {
+       "idempotency_key": "order-1",
+       "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+       "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+       "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+       "sequence": 0,
+       "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+      },
+      {
+       "idempotency_key": "order-2",
+       "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+       "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+       "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+       "sequence": 1,
+       "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+      }
+     ]
+    }
+   },
+   "name": "receipt-fingerprint-mismatch",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-1",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-a",
+     "payload": {
+      "task": {
+       "job": "a"
+      }
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "receipt-fingerprint-mismatch",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the fingerprinter raises",
+   "expect_failure": "divergent_fingerprint",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-raises",
+   "oracle": "raising",
+   "request": {
+    "idempotency_key": "oracle-k",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-oracle",
+     "payload": {
+      "task": "task-oracle"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "oracle-raising",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the fingerprinter returns a list",
+   "expect_failure": "divergent_fingerprint",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-non-str-output",
+   "oracle": "non_str_output",
+   "request": {
+    "idempotency_key": "oracle-k",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-oracle",
+     "payload": {
+      "task": "task-oracle"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "oracle-non_str_output",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the token misses the pinned grammar",
+   "expect_failure": "divergent_fingerprint",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-bad-grammar",
+   "oracle": "bad_grammar",
+   "request": {
+    "idempotency_key": "oracle-k",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-oracle",
+     "payload": {
+      "task": "task-oracle"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "oracle-bad_grammar",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "grammar-valid token not bound to this request",
+   "expect_failure": "divergent_fingerprint",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-unbound-token",
+   "oracle": "unbound_token",
+   "request": {
+    "idempotency_key": "oracle-k",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-oracle",
+     "payload": {
+      "task": "task-oracle"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "oracle-unbound_token",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "the token is a lone surrogate",
+   "expect_failure": "divergent_fingerprint",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "set_oracle": {
+     "oracle": "honest"
+    }
+   },
+   "name": "oracle-lone-surrogate",
+   "oracle": "lone_surrogate",
+   "request": {
+    "idempotency_key": "oracle-k",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-oracle",
+     "payload": {
+      "task": "task-oracle"
+     },
+     "priority": 5
+    }
+   },
+   "scenario": "oracle-lone_surrogate",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "a seen key returns with a different payload",
+   "expect_failure": "key_conflict",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "order-1",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-a",
+       "payload": {
+        "task": {
+         "job": "a"
+        }
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "key-conflict-different-payload",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-1",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-a",
+     "payload": {
+      "task": {
+       "job": "a"
+      }
+     },
+     "priority": 9
+    }
+   },
+   "scenario": "conflict-different-payload",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "defect": "a seen key returns under a different op",
+   "expect_failure": "key_conflict",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "minimal_repair": {
+    "replace_request": {
+     "request": {
+      "idempotency_key": "order-1",
+      "op": "enqueue",
+      "payload": {
+       "dedupe_key": "task-a",
+       "payload": {
+        "task": {
+         "job": "a"
+        }
+       },
+       "priority": 5
+      }
+     }
+    }
+   },
+   "name": "key-conflict-different-op",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-1",
+    "op": "claim",
+    "payload": {
+     "lease_ms": 50,
+     "now": 100,
+     "worker": "worker-1"
+    }
+   },
+   "scenario": "conflict-different-op",
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  }
+ ],
+ "notes": "T0294 jobs-idempotency conformance fixture. Receipts, states and ledgers were computed at authoring time from the T0293 contract-derived reference engine (tests/test_t0293_jobs_idempotency_contract.py) over the linked queue contract. Malformed rows are discriminating: repairing only the declared locus makes each row valid. Rollback rows prove a rejected apply leaves the supplied state, ledger and request bit-identical before the valid follow-up commits. Queue-rejection rows prove the composed error domain: the queue's typed rejection propagates unwrapped and commits nothing.",
+ "queue_rejection": [
+  {
+   "expect_queue_error": "dedupe_conflict",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "name": "dedupe-conflict",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "fresh-q",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-a",
+     "payload": {
+      "task": "task-a"
+     },
+     "priority": 9
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "expect_queue_error": "unknown_job",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "name": "unknown-job",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "q-ack",
+    "op": "ack",
+    "payload": {
+     "job_id": "job1:6f60ef94ec9f7a6bbd841df590cc76a3f1897a03d5d8c4f59eda9557c69738ec",
+     "now": 110,
+     "worker": "worker-1"
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "expect_queue_error": "lease_conflict",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "claim-1",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:cd8be5a1a340f8cd66251dfbcf4f3bb80ba76d680d5ac1cd0cd03f65f45cfc74",
+     "request_fingerprint": "jif1:52389fb0c1f76601b7ea31a040b324431ce8b22b4927ddcc40df5813e8882dc9",
+     "sequence": 1,
+     "state_id": "qs1:886cb92930e16c48a68d77015cb892cf45f8b1e4be3ebd67156d9e9d20e0c95f"
+    }
+   ],
+   "name": "lease-conflict",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "q-ack2",
+    "op": "ack",
+    "payload": {
+     "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+     "now": 110,
+     "worker": "worker-2"
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 1,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": 150,
+      "lease_owner": "worker-1",
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "leased"
+     }
+    ],
+    "next_seq": 1
+   }
+  }
+ ],
+ "rollback": [
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "order-3",
+     "prior_state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93",
+     "receipt_id": "jir1:fe6d5363d80cb00e3fc34765c57ef6c9c516ce333bc06ac435682ac095fd7a6f",
+     "request_fingerprint": "jif1:89460fe45ca57db25948ac6ff873c220a8e99b057b6fc5a8f214839e102d0b2a",
+     "sequence": 2,
+     "state_id": "qs1:188ce2c521e56303c927ae7f37e15cb13457c7a2ac8cb84bfb078715fc91c732"
+    }
+   },
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    },
+    {
+     "idempotency_key": "order-3",
+     "prior_state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93",
+     "receipt_id": "jir1:fe6d5363d80cb00e3fc34765c57ef6c9c516ce333bc06ac435682ac095fd7a6f",
+     "request_fingerprint": "jif1:89460fe45ca57db25948ac6ff873c220a8e99b057b6fc5a8f214839e102d0b2a",
+     "sequence": 2,
+     "state_id": "qs1:188ce2c521e56303c927ae7f37e15cb13457c7a2ac8cb84bfb078715fc91c732"
+    }
+   ],
+   "name": "rollback-past-receipt-reapply-deterministic",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-1",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-a",
+     "payload": {
+      "task": {
+       "job": "a"
+      }
+     },
+     "priority": 5
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   },
+   "then_ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "then_oracle": "honest",
+   "then_request": {
+    "idempotency_key": "order-3",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-c",
+     "payload": {
+      "task": "task-c"
+     },
+     "priority": 5
+    }
+   },
+   "then_state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  },
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "order-3",
+     "prior_state_id": "qs1:646c77adc20afd0cae77e4359d9df86bded197b070551da92045042904c4de56",
+     "receipt_id": "jir1:0344e3e9acd958eb0332bbbd653119aad0356fc3c85de2cf050066bb1ca17c85",
+     "request_fingerprint": "jif1:89460fe45ca57db25948ac6ff873c220a8e99b057b6fc5a8f214839e102d0b2a",
+     "sequence": 3,
+     "state_id": "qs1:779f9658d19c656778161c2ffe4969d067a8c9d6e4d23fc30194bdbcda485f9c"
+    }
+   },
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    },
+    {
+     "idempotency_key": "order-3",
+     "prior_state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93",
+     "receipt_id": "jir1:fe6d5363d80cb00e3fc34765c57ef6c9c516ce333bc06ac435682ac095fd7a6f",
+     "request_fingerprint": "jif1:89460fe45ca57db25948ac6ff873c220a8e99b057b6fc5a8f214839e102d0b2a",
+     "sequence": 2,
+     "state_id": "qs1:188ce2c521e56303c927ae7f37e15cb13457c7a2ac8cb84bfb078715fc91c732"
+    }
+   ],
+   "name": "rollback-then-divergent-reapply-fresh",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-3",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-c",
+     "payload": {
+      "task": "task-c"
+     },
+     "priority": 5
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   },
+   "then_ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    },
+    {
+     "idempotency_key": "order-x",
+     "prior_state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93",
+     "receipt_id": "jir1:001198720b8ce04242a742e02ceeaa8b598af2ede29b3bc0ff6d668b1ec45407",
+     "request_fingerprint": "jif1:a35ba2aef6f97229508ad2d942840dd40412246746192f9ffea2b874b0189caf",
+     "sequence": 2,
+     "state_id": "qs1:646c77adc20afd0cae77e4359d9df86bded197b070551da92045042904c4de56"
+    }
+   ],
+   "then_oracle": "honest",
+   "then_request": {
+    "idempotency_key": "order-3",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-c",
+     "payload": {
+      "task": "task-c"
+     },
+     "priority": 5
+    }
+   },
+   "then_state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:e7e230f899769e4ef3f35dfd626c4a2eed37cdc6c40ca9b7620ca458d548d9dc",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": "task-x"
+      },
+      "priority": 5,
+      "seq": 2,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 3
+   }
+  },
+  {
+   "expect": {
+    "outcome": "applied",
+    "receipt": {
+     "idempotency_key": "order-3",
+     "prior_state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93",
+     "receipt_id": "jir1:fe6d5363d80cb00e3fc34765c57ef6c9c516ce333bc06ac435682ac095fd7a6f",
+     "request_fingerprint": "jif1:89460fe45ca57db25948ac6ff873c220a8e99b057b6fc5a8f214839e102d0b2a",
+     "sequence": 2,
+     "state_id": "qs1:188ce2c521e56303c927ae7f37e15cb13457c7a2ac8cb84bfb078715fc91c732"
+    }
+   },
+   "expect_failure": "corrupt_ledger",
+   "kind": "idempotent_apply",
+   "ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    },
+    {
+     "idempotency_key": "order-3",
+     "prior_state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93",
+     "receipt_id": "jir1:fe6d5363d80cb00e3fc34765c57ef6c9c516ce333bc06ac435682ac095fd7a6f",
+     "request_fingerprint": "jif1:89460fe45ca57db25948ac6ff873c220a8e99b057b6fc5a8f214839e102d0b2a",
+     "sequence": 2,
+     "state_id": "qs1:188ce2c521e56303c927ae7f37e15cb13457c7a2ac8cb84bfb078715fc91c732"
+    }
+   ],
+   "name": "rollback-mixed-stale-ledger-fails-closed",
+   "oracle": "honest",
+   "request": {
+    "idempotency_key": "order-1",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-a",
+     "payload": {
+      "task": {
+       "job": "a"
+      }
+     },
+     "priority": 5
+    }
+   },
+   "state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   },
+   "then_ledger": [
+    {
+     "idempotency_key": "order-1",
+     "prior_state_id": "qs1:723bd31be8e30722ce4e495bf35de07b106ce5f7b43c8b79954311e15be03974",
+     "receipt_id": "jir1:a83d984542dd5e6bc91d299740921ddd46e27e7db483dcbda0de779dd78e19d2",
+     "request_fingerprint": "jif1:ab67f8766a0e4c6da3cca5997628158fa7606da4a2a46bcfe9e3ba0a664873f0",
+     "sequence": 0,
+     "state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc"
+    },
+    {
+     "idempotency_key": "order-2",
+     "prior_state_id": "qs1:8b73af1da81605242166f6e70212b78f80e639601d13f280e0051776027f30fc",
+     "receipt_id": "jir1:818adb992c26c4df8e57fc72752a46c1d8ddfeef3b5acfcadfae45b32a19f426",
+     "request_fingerprint": "jif1:214d14ad90677cc9213577af1b3962ecf55754d1fb2ed61feebdf7798aaa62f7",
+     "sequence": 1,
+     "state_id": "qs1:0bf431ae449e4d8241b0bc2bcc6c4cb5dc6badb941908cadcc2cfe206e80ee93"
+    }
+   ],
+   "then_oracle": "honest",
+   "then_request": {
+    "idempotency_key": "order-3",
+    "op": "enqueue",
+    "payload": {
+     "dedupe_key": "task-c",
+     "payload": {
+      "task": "task-c"
+     },
+     "priority": 5
+    }
+   },
+   "then_state": {
+    "jobs": [
+     {
+      "attempts": 0,
+      "job_id": "job1:1ecb9506bf9cd304276bd611cc8463823c16b1f3629c55262bb20edf3d489cb8",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5,
+      "seq": 0,
+      "status": "ready"
+     },
+     {
+      "attempts": 0,
+      "job_id": "job1:5764147927def31c60936ad0a0e3563865b195cbfb7b00b6b66ab118bf14cf07",
+      "lease_expires_at": null,
+      "lease_owner": null,
+      "payload": {
+       "task": {
+        "job": "b"
+       }
+      },
+      "priority": 5,
+      "seq": 1,
+      "status": "ready"
+     }
+    ],
+    "next_seq": 2
+   }
+  }
+ ],
+ "schema": 1
+}
