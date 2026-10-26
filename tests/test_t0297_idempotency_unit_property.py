@@ -1,15 +1,27 @@
 """T0297: unit and seeded property checks of the production jobs idempotency engine.
 
-An independent model (a dict of key to receipt plus the queue rules,
+An independent model (a list of receipts plus the queue rules,
 restated from the contracts - no shared code with server.jobs_idempotency
 or server.jobs_queue beyond the public id helpers job_id_for,
-state_id_for, request_fingerprint and derive_receipt_id) is driven with
-the same random idempotent-apply streams as JobsIdempotencyEngine. After
-every step the engine and the model agree on outcome, receipt or failure
-class AND error layer (idempotency vs propagated queue), and on state
-and ledger byte-for-byte. Every rejected call leaves state, ledger and
-request byte-identical. Seeded, so a failure replays. This is a
-single-threaded decision battery, not a concurrency test.
+state_id_for, request_fingerprint and derive_receipt_id and the shared
+contract LIMIT CONSTANTS MAX_JOBS and MAX_ATTEMPTS) is driven with the
+same random idempotent-apply streams as JobsIdempotencyEngine. After
+every step the engine and the model agree on error layer (idempotency vs
+propagated queue) and failure class, and per success on the OUTCOME word
+(applied vs replayed) and the receipt; state and ledger compare under
+the canonical JSON serialization, which is type-distinguishing
+(false/0 and 1/1.0 serialize differently), so re-typed values cannot
+hide. Every rejected call leaves state, ledger and request
+canonical-identical. Seeded, so a failure replays. This is a
+single-threaded decision battery over well-shaped requests, not a
+concurrency test and not a replacement for the hostile-input totality
+probes or the oracle/closure taxonomy (the T0295 battery bound to
+production owns those: forged-token oracles, every BaseException form,
+ledger-mutating and KeyboardInterrupt closure variants). The streams are
+finite (150 steps, 6 dedupe keys), so capacity/seq-exhaustion domains
+are NOT modeled here; the live-closure unit case covers an
+honest-return state/request rewrite only, with the T0295 closure probes
+as the broader dependency.
 """
 
 from __future__ import annotations
@@ -92,13 +104,14 @@ class Model:
         return None
 
     def step(self, req):
-        """Returns (layer, failure_class, receipt-ish); mutates only on commit."""
+        """Returns (layer, failure_class, outcome, receipt); mutates only
+        on commit. outcome is "applied" or "replayed" on success."""
         snapshot = (copy.deepcopy(self.jobs), self.next_seq, copy.deepcopy(self.ledger))
         try:
-            return None, None, self._do(req)
+            return (*self._do(req),)
         except _Fail as fail:
             self.jobs, self.next_seq, self.ledger = snapshot
-            return fail.args[0], fail.args[1], None
+            return fail.args[0], fail.args[1], None, None
 
     def _do(self, req):
         key = req["idempotency_key"]
@@ -107,7 +120,7 @@ class Model:
             if stored["idempotency_key"] == key:
                 if stored["request_fingerprint"] != fp:
                     raise _Fail("idem", "key_conflict")
-                return dict(stored)
+                return None, None, "replayed", dict(stored)
         self._queue_op(req)
         new_state = {"jobs": copy.deepcopy(self.jobs), "next_seq": self.next_seq}
         receipt = {
@@ -125,7 +138,7 @@ class Model:
             "sequence": len(self.ledger),
         }
         self.ledger.append(receipt)
-        return dict(receipt)
+        return None, None, "applied", dict(receipt)
 
     @property
     def _prior_state(self):
@@ -483,6 +496,28 @@ def _random_request(rng, now, known):
     return _settle(key, rng.choice(("ack", "nack")), rng.choice(WORKERS), now, jid)
 
 
+def _step_problems(got, want):
+    """Per-step disagreement list: error layer and class always; on a
+    model success also the outcome word and the receipt (canonical,
+    type-distinguishing)."""
+    got_layer, got_fail, got_result = got
+    want_layer, want_fail, want_outcome, want_receipt = want
+    problems = []
+    if (got_layer, got_fail) != (want_layer, want_fail):
+        problems.append(f"layer/class {(got_layer, got_fail)} != {(want_layer, want_fail)}")
+    if want_outcome is not None:
+        if got_result is None:
+            problems.append("model succeeded but the engine rejected")
+        else:
+            if got_result["outcome"] != want_outcome:
+                problems.append(f"outcome {got_result['outcome']} != {want_outcome}")
+            if _canon(got_result["receipt"]) != _canon(want_receipt):
+                problems.append("receipt differs")
+    elif got_result is not None:
+        problems.append("model rejected but the engine committed")
+    return problems
+
+
 @pytest.mark.parametrize("seed", range(40))
 def test_engine_matches_independent_model_on_random_streams(seed):
     rng = random.Random(seed)
@@ -492,17 +527,57 @@ def test_engine_matches_independent_model_on_random_streams(seed):
     for _ in range(150):
         now += rng.choice((0, 0, 1, 3, 50))
         req = _random_request(rng, now, known)
-        got_layer, got_fail, got_result = _engine_step(engine, state, ledger, req)
-        want_layer, want_fail, want_receipt = model.step(req)
-        assert (got_layer, got_fail) == (want_layer, want_fail), (seed, req)
-        if want_receipt is None and want_fail is None:
-            # claim on an empty/idle queue: the queue's null-job receipt is
-            # still an applied transition with a receipt
-            assert got_result["outcome"] == "applied"
-        if got_result is not None:
-            assert got_result["receipt"] == want_receipt, (seed, req)
-        assert state == model.state(), (seed, req)
-        assert ledger == model.ledger, (seed, req)
+        got = _engine_step(engine, state, ledger, req)
+        want = model.step(req)
+        assert _step_problems(got, want) == [], (seed, req)
+        assert _canon(state) == _canon(model.state()), (seed, req)
+        assert _canon(ledger) == _canon(model.ledger), (seed, req)
+
+
+class FlipOutcome:
+    """Regression surrogate (named, hand-built - NOT a source-edit
+    mutant): delegates to the engine but flips the outcome word
+    applied<->replayed on success for every generator key (the unit
+    keys k1/k2 are not generated, so the unit tests never see it). A
+    property that does not pin the outcome lets it pass."""
+
+
+def _flip_outcome(engine, key):
+    class _Flip:
+        def apply(self, state, ledger, req):
+            result = engine.apply(state, ledger, req)
+            if key(req) not in ("k1", "k2"):
+                result = dict(result)
+                result["outcome"] = "replayed" if result["outcome"] == "applied" else "applied"
+            return result
+
+    return _Flip()
+
+
+def test_outcome_flip_wrapper_is_caught_by_the_property():
+    """The FlipOutcome surrogate over ALL 40 property seeds (150 steps
+    each, the agreement stream) must produce wrong outcomes; the exact
+    count for THIS wrapper definition is pinned. The same streams
+    through the unwrapped engine produce zero problems (the property
+    above)."""
+    wrong = 0
+    for seed in range(40):
+        rng = random.Random(seed)
+        state, ledger, model = _empty(), [], Model()
+        engine = _flip_outcome(
+            JobsIdempotencyEngine(request_fingerprint),
+            lambda req: req["idempotency_key"],
+        )
+        now, known = 0, [job_id_for(f"task-{i}") for i in range(6)]
+        for _ in range(150):
+            now += rng.choice((0, 0, 1, 3, 50))
+            req = _random_request(rng, now, known)
+            got = _engine_step(engine, state, ledger, req)
+            want = model.step(req)
+            wrong += sum(
+                1 for problem in _step_problems(got, want) if problem.startswith("outcome")
+            )
+    assert wrong == 735, wrong
 
 
 @pytest.mark.parametrize("seed", range(10))
