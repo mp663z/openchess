@@ -8,7 +8,11 @@ contract) - nothing is re-implemented here. Pinned receipts,
 states and ledgers in the fixture were computed from that
 reference at authoring time, so any contract or derivation drift
 breaks this battery. Every malformed case is discriminating
-(repairing ONLY its declared defect locus makes the case valid),
+(repairing its declared defect locus makes the case valid: a
+field-level locus for set_request_field repairs, the whole
+request for replace_request repairs - those are used only where
+the defect is not one settable field, so they are NOT
+one-scalar-defect proofs),
 every queue-rejection case pins the propagated code from the
 composed error domain, and rollback cases prove a rejected apply
 leaves the exact supplied state, ledger and request bit-identical
@@ -150,7 +154,7 @@ MALFORMED_MANIFEST = {
     "request-not-a-dict": (MIR, "honest", "replace_request",
                            "the request is a list, not a dict",
                            "non-dict-request"),
-    "request-missing-field": (MIR, "honest", "replace_request",
+    "request-missing-field": (MIR, "honest", "set_request_field",
                               "the request has no op field",
                               "missing-request-field"),
     "request-extra-field": (MIR, "honest", "replace_request",
@@ -172,14 +176,14 @@ MALFORMED_MANIFEST = {
                         "the op is not one of the queue "
                         "contract's four",
                         "unregistered-request-op"),
-    "payload-op-smuggle": (MIR, "honest", "replace_request",
+    "payload-op-smuggle": (MIR, "honest", "set_request_field",
                            "the payload smuggles its own op field",
                            "payload-op-smuggle"),
-    "enqueue-missing-field": (MIR, "honest", "replace_request",
+    "enqueue-missing-field": (MIR, "honest", "set_request_field",
                               "the enqueue payload has no "
                               "priority",
                               "enqueue-payload-field-missing"),
-    "claim-bad-lease": (MIR, "honest", "replace_request",
+    "claim-bad-lease": (MIR, "honest", "set_request_field",
                         "the claim lease_ms is zero",
                         "claim-lease-out-of-bounds"),
     "request-aliases-state": (
@@ -244,7 +248,7 @@ MALFORMED_MANIFEST = {
                               "the token is a lone surrogate",
                               "oracle-lone_surrogate"),
     "key-conflict-different-payload": (
-        KC, "honest", "replace_request",
+        KC, "honest", "set_request_field",
         "a seen key returns with a different payload",
         "conflict-different-payload"),
     "key-conflict-different-op": (
@@ -297,7 +301,7 @@ ROW_DIGESTS = {
     "malformed:request-not-a-dict":
         "18c6b7120d6221a683901476121a2befade59bc3df48875b48c967c1d4057350",
     "malformed:request-missing-field":
-        "de6b3b3e4e29db1f93872e023c2b0a35d32ef7f48ab583bd08c8ed27eedf106c",
+        "27a1d8abdb02ac54fef1633139d702edf616f85ab5b195f1ed6c766bac43f915",
     "malformed:request-extra-field":
         "3470a92ece6a86b762d73a30d7bd64702a314bb65fe9ee021df51091f649f89c",
     "malformed:key-empty":
@@ -311,11 +315,11 @@ ROW_DIGESTS = {
     "malformed:unregistered-op":
         "861e12240c32861847567b2bc65b8cf68f726de331d968789ab9dbedbe8192ca",
     "malformed:payload-op-smuggle":
-        "4048903c257ddf4f581949cf37563b5afd42315d66d74789ddabb01f5be6e57d",
+        "5dd217229939516d55cc0e38cef16dbfb1dd5862a330b2e8cdf4dcce8bebfad5",
     "malformed:enqueue-missing-field":
-        "0e3e73f9909669c205c73bc33950336513272dfb836dd80097f5915d84fa90be",
+        "d1bea2f1eda93fe04525253bd8d59c6c96f25735ac5bc1ed6507d2dc4d9bcea3",
     "malformed:claim-bad-lease":
-        "d64a9c31d97173b76ed9c4719a073dd49d60b8bca9d38871ddd55745a04765f7",
+        "505558c693e229d39870ec1945c133fb47caa11fd2014bb74c5b45fe9182d6e6",
     "malformed:request-aliases-state":
         "d738158be6f65a1e60e7c1973373360bff0662c8457e7780c402dc7e47b33165",
     "malformed:request-aliases-ledger":
@@ -351,7 +355,7 @@ ROW_DIGESTS = {
     "malformed:oracle-lone-surrogate":
         "8936f1d834feaf6529dd3eb2b598e5a0a19aa04380cf2797aa419fbd8845b816",
     "malformed:key-conflict-different-payload":
-        "b96fd3934c2e1d2345fca880d5361ff88fe2dae92301e4328d82cd9a9f0fee0f",
+        "a06e232e28f5ba51c394bb2b0f52b3cbca519200a662468047687c735dbecf36",
     "malformed:key-conflict-different-op":
         "c676703374194517be40afdf10a14aac9ddcbcdc57564f50dcd45742f115d6cc",
     "queue_rejection:dedupe-conflict":
@@ -778,7 +782,10 @@ def test_fixture_schema_version_mutations_fail():
 
 def test_repairs_minimal_locus():
     """Every declarative minimal repair makes its malformed case
-    fully valid end to end, changing ONLY the declared locus."""
+    fully valid end to end, changing ONLY the declared locus -
+    one request field for set_request_field, the whole request
+    for replace_request (a coarse locus, not a one-scalar-defect
+    proof)."""
     for name in _names("malformed"):
         case = _case("malformed", name)
         rep = _repaired(case)
@@ -849,8 +856,9 @@ def test_rollback_atomicity_kills_mutants():
     """The imported T0240 atomicity machinery is non-vacuous
     against engine mutants: a commit-before-validate engine that
     appends the receipt BEFORE the failing ledger check is caught
-    by _assert_work_atomic, and a live-mutating fingerprinter is
-    caught by the restore."""
+    by _assert_work_atomic. This is the only LOCAL mutant witness
+    here; fingerprinter-mutation behavior is covered by the T0293
+    contract battery, not re-proven in this file."""
     case = _case("malformed", "sequence-gap")
 
     def commit_first(engine, state, ledger, request):
@@ -909,6 +917,13 @@ def _assert_scoped_edges(section, case):
             name != "same-request-distinct-key-applies-again":
         assert receipt["prior_state_id"] != receipt["state_id"], \
             name
+    if name == "key-max-length-128":
+        # the row exists to pin the upper key-length boundary
+        assert len(case["request"]["idempotency_key"]) == 128, \
+            name
+    if name == "key-single-char":
+        # the row exists to pin the lower key-length boundary
+        assert len(case["request"]["idempotency_key"]) == 1, name
     if name == "same-request-distinct-key-applies-again":
         assert receipt["prior_state_id"] == receipt["state_id"], \
             name
@@ -918,6 +933,9 @@ def _assert_scoped_edges(section, case):
         assert any(r["request_fingerprint"] == fp
                    for r in others), name
     if name == "replay-state-neutral-receipt":
+        # entailed by the chain + terminal pins for this LAST
+        # ledger receipt; kept as explicit documentation of the
+        # row's intent, not an independently load-bearing check
         assert receipt["prior_state_id"] == receipt["state_id"], \
             name
 
@@ -1149,30 +1167,49 @@ def _section_of(row):
     return "?"
 
 
-def test_row_digest_detects_malformed_and_rollback_payload_swap():
-    """A payload swap between two malformed rows of the SAME
-    failure class and repair form, and a follow-up swap between
-    two rollback rows, are caught by the digest table."""
+def _digest_only_swaps():
+    """Row edits that NO semantic check can catch: the malformed
+    swap exchanges the (both valid) live STATES of two
+    request-family rows, leaving requests, ledgers, repairs,
+    defects and scenarios - everything the semantic pins read -
+    untouched; the rollback swap exchanges the first-apply
+    request between two rows whose failure is ledger-driven, so
+    every re-derivation is intact."""
     m = copy.deepcopy(CASES)
     rows = {r["name"]: r for r in m["malformed"]}
-    a, b = rows["request-missing-field"], \
-        rows["request-extra-field"]
+    a, b = rows["key-conflict-different-payload"], \
+        rows["key-conflict-different-op"]
+    # same state, same ledger, same stored receipt, same failure
+    # class: only the incoming request differs, and the conflict
+    # re-derivation and scenario pins stay intact either way
+    assert a["state"] == b["state"] and a["ledger"] == b["ledger"]
     assert a["expect_failure"] == b["expect_failure"]
-    assert a["minimal_repair"] == b["minimal_repair"]
-    for key in a:
-        if key != "name":
-            a[key], b[key] = b[key], a[key]
-    with pytest.raises(AssertionError):
-        _validate_structure(m)
+    a["request"], b["request"] = b["request"], a["request"]
+    yield "malformed-request-swap", m
     m = copy.deepcopy(CASES)
     rows = m["rollback"]
-    # both failures are ledger-driven, so swapping the first-apply
-    # request leaves every semantic re-derivation intact; only the
-    # digest table catches it
     rows[0]["request"], rows[1]["request"] = \
         rows[1]["request"], rows[0]["request"]
-    with pytest.raises(AssertionError):
-        _validate_structure(m)
+    yield "rollback-first-request-swap", m
+
+
+@pytest.mark.parametrize("with_digests", [True, False],
+                         ids=["with-digests", "digests-neutralized"])
+def test_row_digest_detects_digest_only_swaps(with_digests,
+                                              monkeypatch):
+    """Both digest-only swaps are caught WITH the digest table
+    live; with _row_digest monkeypatched neutral they SURVIVE -
+    proving the digest table, not any semantic check, is their
+    killer."""
+    if not with_digests:
+        _neutralize_digests(monkeypatch)
+    for label, m in _digest_only_swaps():
+        if with_digests:
+            with pytest.raises(AssertionError):
+                _validate_structure(m)
+        else:
+            _validate_structure(m)
+            assert label
 
 
 # -- closure kills the verifier mutants --------------------------------------
@@ -1182,16 +1219,28 @@ def _named(m, section, name):
     return next(r for r in m[section] if r["name"] == name)
 
 
+def _regen_detached(row):
+    """Regenerate a mutated row's expect over FROZEN, DETACHED
+    copies of its inputs. The engine mutates what it is given, so
+    it consumes the detached copies; the row KEEPS its original
+    pre-apply state/ledger/request. The resulting row is
+    internally consistent (pre-apply inputs, post-apply expect),
+    so only the closure (order, digests, pins, prior binding,
+    scoped edges) can kill it - never a live-aliasing collateral
+    mismatch like a receipt already appended to the ledger."""
+    work = (copy.deepcopy(row["state"]),
+            copy.deepcopy(row["ledger"]),
+            copy.deepcopy(row["request"]))
+    row["expect"] = _apply(row["oracle"], *work)
+
+
 def _verifier_mutants():
     """Fixture-only mutants applied to an in-memory copy of
-    cases.json with the pinned result REGENERATED from the
-    reference where the row stays executable - so only the
+    cases.json. Where a mutant row stays executable its pinned
+    result is REGENERATED from the reference over detached input
+    copies, so the row is internally consistent and only the
     closure (order, digests, pins, scoped edges) can kill it."""
     out = []
-
-    def regen(row):
-        row["expect"] = _apply(row["oracle"], row["state"],
-                               row["ledger"], row["request"])
 
     # A: swap names of two boundary rows
     m = copy.deepcopy(CASES)
@@ -1208,41 +1257,82 @@ def _verifier_mutants():
     out.append(("B-payload-substitution", m))
     # D: new-key row given the first row's payload - the queue's
     # own dedupe turns the apply into a STATE-NEUTRAL no-op, which
-    # only the scoped applied-changes-state edge rejects without
-    # digests
+    # only the scoped applied-changes-state edge rejects
     m = copy.deepcopy(CASES)
     row = _named(m, "happy", "apply-new-key-extends-queue")
     row["request"]["payload"] = copy.deepcopy(
         _named(m, "happy", "apply-first-key-empty-queue")[
             "request"]["payload"])
-    regen(row)
+    _regen_detached(row)
     out.append(("D-new-key-first-payload", m))
     # E: reversed happy and boundary rows
     m = copy.deepcopy(CASES)
     m["happy"].reverse()
     m["boundary"].reverse()
     out.append(("E-reversed-rows", m))
-    # edge erasures
-    for name, mutate in (
-            ("key-max-length-128",
-             lambda r: r["request"].__setitem__(
-                 "idempotency_key", "Kxxxx")),
-            ("key-single-char",
-             lambda r: r["request"].__setitem__(
-                 "idempotency_key", "cc")),
-            ("same-request-distinct-key-applies-again",
-             lambda r: r["request"]["payload"].__setitem__(
-                 "lease_ms", 51)),
-            ("replay-state-neutral-receipt",
-             lambda r: r.__setitem__(
-                 "request", copy.deepcopy(_named(
-                     CASES, "boundary", "key-single-char")
-                     ["request"])))):
+    # key-length edge erasures: the key moves off its pinned
+    # boundary and the row is REGENERATED consistent, so only the
+    # literal boundary pins in _assert_scoped_edges can kill them
+    for name, key in (("key-max-length-128", "Kxxxx"),
+                      ("key-single-char", "cc")):
         m = copy.deepcopy(CASES)
         row = _named(m, "boundary", name)
-        mutate(row)
-        regen(row)
+        row["request"]["idempotency_key"] = key
+        _regen_detached(row)
         out.append((f"edge-erased:{name}", m))
+    # same-request edge erasure: the request leaves the shared
+    # fingerprint (regen would raise key_conflict, so the expect
+    # stays pinned); only the shares-fingerprint edge notices
+    m = copy.deepcopy(CASES)
+    row = _named(m, "boundary",
+                 "same-request-distinct-key-applies-again")
+    row["request"]["payload"]["lease_ms"] = 51
+    out.append(
+        ("edge-erased:same-request-distinct-key-applies-again",
+         m))
+    # state-neutral replay erasure, request-swap form: replay the
+    # STATE-CHANGING claim-1 receipt instead of the state-neutral
+    # claim-2; the seq pin AND the state-neutral edge both fire
+    m = copy.deepcopy(CASES)
+    row = _named(m, "boundary", "replay-state-neutral-receipt")
+    row["request"]["idempotency_key"] = "claim-1"
+    _regen_detached(row)
+    out.append(("edge-erased:replay-state-neutral-receipt", m))
+    # NOTE: replay-state-neutral-receipt has no sole-witness
+    # tamper: for the LAST ledger receipt the chain and terminal
+    # pins already force prior_state_id == state_id, so that
+    # row's state-neutrality edge is entailed by existing
+    # structural pins, not independently load-bearing. The
+    # request-swap erasure above still exercises it.
+    # applied-changes-state, sole-witness form: the pinned expect
+    # of an applied happy row is tampered to a re-derived
+    # STATE-NEUTRAL receipt (prior still binds the live state,
+    # the receipt still is not in the ledger), so only the
+    # applied-changes-state edge can kill it
+    m = copy.deepcopy(CASES)
+    row = _named(m, "happy", "apply-new-key-extends-queue")
+    receipt = row["expect"]["receipt"]
+    receipt["state_id"] = receipt["prior_state_id"]
+    receipt["receipt_id"] = derive_receipt_id(
+        receipt["idempotency_key"], receipt["request_fingerprint"],
+        receipt["prior_state_id"], receipt["state_id"],
+        receipt["sequence"])
+    out.append(
+        ("edge-erased:apply-receipt-state-neutral-tampered", m))
+    # distinct-key state-neutrality, sole-witness form: the pinned
+    # expect is tampered to a re-derived STATE-CHANGING receipt
+    # (prior still binds the live state), so only the
+    # distinct-key state-neutrality pin can kill it
+    m = copy.deepcopy(CASES)
+    row = _named(m, "boundary",
+                 "same-request-distinct-key-applies-again")
+    receipt = row["expect"]["receipt"]
+    receipt["state_id"] = row["ledger"][0]["state_id"]
+    receipt["receipt_id"] = derive_receipt_id(
+        receipt["idempotency_key"], receipt["request_fingerprint"],
+        receipt["prior_state_id"], receipt["state_id"],
+        receipt["sequence"])
+    out.append(("edge-erased:distinct-key-state-changing", m))
     return out
 
 
@@ -1311,6 +1401,28 @@ def _shape_ok(fn, value):
     return True
 
 
+def _ledger_invariants(ledger):
+    """Piecewise ledger invariants, checked WITHOUT the shape
+    validator so a defective row's named mechanism can be pinned
+    as isolated from the others."""
+    keys = [r["idempotency_key"] for r in ledger]
+    return {
+        "keys-unique": len(keys) == len(set(keys)),
+        "sequences-contiguous":
+            [r["sequence"] for r in ledger]
+            == list(range(len(ledger))),
+        "chain-intact": all(
+            ledger[i]["prior_state_id"] ==
+            ledger[i - 1]["state_id"]
+            for i in range(1, len(ledger))),
+        "ids-reattach": all(
+            r["receipt_id"] == derive_receipt_id(
+                r["idempotency_key"], r["request_fingerprint"],
+                r["prior_state_id"], r["state_id"],
+                r["sequence"]) for r in ledger),
+    }
+
+
 def _assert_malformed_scenario(case):
     tag = case["scenario"]
     name = case["name"]
@@ -1339,6 +1451,30 @@ def _assert_malformed_scenario(case):
         assert not state_ok and ledger_ok and request_ok, name
     elif tag in _LEDGER_MECHANISM_TAGS:
         assert state_ok and not ledger_ok and request_ok, name
+        # per-row ISOLATED mechanism pins: the named invariant is
+        # violated and the row's other ledger invariants are
+        # pinned holding - per-row isolation, not a generic
+        # closure claim
+        if tag == "non-list-ledger":
+            assert type(ledger) is not list, name
+        elif tag in ("ledger-receipt-missing-field",
+                     "ledger-receipt-extra-field"):
+            bad = [r for r in ledger
+                   if set(r) != RECEIPT_FIELDS]
+            assert len(bad) == 1, name
+            if tag == "ledger-receipt-missing-field":
+                assert set(bad[0]) < RECEIPT_FIELDS, name
+            else:
+                assert set(bad[0]) > RECEIPT_FIELDS, name
+        else:
+            inv = _ledger_invariants(ledger)
+            broken = {
+                "duplicate-ledger-key": "keys-unique",
+                "sequence-gap": "sequences-contiguous",
+                "ledger-chain-break": "chain-intact",
+                "tampered-receipt-id": "ids-reattach"}[tag]
+            assert not inv.pop(broken), name
+            assert all(inv.values()), (name, inv)
     elif tag == _TERMINAL_TAG:
         assert state_ok and ledger_ok and request_ok, name
         assert ledger and ledger[-1]["state_id"] != \
@@ -1364,3 +1500,118 @@ def _assert_malformed_scenario(case):
 
 def test_scenario_tags_partition_the_malformed_rows():
     assert {c["scenario"] for c in CASES["malformed"]} == _ALL_TAGS
+
+
+# -- load-bearing controls and intended-witness rechecks ----------------------
+
+# Mutants whose ONLY killer inside _validate_structure is
+# _assert_scoped_edges (with digests neutralized). Verified by the
+# control below: neutralize the edges and these SURVIVE.
+_EDGE_ONLY_MUTANTS = {
+    "D-new-key-first-payload",
+    "edge-erased:key-max-length-128",
+    "edge-erased:key-single-char",
+    "edge-erased:same-request-distinct-key-applies-again",
+    "edge-erased:distinct-key-state-changing",
+    "edge-erased:apply-receipt-state-neutral-tampered",
+}
+
+# mutant label -> (section, row name) for the edge-witness recheck
+_EDGE_WITNESS_ROWS = {
+    "D-new-key-first-payload": ("happy",
+                                "apply-new-key-extends-queue"),
+    "edge-erased:key-max-length-128": ("boundary",
+                                       "key-max-length-128"),
+    "edge-erased:key-single-char": ("boundary", "key-single-char"),
+    "edge-erased:same-request-distinct-key-applies-again": (
+        "boundary", "same-request-distinct-key-applies-again"),
+    "edge-erased:replay-state-neutral-receipt": (
+        "boundary", "replay-state-neutral-receipt"),
+    "edge-erased:apply-receipt-state-neutral-tampered": (
+        "happy", "apply-new-key-extends-queue"),
+    "edge-erased:distinct-key-state-changing": (
+        "boundary", "same-request-distinct-key-applies-again"),
+}
+
+
+def _neutralize_digests(monkeypatch):
+    monkeypatch.setattr(
+        sys.modules[__name__], "_row_digest",
+        lambda row: ROW_DIGESTS[
+            f"{_section_of(row)}:{row['name']}"])
+
+
+def test_scoped_edges_are_load_bearing_controls(monkeypatch):
+    """CONTROL: with digests neutralized AND _assert_scoped_edges
+    replaced by a no-op, exactly the _EDGE_ONLY_MUTANTS survive
+    structure validation - the scoped edges are their actual
+    killers, not decorative checks. Every other named mutant is
+    still rejected (order/pins), and none of this relies on
+    counting raw crashes: every kill in this battery is an
+    AssertionError semantic reject."""
+    _neutralize_digests(monkeypatch)
+    monkeypatch.setattr(sys.modules[__name__],
+                        "_assert_scoped_edges",
+                        lambda section, case: None)
+    survivors = set()
+    for label, m in _verifier_mutants():
+        try:
+            _validate_structure(m)
+        except AssertionError:
+            continue
+        survivors.add(label)
+    assert survivors == _EDGE_ONLY_MUTANTS
+
+
+def test_named_mutants_carry_their_intended_witness():
+    """Each named verifier mutant's INTENDED locus check, re-run
+    in isolation on the mutant, fails - and the same check passes
+    on the pristine fixture, so the witness is non-vacuous.
+    Kills: order mutants by manifest order, B by the manifest
+    pins, the rest by _assert_scoped_edges."""
+    for label, m in _verifier_mutants():
+        if label == "E-reversed-rows":
+            drifted = any(
+                [c["name"] for c in m[section]]
+                != list(MANIFESTS[section])
+                for section in ("happy", "boundary"))
+            assert drifted, label
+            for section in ("happy", "boundary"):
+                assert _names(section) == list(MANIFESTS[section])
+        elif label == "A-name-swap":
+            # _swap_names keeps manifest order (content moves
+            # under a new name), so the witness is the manifest
+            # (op, sequence, outcome) pins, not order
+            for name in ("key-max-length-128",
+                         "same-request-distinct-key-applies-again"):
+                case = _named(m, "boundary", name)
+                op, seq, outcome = MANIFESTS["boundary"][name]
+                pins = (case["request"]["op"] == op,
+                        case["expect"]["outcome"] == outcome,
+                        case["expect"]["receipt"]["sequence"]
+                        == seq)
+                assert not all(pins), (label, name)
+                pristine = _case("boundary", name)
+                assert pristine["request"]["op"] == op
+                assert pristine["expect"]["outcome"] == outcome
+                assert pristine["expect"]["receipt"][
+                    "sequence"] == seq
+        elif label == "B-payload-substitution":
+            case = _named(m, "boundary", "key-single-char")
+            op, seq, outcome = MANIFESTS["boundary"][
+                "key-single-char"]
+            pins = (case["request"]["op"] == op,
+                    case["expect"]["outcome"] == outcome,
+                    case["expect"]["receipt"]["sequence"] == seq)
+            assert not all(pins), label
+            pristine = _case("boundary", "key-single-char")
+            assert pristine["request"]["op"] == op
+            assert pristine["expect"]["outcome"] == outcome
+            assert pristine["expect"]["receipt"][
+                "sequence"] == seq
+        else:
+            section, name = _EDGE_WITNESS_ROWS[label]
+            case = _named(m, section, name)
+            with pytest.raises(AssertionError):
+                _assert_scoped_edges(section, case)
+            _assert_scoped_edges(section, _case(section, name))
