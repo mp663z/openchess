@@ -79,14 +79,19 @@ accepted one changes only the unexpired leases of the named worker.
   (The file itself proves contract consistency, not production
   behavior.)
 - fixture: tests/fixtures/restart/cases.json - 65 cases: 4 happy, 17 boundary, 42 malformed, 2 rollback.
-  Pinned records were computed from the reference at authoring time,
+  Pinned receipts and states were computed from the reference at authoring time,
   so any contract or derivation drift breaks the battery. Every
   malformed case is discriminating via its declared single-locus
   repair. Repairs are single-locus (of the
 state or of the request), except the precedence row, which has a bad
-request AND a corrupt state and repairs both. Rollback cases prove a rejected call
-  leaves the exact supplied request bit- and value-identical before
-  a valid follow-up succeeds as pinned. Hostile-type rows are
+request AND a corrupt state and repairs both. Rollback cases prove a
+  rejected call leaves the rejected state and request type-exact
+  structurally unchanged (snapshot equality over topology and types -
+  not byte or original-container identity), then a valid follow-up on
+  the row's own state returns the pinned receipt and commits the
+  pinned state, copy-on-write: no inner container of the committed
+  state is one of the call's pre-call containers (held alive against
+  id reuse; the in-place root stays the caller's). Hostile-type rows are
   derived from every request the fixture accepts.
 - red test: permanent battery driving every fixture row plus hostile
   totality probes and pinned semantic probes through the
@@ -95,10 +100,15 @@ request AND a corrupt state and repairs both. Rollback cases prove a rejected ca
   place), returning the pinned receipt exactly and ending in the
   pinned state; state_id and restart_id re-derived here from the
   contract preimages; refusal with the pinned class and code, fresh
-  (no __cause__ or __context__), state and request untouched; each
-  declared repair accepted; rollback: a rejected restart leaves state
-  and request untouched, then the valid follow-up on the SAME state
-  returns the pinned receipt and state. Pinned semantics: only the
+  (no __cause__ or __context__), the rejected state and
+  request left value-equal to their pre-call deepcopy snapshots
+  (value equality at this layer; the type-exact structural check
+  lives in the fixture battery); each declared repair is accepted on
+  the repaired state and request without error (the resulting receipt
+  and state are not pinned); rollback: a rejected restart refuses as
+  pinned, then the valid follow-up runs on a fresh copy of the row's
+  own pinned state - a different object graph from the rejected one -
+  and returns the pinned receipt and pinned state. Pinned semantics: only the
   worker's unexpired leases are released, in ascending seq order,
   attempts are kept, expiry at now is untouched, restart is
   idempotent, jobs conserve.
