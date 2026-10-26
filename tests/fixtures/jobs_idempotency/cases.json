@@ -738,18 +738,9 @@
     }
    ],
    "minimal_repair": {
-    "replace_request": {
-     "request": {
-      "idempotency_key": "fresh",
-      "op": "enqueue",
-      "payload": {
-       "dedupe_key": "task-fresh",
-       "payload": {
-        "task": "task-fresh"
-       },
-       "priority": 5
-      }
-     }
+    "set_request_field": {
+     "field": "op",
+     "value": "enqueue"
     }
    },
    "name": "request-missing-field",
@@ -1288,17 +1279,14 @@
     }
    ],
    "minimal_repair": {
-    "replace_request": {
-     "request": {
-      "idempotency_key": "fresh",
-      "op": "enqueue",
+    "set_request_field": {
+     "field": "payload",
+     "value": {
+      "dedupe_key": "task-fresh",
       "payload": {
-       "dedupe_key": "task-fresh",
-       "payload": {
-        "task": "task-fresh"
-       },
-       "priority": 5
-      }
+       "task": "task-fresh"
+      },
+      "priority": 5
      }
     }
    },
@@ -1374,17 +1362,14 @@
     }
    ],
    "minimal_repair": {
-    "replace_request": {
-     "request": {
-      "idempotency_key": "fresh",
-      "op": "enqueue",
+    "set_request_field": {
+     "field": "payload",
+     "value": {
+      "dedupe_key": "task-fresh",
       "payload": {
-       "dedupe_key": "task-fresh",
-       "payload": {
-        "task": "task-fresh"
-       },
-       "priority": 5
-      }
+       "task": "task-fresh"
+      },
+      "priority": 5
      }
     }
    },
@@ -1458,17 +1443,12 @@
     }
    ],
    "minimal_repair": {
-    "replace_request": {
-     "request": {
-      "idempotency_key": "fresh",
-      "op": "enqueue",
-      "payload": {
-       "dedupe_key": "task-fresh",
-       "payload": {
-        "task": "task-fresh"
-       },
-       "priority": 5
-      }
+    "set_request_field": {
+     "field": "payload",
+     "value": {
+      "lease_ms": 50,
+      "now": 100,
+      "worker": "worker-1"
      }
     }
    },
@@ -2923,19 +2903,16 @@
     }
    ],
    "minimal_repair": {
-    "replace_request": {
-     "request": {
-      "idempotency_key": "order-1",
-      "op": "enqueue",
+    "set_request_field": {
+     "field": "payload",
+     "value": {
+      "dedupe_key": "task-a",
       "payload": {
-       "dedupe_key": "task-a",
-       "payload": {
-        "task": {
-         "job": "a"
-        }
-       },
-       "priority": 5
-      }
+       "task": {
+        "job": "a"
+       }
+      },
+      "priority": 5
      }
     }
    },
@@ -3075,7 +3052,7 @@
    }
   }
  ],
- "notes": "T0294 jobs-idempotency conformance fixture. Receipts, states and ledgers were computed at authoring time from the T0293 contract-derived reference engine (tests/test_t0293_jobs_idempotency_contract.py) over the linked queue contract. Malformed rows are discriminating: repairing only the declared locus makes each row valid. Rollback rows prove a rejected apply leaves the supplied state, ledger and request bit-identical before the valid follow-up commits. Queue-rejection rows prove the composed error domain: the queue's typed rejection propagates unwrapped and commits nothing.",
+ "notes": "T0294 jobs-idempotency conformance fixture. Receipts, states and ledgers were computed at authoring time from the T0293 contract-derived reference engine (tests/test_t0293_jobs_idempotency_contract.py) over the linked queue contract. Malformed rows are discriminating: repairing the declared locus makes each row valid - one request field for set_request_field repairs; whole-request replace_request repairs are used only where the defect is not one settable field (non-dict request, field removal, runtime alias, multi-field conflict) and are not one-scalar-defect proofs. Rollback rows prove a rejected apply leaves the supplied state, ledger and request bit-identical before the valid follow-up commits. Queue-rejection rows prove the composed error domain: the queue's typed rejection propagates unwrapped and commits nothing.",
  "queue_rejection": [
   {
    "expect_queue_error": "dedupe_conflict",
