@@ -1,0 +1,98 @@
+schema_version: 1
+
+contract:
+  id: jobs-idempotency
+  role:
+    kind: keyed-exactly-once-apply-over-one-queue-state
+    serves: background-job-execution
+    scope: single-state-single-ledger-idempotent-apply
+    owns: idempotency-key-receipt-semantics-and-request-fingerprinting
+    not_scope: key-expiry-cross-state-deduplication-distributed-locking-or-the-queue-own-enqueue-dedupe-key-mechanics
+  record:
+    fields: [receipt_id, idempotency_key, request_fingerprint, prior_state_id, state_id, sequence]
+    exact: true
+  request:
+    fields: [idempotency_key, op, payload]
+    exact: true
+  identifiers:
+    receipt_id:
+      kind: content-addressed-idempotency-receipt-id
+      grammar: ^jir1:[0-9a-f]{64}$
+      derivation: sha256-over-idempotency-key-request-fingerprint-prior-state-id-state-id-sequence
+      source: derived-from-validated-apply-never-caller-supplied
+    idempotency_key:
+      kind: caller-supplied-opaque-idempotency-key
+      grammar: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+      source: caller-supplied-exact-built-in-string-grammar-validated
+    request_fingerprint:
+      kind: untrusted-fingerprinter-request-token
+      grammar: ^jif1:[0-9a-f]{64}$
+      derivation: sha256-over-domain-separated-length-framed-canonical-serialization-of-every-exact-frozen-request-field-except-the-key
+      source: fingerprinter-output-shape-validated-and-bound-byte-exact-to-the-local-request-derivation
+    state_id:
+      kind: queue-state-id-of-the-post-apply-state
+      grammar: ^qs1:[0-9a-f]{64}$
+      source: derived-from-the-linked-queue-transition-never-caller-supplied
+    prior_state_id:
+      kind: queue-state-id-of-the-pre-apply-state
+      grammar: ^qs1:[0-9a-f]{64}$
+      source: derived-from-the-linked-queue-state-never-caller-supplied
+  outcomes:
+    values: [applied, replayed]
+    closed: true
+    applied: unseen-key-applies-exactly-one-queue-transition-and-commits-one-receipt
+    replayed: seen-key-with-identical-fingerprint-returns-the-stored-receipt-no-transition
+  semantics:
+    request_validation: exact-key-op-payload-shape-op-and-payload-through-linked-queue-validation
+    source_validation: full-linked-queue-state-validation-and-full-ledger-validation-before-any-oracle-call
+    ledger_binding: every-receipt-rederives-sequences-strictly-increasing-from-zero-keys-unique-state-ids-chained-last-receipt-state-id-names-the-live-state
+    deduplication: key-lookup-then-byte-exact-fingerprint-comparison-never-key-only
+    conflict: seen-key-with-different-fingerprint-fails-closed-never-overwrites
+    commit: queue-transition-and-receipt-committed-together-last-after-full-validation-and-fingerprinting
+    queue_rejection: a-request-the-linked-queue-engine-rejects-on-its-own-domain-rules-propagates-that-typed-error-and-commits-no-receipt
+  oracle_boundary:
+    role: request-fingerprinter-is-untrusted-input
+    single_evaluation: exactly-one-call-per-apply
+    frozen_snapshots: request-state-and-ledger-frozen-before-first-oracle-call-never-re-read-restored-bit-identical
+    output_validation: exact-built-in-string-pinned-grammar-byte-exact-request-bound-token-or-fail-closed
+  failures:
+    classes:
+      - malformed_idempotency_request
+      - corrupt_queue
+      - corrupt_ledger
+      - key_conflict
+      - divergent_fingerprint
+    triggers:
+      malformed_idempotency_request: request-key-op-payload-grammar-or-type-violation
+      corrupt_queue: queue-state-fails-linked-queue-state-validation-or-state-id-rederivation
+      corrupt_ledger: ledger-shape-grammar-rederivation-uniqueness-chain-or-live-state-binding-violation
+      key_conflict: seen-key-with-a-different-request-fingerprint
+      divergent_fingerprint: fingerprinter-raising-any-baseexception-non-exact-string-bad-grammar-or-request-divergent-token
+    mapping:
+      malformed_idempotency_request: malformed_request
+      corrupt_queue: corrupt_queue
+      corrupt_ledger: corrupt_ledger
+      key_conflict: key_conflict
+      divergent_fingerprint: divergent_fingerprint
+    closed: true
+  errors:
+    closed_enum:
+      - malformed_request
+      - corrupt_queue
+      - corrupt_ledger
+      - key_conflict
+      - divergent_fingerprint
+      - internal
+    shape:
+      retryable_true_only_for: [internal]
+  properties:
+    total: hostile-requests-states-ledgers-and-fingerprinters-fail-closed-typed-never-raw
+    atomic: rejected-apply-leaves-state-ledger-and-request-bit-identical
+    deterministic: same-inputs-same-outcome-receipt-state-and-ledger
+    idempotent: repeated-identical-keyed-request-returns-the-identical-receipt-and-applies-nothing
+    rollback: durable-state-rolled-back-past-a-receipt-makes-the-stale-ledger-fail-closed-never-replayed
+  versioning:
+    base_path: /jobs/idempotency/v1
+    rule: "Clients pin MAJOR. MINOR is additive-only: new optional fields, new enum members, new endpoints. Never change the meaning of an existing field in place."
+  links:
+    queue_contract: data/contracts/queue.yaml
