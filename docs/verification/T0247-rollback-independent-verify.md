@@ -4,11 +4,15 @@ Scope: the COMPLETE store rollback chain (T0239-T0246) on the Python
 reference runtime, submitted for independent adversarial review. This
 package claims chain-level coherence only - not Rust product runtime
 parity and not board completion. The author of this package is the
-builder lead lane. PROVENANCE DISCLOSURE: the author implemented NO link
-of this chain; all eight links were built and reviewed by other lanes,
-and every link commit carries the shared "Instinct Agent
-<agent@instinct.com>" authorship, distinct from the package author's
-builder identity (openchess-builder). This package asserts no authority.
+builder lead lane. PROVENANCE DISCLOSURE: the author ATTESTS that it
+implemented no link of this chain, on the basis of its own work history
+(branch pushes, commit records and task transcripts searched for any
+contribution to these links, none found). The commit authorship
+metadata on all eight links is the shared "Instinct Agent
+<agent@instinct.com>" identity, which does NOT by itself prove person-
+or lane-independence; the attestation and history search above are the
+basis of this disclosure, not the git identity. This package asserts
+no authority.
 
 ## Chain inventory (merge order)
 
@@ -77,7 +81,7 @@ production, and the production binding switch is exactly its two lines
   archival; and the battery pins that a rejected rollback leaves every
   input bit-identical. (The file itself proves contract consistency, not
   production behavior.)
-- fixture: tests/fixtures/rollback/cases.json - 21 cases: 3 happy, 3 boundary, 15
+- fixture: tests/fixtures/rollback/cases.json - 24 cases: 3 happy, 3 boundary, 15
   malformed, 3 rollback. Pinned rollback receipts were computed from the
   reference at authoring time, so any contract or derivation drift
   breaks the battery. Every malformed case is discriminating via its
@@ -185,6 +189,7 @@ the review head, with its own rerun of the full chain suite and its own
 reading of every chain artifact (including the assertion bodies behind
 every coverage claim above, not only the module docstrings). It reports
 build-side results only as recorded in the per-link evidence files and
-does not blend environments. The author holds no implementation role in
-any link of this chain; this document asserts no authority: the task
+does not blend environments. The author attests it holds no
+implementation role in any link of this chain (see the provenance
+disclosure for its basis); this document asserts no authority: the task
 closes under the independent review and CI gates.
