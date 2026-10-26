@@ -95,8 +95,10 @@ production, and the production binding switch is exactly its two lines
   of totality probes and a pinned identity-order probe through an engine
   class constructed with a document exporter. happy/boundary: the pinned
   receipt exactly (exact field types), the log and request untouched by
-  value AND identity (export is read-only: every container and key
-  _snap-identical), determinism by value over fresh copies on the SAME
+  value AND container identity (export is read-only: every container
+  _snap-identical - container type, id, length and key order, with
+  exact-str keys compared by text and non-str keys by type and id,
+  not blanket all-key object identity), determinism by value over fresh copies on the SAME
   instance (never the same object), and exactly ONE exporter call with a
   DETACHED by-value copy of the replayed state and the exact format.
   malformed: the original input rejects with the pinned failure class
