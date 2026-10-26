@@ -3,14 +3,16 @@
 The contract's reference implementation is the differential oracle. Valid
 cases are mutated at every reachable path with hostile values (every type
 the validators gate on, boundary ints and strings, armed objects whose
-every hook fails the test, attribute bombs, lying dicts, cycles, 100000-deep
-and wide values, oversize ints under a lowered interpreter int-digit
-limit), keys are dropped, added and replaced by non-str or armed keys, and
-faults are injected into the digest steps. Production and reference must
-return the same record or the same failure class and code, a rejected call
-must leave its input structurally identical (a hook-free iterative
-snapshot), production must never run caller code, and a late fault must
-leave the input untouched and the next call clean. Seeded and
+every hook increments an external tripwire counter before raising (so a
+hook run is seen even if its raise is caught), attribute bombs, lying
+dicts, cycles, 100000-deep and wide values, oversize ints under a lowered
+interpreter int-digit limit), keys are dropped, added and replaced by
+non-str or armed keys, and faults are injected into the digest steps.
+Production and reference must return the same record or the same failure
+class and code, a rejected call must leave its input structurally
+identical (a hook-free iterative snapshot), production must never run
+caller code (the tripwire is checked after every call), and a late fault
+must leave the input untouched and the next call clean. Seeded and
 single-threaded, so a failure replays.
 """
 
@@ -133,8 +135,12 @@ HOOKS = (
 )
 
 
+ARMED_CALLS = []  # external tripwire: survives even if a hook's raise is caught
+
+
 def _raiser(name):
     def hook(self, *a, **k):
+        ARMED_CALLS.append(name)
         raise AssertionError(f"caller code ran: {name}")
 
     return hook
@@ -161,6 +167,7 @@ class AttrBomb:
     """Any attribute access is a fault (guards getattr-based duck typing)."""
 
     def __getattribute__(self, name):
+        ARMED_CALLS.append("attribute " + name)
         raise AssertionError(f"caller code ran: attribute {name}")
 
 
@@ -168,18 +175,23 @@ class LyingDict(dict):
     """An exact-looking dict whose real contents differ from what hooks say."""
 
     def keys(self):
+        ARMED_CALLS.append("keys")
         raise AssertionError("caller code ran: keys")
 
     def items(self):
+        ARMED_CALLS.append("items")
         raise AssertionError("caller code ran: items")
 
     def values(self):
+        ARMED_CALLS.append("values")
         raise AssertionError("caller code ran: values")
 
     def get(self, *a):
+        ARMED_CALLS.append("get")
         raise AssertionError("caller code ran: get")
 
     def __getitem__(self, k):
+        ARMED_CALLS.append("__getitem__")
         raise AssertionError("caller code ran: getitem")
 
 
@@ -346,15 +358,21 @@ def _build(base, path, make=None, drop=False, add=None):
     return case
 
 
-def _outcome(fn, case, err_cls):
+def _outcome(fn, case, err_cls, check_purity=True):
+    armed_before = len(ARMED_CALLS)
+    before = _isnap(case) if check_purity else None
     try:
         res = fn(*_args(case))
-        return ("ok", res, _isnap(case.get("state")) if "state" in case else None)
+        out = ("ok", res, _isnap(case.get("state")) if "state" in case else None)
     except err_cls as error:
         assert type(error) is err_cls
         assert error.__cause__ is None and error.__context__ is None
         assert error.retryable is False
-        return ("fail", error.failure_class, error.code)
+        out = ("fail", error.failure_class, error.code)
+    assert len(ARMED_CALLS) == armed_before, "production ran caller code"
+    if before is not None:
+        assert _isnap(case) == before, "call changed its input"
+    return out
 
 
 def _typed(obj):
@@ -373,20 +391,15 @@ def _typed(obj):
 def _agree(base, **kw):
     """Run PROD and REF on two fresh builds; require identical outcomes and no torn input."""
     prod_case, ref_case = _build(base, **kw), _build(base, **kw)
-    before = _isnap(prod_case)
     prod = _outcome(PROD, prod_case, PROD_ERR)
     ref = _outcome(REF, ref_case, REF_ERR)
     assert prod[0] == ref[0], (kw.get("path"), prod, ref)
     if prod[0] == "fail":
         assert prod == ref, (kw.get("path"), prod, ref)
-        assert _isnap(prod_case) == before, "rejected call changed its input"
         assert prod[2] == CODES[prod[1]]
     else:
         assert _typed(prod[1]) == _typed(ref[1]), (kw.get("path"), prod, ref)
         assert prod[2] == ref[2]
-        assert _isnap(prod_case["request"]) == _isnap(_build(base, **kw)["request"]), (
-            "accepted call changed its request"
-        )
     return prod
 
 
@@ -461,12 +474,9 @@ def test_seeded_multi_mutation_fuzz_matches_the_oracle(seed):
             return case
 
         prod_case, ref_case = build_case(), build_case()
-        before = _isnap(prod_case)
         prod = _outcome(PROD, prod_case, PROD_ERR)
         ref = _outcome(REF, ref_case, REF_ERR)
         assert _typed(prod) == _typed(ref), (picks, prod, ref)
-        if prod[0] == "fail":
-            assert _isnap(prod_case) == before
 
 
 # ---------- fault objects: no caller code, always typed, never raw ----------
@@ -491,11 +501,10 @@ def test_armed_objects_at_every_path_never_run_caller_code_and_fail_typed():
                 continue
             for make in armed:
                 case = _build(base, path=path, make=make)
-                before = _isnap(case)
-                # any AssertionError from an armed hook would escape _outcome
+                # any AssertionError from an armed hook would escape _outcome;
+                # a caught raise still trips the ARMED_CALLS counter there
                 out = _outcome(PROD, case, PROD_ERR)
                 assert out[0] == "fail", (path, out)
-                assert _isnap(case) == before
 
 
 def test_armed_and_nasty_keys_in_every_dict_are_refused_without_running_hooks():
@@ -505,9 +514,7 @@ def test_armed_and_nasty_keys_in_every_dict_are_refused_without_running_hooks():
                 continue
             for make_key in NASTY_KEYS:
                 case = _build(base, path=path + ("x",), add=(make_key, lambda: 1))
-                before = _isnap(case)
                 out = _outcome(PROD, case, PROD_ERR)
-                assert _isnap(case) == before or out[0] == "ok"
                 if type(dict.fromkeys([make_key()]).popitem()[0]) is not str:
                     assert out[0] == "fail", path
                 else:  # exact str keys of any content: the oracle decides
@@ -525,10 +532,8 @@ def test_armed_and_nasty_keys_in_every_dict_are_refused_without_running_hooks():
             parent = _get(case, path[:-1])
             value = parent.pop(path[-1])
             dict.__setitem__(parent, ArmedStr(path[-1]), value)
-            before = _isnap(case)
             out = _outcome(PROD, case, PROD_ERR)
             assert out[0] == "fail", path
-            assert _isnap(case) == before
 
 
 class PlainStr(str):
@@ -554,12 +559,10 @@ def test_plain_str_subclass_keys_with_valid_names_and_values_are_refused_like_th
                 return case
 
             prod_case, ref_case = build(), build()
-            before = _isnap(prod_case)
             prod = _outcome(PROD, prod_case, PROD_ERR)
             ref = _outcome(REF, ref_case, REF_ERR)
             assert prod[0] == ref[0] == "fail", (path, prod, ref)
             assert prod[1] == ref[1] and prod[2] == ref[2]
-            assert _isnap(prod_case) == before
             refused += 1
     assert refused > 0
 
@@ -587,7 +590,14 @@ def _timed(fn, *a):
     return out
 
 
-def test_hundred_thousand_deep_and_wide_values_at_every_field_fail_typed_in_bounded_time():
+def test_pathological_values_at_sampled_paths_stay_typed_and_bounded():
+    # sampled, not every field: the first 12 paths of the two ready bases
+    # (payload interior and job scalar paths); wide strings/lists and big
+    # ints are legitimately ACCEPTED at payload paths, refused at
+    # grammar-gated paths, so the outcome is pinned as typed (ok or fail),
+    # with the oracle pinning which where it matters in the sweeps above.
+    # The 100000-deep DICT row skips the input-purity snapshot (declared
+    # via check_purity=False): that row's purity is not claimed.
     deep_list = _nested_list(100_000)
     deep_dict = _nested_dict(100_000)
     wide_dict = {str(i): i for i in range(100_000)}
@@ -598,11 +608,8 @@ def test_hundred_thousand_deep_and_wide_values_at_every_field_fail_typed_in_boun
         for path in [p for p in _paths(base) if p][:12]:
             for value in (deep_list, deep_dict, wide_dict, wide_list, big_str, big_int, -big_int):
                 case = _build(base, path=path, make=lambda v=value: v)
-                before = _isnap(case) if value is not deep_dict else None
-                out = _timed(_outcome, PROD, case, PROD_ERR)
+                out = _timed(_outcome, PROD, case, PROD_ERR, value is not deep_dict)
                 assert out[0] in ("ok", "fail")
-                if out[0] == "fail" and before is not None:
-                    assert _isnap(case) == before
 
 
 def test_huge_ints_never_hit_a_str_conversion_under_a_lowered_interpreter_limit():
